@@ -6,7 +6,8 @@
 *.npy
 *.csv
 
-# /Mouillage
+/dataGenerated/historyTracker/*.pkl
+/dataGenerated/plot/*.png
 
 # vdscodium
 AwesomePKF.code-workspace
