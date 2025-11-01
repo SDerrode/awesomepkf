@@ -1,55 +1,109 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import numpy as np
+"""
+Module SeedGenerator
+--------------------
+Génère et gère des graines aléatoires reproductibles de manière thread-safe,
+en utilisant numpy.random.SeedSequence et secrets pour la graine initiale.
+"""
+
+from __future__ import annotations
+
 import secrets
 import threading
+import logging
+from typing import Optional
+import numpy as np
+
+# ----------------------------------------------------------------------
+# Configuration du logging
+# ----------------------------------------------------------------------
+logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 class SeedGenerator:
     """
-    Classe pour gérer des graines aléatoires reproductibles et thread-safe.
+    Gère des graines aléatoires reproductibles et thread-safe.
+
     Utilise numpy.random.SeedSequence pour dériver des RNG indépendants.
+    Permet de créer des sous-générateurs indépendants à partir d'une graine
+    principale (maîtresse).
     """
 
-    _lock = threading.Lock()  # pour la sécurité en environnement multi-thread
+    def __init__(self, seed_key: Optional[int] = None, verbose: bool = False):
+        """
+        Parameters
+        ----------
+        seed_key : int | None
+            Graine initiale (si None, une graine forte est générée via secrets).
+        verbose : bool
+            Active les messages d'information via logging.
+        """
+        self._lock = threading.Lock()
+        self.verbose = verbose
 
-    def __init__(self, sKey=None):
-        if sKey is None:
-            # Graine maîtresse aléatoire et forte
-            sKey = secrets.randbits(128)
-        self._master_seed = sKey
-        self._master_seq = np.random.SeedSequence(self._master_seed)
-        self._rng = np.random.default_rng(self._master_seq)
+        if seed_key is None:
+            seed_key = secrets.randbits(128)
+            if self.verbose:
+                logger.info(f"[SeedGenerator] Graine forte générée aléatoirement ({seed_key}).")
 
-    def generateNewRandomSeed(self):
-        """Crée une nouvelle séquence indépendante mais traçable."""
-        with self._lock:
-            new_seq = self._master_seq.spawn(1)[0]  # sous-séquence indépendante
-            self._rng = np.random.default_rng(new_seq)
-            self._master_seq = new_seq  # on met à jour la séquence courante
+        self._root_seed = seed_key
+        self._seed_seq = np.random.SeedSequence(self._root_seed)
+        self._rng = np.random.default_rng(self._seed_seq)
 
+    # ------------------------------------------------------------------
+    # Propriétés
+    # ------------------------------------------------------------------
     @property
-    def seed(self):
-        """Retourne la graine maîtresse."""
-        return self._master_seed
-
-    @property
-    def rng(self):
-        """Retourne le générateur NumPy."""
+    def rng(self) -> np.random.Generator:
+        """Retourne le générateur aléatoire NumPy."""
         return self._rng
 
-    def __repr__(self):
-        return f"<SeedGenerator seed={self._master_seed}>"
+    @property
+    def seed(self) -> int:
+        """Retourne la graine principale utilisée à l’initialisation."""
+        return self._root_seed
 
-if __name__ == '__main__':
-    
-    sg1 = SeedGenerator()
-    print(f"sg1 = {sg1}")
+    # ------------------------------------------------------------------
+    # Méthodes principales
+    # ------------------------------------------------------------------
+    def generate_new_seed(self) -> int:
+        """
+        Crée et active un nouveau générateur basé sur une sous-séquence indépendante.
+
+        Returns
+        -------
+        int
+            Une nouvelle graine dérivée, utile pour la traçabilité.
+        """
+        with self._lock:
+            new_seq = self._seed_seq.spawn(1)[0]
+            self._rng = np.random.default_rng(new_seq)
+            self._seed_seq = new_seq
+
+            # On récupère un identifiant dérivé (hashable) pour la traçabilité
+            derived_seed = int(new_seq.entropy)
+            if self.verbose:
+                logger.info(f"[SeedGenerator] Nouvelle graine dérivée : {derived_seed}")
+            return derived_seed
+
+    def __repr__(self) -> str:
+        return f"<SeedGenerator seed={self._root_seed} id={id(self):x}>"
+
+
+# ----------------------------------------------------------------------
+# Exemple d'utilisation
+# ----------------------------------------------------------------------
+if __name__ == "__main__":
+    sg1 = SeedGenerator(verbose=True)
+    print(f"\nsg1 = {sg1}")
     print("Premiers tirages:", sg1.rng.random(3))
 
-    sg1.generateNewRandomSeed()
-    print("Après nouvelle seed:", sg1.rng.random(3))
+    sg1.generate_new_seed()
+    print("Après nouvelle graine :", sg1.rng.random(3))
 
-    sg2 = SeedGenerator(42)
-    print(f"sg2 = {sg2}")
-    print("Tirages reproductibles:", sg2.rng.random(3))
+    sg2 = SeedGenerator(42, verbose=True)
+    print(f"\nsg2 = {sg2}")
+    print("Tirages reproductibles :", sg2.rng.random(3))
