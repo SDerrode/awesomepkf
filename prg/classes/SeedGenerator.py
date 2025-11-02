@@ -32,21 +32,25 @@ class SeedGenerator:
     principale (maîtresse).
     """
 
-    def __init__(self, seed_key: Optional[int] = None, verbose: bool = False):
+    def __init__(self, seed_key: Optional[int] = None, verbose: int = 0):
         """
         Parameters
         ----------
         seed_key : int | None
             Graine initiale (si None, une graine forte est générée via secrets).
-        verbose : bool
+        verbose : int in [0, 1, 2]
             Active les messages d'information via logging.
         """
+        
+        if verbose not in [0, 1, 2]:
+            raise ValueError("verbose must be 0, 1 or 2")
+        
         self._lock = threading.Lock()
         self.verbose = verbose
 
         if seed_key is None:
             seed_key = secrets.randbits(128)
-            if self.verbose:
+            if self.verbose>0:
                 logger.info(f"[SeedGenerator] Graine forte générée aléatoirement ({seed_key}).")
 
         self._root_seed = seed_key
@@ -85,7 +89,7 @@ class SeedGenerator:
 
             # On récupère un identifiant dérivé (hashable) pour la traçabilité
             derived_seed = int(new_seq.entropy)
-            if self.verbose:
+            if self.verbose>1:
                 logger.info(f"[SeedGenerator] Nouvelle graine dérivée : {derived_seed}")
             return derived_seed
 
@@ -97,13 +101,15 @@ class SeedGenerator:
 # Exemple d'utilisation
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
-    sg1 = SeedGenerator(verbose=True)
+    verbose = 1
+    
+    sg1 = SeedGenerator(verbose=verbose)
     print(f"\nsg1 = {sg1}")
     print("Premiers tirages:", sg1.rng.random(3))
 
     sg1.generate_new_seed()
     print("Après nouvelle graine :", sg1.rng.random(3))
 
-    sg2 = SeedGenerator(42, verbose=True)
+    sg2 = SeedGenerator(42, verbose=verbose)
     print(f"\nsg2 = {sg2}")
     print("Tirages reproductibles :", sg2.rng.random(3))

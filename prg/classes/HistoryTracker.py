@@ -26,9 +26,26 @@ class HistoryTracker:
     Permet la sauvegarde / rechargement via pickle et la visualisation via Matplotlib.
     """
 
-    def __init__(self, verbose: bool = True):
+    def __init__(self, verbose: int = 0):
+        
+        if verbose not in [0, 1, 2]:
+            raise ValueError("verbose must be 0, 1 or 2")
         self._history: list[dict[str, Any]] = []
         self.verbose = verbose
+        
+        # Configuration du logger selon verbose
+        self._set_log_level()
+
+    # ------------------------------------------------------------------
+    # Gestion du logging selon le niveau de verbosité
+    # ------------------------------------------------------------------
+    def _set_log_level(self):
+        if self.verbose == 0:
+            logger.setLevel(logging.WARNING)
+        elif self.verbose == 1:
+            logger.setLevel(logging.INFO)
+        else:
+            logger.setLevel(logging.DEBUG)
 
     # ------------------------------------------------------------------
     #  Gestion des enregistrements
@@ -57,7 +74,7 @@ class HistoryTracker:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:
             pickle.dump(self._history, f)
-        if self.verbose:
+        if self.verbose>0:
             logger.info(f"[HistoryTracker] Historique sauvegardé dans '{path}' ({len(self)} enregistrements)")
 
     @classmethod
@@ -67,7 +84,8 @@ class HistoryTracker:
             data = pickle.load(f)
         tracker = cls()
         tracker._history = data
-        logger.info(f"[HistoryTracker] Rechargé depuis '{path}' ({len(tracker)} enregistrements)")
+        if self.verbose>0:
+            logger.info(f"[HistoryTracker] Rechargé depuis '{path}' ({len(tracker)} enregistrements)")
         return tracker
 
     # ------------------------------------------------------------------
@@ -133,7 +151,8 @@ class HistoryTracker:
                 os.makedirs(base_dir or ".", exist_ok=True)
                 save_path = os.path.join(base_dir or ".", f"plot_{param}.png")
                 ax.figure.savefig(save_path, dpi=150, bbox_inches="tight")
-                print(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
+                if self.verbose>0:
+                    print(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
                 if created_fig:
                     plt.close(fig)
             return ax, fig
@@ -179,7 +198,11 @@ class A:
     """Classe jouet pour illustrer l'usage de HistoryTracker."""
 
     def __init__(self, x0: float = 1.0, verbose: bool = True):
-        self.x = x0
+        
+        if verbose not in [0, 1, 2]:
+            raise ValueError("verbose must be 0, 1 or 2")
+        
+        self.x       = x0
         self.verbose = verbose
         self.history = HistoryTracker(verbose=verbose)
 
@@ -191,7 +214,7 @@ class A:
             diff = abs(new_x - self.x)
             record = {"iter": k, "x": self.x, "new_x": new_x, "diff": diff}
             self.history.record(**record)
-            if self.verbose:
+            if self.verbose>1:
                 logger.debug(f"[A] it={k} x={self.x:.4f} diff={diff:.4e}")
             yield record
             self.x = new_x
@@ -203,14 +226,17 @@ class A:
 
 
 if __name__ == "__main__":
-    a = A(x0=1.0)
-    for step in a.iterate_gen(5):
-        print(step)
-
+    
+    verbose = 1
+    
     graph_dir = os.path.join('.', 'dataGenerated', 'plot')
     os.makedirs(graph_dir, exist_ok=True)
-    a.history.plot("x", color="blue", show=False, base_dir=graph_dir)
-
     tracker_dir = os.path.join('.', 'dataGenerated', 'historyTracker')
     os.makedirs(tracker_dir, exist_ok=True)
+    
+    a = A(x0=1.0, verbose=verbose)
+    for step in a.iterate_gen(5):
+        print(step)
+    
+    a.history.plot("x", color="blue", show=False, base_dir=graph_dir)
     a.history.save_pickle(os.path.join(tracker_dir, "history_run_a.pkl"))
