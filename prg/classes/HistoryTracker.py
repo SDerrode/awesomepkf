@@ -73,77 +73,99 @@ class HistoryTracker:
     # ------------------------------------------------------------------
     #  Visualisation
     # ------------------------------------------------------------------
-    def plot(
-        self,
-        param: str,
-        iter_key: str = "iter",
-        show: bool = True,
-        ax: Optional[plt.Axes] = None,
-        fig: Optional[plt.Figure] = None,
-        base_dir: Optional[str] = None,
-        **kwargs: Any,
-    ):
+    def plot(self, param, iter_key="iter", show=True, ax=None, fig=None, base_dir=None, **kwargs):
         """
         Trace l'évolution d'un paramètre au fil des itérations.
-        Si le paramètre est vectoriel, chaque composante est tracée séparément.
+        Si le paramètre est vectoriel (ex: numpy.ndarray), chaque composante est tracée séparément.
+        Si show=False, chaque figure est sauvegardée dans base_dir avec un indice dans le nom.
+
+        Arguments :
+        -----------
+        param : str
+            Nom du paramètre à tracer (scalaire ou vecteur)
+        iter_key : str
+            Clé utilisée pour l'axe X (par défaut 'iter')
+        show : bool
+            Si True → affiche le graphique, sinon sauvegarde dans base_dir
+        ax : matplotlib.axes.Axes | None
+            Axe existant (optionnel, utilisé seulement pour les scalaires)
+        base_dir : str | None
+            Dossier de sauvegarde si show=False
+        kwargs :
+            Paramètres passés à matplotlib.plot() (couleur, style, etc.)
         """
-        df = self.as_dataframe()
+
+        df = pd.DataFrame(self._history.copy())
+
         if df.empty:
             raise ValueError("Aucune donnée enregistrée.")
         if param not in df.columns:
             raise KeyError(f"'{param}' n'est pas une colonne enregistrée. Colonnes disponibles : {list(df.columns)}")
 
+        # Récupération des données
         y_values = df[param]
         x = df[iter_key] if iter_key in df.columns else df.index
+
+        # Vérifie si les entrées sont des vecteurs
         first_val = y_values.iloc[0]
         is_vector = isinstance(first_val, (list, np.ndarray))
 
         if not is_vector:
-            ax, fig = self._plot_scalar(x, y_values, param, iter_key, show, ax, fig, base_dir, **kwargs)
+            # --- Cas scalaire -------------------------------------------------
+            if not all(isinstance(v, numbers.Number) for v in y_values):
+                raise TypeError(f"La colonne '{param}' contient des valeurs non scalaires et non vectorielles.")
+
+            created_fig = False
+            if ax is None:
+                fig, ax = plt.subplots(figsize=(6, 4))
+                created_fig = True
+
+            ax.plot(x, y_values, **kwargs)
+            ax.set_xlabel(iter_key)
+            ax.set_ylabel(param)
+            ax.set_title(f"Évolution de '{param}' ({len(df)} points)")
+            ax.grid(True, linestyle="--", alpha=0.6)
+            ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+
+            if show:
+                plt.show()
+            else:
+                os.makedirs(base_dir or ".", exist_ok=True)
+                save_path = os.path.join(base_dir or ".", f"plot_{param}.png")
+                ax.figure.savefig(save_path, dpi=150, bbox_inches="tight")
+                print(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
+                if created_fig:
+                    plt.close(fig)
+            return ax, fig
         else:
-            arr = np.vstack(y_values.values)
-            for i in range(arr.shape[1]):
-                ax, fig = self._plot_scalar(
-                    x, arr[:, i], f"{param}[{i}]", iter_key, show, None, None, base_dir, **kwargs
-                )
-        return ax, fig
+            # --- Cas vectoriel ------------------------------------------------
+            n_components = y_values[0].shape[0]
 
-    def _plot_scalar(
-        self,
-        x,
-        y,
-        label: str,
-        iter_key: str,
-        show: bool,
-        ax: Optional[plt.Axes],
-        fig: Optional[plt.Figure],
-        base_dir: Optional[str],
-        **kwargs: Any,
-    ):
-        """Trace un paramètre scalaire."""
-        created_fig = False
-        if ax is None:
-            fig, ax = plt.subplots(figsize=(6, 4))
-            created_fig = True
+            for i in range(n_components):
 
-        ax.plot(x, y, **kwargs)
-        ax.set_xlabel(iter_key)
-        ax.set_ylabel(label)
-        ax.set_title(f"Évolution de '{label}' ({len(x)} points)")
-        ax.grid(True, linestyle="--", alpha=0.6)
-        ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+                created_fig = False
+                if ax is None:
+                    fig, ax = plt.subplots(figsize=(6, 4))
+                    created_fig = True
+                
+                yi = y_values.apply(lambda x: x[i])
+                ax.plot(x, yi, **kwargs)
+                ax.set_xlabel(iter_key)
+                ax.set_ylabel(f"{param}[{i}]")
+                ax.set_title(f"Évolution de '{param}[{i}]' ({len(df)} points)")
+                ax.grid(True, linestyle="--", alpha=0.6)
+                ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
 
-        if show:
-            plt.show()
-        else:
-            os.makedirs(base_dir or ".", exist_ok=True)
-            save_path = os.path.join(base_dir or ".", f"plot_{label.replace('[','_').replace(']','')}.png")
-            fig.savefig(save_path, dpi=150, bbox_inches="tight")
-            if self.verbose:
-                logger.info(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
-            if created_fig:
-                plt.close(fig)
-        return ax, fig
+                if show:
+                    plt.show()
+                else:
+                    os.makedirs(base_dir or ".", exist_ok=True)
+                    save_path = os.path.join(base_dir or ".", f"plot_{param}_{i}.png")
+                    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+                    print(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
+                    if created_fig:
+                        plt.close(fig)
+            return ax, fig
 
     # ------------------------------------------------------------------
     def __len__(self) -> int:
