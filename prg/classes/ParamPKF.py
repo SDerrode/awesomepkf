@@ -41,6 +41,26 @@ class ActiveView:
     def __repr__(self):
         return repr(self._parent[self._rows, self._cols])
 
+    @property
+    def value(self):
+        return self._parent[self._rows, self._cols]
+    
+    # def __matmul__(self, other):
+    #     print('__matmul__ ?')
+    #     input('attente')
+    #     # ActiveView @ ndarray
+    #     if isinstance(other, np.ndarray):
+    #         return self.value @ other
+    #     raise TypeError("Unsupported type for @")
+
+    # def __rmatmul__(self, other):
+    #     # ndarray @ ActiveView
+    #     print('__rmatmul__ ?')
+    #     input('attente')
+    #     if isinstance(other, np.ndarray):
+    #         return other @ self.value
+    #     raise TypeError("Unsupported type for @")
+
 
 # ----------------------------------------------------------------------
 # Classe ParamPKF
@@ -200,7 +220,8 @@ class ParamPKF:
 
     @property
     def Sigma_Y2(self): return self._Sigma_Y2
-
+    
+    
     @property
     def a(self): return self._a
     @property
@@ -224,6 +245,16 @@ class ParamPKF:
         self._updateSigma()
         self._check_consistency()
         logger.info("[ParamPKF] A mis à jour")
+    
+    # --- Sous-blocs de A (lecture seule) ---
+    @property
+    def A_xx(self): return self._A_xx
+    @property
+    def A_xy(self): return self._A_xy
+    @property
+    def A_yx(self): return self._A_yx
+    @property
+    def A_yy(self): return self._A_yy
 
     @property
     def mQ(self): return self._mQ
@@ -237,6 +268,16 @@ class ParamPKF:
         self._updateSigma()
         self._check_consistency()
         logger.info("[ParamPKF] mQ mis à jour")
+    # --- Sous-blocs de mQ (lecture seule) ---
+    @property
+    def Q_xx(self): return self._Q_xx
+    @property
+    def Q_xy(self): return self._Q_xy
+    @property
+    def Q_yx(self): return self._Q_yx
+    @property
+    def Q_yy(self): return self._Q_yy
+
 
     # ------------------------------------------------------------------
     # Résumé
