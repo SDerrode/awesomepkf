@@ -60,9 +60,9 @@ class ParamPKF:
         if verbose not in [0, 1, 2]:
             raise ValueError("verbose doit être 0, 1 ou 2")
 
-        self.dim_y = dim_y
-        self.dim_x = dim_x
-        self.dim_xy = dim_x + dim_y
+        self.dim_y   = dim_y
+        self.dim_x   = dim_x
+        self.dim_xy  = dim_x + dim_y
         self.verbose = verbose
 
         # Configuration du logger selon verbose
@@ -264,6 +264,8 @@ class ParamPKF:
 # Exemple d'utilisation
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
+    verbose=0
+    
     dim_x, dim_y = 2, 2
     A = np.array([[5, 2, 1, 0],
                   [3, 8, 0, 2],
@@ -275,5 +277,5 @@ if __name__ == "__main__":
                    [0.1, 0.1, 1.0, 0.5],
                    [0.2, 0.1, 0.5, 1.0]], float)
 
-    param = ParamPKF(dim_y=dim_y, dim_x=dim_x, A=A, mQ=mQ, verbose=2)
+    param = ParamPKF(dim_y=dim_y, dim_x=dim_x, A=A, mQ=mQ, verbose=verbose)
     param.summary()
