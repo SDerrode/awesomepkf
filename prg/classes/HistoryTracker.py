@@ -91,7 +91,7 @@ class HistoryTracker:
     # ------------------------------------------------------------------
     #  Visualisation
     # ------------------------------------------------------------------
-    def plot(self, list_param, list_label, iter_key="iter", show=True, base_dir=None, **kwargs):
+    def plot(self, list_param, list_label, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
         """
         Trace l'évolution d'un paramètre au fil des itérations.
         Si show=False, chaque figure est sauvegardée dans base_dir avec un indice dans le nom.
@@ -116,33 +116,39 @@ class HistoryTracker:
 
         if df.empty:
             raise ValueError("Aucune donnée enregistrée.")
-        if param not in df.columns:
-            raise KeyError(f"'{param}' n'est pas une colonne enregistrée. Colonnes disponibles : {list(df.columns)}")
+        for p in list_param:
+            if p not in df.columns:
+                raise KeyError(f"'{p}' is not a saved column. Available columns: {list(df.columns)}")
 
-        # Récupération des données
-        y_values = df[param]
-        print(y_values)
-        input('attente')
+        # Data focus
+        y_values = df[list_param]
         x = df[iter_key] if iter_key in df.columns else df.index
+        # Compute the number of components (should be equal to dimx)
+        nb_components = y_values[list_param[0]].iloc[0].shape[0]
+        # print(f'nb_components={nb_components}')
 
-        # Vérifie si les entrées sont des vecteurs
-        first_val = y_values.iloc[0]
-        is_vector = isinstance(first_val, (list, np.ndarray))
+        datafocus = pd.DataFrame()
+        for p in list_param:
+            liste = []
+            for component in range(nb_components):
+                liste.append(f'{p}_{component}')
+            datafocus[liste] = df[p].apply(lambda x: pd.Series(x.flatten()))
+        
+        liste_ax = []
+        for component in range(nb_components):
+            fig, ax = plt.subplots(figsize=(6, 4))
+            liste_ax.append(ax)
+            
+            liste = []
+            for p in list_param:
+                liste.append(f'{p}_{component}')
+            
+            for col, label in zip(liste, list_label):
+                datafocus[col].plot(ax=ax, label=label, alpha=0.5)
 
-        if not is_vector:
-            # --- Cas scalaire -------------------------------------------------
-            if not all(isinstance(v, numbers.Number) for v in y_values):
-                raise TypeError(f"La colonne '{param}' contient des valeurs non scalaires et non vectorielles.")
-
-            created_fig = False
-            if ax is None:
-                fig, ax = plt.subplots(figsize=(6, 4))
-                created_fig = True
-
-            ax.plot(x, y_values, **kwargs)
+            ax.legend() #title="Légende")
             ax.set_xlabel(iter_key)
-            ax.set_ylabel(param)
-            ax.set_title(f"Évolution de '{param}' ({len(df)} points)")
+            # ax.set_title(f"Évolution de '{param}' ({len(df)} points)")
             ax.grid(True, linestyle="--", alpha=0.6)
             ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
 
@@ -150,42 +156,12 @@ class HistoryTracker:
                 plt.show()
             else:
                 os.makedirs(base_dir or ".", exist_ok=True)
-                save_path = os.path.join(base_dir or ".", f"plot_{param}.png")
+                save_path = os.path.join(base_dir or ".", f"{basename}_{component}.png")
                 ax.figure.savefig(save_path, dpi=150, bbox_inches="tight")
                 if self.verbose>0:
                     print(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
-                if created_fig:
-                    plt.close(fig)
-            return ax, fig
-        else:
-            # --- Cas vectoriel ------------------------------------------------
-            n_components = y_values[0].shape[0]
-
-            for i in range(n_components):
-
-                created_fig = False
-                if ax is None:
-                    fig, ax = plt.subplots(figsize=(6, 4))
-                    created_fig = True
-                
-                yi = y_values.apply(lambda x: x[i])
-                ax.plot(x, yi, **kwargs)
-                ax.set_xlabel(iter_key)
-                ax.set_ylabel(f"{param}[{i}]")
-                ax.set_title(f"Évolution de '{param}[{i}]' ({len(df)} points)")
-                ax.grid(True, linestyle="--", alpha=0.6)
-                ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
-
-                if show:
-                    plt.show()
-                else:
-                    os.makedirs(base_dir or ".", exist_ok=True)
-                    save_path = os.path.join(base_dir or ".", f"plot_{param}_{i}.png")
-                    fig.savefig(save_path, dpi=150, bbox_inches="tight")
-                    print(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
-                    if created_fig:
-                        plt.close(fig)
-            return ax, fig
+                plt.close(fig)
+        return liste_ax
 
     # ------------------------------------------------------------------
     def __len__(self) -> int:
