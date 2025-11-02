@@ -305,12 +305,12 @@ if __name__ == "__main__":
             # print(df.info())
 
         # pickle storing and plots
-        pkf.history.save_pickle(os.path.join(
-            tracker_dir, "history_run_pkf.pkl"))
-        ax, fig = pkf.history.plot("xkp1",             color="blue",  show=False, base_dir=graph_dir)
-        pkf.history.plot(          "Xkp1_update_math", color="green", show=False, base_dir=graph_dir, ax=ax, fig=fig)
-        pkf.history.plot(          "Xkp1_update_phys", color="red",   show=False, base_dir=graph_dir, ax=ax, fig=fig)
-         
+        pkf.history.save_pickle(os.path.join(tracker_dir, "history_run_pkf.pkl"))
+        ax = pkf.history.plot( ["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
+                         label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
+                         show=False, base_dir=graph_dir)
+
+
     # input("\nEnter to re-run with the same seed, but Physical formulation... ")
     # pkf_reloaded = PKF(param, sKey=pkf.seed_gen, save_pickle=save_pickle, verbose=verbose)
     # pkf_reloaded.process_N_data(N=N)

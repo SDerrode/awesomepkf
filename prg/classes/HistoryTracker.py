@@ -91,26 +91,25 @@ class HistoryTracker:
     # ------------------------------------------------------------------
     #  Visualisation
     # ------------------------------------------------------------------
-    def plot(self, param, iter_key="iter", show=True, ax=None, fig=None, base_dir=None, **kwargs):
+    def plot(self, list_param, list_label, iter_key="iter", show=True, base_dir=None, **kwargs):
         """
         Trace l'évolution d'un paramètre au fil des itérations.
-        Si le paramètre est vectoriel (ex: numpy.ndarray), chaque composante est tracée séparément.
         Si show=False, chaque figure est sauvegardée dans base_dir avec un indice dans le nom.
 
         Arguments :
         -----------
-        param : str
-            Nom du paramètre à tracer (scalaire ou vecteur)
+        list_param : str
+            List of parameters to draw on the same plot (scalar or vector)
+        list_param : str
+            List of labels to appear in the legend
         iter_key : str
-            Clé utilisée pour l'axe X (par défaut 'iter')
+            Key for X axis (default: 'iter')
         show : bool
-            Si True → affiche le graphique, sinon sauvegarde dans base_dir
-        ax : matplotlib.axes.Axes | None
-            Axe existant (optionnel, utilisé seulement pour les scalaires)
+            If True → plot the graphic else save in base_dir
         base_dir : str | None
-            Dossier de sauvegarde si show=False
+            Store repository if show=False
         kwargs :
-            Paramètres passés à matplotlib.plot() (couleur, style, etc.)
+            Parameters to be passed to matplotlib.plot() (color, style, etc.)
         """
 
         df = pd.DataFrame(self._history.copy())
@@ -122,6 +121,8 @@ class HistoryTracker:
 
         # Récupération des données
         y_values = df[param]
+        print(y_values)
+        input('attente')
         x = df[iter_key] if iter_key in df.columns else df.index
 
         # Vérifie si les entrées sont des vecteurs
