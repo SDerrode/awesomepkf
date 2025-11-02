@@ -78,10 +78,7 @@ class PKF:
     # ------------------------------------------------------------------
     # Generators
     # ------------------------------------------------------------------
-    def _data_generation(
-            self, 
-            N: Optional[int] = None
-        ) -> Generator[Tuple[int, np.ndarray], None, None]:
+    def _data_generation(self, N: Optional[int] = None) -> Generator[Tuple[int, np.ndarray], None, None]:
         """
         Genrator for the simulation of Z_{k+1} = A * Z_k + W_{k+1}, 
         with W_{k+1} ~ N(0, mQ) and Z_1 ~ N(0, Q1).
@@ -102,11 +99,23 @@ class PKF:
                 self._seed_gen.rng.multivariate_normal(mean=mu0, cov=mQ).reshape(-1,1)
             yield k, np.split(Zkp1_simul, [dimx])
 
+    def file_data_generator(self, filename, dim_x: int):
+        """
+        Générateur qui lit les données d'un DataFrame pandas.
+        Suppose que df contient au moins dim_x + dim_y colonnes (x puis y).
+        """
+        df = pd.read_csv(filename)
+        for k, row in df.iterrows():
+            # Suppose que la 1re partie du vecteur est X, la 2e partie Y
+            values = row.values.reshape(-1, 1)
+            xkp1, ykp1 = np.split(values, [dim_x])
+            yield k, (xkp1, ykp1)
+    
     # ------------------------------------------------------------------
     # PKF : Mathematic and Physicist formulations
     # ------------------------------------------------------------------
 
-    def process_pkf(self, N=None):
+    def process_pkf(self, N=None, data_generator=None):
         """
         Generator of PKF filter (mathematic and physicist formulations).
         It makes use of data generator called _data_generation().
@@ -114,19 +123,19 @@ class PKF:
         
         if not ((isinstance(N, int) and N > 0) or N is None):
             raise ValueError("sKey must be None or a number >0")
+        
+        # Data generator
+        generator = data_generator if data_generator is not None else self._data_generation()
 
         # Short-cuts
         A, mQ             = self.param.A, self.param.mQ
         dimx, dimy, dimxy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
 
-        # data simulation generator
-        generatorSimul = self._data_generation()
-
         # The first
         ###################
        
         # First generated data sample
-        k, (xkp1, ykp1) = next(generatorSimul) # les parenthèses servent à déballer la liste de 2 élements
+        k, (xkp1, ykp1) = next(generator) # les parenthèses servent à déballer la liste de 2 élements
 
         # Filtering of the first sample
         Xkp1_update = self.param.b.T @ np.linalg.inv(self.param.Sigma_Y1) @ ykp1
@@ -177,7 +186,11 @@ class PKF:
             #######################################
             
             # Get new obervation from the data generator
-            k, (xkp1, ykp1) = next(generatorSimul) # parenthesis is used to flatten the list of two elements
+            try:
+                k, (xkp1, ykp1) = next(generator) # parenthesis is used to flatten the list of two elements
+            except StopIteration:
+                # generator est terminé, on arrête process_pkf
+                return
 
             # Updating with mathematical formulation
             ###############################################
@@ -230,8 +243,8 @@ class PKF:
 
             yield xkp1, ykp1, Xkp1_update_math, Xkp1_update_phys
 
-    def process_N_data(self, N):
-        return list(self.process_pkf(N=N))
+    def process_N_data(self, N, data_generator=None):
+        return list(self.process_pkf(N=N, data_generator=data_generator))
 
 if __name__ == "__main__":
     """
@@ -244,8 +257,10 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     save_pickle = True
     verbose     = 1
-    N           = 200
-
+    N           = 20
+    
+    # datafile = 'data_dim2x2.csv'
+    datafile = 'data_dim1x1.csv'
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
@@ -271,14 +286,13 @@ if __name__ == "__main__":
     #                [0.1, 0.1, 1.0, 0.5],
     #                [0.2, 0.1, 0.5, 1.0]], float)
 
-
-
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
     # ------------------------------------------------------------------
-    base_dir = os.path.join(".",         "dataGenerated")
-    tracker_dir = os.path.join(base_dir, "historyTracker")
-    graph_dir = os.path.join(base_dir,   "plot")
+    base_dir     = os.path.join(".",      "dataGenerated")
+    tracker_dir  = os.path.join(base_dir, "historyTracker")
+    datafile_dir = os.path.join(base_dir, "datafile")
+    graph_dir    = os.path.join(base_dir, "plot")
     os.makedirs(tracker_dir, exist_ok=True)
     os.makedirs(graph_dir,   exist_ok=True)
 
@@ -291,24 +305,45 @@ if __name__ == "__main__":
     if verbose > 0:
         param.summary()
 
-    print("\nPKF filtering with the Mathematic formulation of PKF... ")
-    sKey = 41
-    pkf = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
-    listePKF = pkf.process_N_data(N=N)
-    # print(f'listePKF={listePKF}')
-
-    if save_pickle and pkf.history is not None:
-        df = pkf.history.as_dataframe()
+    print("\nPKF filtering with data generated from a PKF... ")
+    sKey  = 41
+    pkf_1 = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
+    # Call with the default data simulator generator
+    listePKF_1 = pkf_1.process_N_data(N=N)
+    if save_pickle and pkf_1.history is not None:
+        df = pkf_1.history.as_dataframe()
         if verbose > 0:
             print("\nHistorique complet :")
             print(df.head())
             # print(df.info())
 
         # pickle storing and plots
-        pkf.history.save_pickle(os.path.join(tracker_dir, "history_run_pkf.pkl"))
-        ax = pkf.history.plot( ["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
-                         label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
-                         show=False, base_dir=graph_dir)
+        pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
+        pkf_1.history.plot(list_param=["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
+                           list_label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
+                           basename='pkf_1', \
+                           show=False, base_dir=graph_dir)
+    
+    print("\nPKF filtering with data generated from a file... ")
+    pkf_2 = PKF(param, save_pickle=save_pickle, verbose=verbose)
+    # Call with the fila as data generator
+    filename = os.path.join(datafile_dir, datafile)
+    listePKF_2 = pkf_2.process_N_data(N=None, data_generator=pkf_2.file_data_generator(filename, dim_x))
+    # print(f'listePKF={listePKF}')
+
+    if save_pickle and pkf_2.history is not None:
+        df = pkf_2.history.as_dataframe()
+        if verbose > 0:
+            print("\nHistorique complet :")
+            print(df.head())
+            # print(df.info())
+
+        # pickle storing and plots
+        pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
+        pkf_2.history.plot(list_param=["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
+                           list_label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
+                           basename='pkf_2', \
+                           show=False, base_dir=graph_dir)
 
 
     # input("\nEnter to re-run with the same seed, but Physical formulation... ")
