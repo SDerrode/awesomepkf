@@ -206,11 +206,26 @@ class PKF:
             # Get new obervation from the data generator
             k, (xkp1, ykp1) = next(generatorSimul) # parenthesis is used to flatten the list of two elements
 
-            # Updating
+            # Updating with mathematical formulation
+            ###############################################
             Xkp1_update = Xkp1_predict + \
                 (PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)) @ (ykp1 - Ykp1_predict)
             PXXkp1_update = PXXkp1_predict - \
                 PXYkp1_predict @ np.linalg.inv(PYYkp1_predict) @ PYXkp1_predict
+            print(f'\nMATH : Xkp1_update={Xkp1_update}\nPXXkp1_update={PXXkp1_update}')
+            
+            # Updating with physical formulation
+            ###############################################
+            # innovation (expectation and variance)
+            ikp1 = ykp1 - Ykp1_predict
+            Skp1 = PYYkp1_predict
+            # Kalman gain
+            Kkp1 = PXYkp1_predict @ np.linalg.inv(Skp1)
+            # Updating expectation and variance 
+            Xkp1_update = Xkp1_predict + Kkp1 @ ikp1
+            PXXkp1_update = PXXkp1_predict - Kkp1 @ PXYkp1_predict.T
+            print(f'\nPHYS : Xkp1_update={Xkp1_update}\nPXXkp1_update={PXXkp1_update}')
+            exit(1)
 
             # Store if save_pickle==True
             if self.save_pickle and self._history is not None:
