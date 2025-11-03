@@ -138,9 +138,9 @@ class PKF:
         k, (xkp1, ykp1) = next(generator) # les parenthèses servent à déballer la liste de 2 élements
 
         # Filtering of the first sample
-        Xkp1_update = self.param.b.T @ np.linalg.inv(self.param.Sigma_Y1) @ ykp1
-        PXXkp1_update = self.param.Sigma_X1 - \
-            self.param.b.T @ np.linalg.inv(self.param.Sigma_Y1) @ self.param.b
+        Xkp1_update = self.param.b.T @ np.linalg.inv(self.param.syy) @ ykp1
+        PXXkp1_update = self.param.sxx - \
+            self.param.b.T @ np.linalg.inv(self.param.syy) @ self.param.b
 
         # Store if save_pickle==True
         if self.save_pickle and self._history is not None:
@@ -259,33 +259,6 @@ if __name__ == "__main__":
     verbose     = 1
     N           = 20
     
-    # datafile = 'data_dim2x2.csv'
-    datafile = 'data_dim1x1.csv'
-    # ------------------------------------------------------------------
-    # Test parameters
-    # ------------------------------------------------------------------
-    dim_x, dim_y = 1, 1
-    A = np.array([
-        [0.8, 0.1],
-        [0.0, 0.9]
-    ])
-
-    mQ = np.array([
-        [1.0, 0.2],
-        [0.2, 1.0]
-    ])
-
-    # dim_x, dim_y = 2, 2
-    # A = np.array([[5, 2, 1, 0],
-    #               [3, 8, 0, 2],
-    #               [2, 2, 10, 6],
-    #               [1, 1, 5, 9]], float)
-
-    # mQ = np.array([[1.0, 0.5, 0.1, 0.2],
-    #                [0.5, 1.0, 0.1, 0.1],
-    #                [0.1, 0.1, 1.0, 0.5],
-    #                [0.2, 0.1, 0.5, 1.0]], float)
-
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
     # ------------------------------------------------------------------
@@ -297,13 +270,63 @@ if __name__ == "__main__":
     os.makedirs(graph_dir,   exist_ok=True)
 
     # ------------------------------------------------------------------
-    # Let's go.....
+    # Test parameters
     # ------------------------------------------------------------------
+    # from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_Sigma
+    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx1_dimy1_from_Sigma()
+    # param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
+    # if verbose > 0:
+    #     param.summary()
+    
+    # ------------------------------------------------------------------
+    # dim_x = dim_y = 1 - Test parameters for (A, mQ) parametrization
+    # ------------------------------------------------------------------
+    # from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_A_mQ
+    # dim_x, dim_y, A, mQ = model_dimx1_dimy1_from_A_mQ()
+    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
+    # if verbose > 0:
+    #     param.summary()
 
-    # PKF parameters object manager
-    param = ParamPKF(dim_x=dim_x, dim_y=dim_y, A=A, mQ=mQ, verbose=verbose)
+    # ------------------------------------------------------------------
+    # dim_x = dim_y = 2 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
+    # ------------------------------------------------------------------
+    # from models.model_dimx2_dimy2 import model_dimx2_dimy2_from_Sigma
+    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx2_dimy2_from_Sigma()
+    # param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
+    # if verbose > 0:
+    #   param.summary()
+    
+    # ------------------------------------------------------------------
+    # dim_x = dim_y = 2 - Test parameters for (A, mQ) parametrization
+    # ------------------------------------------------------------------
+    # from models.model_dimx2_dimy2 import model_dimx2_dimy2_from_A_mQ
+    # dim_x, dim_y, A, mQ = model_dimx2_dimy2_from_A_mQ()
+    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
+    # if verbose > 0:
+    #     param.summary()
+
+    # ------------------------------------------------------------------
+    # dim_x = 3, dim_y = 1 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
+    # ------------------------------------------------------------------
+    from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_Sigma
+    dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx3_dimy1_from_Sigma()
+    param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     if verbose > 0:
         param.summary()
+    
+    # ------------------------------------------------------------------
+    # dim_x = 3, dim_y = 1 - Test parameters for (A, mQ) parametrization
+    # ------------------------------------------------------------------
+    # from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_A_mQ
+    # dim_x, dim_y, A, mQ = model_dimx3_dimy1_from_A_mQ()
+    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
+    # if verbose > 0:
+    #     param.summary()
+
+
+    # ------------------------------------------------------------------
+    # Let's go
+    # ------------------------------------------------------------------
 
     print("\nPKF filtering with data generated from a PKF... ")
     sKey  = 41
@@ -324,42 +347,26 @@ if __name__ == "__main__":
                            basename='pkf_1', \
                            show=False, base_dir=graph_dir)
     
-    print("\nPKF filtering with data generated from a file... ")
-    pkf_2 = PKF(param, save_pickle=save_pickle, verbose=verbose)
-    # Call with the fila as data generator
-    filename = os.path.join(datafile_dir, datafile)
-    listePKF_2 = pkf_2.process_N_data(N=None, data_generator=pkf_2.file_data_generator(filename, dim_x))
-    # print(f'listePKF={listePKF}')
+    # # datafile = 'data_dim2x2.csv'
+    # datafile = 'data_dim1x1.csv'
+    # print("\nPKF filtering with data generated from a file... ")
+    # pkf_2 = PKF(param, save_pickle=save_pickle, verbose=verbose)
+    # # Call with the fila as data generator
+    # filename = os.path.join(datafile_dir, datafile)
+    # listePKF_2 = pkf_2.process_N_data(N=None, data_generator=pkf_2.file_data_generator(filename, dim_x))
+    # # print(f'listePKF={listePKF}')
 
-    if save_pickle and pkf_2.history is not None:
-        df = pkf_2.history.as_dataframe()
-        if verbose > 0:
-            print("\nHistorique complet :")
-            print(df.head())
-            # print(df.info())
-
-        # pickle storing and plots
-        pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
-        pkf_2.history.plot(list_param=["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
-                           list_label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
-                           basename='pkf_2', \
-                           show=False, base_dir=graph_dir)
-
-
-    # input("\nEnter to re-run with the same seed, but Physical formulation... ")
-    # pkf_reloaded = PKF(param, sKey=pkf.seed_gen, save_pickle=save_pickle, verbose=verbose)
-    # pkf_reloaded.process_N_data(N=N)
-
-    # if save_pickle and pkf.history is not None:
-    #     df_reloaded = pkf_reloaded.history.as_dataframe()
+    # if save_pickle and pkf_2.history is not None:
+    #     df = pkf_2.history.as_dataframe()
     #     if verbose > 0:
     #         print("\nHistorique complet :")
-    #         print(df_reloaded.head())
-    #         # print(df_reloaded.info())
+    #         print(df.head())
+    #         # print(df.info())
 
     #     # pickle storing and plots
-    #     pkf_reloaded.history.save_pickle(os.path.join(
-    #         tracker_dir, "history_run_pkf_reloaded.pkl"))
-    #     ax, fig = pkf_reloaded.history.plot(
-    #         "xkp1",        color="blue",  show=False, base_dir=graph_dir)
-    #     pkf_reloaded.history.plot("Xkp1_update_physi", color="green", show=False, base_dir=graph_dir, ax=ax, fig=fig)
+    #     pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
+    #     pkf_2.history.plot(list_param=["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
+    #                        list_label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
+    #                        basename='pkf_2', \
+    #                        show=False, base_dir=graph_dir)
+

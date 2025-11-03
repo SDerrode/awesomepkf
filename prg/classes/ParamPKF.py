@@ -125,6 +125,7 @@ class ParamPKF:
             raise ValueError(f"c doit être carrée de dimension ({self.dim_y},{self.dim_y})")
 
         self._update_A_mQ_from_Sigma()
+        
 
 
     def __repr__(self):
@@ -165,7 +166,9 @@ class ParamPKF:
         
         # calcul de A, mQ
         self._A  = self._Q2 @ np.linalg.inv(self._Q1)
+        self._update_A_views()
         self._mQ = self._Q1 - self._A @ self._Q2.T
+        self._update_mQ_views()
     
     def _update_Sigma_from_A_mQ(self):
         """Met à jour Q1, Q2 et Sigma à partir de A et mQ."""
@@ -190,14 +193,14 @@ class ParamPKF:
             logger.debug(f"Vérification OK : ||Q - (Q1 - A Q2^T)||_rel = {rel_error:.2e}")
 
         # Vues dérivées
-        self._a = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x, 0:self.dim_x]
-        self._b = self._Sigma[self.dim_x:self.dim_xy, 0:self.dim_x]
+        self._a = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x,   0:self.dim_x]
+        self._b = self._Sigma[self.dim_x:self.dim_xy,               0:self.dim_x]
         self._c = self._Sigma[self.dim_xy+self.dim_x:2*self.dim_xy, self.dim_x:self.dim_xy]
         self._d = self._Sigma[self.dim_xy+self.dim_x:2*self.dim_xy, 0:self.dim_x]
-        self._e = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x, self.dim_x:self.dim_xy]
+        self._e = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x,   self.dim_x:self.dim_xy]
 
         # Blocs diagonaux
-        self._sxx = self._Sigma[0:self.dim_x, 0:self.dim_x]
+        self._sxx = self._Sigma[0:self.dim_x,           0:self.dim_x]
         self._syy = self._Sigma[self.dim_x:self.dim_xy, self.dim_x:self.dim_xy]
 
     # ------------------------------------------------------------------
@@ -258,7 +261,7 @@ class ParamPKF:
     @property
     def sxx(self): return self._sxx
     @property
-    def syy(self): return self._yy
+    def syy(self): return self._syy
     @property
     def a(self): return self._a
     @property
@@ -331,12 +334,23 @@ class ParamPKF:
         print("A:\n", fmt(self.A))
         print("mQ:\n", fmt(self.mQ))
         print("Sigma:\n", fmt(self._Sigma))
-        print("========================")
-        
-        print("A = np.array(",  repr(self.A.tolist()), ')')
-        print("mQ = np.array(", repr(self.mQ.tolist()), ')')
-        
-        self._check_consistency()
+        if verbose>0:
+            print("========================")
+            print("Q1:\n", fmt(self._Q1))
+            print("Q2:\n", fmt(self._Q2))
+            print("========================")
+            print("sxx:\n", fmt(self._sxx))
+            print("syy:\n", fmt(self._syy))
+            print("a:\n", fmt(self._a))
+            print("b:\n", fmt(self._b))
+            print("c:\n", fmt(self._c))
+            print("d:\n", fmt(self._d))
+            print("e:\n", fmt(self._e))
+            print("========================")
+        if verbose>1:
+            print("A = np.array(",  repr(self.A.tolist()), ')')
+            print("mQ = np.array(", repr(self.mQ.tolist()), ')')
+        # self._check_consistency()
         
 
 
@@ -344,23 +358,25 @@ class ParamPKF:
 # Exemple d'utilisation
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
-    verbose = 0
+    verbose = 1
 
     # ------------------------------------------------------------------
-    # dim_x = dim_y = 1 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
+    # Test parameters
     # ------------------------------------------------------------------
     # from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_Sigma
     # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx1_dimy1_from_Sigma()
-    # param_Sigma = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-    # param_Sigma.summary()
+    # param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
+    # if verbose > 0:
+    #     param.summary()
     
     # ------------------------------------------------------------------
     # dim_x = dim_y = 1 - Test parameters for (A, mQ) parametrization
     # ------------------------------------------------------------------
-    # from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_A_mQ
-    # dim_x, dim_y, A, mQ = model_dimx1_dimy1_from_A_mQ()
-    # param_A_mQ = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
-    # param_A_mQ.summary()
+    from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_A_mQ
+    dim_x, dim_y, A, mQ = model_dimx1_dimy1_from_A_mQ()
+    param_A_mQ = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
+    if verbose > 0:
+      param_A_mQ.summary()
 
     # ------------------------------------------------------------------
     # dim_x = dim_y = 2 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
@@ -368,7 +384,8 @@ if __name__ == "__main__":
     # from models.model_dimx2_dimy2 import model_dimx2_dimy2_from_Sigma
     # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx2_dimy2_from_Sigma()
     # param_Sigma = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-    # param_Sigma.summary()
+    # if verbose > 0:
+    #   param_Sigma.summary()
     
     # ------------------------------------------------------------------
     # dim_x = dim_y = 2 - Test parameters for (A, mQ) parametrization
@@ -376,21 +393,24 @@ if __name__ == "__main__":
     # from models.model_dimx2_dimy2 import model_dimx2_dimy2_from_A_mQ
     # dim_x, dim_y, A, mQ = model_dimx2_dimy2_from_A_mQ()
     # param_A_mQ = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
-    # param_A_mQ.summary()
+    # if verbose > 0:
+    #   param_A_mQ.summary()
 
     # ------------------------------------------------------------------
     # dim_x = 3, dim_y = 1 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
     # ------------------------------------------------------------------
-    from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_Sigma
-    dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx3_dimy1_from_Sigma()
-    param_Sigma = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-    param_Sigma.summary()
+    # from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_Sigma
+    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx3_dimy1_from_Sigma()
+    # param_Sigma = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
+    # if verbose > 0:
+    #     param_Sigma.summary()
     
     # ------------------------------------------------------------------
     # dim_x = 3, dim_y = 1 - Test parameters for (A, mQ) parametrization
     # ------------------------------------------------------------------
-    from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_A_mQ
-    dim_x, dim_y, A, mQ = model_dimx3_dimy1_from_A_mQ()
-    param_A_mQ = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
-    param_A_mQ.summary()
+    # from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_A_mQ
+    # dim_x, dim_y, A, mQ = model_dimx3_dimy1_from_A_mQ()
+    # param_A_mQ = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
+    # if verbose > 0:
+    #     param_A_mQ.summary()
     
