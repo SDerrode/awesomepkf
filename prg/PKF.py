@@ -301,7 +301,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     # PKF parameters object manager
-    param = ParamPKF(dim_y=dim_y, dim_x=dim_x, A=A, mQ=mQ, verbose=verbose)
+    param = ParamPKF(dim_x=dim_x, dim_y=dim_y, A=A, mQ=mQ, verbose=verbose)
     if verbose > 0:
         param.summary()
 
