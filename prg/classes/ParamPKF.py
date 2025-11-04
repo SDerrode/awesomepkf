@@ -243,6 +243,8 @@ class ParamPKF:
         _is_covariance(self._mQ, "mQ")
         if hasattr(self, "_Q1"): _is_covariance(self._Q1, "Q1")
         if hasattr(self, "_Sigma"): _is_covariance(self._Sigma, "Sigma")
+        if hasattr(self, "_sxx"): _is_covariance(self._sxx, "sxx")
+        if hasattr(self, "_syy"): _is_covariance(self._syy, "syy")
 
     # ------------------------------------------------------------------
     # Setters
@@ -334,7 +336,7 @@ class ParamPKF:
         print("A:\n", fmt(self.A))
         print("mQ:\n", fmt(self.mQ))
         print("Sigma:\n", fmt(self._Sigma))
-        if verbose>0:
+        if self.verbose>0:
             print("========================")
             print("Q1:\n", fmt(self._Q1))
             print("Q2:\n", fmt(self._Q2))
@@ -347,7 +349,7 @@ class ParamPKF:
             print("d:\n", fmt(self._d))
             print("e:\n", fmt(self._e))
             print("========================")
-        if verbose>1:
+        if self.verbose>1:
             print("A = np.array(",  repr(self.A.tolist()), ')')
             print("mQ = np.array(", repr(self.mQ.tolist()), ')')
         # self._check_consistency()

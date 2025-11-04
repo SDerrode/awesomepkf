@@ -26,14 +26,14 @@ import pandas as pd
 import scipy as sc
 
 from classes.ParamPKF import ParamPKF  # Manage parameters for the PKF
-# Keep trace of exécution (all parameters at all iteration)
+# Keep trace of execution (all parameters at all iterations)
 from classes.HistoryTracker import HistoryTracker
 # To manage the seed for random generation
 from classes.SeedGenerator import SeedGenerator
 
 
 class PKF:
-    """Implementation of PKF."""
+    """Implementation of PKF according to the maethamtical and classical formulations."""
 
     def __init__(
         self,
@@ -308,11 +308,11 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # dim_x = 3, dim_y = 1 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
     # ------------------------------------------------------------------
-    from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_Sigma
-    dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx3_dimy1_from_Sigma()
-    param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-    if verbose > 0:
-        param.summary()
+    # from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_Sigma
+    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx3_dimy1_from_Sigma()
+    # param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
+    # if verbose > 0:
+    #     param.summary()
     
     # ------------------------------------------------------------------
     # dim_x = 3, dim_y = 1 - Test parameters for (A, mQ) parametrization
