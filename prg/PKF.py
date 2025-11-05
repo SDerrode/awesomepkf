@@ -123,7 +123,6 @@ class PKF:
                 self._seed_gen.rng.multivariate_normal(mean=mu0, cov=mQ).reshape(-1,1)
             yield k, np.split(Zkp1_simul, [dimx])
 
-
     def _read_unknown_file(self, filepath: str, nrows_detect: int = 500):
         """
         Lecture robuste d'un fichier de données en devinant :
@@ -193,7 +192,6 @@ class PKF:
         except Exception as e:
             logger.error(f"❌ Erreur lors de la lecture du fichier {filepath} : {e}")
             raise
-
 
     def file_data_generator(self, filename: str, dim_x: int):
         """
@@ -309,7 +307,7 @@ class PKF:
                                     PXXkp1_update_phys   = PXXkp1_update.copy(),
                                     PXXkp1_update_Joseph = PXXkp1_update.copy())
         
-        yield xkp1, ykp1, Xkp1_update, PXXkp1_update
+        yield xkp1, ykp1, Xkp1_update, Xkp1_update
 
         ###################
         # The next
@@ -406,10 +404,18 @@ class PKF:
                                      PXXkp1_update_phys   = PXXkp1_update_phys,
                                      PXXkp1_update_Joseph = PXXkp1_update_Joseph)
 
-            yield xkp1, ykp1, Xkp1_update_math, PXXkp1_update_math
+            yield xkp1, ykp1, Xkp1_update_math, Xkp1_update_phys
 
     def process_N_data(self, N, data_generator=None):
         return list(self.process_pkf(N=N, data_generator=data_generator))
+
+def rmse_global(X1, X2):
+    X1 = np.asarray(X1).ravel()  # Aplatir en 1D
+    X2 = np.asarray(X2).ravel()
+    if X1.shape != X2.shape:
+        raise ValueError(f" Les arrays doivent avoir la même forme : {X1.shape} vs {X2.shape}")
+    mse = np.mean((X1 - X2)**2)
+    return np.sqrt(mse)
 
 if __name__ == "__main__":
     """
@@ -421,8 +427,8 @@ if __name__ == "__main__":
     # Constants
     # ------------------------------------------------------------------
     save_pickle = True
-    verbose     = 1
-    N           = 2000
+    verbose     = 0
+    N           = 5000
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -464,11 +470,11 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # dim_x = dim_y = 2 - Test parameters for (A, mQ) parametrization
     # ------------------------------------------------------------------
-    from models.model_dimx2_dimy2 import model_dimx2_dimy2_from_A_mQ
-    dim_x, dim_y, A, mQ = model_dimx2_dimy2_from_A_mQ()
-    param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
-    if verbose > 0:
-        param.summary()
+    # from models.model_dimx2_dimy2 import model_dimx2_dimy2_from_A_mQ
+    # dim_x, dim_y, A, mQ = model_dimx2_dimy2_from_A_mQ()
+    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
+    # if verbose > 0:
+    #     param.summary()
 
     # ------------------------------------------------------------------
     # dim_x = 3, dim_y = 1 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
@@ -482,56 +488,69 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # dim_x = 3, dim_y = 1 - Test parameters for (A, mQ) parametrization
     # ------------------------------------------------------------------
-    # from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_A_mQ
-    # dim_x, dim_y, A, mQ = model_dimx3_dimy1_from_A_mQ()
-    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
-    # if verbose > 0:
-    #     param.summary()
+    from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_A_mQ
+    dim_x, dim_y, A, mQ = model_dimx3_dimy1_from_A_mQ()
+    param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
+    if verbose > 0:
+        param.summary()
 
 
     # ------------------------------------------------------------------
     # Let's go
     # ------------------------------------------------------------------
 
-    # print("\nPKF filtering with data generated from a PKF... ")
-    # sKey  = 41
-    # pkf_1 = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
-    # # Call with the default data simulator generator
-    # listePKF_1 = pkf_1.process_N_data(N=N)
-    # if save_pickle and pkf_1.history is not None:
-    #     df = pkf_1.history.as_dataframe()
-    #     if verbose > 0:
-    #         print("\nExtract of the resulting filtering with PKF :")
-    #         print(df.head())
-    #         # print(df.info())
+    print("\nPKF filtering with data generated from a PKF... ")
+    sKey  = 41
+    pkf_1 = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
+    # Call with the default data simulator generator
+    listePKF_1 = pkf_1.process_N_data(N=N)
 
-    #     # pickle storing and plots
-    #     pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
-    #     pkf_1.history.plot(list_param=["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
-    #                        list_label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
-    #                        basename='pkf_1', \
-    #                        show=False, base_dir=graph_dir)
     
-    datafile = 'data_dim2x2.parquet'
-    #datafile = 'data_dim1x1.csv'
-    print("\nPKF filtering with data generated from a file... ")
-    pkf_2 = PKF(param, save_pickle=save_pickle, verbose=verbose)
-    # Call with the fila as data generator
-    filename = os.path.join(datafile_dir, datafile)
-    listePKF_2 = pkf_2.process_N_data(N=None, data_generator=pkf_2.file_data_generator(filename, dim_x))
-    # print(f'listePKF={listePKF}')
-
-    if save_pickle and pkf_2.history is not None:
-        df = pkf_2.history.as_dataframe()
+    # Calcul du RMSE entre le simulé et l'estimation math, et entre le simulé et l'estimation phys.
+    first_arrays  = np.vstack([t[0] for t in listePKF_1])
+    third_arrays  = np.vstack([t[2] for t in listePKF_1])
+    fourth_arrays = np.vstack([t[3] for t in listePKF_1])
+    # Calcul du RMSE global
+    rmse = rmse_global(first_arrays, third_arrays)
+    print(f"RMSE (X, Esp[X]_math) : {rmse_global(first_arrays, third_arrays)}")
+    print(f"RMSE (X, Esp[X]_phys) : {rmse_global(first_arrays, fourth_arrays)}")
+    
+    if save_pickle and pkf_1.history is not None:
+        df = pkf_1.history.as_dataframe()
         if verbose > 0:
             print("\nExtract of the resulting filtering with PKF :")
             print(df.head())
             # print(df.info())
 
         # pickle storing and plots
-        pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
-        pkf_2.history.plot(list_param=["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
+        pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
+        pkf_1.history.plot(list_param=["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
                            list_label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
-                           basename='pkf_2', \
+                           basename='pkf_1', \
                            show=False, base_dir=graph_dir)
+        
+    
+    
+    # datafile = 'data_dim2x2.parquet'
+    # #datafile = 'data_dim1x1.csv'
+    # print("\nPKF filtering with data generated from a file... ")
+    # pkf_2 = PKF(param, save_pickle=save_pickle, verbose=verbose)
+    # # Call with the fila as data generator
+    # filename = os.path.join(datafile_dir, datafile)
+    # listePKF_2 = pkf_2.process_N_data(N=None, data_generator=pkf_2.file_data_generator(filename, dim_x))
+    # # print(f'listePKF={listePKF}')
+
+    # if save_pickle and pkf_2.history is not None:
+    #     df = pkf_2.history.as_dataframe()
+    #     if verbose > 0:
+    #         print("\nExtract of the resulting filtering with PKF :")
+    #         print(df.head())
+    #         # print(df.info())
+
+    #     # pickle storing and plots
+    #     pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
+    #     pkf_2.history.plot(list_param=["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
+    #                        list_label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
+    #                        basename='pkf_2', \
+    #                        show=False, base_dir=graph_dir)
 
