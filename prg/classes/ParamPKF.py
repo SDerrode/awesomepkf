@@ -60,11 +60,11 @@ class ParamPKF:
     def __init__(self, dim_x, dim_y, verbose, **kwargs):
         
         if not isinstance(dim_y, int) or dim_y <= 0:
-            raise ValueError("dim_y doit être un entier > 0")
+            raise ValueError("⚠️ dim_y doit être un entier > 0")
         if not isinstance(dim_x, int) or dim_x <= 0:
-            raise ValueError("dim_x doit être un entier > 0")
+            raise ValueError("⚠️ dim_x doit être un entier > 0")
         if verbose not in [0, 1, 2]:
-            raise ValueError("verbose doit être 0, 1 ou 2")
+            raise ValueError("⚠️ verbose doit être 0, 1 ou 2")
 
         self.dim_y   = dim_y
         self.dim_x   = dim_x
@@ -87,12 +87,12 @@ class ParamPKF:
         # --- Initialisation des matrices ---
         self._A = np.array(A, dtype=float)
         if self._A.shape != (self.dim_xy, self.dim_xy):
-            raise ValueError(f"A doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
+            raise ValueError(f"⚠️ A doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
         self._update_A_views()
 
         self._mQ = np.array(mQ, dtype=float)
         if self._mQ.shape != (self.dim_xy, self.dim_xy):
-            raise ValueError(f"mQ doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
+            raise ValueError(f"⚠️ mQ doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
         self._update_mQ_views()
 
         self._update_Sigma_from_A_mQ()
@@ -102,25 +102,25 @@ class ParamPKF:
         # --- Initialisation des matrices ---
         self._sxx = np.array(sxx, dtype=float)
         if self._sxx.shape != (self.dim_x, self.dim_x):
-            raise ValueError(f"sxx doit être carrée de dimension ({self.dim_x},{self.dim_x})")
+            raise ValueError(f"⚠️ sxx doit être carrée de dimension ({self.dim_x},{self.dim_x})")
         self._b = np.array(b, dtype=float)
         if self._b.shape != (self.dim_y, self.dim_x):
-            raise ValueError(f"b doit être carrée de dimension ({self.dim_y},{self.dim_x})")
+            raise ValueError(f"⚠️ b doit être carrée de dimension ({self.dim_y},{self.dim_x})")
         self._syy = np.array(syy, dtype=float)
         if self._syy.shape != (self.dim_y, self.dim_y):
-            raise ValueError(f"syy doit être carrée de dimension ({self.dim_y},{self.dim_y})")
+            raise ValueError(f"⚠️ syy doit être carrée de dimension ({self.dim_y},{self.dim_y})")
         self._a = np.array(a, dtype=float)
         if self._a.shape != (self.dim_x, self.dim_x):
-            raise ValueError(f"a doit être carrée de dimension ({self.dim_x},{self.dim_x})")
+            raise ValueError(f"⚠️ a doit être carrée de dimension ({self.dim_x},{self.dim_x})")
         self._d = np.array(d, dtype=float)
         if self._d.shape != (self.dim_y, self.dim_x):
-            raise ValueError(f"d doit être carrée de dimension ({self.dim_y},{self.dim_x})")
+            raise ValueError(f"⚠️ d doit être carrée de dimension ({self.dim_y},{self.dim_x})")
         self._e = np.array(e, dtype=float)
         if self._e.shape != (self.dim_x, self.dim_y):
-            raise ValueError(f"e doit être carrée de dimension ({self.dim_x},{self.dim_y})")
+            raise ValueError(f"⚠️ e doit être carrée de dimension ({self.dim_x},{self.dim_y})")
         self._c = np.array(c, dtype=float)
         if self._c.shape != (self.dim_y, self.dim_y):
-            raise ValueError(f"c doit être carrée de dimension ({self.dim_y},{self.dim_y})")
+            raise ValueError(f"⚠️ c doit être carrée de dimension ({self.dim_y},{self.dim_y})")
 
         self._update_A_mQ_from_Sigma()
 
@@ -277,7 +277,7 @@ class ParamPKF:
     def A(self, new_A):
         new_A = np.array(new_A, dtype=float)
         if new_A.shape != (self.dim_xy, self.dim_xy):
-            raise ValueError(f"A doit être ({self.dim_xy},{self.dim_xy})")
+            raise ValueError(f"⚠️ A doit être ({self.dim_xy},{self.dim_xy})")
         self._A = new_A
         self._update_A_views()
         self._update_Sigma_from_A_mQ()
@@ -300,7 +300,7 @@ class ParamPKF:
     def mQ(self, new_Q):
         new_Q = np.array(new_Q, dtype=float)
         if new_Q.shape != (self.dim_xy, self.dim_xy):
-            raise ValueError(f"mQ doit être ({self.dim_xy},{self.dim_xy})")
+            raise ValueError(f"⚠️ mQ doit être ({self.dim_xy},{self.dim_xy})")
         self._mQ = new_Q
         self._update_mQ_views()
         self._update_Sigma_from_A_mQ()
@@ -355,7 +355,7 @@ class ParamPKF:
 # Exemples d'utilisation
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
-    verbose = 1
+    verbose = 2
 
     # ------------------------------------------------------------------
     # Test parameters
