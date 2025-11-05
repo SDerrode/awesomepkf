@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
 import logging
 import warnings
 from typing import Callable, Any
@@ -73,9 +74,6 @@ class ParamPKF:
         # Configuration du logger selon verbose
         self._set_log_level()
         
-        # print(kwargs)
-        # print(kwargs['A'])
-        
         # Deux façons de construire un objet de cette classe
         if len(kwargs.keys()) == 2:                                # parametrization (A, mQ)
             self.constructorFrom_A_mQ(kwargs['A'], kwargs['mQ'])
@@ -125,12 +123,10 @@ class ParamPKF:
             raise ValueError(f"c doit être carrée de dimension ({self.dim_y},{self.dim_y})")
 
         self._update_A_mQ_from_Sigma()
-        
-
 
     def __repr__(self):
         return f"<ParamPKF(mode={self.mode}, dim_y={self.dim_y}, dim_x={self.dim_x}, verbose={self.verbose})>"
-       
+
 
     # ------------------------------------------------------------------
     # Gestion du logging selon le niveau de verbosité
@@ -173,24 +169,24 @@ class ParamPKF:
     def _update_Sigma_from_A_mQ(self):
         """Met à jour Q1, Q2 et Sigma à partir de A et mQ."""
         
-        self._Q1 = solve_discrete_lyapunov(self._A, self._mQ)
-        self._Q2 = self._A @ self._Q1
+        self._Q1    = solve_discrete_lyapunov(self._A, self._mQ)
+        self._Q2    = self._A @ self._Q1
         self._Sigma = np.block([
             [self._Q1, self._Q2.T],
             [self._Q2, self._Q1],
         ])
 
         # Vérifie la cohérence Q ≈ Q1 - A Q2^T
-        Q_est = self._Q1 - self._A @ self._Q2.T
-        diff = self._mQ - Q_est
+        Q_est     = self._Q1 - self._A @ self._Q2.T
+        diff      = self._mQ - Q_est
         rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + 1e-12)
 
         if rel_error > 1e-8:
-            logger.warning(f"Incohérence : Q ≉ Q1 - A Q2^T (erreur relative = {rel_error:.2e})")
+            logger.warning(f"⚠️ Incohérence : Q ≉ Q1 - A Q2^T (erreur relative = {rel_error:.2e})")
             if self.verbose >= 2:
                 logger.debug(f"Différence :\n{diff}")
         else:
-            logger.debug(f"Vérification OK : ||Q - (Q1 - A Q2^T)||_rel = {rel_error:.2e}")
+            logger.debug(f"♻️ Vérification OK : ||Q - (Q1 - A Q2^T)||_rel = {rel_error:.2e}")
 
         # Vues dérivées
         self._a = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x,   0:self.dim_x]
@@ -210,7 +206,7 @@ class ParamPKF:
         def _callback():
             self._update_Sigma_from_A_mQ()
             self._check_consistency()
-            logger.debug("[ActiveView] A mis à jour → recalcul Sigma")
+            logger.info("[ActiveView] ✅ A, Sigma matrice updated")
         self._A_xx = ActiveView(self._A, slice(0, self.dim_x),           slice(0, self.dim_x),           _callback)
         self._A_xy = ActiveView(self._A, slice(0, self.dim_x),           slice(self.dim_x, self.dim_xy), _callback)
         self._A_yx = ActiveView(self._A, slice(self.dim_x, self.dim_xy), slice(0, self.dim_x),           _callback)
@@ -220,7 +216,7 @@ class ParamPKF:
         def _callback():
             self._update_Sigma_from_A_mQ()
             self._check_consistency()
-            logger.debug("[ActiveView] mQ mis à jour → recalcul Sigma")
+            logger.debug("[ActiveView] ✅ mQ, Sigma matrices updated")
         self._mQ_xx = ActiveView(self._mQ, slice(0, self.dim_x),           slice(0, self.dim_x),           _callback)
         self._mQ_xy = ActiveView(self._mQ, slice(0, self.dim_x),           slice(self.dim_x, self.dim_xy), _callback)
         self._mQ_yx = ActiveView(self._mQ, slice(self.dim_x, self.dim_xy), slice(0, self.dim_x),           _callback)
@@ -230,21 +226,21 @@ class ParamPKF:
     # Vérification de cohérence
     # ------------------------------------------------------------------
     def _check_consistency(self):
-        """Vérifie la cohérence interne des matrices (symétrie, PSD)."""
+        """Check the internal consistency of the matrices (symmetry, PSD)."""
 
         def _is_covariance(M: np.ndarray, name: str):
             if not np.allclose(M, M.T, atol=1e-12):
-                logger.warning(f"{name} n'est pas symétrique")
+                logger.warning(f"⚠️ {name} matrix is not symmetrical")
             eigvals = np.linalg.eigvals(M)
             if np.any(eigvals < -1e-12):
-                logger.warning(f"{name} n'est pas PSD (min eig = {eigvals.min():.3e})")
-            logger.debug(f"Valeurs propres de {name} : {eigvals}")
+                logger.warning(f"⚠️ {name} matrix is not positive semi-definite (min eig = {eigvals.min():.3e})")
+            logger.debug(f"Eig of {name} matrix: {eigvals}")
 
-        _is_covariance(self._mQ, "mQ")
-        if hasattr(self, "_Q1"): _is_covariance(self._Q1, "Q1")
+        if hasattr(self, "_mQ"):    _is_covariance(self._mQ,    "mQ")
+        if hasattr(self, "_Q1"):    _is_covariance(self._Q1,    "Q1")
         if hasattr(self, "_Sigma"): _is_covariance(self._Sigma, "Sigma")
-        if hasattr(self, "_sxx"): _is_covariance(self._sxx, "sxx")
-        if hasattr(self, "_syy"): _is_covariance(self._syy, "syy")
+        if hasattr(self, "_sxx"):   _is_covariance(self._sxx,   "sxx")
+        if hasattr(self, "_syy"):   _is_covariance(self._syy,   "syy")
 
     # ------------------------------------------------------------------
     # Setters
@@ -274,7 +270,7 @@ class ParamPKF:
     def d(self): return self._d
     @property
     def e(self): return self._e
-    
+
     @property
     def A(self): return self._A
     @A.setter
@@ -286,7 +282,7 @@ class ParamPKF:
         self._update_A_views()
         self._update_Sigma_from_A_mQ()
         self._check_consistency()
-        logger.info("[ParamPKF] A mis à jour")
+        logger.info("[ParamPKF] ✅ A matrix updates")
     
     # --- Sous-blocs de A (lecture seule) ---
     @property
@@ -309,7 +305,7 @@ class ParamPKF:
         self._update_mQ_views()
         self._update_Sigma_from_A_mQ()
         self._check_consistency()
-        logger.info("[ParamPKF] mQ mis à jour")
+        logger.info("[ParamPKF] ✅ mQ matrix updated")
     # --- Sous-blocs de mQ (lecture seule) ---
     @property
     def Q_xx(self): return self._mQ_xx
@@ -333,31 +329,30 @@ class ParamPKF:
 
         print("=== ParamPKF Summary ===")
         print(f"dim_x={self.dim_x}, dim_y={self.dim_y}, verbose={self.verbose}\n")
-        print("A:\n", fmt(self.A))
-        print("mQ:\n", fmt(self.mQ))
+        print("A:\n",      fmt(self.A))
+        print("mQ:\n",    fmt(self.mQ))
         print("Sigma:\n", fmt(self._Sigma))
         if self.verbose>0:
             print("========================")
-            print("Q1:\n", fmt(self._Q1))
-            print("Q2:\n", fmt(self._Q2))
+            print("  Q1:\n  ",  fmt(self._Q1))
+            print("  Q2:\n  ",  fmt(self._Q2))
             print("========================")
-            print("sxx:\n", fmt(self._sxx))
-            print("syy:\n", fmt(self._syy))
-            print("a:\n", fmt(self._a))
-            print("b:\n", fmt(self._b))
-            print("c:\n", fmt(self._c))
-            print("d:\n", fmt(self._d))
-            print("e:\n", fmt(self._e))
+            print("  sxx:\n  ", fmt(self._sxx))
+            print("  syy:\n  ", fmt(self._syy))
+            print("  a:\n  ",   fmt(self._a))
+            print("  b:\n  ",   fmt(self._b))
+            print("  c:\n  ",   fmt(self._c))
+            print("  d:\n  ",   fmt(self._d))
+            print("  e:\n  ",   fmt(self._e))
             print("========================")
-        if self.verbose>1:
-            print("A = np.array(",  repr(self.A.tolist()), ')')
+        if self.verbose>1: # pret a être copié dans du code python
+            print("A  = np.array(",  repr(self.A.tolist()), ')')
             print("mQ = np.array(", repr(self.mQ.tolist()), ')')
         # self._check_consistency()
-        
 
 
 # ----------------------------------------------------------------------
-# Exemple d'utilisation
+# Exemples d'utilisation
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
     verbose = 1
