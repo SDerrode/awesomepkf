@@ -88,6 +88,9 @@ class ParamPKF:
         self._A = np.array(A, dtype=float)
         if self._A.shape != (self.dim_xy, self.dim_xy):
             raise ValueError(f"⚠️ A doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
+        eigvals = np.linalg.eigvals(self._A)
+        if np.any(np.abs(eigvals) >= 1.0):
+            logger.warning(f"⚠️ Certaines valeurs propres de A ont un module >= 1 : {eigvals}")
         self._update_A_views()
 
         self._mQ = np.array(mQ, dtype=float)
@@ -123,6 +126,7 @@ class ParamPKF:
             raise ValueError(f"⚠️ c doit être carrée de dimension ({self.dim_y},{self.dim_y})")
 
         self._update_A_mQ_from_Sigma()
+        self._check_consistency()
 
     def __repr__(self):
         return f"<ParamPKF(mode={self.mode}, dim_y={self.dim_y}, dim_x={self.dim_x}, verbose={self.verbose})>"
@@ -355,25 +359,25 @@ class ParamPKF:
 # Exemples d'utilisation
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
-    verbose = 2
+    verbose = 1
 
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    # from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_Sigma
-    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx1_dimy1_from_Sigma()
-    # param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-    # if verbose > 0:
-    #     param.summary()
+    from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_Sigma
+    dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx1_dimy1_from_Sigma()
+    param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
+    if verbose > 0:
+        param.summary()
     
     # ------------------------------------------------------------------
     # dim_x = dim_y = 1 - Test parameters for (A, mQ) parametrization
     # ------------------------------------------------------------------
-    from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_A_mQ
-    dim_x, dim_y, A, mQ = model_dimx1_dimy1_from_A_mQ()
-    param_A_mQ = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
-    if verbose > 0:
-      param_A_mQ.summary()
+    # from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_A_mQ
+    # dim_x, dim_y, A, mQ = model_dimx1_dimy1_from_A_mQ()
+    # param_A_mQ = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
+    # if verbose > 0:
+    #   param_A_mQ.summary()
 
     # ------------------------------------------------------------------
     # dim_x = dim_y = 2 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
