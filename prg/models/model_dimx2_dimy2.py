@@ -2,6 +2,7 @@ import numpy as np
 
 # Equivalent paramétrizations for dim_x, dim_y = 2, 2 
 
+# Homogeneous model
 def model_dimx2_dimy2_from_A_mQ():
 
     dim_x, dim_y = 2, 2
@@ -19,6 +20,8 @@ def model_dimx2_dimy2_from_A_mQ():
         [0.1698174706649283, 0.5678943937418514, 0.2719361147327249, 0.957513037809648]] )
     
     return dim_x, dim_y, A, mQ
+
+# Stationary model (equivalent to previous)
 
 def model_dimx2_dimy2_from_Sigma():
     

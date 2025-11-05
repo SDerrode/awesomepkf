@@ -3,6 +3,23 @@ import numpy as np
 # Equivalent paramétrizations for dim_x, dim_y = 1, 1
 
 
+# Homogeneous model
+def model_dimx1_dimy1_from_A_mQ_bis(): 
+    """La matrice A de cet exemple a une valeur propre supérieure à 1.
+        A n'est pas ergondique : pas de distribution stationnaire"""
+    
+    dim_x, dim_y = 1, 1
+    
+    A = np.array( [ [0.5813651,  0.22435528],
+                    [0.22435528, 1.1186349 ]] )
+    mQ = np.array( [[0.739010989010989, 0.27774725274725276], 
+                    [0.27774725274725276, 0.9968131868131868]] )
+
+    return dim_x, dim_y, A, mQ
+
+
+
+# Homogeneous model
 def model_dimx1_dimy1_from_A_mQ():
     
     dim_x, dim_y = 1, 1
@@ -14,6 +31,7 @@ def model_dimx1_dimy1_from_A_mQ():
 
     return dim_x, dim_y, A, mQ
 
+# Stationary model (equivalent to previous)
 def model_dimx1_dimy1_from_Sigma():
     
     dim_x, dim_y = 1, 1

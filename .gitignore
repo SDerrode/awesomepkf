@@ -1,10 +1,9 @@
 .DS_Store
 
 *.png
-*.mp4
-*.avi
 *.npy
 *.csv
+*.parquet
 
 /dataGenerated/historyTracker/*.pkl
 /dataGenerated/plot/*.png

@@ -19,6 +19,9 @@ def model_dimx3_dimy1_from_A_mQ():
     
     return dim_x, dim_y, A, mQ
 
+# Stationary model (equivalent to previous)
+
+# Homogeneous model
 def model_dimx3_dimy1_from_Sigma():
     
     dim_x, dim_y = 3, 1
