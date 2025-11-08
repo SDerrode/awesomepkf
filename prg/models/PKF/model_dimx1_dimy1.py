@@ -18,7 +18,6 @@ def model_dimx1_dimy1_from_A_mQ_bis():
     return dim_x, dim_y, A, mQ
 
 
-
 # Homogeneous model
 def model_dimx1_dimy1_from_A_mQ():
     

@@ -2,14 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Module PKF #########################################################
+Module UPKF #########################################################
 ####################################################################
-Implémente un filtre de Kalman couple (PKF) 
-  selon la formulation mathématique (Wojciech), ou
-  selon la formulation phsique (classique, avec expression du gain),
-  avec enregistrement optionnel.
-Un exemple d'usage est donné dans le programme principal ci-dessous,
-qui compare les 2 implémentations (mêmes résultats attendus).
+Implémente un filtre de Kalman couple Unscented (UPKF) 
 ####################################################################
 """
 
@@ -25,8 +20,8 @@ import numpy as np
 
 # A few utils functions that are used several times
 from others.Utils import rmse, file_data_generator
-# Manage parameters for the PKF
-from classes.ParamPKF import ParamPKF
+# Manage parameters for the UPKF
+from classes.ParamUPKF import ParamUPKF
 # Keep trace of execution (all parameters at all iterations)
 from classes.HistoryTracker import HistoryTracker
 # To manage the seed for random generation
@@ -39,18 +34,18 @@ logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class PKF:
-    """Implementation of PKF according to the mathematical and classical formulations."""
+class UPKF:
+    """Implementation of UPKF."""
 
     def __init__(
         self,
-        param: ParamPKF,
+        param: ParamUPKF,
         sKey: Optional[int] = None,
         save_pickle: bool = False,
         verbose: int = 0):
         
-        if not isinstance(param, ParamPKF):
-            raise TypeError("param msut be an object from class ParamPKF")
+        if not isinstance(param, ParamUPKF):
+            raise TypeError("param must be an object from class ParamUPKF")
         if not ((isinstance(sKey, int) and sKey > 0) or sKey is None):
             raise ValueError("sKey must be None or a number>0")
         if not isinstance(save_pickle, bool):
@@ -70,7 +65,7 @@ class PKF:
         self._set_log_level()
 
         if self.verbose >= 1:
-            logger.info(f"[PKF] Init with sKey={sKey}, verbose={verbose}, save_pickle={save_pickle}")
+            logger.info(f"[UPKF] Init with sKey={sKey}, verbose={verbose}, save_pickle={save_pickle}")
 
 
     # ------------------------------------------------------------------
@@ -120,8 +115,6 @@ class PKF:
                 self._seed_gen.rng.multivariate_normal(mean=mu0, cov=mQ).reshape(-1,1)
             yield k, np.split(Zkp1_simul, [dimx])
 
-
-    
     # ------------------------------------------------------------------
     # Vérification de cohérence
     # ------------------------------------------------------------------
@@ -177,9 +170,9 @@ class PKF:
         # else:
         #     logger.info(f"✅ Toutes les matrices ({', '.join(names)}) sont identiques.")
 
-    def process_pkf(self, N=None, data_generator=None):
+    def process_upkf(self, N=None, data_generator=None):
         """
-        Generator of PKF filter (mathematic and physicist formulations).
+        Generator of UPKF filter.
         It makes use of data generator called _data_generation().
         """
         
@@ -242,21 +235,21 @@ class PKF:
 
             # Prediction
             Xkp1_predict, Ykp1_predict = np.split(A @ temp1, [dimx]) # Zkp1_predict = A @ temp1
-            Pkp1_predict               = A @ temp2 @ A.T + mQ
-            # Cutting Pkp1 into 4 blocks
+            Pkp1_predict = A @ temp2 @ A.T + mQ
+            # Cutting into 4 blocks
             M_top, M_bottom                = np.vsplit(Pkp1_predict, [dimx])
-            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,        [dimx])
-            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom,     [dimx])
+            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,    [dimx])
+            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom, [dimx])
 
             #######################################
             # Update with a new observation
             #######################################
             
-            # Get new observation from the data generator
+            # Get new obervation from the data generator
             try:
                 k, (xkp1, ykp1) = next(generator) # parenthesis is used to flatten the list of two elements
             except StopIteration:
-                # generator qui fournit les données est terminé, on arrête alors process_pkf
+                # generator qui fournit les données est terminé, on arrête alors process_upkf
                 return
 
             # Updating with mathematical formulation
@@ -281,7 +274,7 @@ class PKF:
             Xkp1_update   = Xkp1_predict + Kkp1 @ ikp1
             PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
             # Dans la forme de Joseph, j'utilise les sous matrices de mQ, qui ne sont pas des matrices mais des ActiveView.
-            # pour revenir à un forme np.ndarray, j'utilise l'opérateur value (méthode définie dans la classe ActiveView de ParamPKF.py)
+            # pour revenir à un forme np.ndarray, j'utilise l'opérateur value (méthode définie dans la classe ActiveView de ParamUPKF.py)
             PXXkp1_update_Joseph =  (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value) @ PXXk_update @ (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value).T \
                 + self.param.Q_xx.value - Kkp1 @ self.param.Q_yx.value - self.param.Q_xy.value @ Kkp1.T + Kkp1 @ self.param.Q_yy.value @ Kkp1.T
 
@@ -323,22 +316,22 @@ class PKF:
             yield xkp1, ykp1, Xkp1_update_math, Xkp1_update_phys
 
     def process_N_data(self, N, data_generator=None):
-        return list(self.process_pkf(N=N, data_generator=data_generator))
+        return list(self.process_upkf(N=N, data_generator=data_generator))
 
 
 
 if __name__ == "__main__":
     """
-    Exemple d'utilisation du PKF.
+    Exemple d'utilisation du UPKF.
     Pour exécuter :
-        python prg/PKF.py
+        python prg/UPKF.py
     """
     # ------------------------------------------------------------------
     # Constants
     # ------------------------------------------------------------------
     save_pickle = True
     verbose     = 0
-    N           = 5000
+    N           = 50
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -353,109 +346,65 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    from models.PKF.model_dimx1_dimy1 import model_dimx1_dimy1_from_Sigma
+    from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_Sigma
     dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx1_dimy1_from_Sigma()
-    param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
+    param = ParamUPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     if verbose > 0:
         param.summary()
-    
-    # ------------------------------------------------------------------
-    # dim_x = dim_y = 1 - Test parameters for (A, mQ) parametrization
-    # ------------------------------------------------------------------
-    # from models.PKF.model_dimx1_dimy1 import model_dimx1_dimy1_from_A_mQ
-    # dim_x, dim_y, A, mQ = model_dimx1_dimy1_from_A_mQ()
-    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
-    # if verbose > 0:
-    #     param.summary()
-
-    # ------------------------------------------------------------------
-    # dim_x = dim_y = 2 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
-    # ------------------------------------------------------------------
-    # from models.PKF.model_dimx2_dimy2 import model_dimx2_dimy2_from_Sigma
-    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx2_dimy2_from_Sigma()
-    # param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-    # if verbose > 0:
-    #   param.summary()
-    
-    # ------------------------------------------------------------------
-    # dim_x = dim_y = 2 - Test parameters for (A, mQ) parametrization
-    # ------------------------------------------------------------------
-    # from models.PKF.model_dimx2_dimy2 import model_dimx2_dimy2_from_A_mQ
-    # dim_x, dim_y, A, mQ = model_dimx2_dimy2_from_A_mQ()
-    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
-    # if verbose > 0:
-    #     param.summary()
-
-    # ------------------------------------------------------------------
-    # dim_x = 3, dim_y = 1 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
-    # ------------------------------------------------------------------
-    # from models.PKF.model_dimx3_dimy1 import model_dimx3_dimy1_from_Sigma
-    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx3_dimy1_from_Sigma()
-    # param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-    # if verbose > 0:
-    #     param.summary()
-    
-    # ------------------------------------------------------------------
-    # dim_x = 3, dim_y = 1 - Test parameters for (A, mQ) parametrization
-    # ------------------------------------------------------------------
-    # from models.PKF.model_dimx3_dimy1 import model_dimx3_dimy1_from_A_mQ
-    # dim_x, dim_y, A, mQ = model_dimx3_dimy1_from_A_mQ()
-    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
-    # if verbose > 0:
-    #     param.summary()
 
 
     # ------------------------------------------------------------------
     # Let's go
     # ------------------------------------------------------------------
 
-    print("\nPKF filtering with data generated from a PKF... ")
+    print("\nUPKF filtering with data generated from a UPKF... ")
     sKey  = 41
-    pkf_1 = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
+    upkf_1 = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     # Call with the default data simulator generator
-    listePKF_1 = pkf_1.process_N_data(N=N)
+    listeUPKF_1 = upkf_1.process_N_data(N=N)
 
-    # Calcul du RMSE entre le simulé et l'estimation math, et entre le simulé et l'estimation phys.
-    first_arrays  = np.vstack([t[0] for t in listePKF_1])
-    third_arrays  = np.vstack([t[2] for t in listePKF_1])
-    fourth_arrays = np.vstack([t[3] for t in listePKF_1])
+    # Calcul du RMSE entre le simulé et l'estimation
+    first_arrays  = np.vstack([t[0] for t in listeUPKF_1])
+    third_arrays  = np.vstack([t[2] for t in listeUPKF_1])
     # Calcul du RMSE global
-    print(f"RMSE (X, Esp[X]_math) : {rmse(first_arrays, third_arrays)}")
-    print(f"RMSE (X, Esp[X]_phys) : {rmse(first_arrays, fourth_arrays)}")
+    print(f"RMSE (X, Esp[X]) : {rmse(first_arrays, third_arrays)}")
     
-    if save_pickle and pkf_1.history is not None:
-        df = pkf_1.history.as_dataframe()
+    if save_pickle and upkf_1.history is not None:
+        df = upkf_1.history.as_dataframe()
         if verbose > 0:
-            print("\nExtract of the resulting filtering with PKF :")
+            print("\nExtract of the resulting filtering with UPKF :")
             print(df.head())
             # print(df.info())
 
         # pickle storing and plots
-        pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
-        pkf_1.history.plot(list_param=["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
-                           list_label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
-                           basename='pkf_1', \
-                           show=False, base_dir=graph_dir)
-
-    # # datafile = 'data_dim2x2.parquet'
-    # datafile = 'data_dim1x1.csv'
-    # print("\nPKF filtering with data generated from a file... ")
-    # pkf_2 = PKF(param, save_pickle=save_pickle, verbose=verbose)
-    # # Call with the fila as data generator
+        upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
+        upkf_1.history.plot(list_param=["xkp1", "Xkp1_update"], \
+                            list_label=["X - Ground Truth", "X - Filtered"], \
+                            basename='upkf_1', \
+                            show=False, base_dir=graph_dir)
+        
+    
+    
+    # datafile = 'data_dim2x2.parquet'
+    # #datafile = 'data_dim1x1.csv'
+    # print("\nUPKF filtering with data generated from a file... ")
+    # upkf_2 = UPKF(param, save_pickle=save_pickle, verbose=verbose)
+    # # Call with a fil as data generator
     # filename = os.path.join(datafile_dir, datafile)
-    # listePKF_2 = pkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, verbose))
-    # # print(f'listePKF_2={listePKF_2}')
+    # listeUPKF_2 = upkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, verbose))
+    # # print(f'listeUPKF_2={listeUPKF_2}')
 
-    # if save_pickle and pkf_2.history is not None:
-    #     df = pkf_2.history.as_dataframe()
+    # if save_pickle and upkf_2.history is not None:
+    #     df = upkf_2.history.as_dataframe()
     #     if verbose > 0:
-    #         print("\nExtract of the resulting filtering with PKF :")
+    #         print("\nExtract of the resulting filtering with UPKF :")
     #         print(df.head())
     #         # print(df.info())
 
     #     # pickle storing and plots
-    #     pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
-    #     pkf_2.history.plot(list_param=["xkp1", "Xkp1_update_math","Xkp1_update_phys"], \
-    #                        list_label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
-    #                        basename='pkf_2', \
+    #     upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_2.pkl"))
+    #     upkf_2.history.plot(list_param=["xkp1", "Xkp1_update"], \
+    #                        list_label=["X - Ground Truth", "X - Filtered"], \
+    #                        basename='upkf_2', \
     #                        show=False, base_dir=graph_dir)
+
