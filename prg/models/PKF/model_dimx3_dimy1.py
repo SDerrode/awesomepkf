@@ -2,7 +2,7 @@ import numpy as np
 
 # Equivalent paramétrizations for dim_x, dim_y = 3, 1
 
-def model_dimx3_dimy1_from_A_mQ():
+def model_dim_x3_dim_y1_from_A_mQ():
     
     dim_x, dim_y = 3, 1
     
@@ -17,12 +17,15 @@ def model_dimx3_dimy1_from_A_mQ():
         [0.21131687242798355, 0.14120370370370378, 0.6734053497942387, 0.41944444444444445],
         [0.6555555555555556, 0.22500000000000003, 0.4194444444444445, 0.8500000000000001]] )
     
-    return dim_x, dim_y, A, mQ
+    z00 = np.zeros(shape=(dim_x+dim_y, 1))
+    Pz00 = np.eye(dim_x+dim_y)
+
+    return dim_x, dim_y, A, mQ, z00, Pz00
 
 # Stationary model (equivalent to previous)
 
 # Homogeneous model
-def model_dimx3_dimy1_from_Sigma():
+def model_dim_x3_dim_y1_from_Sigma():
     
     dim_x, dim_y = 3, 1
     

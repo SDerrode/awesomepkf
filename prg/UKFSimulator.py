@@ -93,7 +93,7 @@ class UKFSimulator:
         """Vérifie que P est bien définie positive"""
         eig = np.linalg.eigvals(self.P)
         if np.any(eig <= 0):
-            print("⚠️ Covariance non dPSD...")
+            print("⚠️ Covariance non PSD...")
             self.P = (self.P + self.P.T) / 2
             min_eig = np.min(np.real(eig))
             self.P += np.eye(self.n) * abs(min_eig) * 1.01

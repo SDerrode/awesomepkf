@@ -4,9 +4,10 @@ import numpy as np
 
 
 # Homogeneous model
-def model_dimx1_dimy1_from_A_mQ_bis(): 
-    """La matrice A de cet exemple a une valeur propre supérieure à 1.
-        A n'est pas ergondique : pas de distribution stationnaire"""
+def model_dim_x1_dim_y1_from_A_mQ_bis(): 
+    """The A matrix got a VP>1.
+       A is not ergodic, with no stationary distribution.
+    """
     
     dim_x, dim_y = 1, 1
     
@@ -14,12 +15,14 @@ def model_dimx1_dimy1_from_A_mQ_bis():
                     [0.22435528, 1.1186349 ]] )
     mQ = np.array( [[0.739010989010989, 0.27774725274725276], 
                     [0.27774725274725276, 0.9968131868131868]] )
+    z00 = np.zeros(shape=(dim_x+dim_y, 1))
+    Pz00 = np.eye(dim_x+dim_y)
 
-    return dim_x, dim_y, A, mQ
+    return dim_x, dim_y, A, mQ, z00, Pz00
 
 
 # Homogeneous model
-def model_dimx1_dimy1_from_A_mQ():
+def model_dim_x1_dim_y1_from_A_mQ():
     
     dim_x, dim_y = 1, 1
     
@@ -27,11 +30,13 @@ def model_dimx1_dimy1_from_A_mQ():
                    [0.04175824175824177, 0.027472527472527472]] )
     mQ = np.array( [[0.739010989010989, 0.27774725274725276], 
                     [0.27774725274725276, 0.9968131868131868]] )
+    z00 = np.zeros(shape=(dim_x+dim_y, 1))
+    Pz00 = np.eye(dim_x+dim_y)
 
-    return dim_x, dim_y, A, mQ
+    return dim_x, dim_y, A, mQ, z00, Pz00
 
 # Stationary model (equivalent to previous)
-def model_dimx1_dimy1_from_Sigma():
+def model_dim_x1_dim_y1_from_Sigma():
     
     dim_x, dim_y = 1, 1
     

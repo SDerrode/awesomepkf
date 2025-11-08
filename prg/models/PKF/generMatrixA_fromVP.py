@@ -17,4 +17,4 @@ A = Q @ D @ Q.T
 vals = np.linalg.eigvals(A)
 print("Matrice A :\n", A)
 print("Valeurs propres :", vals)
-print("Au moins une valeur propre > 1 :", np.any(vals > 1))
+print("Au moins une valeur propre>1 :", np.any(vals > 1))

@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 
 
 def rmse(X1, X2):
-    X1 = np.asarray(X1).ravel()  # Aplatir en 1D
+    X1 = np.asarray(X1).ravel()  # Applatir en 1D
     X2 = np.asarray(X2).ravel()
     if X1.shape != X2.shape:
-        raise ValueError(f" Les arrays doivent avoir la même forme : {X1.shape} vs {X2.shape}")
+        raise ValueError(f"❌ Arrays must have the same shape : {X1.shape} vs {X2.shape}")
     mse = np.mean((X1 - X2)**2)
     return np.sqrt(mse)
 
-def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose : int = 0):
+def read_unknown_file(filepath: str, nrows_detect: int=500, verbose : int=0):
     """
     Lecture robuste d'un fichier de données en devinant :
     - le format (csv, parquet, json, excel…)
@@ -96,15 +96,67 @@ def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose : int = 0)
 
 def file_data_generator(filename: str, dim_x: int, verbose :int = 0):
     """
-    Générateur qui lit les données d'un DataFrame pandas.
-    Suppose que df contient au moins dim_x + dim_y colonnes (x puis y).
+    This generator read data from a Pandas DataFrame.
+    Suppose that df contains at least dim_x + dim_y columns (first x, then y).
     """
 
     df = read_unknown_file(filename, verbose=verbose)
-    
     for k, row in df.iterrows():
         values     = row.values.reshape(-1, 1)
         xkp1, ykp1 = np.split(values, [dim_x])
         yield k, (xkp1, ykp1)
-        
-        
+
+# ------------------------------------------------------------------
+# Vérification de cohérence
+# ------------------------------------------------------------------
+def check_consistency(**kwargs):
+    """Check the consistency of the matrices (Positive Semi-Definite)."""
+    
+    tol = 1e-12
+    for name, M in kwargs.items():
+        if not np.allclose(M, M.T, atol=tol):
+            logger.warning(f"⚠️ {name} matrix is not symmetrical")
+        eigvals = np.linalg.eigvals(M)
+        if np.any(eigvals < -tol):
+            logger.warning(f"⚠️ {name} matrix is not PSD (min eig = {eigvals.min():.3e})")
+        logger.debug(f"Eig of {name} matrix: {eigvals}")
+
+def check_equality(**kwargs):
+    """
+    Check that all matrices passed in **kwargs are pairwise identical.
+    """
+
+    # Aucun argument fourni → on avertit
+    if len(kwargs) < 2:
+        logger.warning("⚠️ _check_equality : need 2 matrices at least.")
+        return
+
+    # Liste des noms et matrices
+    names = list(kwargs.keys())
+    matrices = list(kwargs.values())
+
+    # Vérifie les dimensions d'abord
+    shapes = [m.shape for m in matrices]
+    if len(set(shapes)) != 1:
+        logger.warning(f"⚠️ Matrices are not identically shaped ! {shapes}")
+        return
+
+    # Vérification 2 à 2
+    ref       = matrices[0]
+    ref_name  = names[0]
+    tol       = 1e-10
+    all_equal = True
+
+    for name, M in zip(names[1:], matrices[1:]):
+        if not np.allclose(ref, M, atol=tol, rtol=tol):
+            diff_norm = np.linalg.norm(ref - M)
+            logger.warning(f"⚠️ Matrices '{ref_name}' and '{name}' are diffsrent (‖Δ‖={diff_norm:.3e}).")
+            all_equal = False
+        # else:
+        #     logger.info(f"✅ '{ref_name}' et '{name}' sont identiques (tol={tol}).")
+
+    if not all_equal:
+        logger.warning("⚠️ Some matrices are diffrent — see message above.")
+        input('Waiting for you!')
+    # else:
+    #     logger.info(f"✅ Toutes les matrices ({', '.join(names)}) sont identiques.")
