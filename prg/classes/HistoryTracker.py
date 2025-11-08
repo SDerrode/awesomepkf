@@ -123,7 +123,7 @@ class HistoryTracker:
         # Data focus
         y_values = df[list_param]
         x = df[iter_key] if iter_key in df.columns else df.index
-        # Compute the number of components (should be equal to dimx)
+        # Compute the number of components (should be equal to dim_x)
         nb_components = y_values[list_param[0]].iloc[0].shape[0]
         # print(f'nb_components={nb_components}')
 

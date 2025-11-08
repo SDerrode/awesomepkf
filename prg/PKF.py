@@ -24,7 +24,7 @@ from typing import Generator, Optional, Tuple
 import numpy as np
 
 # A few utils functions that are used several times
-from others.Utils import rmse, file_data_generator
+from others.Utils import rmse, file_data_generator, check_consistency, check_equality
 # Manage parameters for the PKF
 from classes.ParamPKF import ParamPKF
 # Keep trace of execution (all parameters at all iterations)
@@ -106,76 +106,25 @@ class PKF:
         This generator can be replaced by a some data acquired in real-time.
         """
         # Short-cuts
-        mu0, A, mQ, dimx = self.param.mu0, self.param.A, self.param.mQ, self.param.dim_x
+        z00, Pz00, A, mQ, dim_x = self.param.z00, self.param.Pz00, self.param.A, self.param.mQ, self.param.dim_x
 
         # The first
         k = 0
-        Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=mu0, cov=self.param.Q1).reshape(-1,1)
-        yield k, np.split(Zkp1_simul, [dimx])
+        Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
+        yield k, np.split(Zkp1_simul, [dim_x])
 
         # The next...
+        zerosvector = np.zeros(shape=self.param.dim_x+self.param.dim_y)
         while N is None or k < N:
             k += 1
             Zkp1_simul = A @ Zkp1_simul + \
-                self._seed_gen.rng.multivariate_normal(mean=mu0, cov=mQ).reshape(-1,1)
-            yield k, np.split(Zkp1_simul, [dimx])
+                self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1)
+            yield k, np.split(Zkp1_simul, [dim_x])
 
 
-    
     # ------------------------------------------------------------------
     # Vérification de cohérence
     # ------------------------------------------------------------------
-    def _check_consistency(self, **kwargs):
-        """Check the consistency of the matrices (Positive Semi-Definite)."""
-        
-        tol = 1e-12
-        for name, M in kwargs.items():
-            if not np.allclose(M, M.T, atol=tol):
-                logger.warning(f"⚠️ {name} matrix is not symmetrical")
-            eigvals = np.linalg.eigvals(M)
-            if np.any(eigvals < -tol):
-                logger.warning(f"⚠️ {name} matrix is not positive semi-definite (min eig = {eigvals.min():.3e})")
-            logger.debug(f"Eig of {name} matrix: {eigvals}")
-
-    def _check_equality(self, **kwargs):
-        """
-        Check that all matrices passed in **kwargs are pairwise identical.
-        """
-
-        # Aucun argument fourni → on avertit
-        if len(kwargs) < 2:
-            logger.warning("⚠️ _check_equality : nee 2 matrices at least.")
-            return
-
-        # Liste des noms et matrices
-        names = list(kwargs.keys())
-        matrices = list(kwargs.values())
-
-        # Vérifie les dimensions d'abord
-        shapes = [m.shape for m in matrices]
-        if len(set(shapes)) != 1:
-            logger.warning(f"⚠️ Matrices are not identically shaped ! {shapes}")
-            return
-
-        # Vérification 2 à 2
-        ref       = matrices[0]
-        ref_name  = names[0]
-        tol       = 1e-10
-        all_equal = True
-
-        for name, M in zip(names[1:], matrices[1:]):
-            if not np.allclose(ref, M, atol=tol, rtol=tol):
-                diff_norm = np.linalg.norm(ref - M)
-                logger.warning(f"⚠️ Les matrices '{ref_name}' et '{name}' diffèrent (‖Δ‖={diff_norm:.3e}).")
-                all_equal = False
-            # else:
-            #     logger.info(f"✅ '{ref_name}' et '{name}' sont identiques (tol={tol}).")
-
-        if not all_equal:
-            logger.warning("⚠️ Certaines matrices diffèrent — voir messages ci-dessus.")
-            input('Waiting for you!')
-        # else:
-        #     logger.info(f"✅ Toutes les matrices ({', '.join(names)}) sont identiques.")
 
     def process_pkf(self, N=None, data_generator=None):
         """
@@ -191,7 +140,7 @@ class PKF:
 
         # Short-cuts
         A, mQ             = self.param.A, self.param.mQ
-        dimx, dimy, dimxy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
+        dim_x, dim_y, dim_xy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
 
         # The first
         ###################
@@ -205,30 +154,31 @@ class PKF:
         PXXkp1_update = self.param.sxx - temp @ self.param.b
 
         # Check if cov matrices are indeed cov matrices!
-        self._check_consistency(PXXkp1_update=PXXkp1_update)
+        check_consistency(PXXkp1_update=PXXkp1_update)
 
         # Store if save_pickle==True
+        Xkp1_predict = np.zeros(shape=(dim_x, 1))
         if self.save_pickle and self._history is not None:
             self._history.record(   iter                 = k,
                                     xkp1                 = xkp1.copy(),
                                     ykp1                 = ykp1.copy(),
-                                    Xkp1_predict         = np.zeros(shape=(dimx, 1)),      # il n'y a pas de prédiction pour la premier
-                                    Pkp1_predict         = np.eye(dimx),                   # il n'y a pas de prédiction pour la premier
-                                    ikp1                 = np.zeros(shape=(dimy, 1)),      # il n'y a pas de prédiction pour la premier
-                                    Skp1                 = np.eye(dimy),                   # il n'y a pas de prédiction pour la premier
-                                    Kkp1                 = np.zeros(shape=(dimx, dimy)),   # il n'y a pas de prédiction pour la premier
+                                    Xkp1_predict         = Xkp1_predict,                    # il n'y a pas de prédiction pour la premier
+                                    Pkp1_predict         = np.eye(dim_x),                   # il n'y a pas de prédiction pour la premier
+                                    ikp1                 = np.zeros(shape=(dim_y, 1)),      # il n'y a pas de prédiction pour la premier
+                                    Skp1                 = np.eye(dim_y),                   # il n'y a pas de prédiction pour la premier
+                                    Kkp1                 = np.zeros(shape=(dim_x, dim_y)),  # il n'y a pas de prédiction pour la premier
                                     Xkp1_update_math     = Xkp1_update.copy(),
                                     PXXkp1_update_math   = PXXkp1_update.copy(),
                                     Xkp1_update_phys     = Xkp1_update.copy(),
                                     PXXkp1_update_phys   = PXXkp1_update.copy(),
                                     PXXkp1_update_Joseph = PXXkp1_update.copy())
         
-        yield xkp1, ykp1, Xkp1_update, Xkp1_update
+        yield xkp1, ykp1, Xkp1_predict, Xkp1_update, Xkp1_update
 
         ###################
         # The next
 
-        temp2 = np.zeros(shape=(dimxy, dimxy))
+        temp2 = np.zeros(shape=(dim_xy, dim_xy))
         while N is None or k < N:
             
             # nécessaire pour la forme de Joseph
@@ -238,15 +188,15 @@ class PKF:
             # Prediction
             #######################################
             temp1 = np.vstack((Xkp1_update, ykp1)) # here ykp1 still gives the previous : it is yk indeed!
-            temp2[0:dimx, 0:dimx] = PXXkp1_update
+            temp2[0:dim_x, 0:dim_x] = PXXkp1_update
 
             # Prediction
-            Xkp1_predict, Ykp1_predict = np.split(A @ temp1, [dimx]) # Zkp1_predict = A @ temp1
+            Xkp1_predict, Ykp1_predict = np.split(A @ temp1, [dim_x]) # Zkp1_predict = A @ temp1
             Pkp1_predict               = A @ temp2 @ A.T + mQ
             # Cutting Pkp1 into 4 blocks
-            M_top, M_bottom                = np.vsplit(Pkp1_predict, [dimx])
-            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,        [dimx])
-            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom,     [dimx])
+            M_top, M_bottom                = np.vsplit(Pkp1_predict, [dim_x])
+            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,        [dim_x])
+            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom,     [dim_x])
 
             #######################################
             # Update with a new observation
@@ -280,29 +230,29 @@ class PKF:
             # Updating expectation and variance, and variance in Joseph form
             Xkp1_update   = Xkp1_predict + Kkp1 @ ikp1
             PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
-            # Dans la forme de Joseph, j'utilise les sous matrices de mQ, qui ne sont pas des matrices mais des ActiveView.
+            # Dans la forme de Joseph, j'utilise les sous-matrices de mQ, qui ne sont pas des matrices mais des ActiveView.
             # pour revenir à un forme np.ndarray, j'utilise l'opérateur value (méthode définie dans la classe ActiveView de ParamPKF.py)
             PXXkp1_update_Joseph =  (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value) @ PXXk_update @ (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value).T \
-                + self.param.Q_xx.value - Kkp1 @ self.param.Q_yx.value - self.param.Q_xy.value @ Kkp1.T + Kkp1 @ self.param.Q_yy.value @ Kkp1.T
+                + self.param.mQ_xx.value - Kkp1 @ self.param.mQ_yx.value - self.param.mQ_xy.value @ Kkp1.T + Kkp1 @ self.param.mQ_yy.value @ Kkp1.T
 
             Xkp1_update_phys          = Xkp1_update.copy()
             PXXkp1_update_phys        = PXXkp1_update.copy()
             PXXkp1_update_Joseph_phys = PXXkp1_update_Joseph.copy()
-            
+
             # Check if cov matrices are indeed cov matrices!
-            self._check_consistency(Pkp1_predict         = Pkp1_predict, 
-                                    Skp1                 = Skp1, 
-                                    PXXkp1_update_math   = PXXkp1_update_math,
-                                    PXXkp1_update_phys   = PXXkp1_update_phys,
-                                    PXXkp1_update_Joseph = PXXkp1_update_Joseph)
+            check_consistency(Pkp1_predict         = Pkp1_predict, 
+                              Skp1                 = Skp1, 
+                              PXXkp1_update_math   = PXXkp1_update_math,
+                              PXXkp1_update_phys   = PXXkp1_update_phys,
+                              PXXkp1_update_Joseph = PXXkp1_update_Joseph)
             # Check if all cov matrices are identical
-            self._check_equality(   PXXkp1_update_math   = PXXkp1_update_math,
-                                    PXXkp1_update_phys   = PXXkp1_update_phys,
-                                    PXXkp1_update_Joseph = PXXkp1_update_Joseph)
-            
+            check_equality(   PXXkp1_update_math   = PXXkp1_update_math,
+                              PXXkp1_update_phys   = PXXkp1_update_phys,
+                              PXXkp1_update_Joseph = PXXkp1_update_Joseph)
+
             # Check if all expectations vectors are identical
-            self._check_equality(   Xkp1_update_math     = Xkp1_update_math,
-                                    Xkp1_update_phys     = Xkp1_update_phys)
+            check_equality(   Xkp1_update_math     = Xkp1_update_math,
+                              Xkp1_update_phys     = Xkp1_update_phys)
 
             # Store if save_pickle==True
             if self.save_pickle and self._history is not None:
@@ -310,7 +260,7 @@ class PKF:
                                      xkp1                 = xkp1.copy(),
                                      ykp1                 = ykp1.copy(),
                                      Xkp1_predict         = Xkp1_predict,
-                                     Pkp1_predict         = Pkp1_predict,
+                                     PXXkp1_predict       = PXXkp1_predict,
                                      ikp1                 = ikp1.copy(),
                                      Skp1                 = Skp1.copy(),
                                      Kkp1                 = Kkp1.copy(),
@@ -320,7 +270,7 @@ class PKF:
                                      PXXkp1_update_phys   = PXXkp1_update_phys,
                                      PXXkp1_update_Joseph = PXXkp1_update_Joseph)
 
-            yield xkp1, ykp1, Xkp1_update_math, Xkp1_update_phys
+            yield xkp1, ykp1, Xkp1_predict, Xkp1_update_math, Xkp1_update_phys
 
     def process_N_data(self, N, data_generator=None):
         return list(self.process_pkf(N=N, data_generator=data_generator))
@@ -353,8 +303,8 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    from models.PKF.model_dimx1_dimy1 import model_dimx1_dimy1_from_Sigma
-    dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx1_dimy1_from_Sigma()
+    from models.PKF.model_dimx1_dimy1 import model_dim_x1_dim_y1_from_Sigma
+    dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dim_x1_dim_y1_from_Sigma()
     param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     if verbose > 0:
         param.summary()
@@ -362,45 +312,45 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # dim_x = dim_y = 1 - Test parameters for (A, mQ) parametrization
     # ------------------------------------------------------------------
-    # from models.PKF.model_dimx1_dimy1 import model_dimx1_dimy1_from_A_mQ
-    # dim_x, dim_y, A, mQ = model_dimx1_dimy1_from_A_mQ()
-    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
+    # from models.PKF.model_dimx1_dimy1 import model_dim_x1_dim_y1_from_A_mQ
+    # dim_x, dim_y, A, mQ, z00, Pz00 = model_dim_x1_dim_y1_from_A_mQ()
+    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
     # if verbose > 0:
-    #     param.summary()
+    #   param.summary()
 
-    # ------------------------------------------------------------------
-    # dim_x = dim_y = 2 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
-    # ------------------------------------------------------------------
-    # from models.PKF.model_dimx2_dimy2 import model_dimx2_dimy2_from_Sigma
-    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx2_dimy2_from_Sigma()
+    # # ------------------------------------------------------------------
+    # # dim_x = dim_y = 2 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
+    # # ------------------------------------------------------------------
+    # from models.PKF.model_dimx2_dimy2 import model_dim_x2_dim_y2_from_Sigma
+    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dim_x2_dim_y2_from_Sigma()
     # param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     # if verbose > 0:
     #   param.summary()
     
-    # ------------------------------------------------------------------
-    # dim_x = dim_y = 2 - Test parameters for (A, mQ) parametrization
-    # ------------------------------------------------------------------
-    # from models.PKF.model_dimx2_dimy2 import model_dimx2_dimy2_from_A_mQ
-    # dim_x, dim_y, A, mQ = model_dimx2_dimy2_from_A_mQ()
-    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
+    # # ------------------------------------------------------------------
+    # # dim_x = dim_y = 2 - Test parameters for (A, mQ) parametrization
+    # # ------------------------------------------------------------------
+    # from models.PKF.model_dimx2_dimy2 import model_dim_x2_dim_y2_from_A_mQ
+    # dim_x, dim_y, A, mQ, z00, Pz00 = model_dim_x2_dim_y2_from_A_mQ()
+    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
     # if verbose > 0:
-    #     param.summary()
+    #   param.summary()
 
-    # ------------------------------------------------------------------
-    # dim_x = 3, dim_y = 1 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
-    # ------------------------------------------------------------------
-    # from models.PKF.model_dimx3_dimy1 import model_dimx3_dimy1_from_Sigma
-    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx3_dimy1_from_Sigma()
+    # # ------------------------------------------------------------------
+    # # dim_x = 3, dim_y = 1 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
+    # # ------------------------------------------------------------------
+    # from models.PKF.model_dimx3_dimy1 import model_dim_x3_dim_y1_from_Sigma
+    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dim_x3_dim_y1_from_Sigma()
     # param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     # if verbose > 0:
     #     param.summary()
     
-    # ------------------------------------------------------------------
-    # dim_x = 3, dim_y = 1 - Test parameters for (A, mQ) parametrization
-    # ------------------------------------------------------------------
-    # from models.PKF.model_dimx3_dimy1 import model_dimx3_dimy1_from_A_mQ
-    # dim_x, dim_y, A, mQ = model_dimx3_dimy1_from_A_mQ()
-    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
+    # # ------------------------------------------------------------------
+    # # dim_x = 3, dim_y = 1 - Test parameters for (A, mQ) parametrization
+    # # ------------------------------------------------------------------
+    # from models.PKF.model_dimx3_dimy1 import model_dim_x3_dim_y1_from_A_mQ
+    # dim_x, dim_y, A, mQ, z00, Pz00 = model_dim_x3_dim_y1_from_A_mQ()
+    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
     # if verbose > 0:
     #     param.summary()
 
@@ -419,9 +369,11 @@ if __name__ == "__main__":
     first_arrays  = np.vstack([t[0] for t in listePKF_1])
     third_arrays  = np.vstack([t[2] for t in listePKF_1])
     fourth_arrays = np.vstack([t[3] for t in listePKF_1])
+    fith_arrays   = np.vstack([t[4] for t in listePKF_1])
     # Calcul du RMSE global
-    print(f"RMSE (X, Esp[X]_math) : {rmse(first_arrays, third_arrays)}")
-    print(f"RMSE (X, Esp[X]_phys) : {rmse(first_arrays, fourth_arrays)}")
+    print(f"RMSE (X, Esp[X] pred) : {rmse(first_arrays, third_arrays)}")
+    print(f"RMSE (X, Esp[X]_math) : {rmse(first_arrays, fourth_arrays)}")
+    print(f"RMSE (X, Esp[X]_phys) : {rmse(first_arrays, fith_arrays)}")
     
     if save_pickle and pkf_1.history is not None:
         df = pkf_1.history.as_dataframe()
