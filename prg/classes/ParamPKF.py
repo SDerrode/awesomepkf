@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import path, sys
+directory = path.Path(__file__)
+print(directory.parent)
+sys.path.append(directory.parent.parent)
+
 import logging
 import warnings
 from typing import Callable, Any
@@ -8,10 +13,6 @@ from typing import Callable, Any
 import numpy as np
 from scipy.linalg import solve_discrete_lyapunov
 
-import path, sys
-directory = path.Path(__file__)
-print(directory.parent)
-sys.path.append(directory.parent.parent)
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -22,6 +23,46 @@ logger = logging.getLogger(__name__)
 # ----------------------------------------------------------------------
 # Classe ActiveView
 # ----------------------------------------------------------------------
+# class ActiveView:
+#     """
+#     Vue sur une sous-matrice de `parent_matrix`.
+#     Appelle `callback()` à chaque modification.
+#     """
+
+#     def __init__(self, parent_matrix: np.ndarray, rows, cols, callback: Callable[[], None]):
+#         self._parent   = parent_matrix
+#         self._rows     = rows
+#         self._cols     = cols
+#         self._callback = callback
+
+#     def __getitem__(self, key):
+#         return self._parent[self._rows, self._cols][key]
+
+#     def __setitem__(self, key, value):
+#         self._parent[self._rows, self._cols][key] = value
+#         self._callback()
+    
+#     def __sub__(self, other):
+#         if not isinstance(other, ActiveView):
+#             return NotImplemented  # permet à Python de gérer les autres cas
+        
+#         # Vérifie la compatibilité des dimensions
+#         if self.data.shape != other.data.shape:
+#             raise ValueError(f"Shape mismatch: {self.data.shape} vs {other.data.shape}")
+        
+#         # Soustraction élément par élément
+#         return ActiveView(self.data - other.data)
+
+#     def __repr__(self):
+#         return repr(self._parent[self._rows, self._cols])
+
+#     @property
+#     def value(self):
+#         return self._parent[self._rows, self._cols]
+
+import numpy as np
+from typing import Callable
+
 class ActiveView:
     """
     Vue sur une sous-matrice de `parent_matrix`.
@@ -29,24 +70,52 @@ class ActiveView:
     """
 
     def __init__(self, parent_matrix: np.ndarray, rows, cols, callback: Callable[[], None]):
-        self._parent = parent_matrix
-        self._rows = rows
-        self._cols = cols
+        self._parent   = parent_matrix
+        self._rows     = rows
+        self._cols     = cols
         self._callback = callback
 
+    def _submatrix(self):
+        """Retourne la sous-matrice correspondante, en gérant tous les types d'index."""
+        if isinstance(self._rows, (list, np.ndarray)) and isinstance(self._cols, (list, np.ndarray)):
+            return self._parent[np.ix_(self._rows, self._cols)]
+        else:
+            return self._parent[self._rows, self._cols]
+
     def __getitem__(self, key):
-        return self._parent[self._rows, self._cols][key]
+        return self._submatrix()[key]
 
     def __setitem__(self, key, value):
-        self._parent[self._rows, self._cols][key] = value
+        sub = self._submatrix()
+        sub[key] = value
+        # réécrire dans le parent
+        if isinstance(self._rows, (list, np.ndarray)) and isinstance(self._cols, (list, np.ndarray)):
+            self._parent[np.ix_(self._rows, self._cols)] = sub
+        else:
+            self._parent[self._rows, self._cols] = sub
         self._callback()
 
+    def __sub__(self, other):
+        if not isinstance(other, ActiveView):
+            return NotImplemented
+
+        A = self.value
+        B = other.value
+
+        if A.shape != B.shape:
+            raise ValueError(f"Shape mismatch: {A.shape} vs {B.shape}")
+
+        diff = A - B
+        return ActiveView(diff, range(diff.shape[0]), range(diff.shape[1]), lambda: None)
+
     def __repr__(self):
-        return repr(self._parent[self._rows, self._cols])
+        return f"ActiveView(\n{self.value}\n)"
 
     @property
     def value(self):
-        return self._parent[self._rows, self._cols]
+        """Retourne la sous-matrice correspondante."""
+        return self._submatrix()
+
 
 # ----------------------------------------------------------------------
 # Classe ParamPKF
@@ -239,7 +308,7 @@ class ParamPKF:
             if np.any(eigvals < -1e-12):
                 logger.warning(f"⚠️ {name} matrix is not positive semi-definite (min eig = {eigvals.min():.3e})")
             logger.debug(f"Eig of {name} matrix: {eigvals}")
-
+        input('tretretrtert')
         if hasattr(self, "_mQ"):    _is_covariance(self._mQ,    "mQ")
         if hasattr(self, "_Q1"):    _is_covariance(self._Q1,    "Q1")
         if hasattr(self, "_Sigma"): _is_covariance(self._Sigma, "Sigma")
@@ -350,7 +419,7 @@ class ParamPKF:
             print("  e:\n  ",   fmt(self._e))
             print("========================")
         if self.verbose>1: # pret a être copié dans du code python
-            print("A  = np.array(",  repr(self.A.tolist()), ')')
+            print("A  = np.array(", repr(self.A.tolist()), ')')
             print("mQ = np.array(", repr(self.mQ.tolist()), ')')
         # self._check_consistency()
 
@@ -364,7 +433,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_Sigma
+    from models.PKF.model_dimx1_dimy1 import model_dimx1_dimy1_from_Sigma
     dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx1_dimy1_from_Sigma()
     param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     if verbose > 0:
@@ -373,7 +442,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # dim_x = dim_y = 1 - Test parameters for (A, mQ) parametrization
     # ------------------------------------------------------------------
-    # from models.model_dimx1_dimy1 import model_dimx1_dimy1_from_A_mQ
+    # from models.PKF.model_dimx1_dimy1 import model_dimx1_dimy1_from_A_mQ
     # dim_x, dim_y, A, mQ = model_dimx1_dimy1_from_A_mQ()
     # param_A_mQ = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
     # if verbose > 0:
@@ -382,7 +451,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # dim_x = dim_y = 2 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
     # ------------------------------------------------------------------
-    # from models.model_dimx2_dimy2 import model_dimx2_dimy2_from_Sigma
+    # from models.PKF.model_dimx2_dimy2 import model_dimx2_dimy2_from_Sigma
     # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx2_dimy2_from_Sigma()
     # param_Sigma = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     # if verbose > 0:
@@ -391,7 +460,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # dim_x = dim_y = 2 - Test parameters for (A, mQ) parametrization
     # ------------------------------------------------------------------
-    # from models.model_dimx2_dimy2 import model_dimx2_dimy2_from_A_mQ
+    # from models.PKF.model_dimx2_dimy2 import model_dimx2_dimy2_from_A_mQ
     # dim_x, dim_y, A, mQ = model_dimx2_dimy2_from_A_mQ()
     # param_A_mQ = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
     # if verbose > 0:
@@ -400,7 +469,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # dim_x = 3, dim_y = 1 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
     # ------------------------------------------------------------------
-    # from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_Sigma
+    # from models.PKF.model_dimx3_dimy1 import model_dimx3_dimy1_from_Sigma
     # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dimx3_dimy1_from_Sigma()
     # param_Sigma = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     # if verbose > 0:
@@ -409,7 +478,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # dim_x = 3, dim_y = 1 - Test parameters for (A, mQ) parametrization
     # ------------------------------------------------------------------
-    # from models.model_dimx3_dimy1 import model_dimx3_dimy1_from_A_mQ
+    # from models.PKF.model_dimx3_dimy1 import model_dimx3_dimy1_from_A_mQ
     # dim_x, dim_y, A, mQ = model_dimx3_dimy1_from_A_mQ()
     # param_A_mQ = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ)
     # if verbose > 0:
