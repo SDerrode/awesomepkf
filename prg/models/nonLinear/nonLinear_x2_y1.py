@@ -1,6 +1,6 @@
 import numpy as np
 
-def model_dim_x2_dim_y1():
+def model_x2_y1():
     """This an UPKF model that simulate a UKF one"""
     
     dim_x, dim_y = 2, 1
