@@ -4,7 +4,6 @@
 import path, sys
 directory = path.Path(__file__)
 sys.path.append(directory.parent.parent)
-print(directory.parent.parent)
 
 import logging
 import warnings
@@ -13,6 +12,7 @@ from typing import Callable, Any
 import numpy as np
 from scipy.linalg import solve_discrete_lyapunov
 
+from models.linear import BaseModel, all_models
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -108,7 +108,7 @@ class ParamPKF:
     Met automatiquement à jour les matrices dérivées à chaque modification.
     """
     
-    def __init__(self, dim_x, dim_y, verbose, **kwargs):
+    def __init__(self, verbose, dim_x, dim_y, **kwargs):
         
         if not isinstance(dim_y, int) or dim_y <= 0:
             raise ValueError("⚠️ dim_y doit être un entier > 0")
@@ -431,37 +431,18 @@ class ParamPKF:
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
     verbose = 1
+    
+    # Lister tous les fichiers de modèles détectés
+    # print("Modèles détectés :", list(all_models.keys()))
 
-    # ------------------------------------------------------------------
-    # Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
-    # ------------------------------------------------------------------
+    # Importer un modèle spécifique et accéder à ses fonctions/classes
+    # Available : ['A_mQ_x1_y1', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x3_y1', 'A_mQ_x2_y2', 'Sigma_x2_y2', 'A_mQ_x1_y1_VPgreaterThan1']
+    model_module = all_models['Sigma_x1_y1']
+    model = model_module.create_model()
+    print(f'model={model.info}')
+    print(f'model={model.get_params()}')
     
-    from models.linear.linear_x1_y1 import model_x1_y1_from_Sigma # dim_x = dim_y = 1
-    dim_x, dim_y, sxx, syy, a, b, c, d, e = model_x1_y1_from_Sigma()
-    
-    from models.linear.linear_x2_y2 import model_x2_y2_from_Sigma # dim_x = dim_y = 2
-    dim_x, dim_y, sxx, syy, a, b, c, d, e = model_x2_y2_from_Sigma()
-    
-    from models.linear.linear_x3_y1 import model_x3_y1_from_Sigma # dim_x = 3, dim_y = 1
-    dim_x, dim_y, sxx, syy, a, b, c, d, e = model_x3_y1_from_Sigma()
-    
-    param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-    if verbose > 0:
-        param.summary()
-
-    # ------------------------------------------------------------------
-    # Test parameters for (A, mQ) parametrization
-    # ------------------------------------------------------------------
-    
-    from models.linear.linear_x1_y1 import model_x1_y1_from_A_mQ # dim_x = dim_y = 1
-    dim_x, dim_y, A, mQ, z00, Pz00 = model_x1_y1_from_A_mQ()
-    
-    from models.linear.linear_x2_y2 import model_x2_y2_from_A_mQ # dim_x = dim_y = 2
-    dim_x, dim_y, A, mQ, z00, Pz00 = model_x2_y2_from_A_mQ()
-    
-    from models.linear.linear_x3_y1 import model_x3_y1_from_A_mQ # dim_x = 3, dim_y = 1
-    dim_x, dim_y, A, mQ, z00, Pz00 = model_x3_y1_from_A_mQ()
-
-    param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
+    params = model.get_params().copy()
+    param = ParamPKF(verbose, params.pop('dim_x'), params.pop('dim_y'), **params)
     if verbose > 0:
         param.summary()
