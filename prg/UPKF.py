@@ -18,6 +18,8 @@ from typing import Generator, Optional, Tuple
 
 import numpy as np
 
+# non linear models 
+from models.nonLinear import ModelFactory
 # A few utils functions that are used several times
 from others.Utils import rmse, file_data_generator, check_consistency, check_equality
 # Manage parameters for the UPKF
@@ -120,7 +122,7 @@ class UPKF:
         zerosvector = np.zeros(shape=self.dim_xy)
         while N is None or k < N:
             k += 1
-            Zkp1_simul = g(Zkp1_simul[0:self.dim_x], self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), k)
+            Zkp1_simul = g(Zkp1_simul, self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), k)
             yield k, np.split(Zkp1_simul, [self.dim_x])
 
     def _sigma_points(self, x, P):
@@ -146,6 +148,7 @@ class UPKF:
 
         # Short-cuts
         g, mQ = self.param.g, self.param.mQ
+        dim_x = self.param.dim_x
 
         # The first
         ###################
@@ -167,10 +170,9 @@ class UPKF:
                                     xkp1                 = xkp1.copy(),
                                     ykp1                 = ykp1.copy(),
                                     Xkp1_predict         = Xkp1_predict,          # No prediction for the first
-                                    Pkp1_predict         = np.eye(self.dim_x),    # No prediction for the first
+                                    PXXkp1_predict       = np.eye(self.dim_x),    # No prediction for the first
                                     Xkp1_update          = Xkp1_update.copy(),
-                                    PXXkp1_update        = PXXkp1_update.copy(),
-                                    PXXkp1_update_Joseph = PXXkp1_update.copy())
+                                    PXXkp1_update        = PXXkp1_update.copy())
         
         yield xkp1, ykp1, Xkp1_predict, Xkp1_update
 
@@ -233,7 +235,7 @@ class UPKF:
                                         PXXkp1_predict       = PXXkp1_predict.copy(),
                                         Xkp1_update          = Xkp1_update.copy(),
                                         PXXkp1_update        = PXXkp1_update.copy())
-            
+
             yield xkp1, ykp1, Xkp1_predict, Xkp1_update
 
 
@@ -250,8 +252,8 @@ if __name__ == "__main__":
     # Constants
     # ------------------------------------------------------------------
     save_pickle = True
-    verbose     = 0
-    N           = 200
+    verbose     = 1
+    N           = 2000
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -266,18 +268,14 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    # from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_ext_saturant
-    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_ext_saturant()
-    # from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_cubique
-    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_cubique()
-    # from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_sinus
-    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_sinus()
-    # from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_gordon
-    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_gordon()
-    from models.nonLinear.nonLinear_x2_y1 import model_x2_y1
-    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x2_y1()
+    
+    # Choose a model by its name
+    # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1']
+    model = ModelFactory.create("x2_y1")
+    if verbose>0:
+        print(f'model={model}')
 
-    param = ParamUPKF(dim_x, dim_y, verbose, g, mQ, z00, Pz00, alpha, beta, kappa)
+    param = ParamUPKF(*model.get_params(), verbose)
     if verbose > 0:
         param.summary()
 
