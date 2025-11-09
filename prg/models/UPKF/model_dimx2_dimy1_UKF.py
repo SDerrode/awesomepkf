@@ -5,7 +5,7 @@ def model_dim_x2_dim_y1():
     
     dim_x, dim_y = 2, 1
     
-    def _f(x, noise):
+    def _f(x, noise, dt):
         x1,  x2  = x
         nx1, nx2 = noise
         return np.array([
@@ -13,13 +13,13 @@ def model_dim_x2_dim_y1():
             0.9 * x2 + 0.2 * np.cos(0.3 * x1)       + nx2
         ])
 
-    def _h(x, noise):
+    def _h(x, noise, dt):
         x1, x2 = x
         return np.sqrt(x1**2 + x2**2) + noise
     
-    def g(z, noise):
-        fx12   = _f(z[0:dim_x], noise[0:dim_x])
-        h      = _h(fx12, noise[dim_x:])
+    def g(z, noise, dt):
+        fx12   = _f(z[0:dim_x], noise[0:dim_x], dt)
+        h      = _h(fx12, noise[dim_x:], dt)
         gvalue = np.vstack((fx12, h))
         return gvalue
 

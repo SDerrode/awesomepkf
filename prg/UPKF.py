@@ -120,7 +120,7 @@ class UPKF:
         zerosvector = np.zeros(shape=self.dim_xy)
         while N is None or k < N:
             k += 1
-            Zkp1_simul = g(Zkp1_simul[0:self.dim_x], self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1))
+            Zkp1_simul = g(Zkp1_simul[0:self.dim_x], self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), k)
             yield k, np.split(Zkp1_simul, [self.dim_x])
 
     def _sigma_points(self, x, P):
@@ -184,7 +184,7 @@ class UPKF:
             sigma_propag = []
             for e in sigma:
                 ey = np.vstack((e, ykp1))
-                sigma_propag.append( g(ey, np.zeros(self.dim_xy)))
+                sigma_propag.append( g(ey, np.zeros(self.dim_xy), k))
             # print(f'sigma_propag={sigma_propag}')
 
             #######################################
@@ -244,8 +244,6 @@ class UPKF:
 
 if __name__ == "__main__":
     """
-    Exemple d'utilisation du UPKF.
-    Pour exécuter :
         python prg/UPKF.py
     """
     # ------------------------------------------------------------------
@@ -253,7 +251,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     save_pickle = True
     verbose     = 0
-    N           = 2000
+    N           = 200
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -268,20 +266,29 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    from models.UPKF.model_dimx2_dimy1 import model_dim_x2_dim_y1
-    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x2_dim_y1()
-    param = ParamUPKF(dim_x, dim_y, verbose, g, mQ, z00, Pz00, alpha, beta, kappa)
-    if verbose > 0:
-        param.summary()
-        param.summary()
+    from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_ext_saturant
+    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_ext_saturant()
+    # from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_sinus
+    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_sinus()
+    # from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_cubique
+    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_cubique()
+    # from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_gordon
+    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_gordon()
+
+    # from models.UPKF.model_dimx2_dimy1_UKF import model_dim_x2_dim_y1
+    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x2_dim_y1()
 
 
     # ------------------------------------------------------------------
     # Let's go
     # ------------------------------------------------------------------
+    
+    param = ParamUPKF(dim_x, dim_y, verbose, g, mQ, z00, Pz00, alpha, beta, kappa)
+    if verbose > 0:
+        param.summary()
 
     print("\nUPKF filtering with data generated from a UPKF... ")
-    sKey   = 41
+    sKey   = None
     upkf_1 = UPKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     # Call with the default data simulator generator
     listeUPKF_1 = upkf_1.process_N_data(N=N)
