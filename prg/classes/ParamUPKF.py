@@ -163,8 +163,9 @@ class ParamUPKF:
             print("  Q_xx:\n  ",  fmt(self.mQ_xx))
             print("  Q_yy:\n  ",  fmt(self.mQ_yy))
             print("========================")
-        if self.verbose>1: # prêt a être copié dans du code python
+        if self.verbose>1: # Ready to copy in python code
             print("mQ = np.array(",   repr(self.mQ.tolist()),   ')')
+            print("z00 = np.array(",  repr(self.z00.tolist()), ')')
             print("Pz00 = np.array(", repr(self.Pz00.tolist()), ')')
         self._check_consistency()
 
@@ -178,17 +179,16 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_ext_saturant
-    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_ext_saturant()
-    # from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_cubique
-    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_cubique()
-    # from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_sinus
-    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_sinus()
-    # from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_gordon
-    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_gordon()
-
-    # from models.nonLinear.model_dimx2_dimy1_UKF import model_dim_x2_dim_y1
-    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x2_dim_y1()
+    from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_ext_saturant
+    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_ext_saturant()
+    from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_cubique
+    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_cubique()
+    from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_sinus
+    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_sinus()
+    from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_gordon
+    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_gordon()
+    from models.nonLinear.nonLinear_x2_y1 import model_x2_y1
+    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x2_y1()
 
     param = ParamUPKF(dim_x, dim_y, verbose, g, mQ, z00, Pz00, alpha, beta, kappa)
     if verbose > 0:

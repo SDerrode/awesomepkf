@@ -1,8 +1,9 @@
 import numpy as np
 
-# Equivalent paramétrizations for dim_x, dim_y = 3, 1
+# Equivalent parametrizations for dim_x, dim_y = 3, 1
 
-def model_dim_x3_dim_y1_from_A_mQ():
+# Homogeneous model
+def model_x3_y1_from_A_mQ():
     
     dim_x, dim_y = 3, 1
     
@@ -22,10 +23,9 @@ def model_dim_x3_dim_y1_from_A_mQ():
 
     return dim_x, dim_y, A, mQ, z00, Pz00
 
-# Stationary model (equivalent to previous)
 
-# Homogeneous model
-def model_dim_x3_dim_y1_from_Sigma():
+# Stationary model (equivalent to previous)
+def model_x3_y1_from_Sigma():
     
     dim_x, dim_y = 3, 1
     

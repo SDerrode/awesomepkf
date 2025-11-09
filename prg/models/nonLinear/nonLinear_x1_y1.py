@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def model_dim_x1_dim_y1_cubique():
+def model_x1_y1_cubique():
     """This an UPKF model that simulates a UKF one."""
     
     dim_x, dim_y = 1, 1
@@ -33,7 +33,7 @@ def model_dim_x1_dim_y1_cubique():
     return dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa
 
 
-def model_dim_x1_dim_y1_ext_saturant():
+def model_x1_y1_ext_saturant():
     """This an UPKF model that simulates a UKF one."""
     
     dim_x, dim_y = 1, 1
@@ -65,7 +65,7 @@ def model_dim_x1_dim_y1_ext_saturant():
     return dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa
 
 
-def model_dim_x1_dim_y1_sinus():
+def model_x1_y1_sinus():
     """This an UPKF model that simulates a UKF one."""
     
     dim_x, dim_y = 1, 1
@@ -97,7 +97,7 @@ def model_dim_x1_dim_y1_sinus():
     return dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa
 
 
-def model_dim_x1_dim_y1_gordon():
+def model_x1_y1_gordon():
     """This an UPKF model that simulates a UKF one.
         Ce modèle a été introduit par Gordon et al. (1993) dans l’article fondateur sur les particle filters :
         Gordon, N., Salmond, D., & Smith, A. (1993). Novel approach to nonlinear/non-Gaussian Bayesian state estimation. 
