@@ -21,13 +21,19 @@ class ModelGordon(BaseModel):
         
         self.z00 = np.zeros((self.dim_xy, 1))
         self.Pz00 = np.eye(self.dim_xy)
-
         self.check_consistency()
 
-    def fx(self, x: np.ndarray, noise: np.ndarray, dt: float) -> np.ndarray:
+    def _fx(self, x: np.ndarray, nx: np.ndarray, dt: float) -> np.ndarray:
         """State transition with additive noise."""
-        return 0.5*x + 25*x / (1 + x**2) + 8*np.cos(1.2 * dt) + noise
+        return 0.5*x + 25*x / (1 + x**2) + 8*np.cos(1.2 * dt) + nx
 
-    def hx(self, x: np.ndarray, noise: np.ndarray, dt: float) -> np.ndarray:
+    def _hx(self, x: np.ndarray, ny: np.ndarray, dt: float) -> np.ndarray:
         """Measurement function with additive noise."""
-        return 0.05 * x**2 + noise
+        return 0.05 * x**2 + ny
+
+    def _g(self, x, y, nx, ny, dt):
+        """The model is classical and re-written using Wojciech formulation"""
+        fx_val = self._fx(x, nx, dt)
+        hx_val = self._hx(fx_val, ny, dt)
+        g_val  = np.vstack((fx_val, hx_val))
+        return g_val

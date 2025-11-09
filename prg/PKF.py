@@ -285,7 +285,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     save_pickle = True
     verbose     = 0
-    N           = 5000
+    N           = 5000 # > 20
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -322,10 +322,10 @@ if __name__ == "__main__":
     listePKF_1 = pkf_1.process_N_data(N=N)
 
     # Calcul du RMSE entre le simulé et l'estimation math, et entre le simulé et l'estimation phys.
-    first_arrays  = np.vstack([t[0] for t in listePKF_1])
-    third_arrays  = np.vstack([t[2] for t in listePKF_1])
-    fourth_arrays = np.vstack([t[3] for t in listePKF_1])
-    fith_arrays   = np.vstack([t[4] for t in listePKF_1])
+    first_arrays  = np.vstack([t[0] for t in listePKF_1])[20:]
+    third_arrays  = np.vstack([t[2] for t in listePKF_1])[20:]
+    fourth_arrays = np.vstack([t[3] for t in listePKF_1])[20:]
+    fith_arrays   = np.vstack([t[4] for t in listePKF_1])[20:]
     # Calcul du RMSE global
     print(f"RMSE (X, Esp[X] pred) : {rmse(first_arrays, third_arrays)}")
     print(f"RMSE (X, Esp[X]_math) : {rmse(first_arrays, fourth_arrays)}")

@@ -27,8 +27,15 @@ class ModelFactory:
         """Crée un modèle par son nom."""
         if not cls._registry:
             cls._discover_models()
-        key = name.lower().strip()
+        key = name.strip()
         if key not in cls._registry:
             raise ValueError(f"Modèle inconnu: '{key}'. "
                              f"Disponibles: {list(cls._registry.keys())}")
         return cls._registry[key]()
+
+    @classmethod
+    def list_models(cls):
+        """Retourne la liste des modèles disponibles."""
+        if not cls._registry:
+            cls._discover_models()
+        return list(cls._registry.keys())
