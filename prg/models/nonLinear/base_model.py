@@ -1,13 +1,21 @@
 import inspect
 import numpy as np
+import logging
+
+# Configuration du logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 class BaseModel:
     """
-    Base class for all non linear models.
-    Provides a unified structure for fx, hx, and g functions,
-    as well as consistent management of parameters and covariance matrices.
+    Base class for all non-linear models.
+
+    Fournit une structure unifiée pour les fonctions fx, hx et g,
+    ainsi qu'une gestion cohérente des paramètres et matrices de covariance.
+    En mode optimisé (lancé avec `python -O`), les vérifications sont désactivées.
     """
-    
+
     def __init__(
         self,
         dim_x: int,
@@ -16,7 +24,18 @@ class BaseModel:
         beta: float = 2.0,
         kappa: float = 0.0,
     ):
-        # Dimensions of state (x) and observation (y)
+        # ------------------------------------------------------------------
+        # Vérifications (actives uniquement en mode debug)
+        # ------------------------------------------------------------------
+        assert isinstance(dim_x, int) and dim_x > 0, "dim_x doit être un entier positif"
+        assert isinstance(dim_y, int) and dim_y > 0, "dim_y doit être un entier positif"
+        assert isinstance(alpha, (float, int)) and alpha > 0, "alpha doit être positif"
+        assert isinstance(beta, (float, int)), "beta doit être un nombre"
+        assert isinstance(kappa, (float, int)), "kappa doit être un nombre"
+
+        # ------------------------------------------------------------------
+        # Dimensions et paramètres
+        # ------------------------------------------------------------------
         self.dim_x = dim_x
         self.dim_y = dim_y
         self.dim_xy = dim_x + dim_y
@@ -26,61 +45,35 @@ class BaseModel:
         self.beta = beta
         self.kappa = kappa
 
-        # Default covariance and initialization matrices
+        # Covariances et initialisations par défaut
         self.mQ = np.eye(self.dim_xy)
         self.z00 = np.zeros((self.dim_xy, 1))
         self.Pz00 = np.eye(self.dim_xy)
-    
-    # def fx(self, x, noise, dt):
-    #     raise NotImplementedError
-    
-    # def hx(self, x, noise, dt):
-    #     raise NotImplementedError
-    
-    def g(self, z, noise_z, dt):
 
-        if z.shape[0] != self.dim_xy:
-            raise ValueError(f"z must have shape ({self.dim_xy}, 1), but got {z.shape}")
-        
-        if noise_z.shape[0] != self.dim_xy:
-            raise ValueError(f"noise_z must have shape ({self.dim_xy}, 1), but got {noise_z.shape}")
+    # ------------------------------------------------------------------
+    def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
+        """Compute z_{n+1} = g(z_n) + noise."""
 
-        # Split state and noise_z vectors
+        if __debug__:  # ⚙️ ces vérifs seront ignorées avec python -O
+            assert isinstance(z, np.ndarray), "z doit être un numpy.ndarray"
+            assert isinstance(noise_z, np.ndarray), "noise_z doit être un numpy.ndarray"
+            assert z.ndim == 2 and z.shape[1] == 1, f"z doit avoir une forme (N,1), reçu {z.shape}"
+            assert noise_z.ndim == 2 and noise_z.shape[1] == 1, f"noise_z doit avoir une forme (N,1), reçu {noise_z.shape}"
+            assert z.shape[0] == self.dim_xy, f"z doit avoir une taille {self.dim_xy}, reçu {z.shape[0]}"
+            assert noise_z.shape[0] == self.dim_xy, f"noise_z doit avoir une taille {self.dim_xy}, reçu {noise_z.shape[0]}"
+
+        # Split state and noise vectors
         x, y   = z[:self.dim_x], z[self.dim_x:]
         nx, ny = noise_z[:self.dim_x], noise_z[self.dim_x:]
 
-        # Fonction de calcul de la fonction znp1 =  g(zn) + bruit
+        # Appel de la fonction spécifique du modèle
         return self._g(x, y, nx, ny, dt)
 
-        # # Travail sur fx
-        # sig = inspect.signature(self.fx)
-        # nb_parameters_fx = len(sig.parameters)
-        # if nb_parameters_fx == 4:                  # Cas avec retroactions
-        #     fx_val = self.fx(x, nx, y, dt)
-        # else:                                      # Cas classique
-        #     fx_val = self.fx(x, nx, dt)
-            
-        # # Travail sur hx
-        # sig = inspect.signature(self.hx)
-        # nb_parameters_hx = len(sig.parameters)
-        # if nb_parameters_hx == 4:                  # Cas avec retroactions
-        #     hx_val = self.hx(x, ny, y, dt)
-        # else:                                      # Cas classique
-        #     hx_val = self.hx(fx_val, ny, dt)
-
-        # # print(f'fx_val={fx_val}')
-        # # print(f'hx_val={hx_val}')
-        # g_val = np.vstack((fx_val, hx_val))
-        # # print(f'g_val={g_val}')
-        # # input('attente')
-        # return g_val
-    
-    # -------------------------------------------------------------------------
-    # Utility methods
-    # -------------------------------------------------------------------------
-
+    # ------------------------------------------------------------------
     def check_consistency(self):
         """Check that covariance matrices are symmetric and positive semi-definite."""
+        if not __debug__:
+            return  # 🔥 en mode optimisé, on saute ces vérifications
         for name, M in {"mQ": self.mQ, "Pz00": self.Pz00}.items():
             if not np.allclose(M, M.T, atol=1e-12):
                 logger.warning(f"⚠️ Matrix {name} is not symmetric.")
@@ -89,11 +82,23 @@ class BaseModel:
                 logger.warning(
                     f"⚠️ Matrix {name} is not positive semi-definite (min eigenvalue = {eigvals.min():.3e})"
                 )
-                
-    def get_params(self):
-        return (self.dim_x, self.dim_y, self.g, self.mQ, self.z00, self.Pz00,
-                self.alpha, self.beta, self.kappa)
 
+    # ------------------------------------------------------------------
+    def get_params(self):
+        """Retourne les paramètres principaux du modèle."""
+        return (
+            self.dim_x,
+            self.dim_y,
+            self.g,
+            self.mQ,
+            self.z00,
+            self.Pz00,
+            self.alpha,
+            self.beta,
+            self.kappa,
+        )
+
+    # ------------------------------------------------------------------
     def __repr__(self):
         return (
             f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y}, "

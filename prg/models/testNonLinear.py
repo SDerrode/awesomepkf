@@ -8,7 +8,7 @@ print("Modèles détectés :", ModelFactory.list_models())
 
 # Choisir un modèle par nom
 # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
-model = ModelFactory.create("x2_y1")
+model = ModelFactory.create("x1_y1_ext_saturant")
 print(f'model={model}')
 
 dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model.get_params()
