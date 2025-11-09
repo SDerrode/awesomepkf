@@ -9,7 +9,6 @@ en utilisant numpy.random.SeedSequence et secrets pour la graine initiale.
 """
 
 from __future__ import annotations
-
 import secrets
 import threading
 import logging
@@ -32,30 +31,30 @@ class SeedGenerator:
     principale (maîtresse).
     """
 
-    def __init__(self, seed_key: Optional[int] = None, verbose: int = 0):
+    def __init__(self, seed_key: Optional[int] = None, verbose: int = 0) -> None:
         """
         Parameters
         ----------
-        seed_key : int | None
+        seed_key : Optional[int]
             Graine initiale (si None, une graine forte est générée via secrets).
-        verbose : int in [0, 1, 2]
-            Active les messages d'information via logging.
+        verbose : int
+            Niveau de verbosité (0, 1 ou 2).
         """
-        
-        if verbose not in [0, 1, 2]:
-            raise ValueError("verbose must be 0, 1 or 2")
-        
-        self._lock = threading.Lock()
-        self.verbose = verbose
+        if __debug__:
+            if verbose not in [0, 1, 2]:
+                raise ValueError("verbose must be 0, 1 or 2")
+
+        self._lock: threading.Lock = threading.Lock()
+        self.verbose: int = verbose
 
         if seed_key is None:
             seed_key = secrets.randbits(128)
-            if self.verbose>0:
+            if __debug__ and self.verbose > 0:
                 logger.info(f"[SeedGenerator] Graine forte générée aléatoirement ({seed_key}).")
 
-        self._root_seed = seed_key
-        self._seed_seq = np.random.SeedSequence(self._root_seed)
-        self._rng = np.random.default_rng(self._seed_seq)
+        self._root_seed: int = seed_key
+        self._seed_seq: np.random.SeedSequence = np.random.SeedSequence(self._root_seed)
+        self._rng: np.random.Generator = np.random.default_rng(self._seed_seq)
 
     # ------------------------------------------------------------------
     # Propriétés
@@ -83,13 +82,13 @@ class SeedGenerator:
             Une nouvelle graine dérivée, utile pour la traçabilité.
         """
         with self._lock:
-            new_seq = self._seed_seq.spawn(1)[0]
+            new_seq: np.random.SeedSequence = self._seed_seq.spawn(1)[0]
             self._rng = np.random.default_rng(new_seq)
             self._seed_seq = new_seq
 
-            # On récupère un identifiant dérivé (hashable) pour la traçabilité
-            derived_seed = int(new_seq.entropy)
-            if self.verbose>1:
+            # On récupère un identifiant dérivé pour traçabilité
+            derived_seed: int = int(new_seq.entropy)
+            if __debug__ and self.verbose > 1:
                 logger.info(f"[SeedGenerator] Nouvelle graine dérivée : {derived_seed}")
             return derived_seed
 
@@ -102,7 +101,7 @@ class SeedGenerator:
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
     verbose = 1
-    
+
     sg1 = SeedGenerator(verbose=verbose)
     print(f"\nsg1 = {sg1}")
     print("Premiers tirages:", sg1.rng.random(3))

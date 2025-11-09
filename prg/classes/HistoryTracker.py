@@ -3,7 +3,6 @@
 
 import os
 import pickle
-import numbers
 import logging
 from typing import Any, Optional
 
@@ -27,19 +26,17 @@ class HistoryTracker:
     """
 
     def __init__(self, verbose: int = 0):
-        
-        if verbose not in [0, 1, 2]:
-            raise ValueError("verbose must be 0, 1 or 2")
+        assert verbose in [0, 1, 2], "verbose doit être 0, 1 ou 2"
         self._history: list[dict[str, Any]] = []
         self.verbose = verbose
-        
-        # Configuration du logger selon verbose
         self._set_log_level()
 
     # ------------------------------------------------------------------
-    # Gestion du logging selon le niveau de verbosité
-    # ------------------------------------------------------------------
     def _set_log_level(self):
+        """Ajuste le niveau du logger selon la verbosité."""
+        if not __debug__:
+            logger.setLevel(logging.ERROR)  # Mode rapide = silence
+            return
         if self.verbose == 0:
             logger.setLevel(logging.WARNING)
         elif self.verbose == 1:
@@ -48,10 +45,9 @@ class HistoryTracker:
             logger.setLevel(logging.DEBUG)
 
     # ------------------------------------------------------------------
-    #  Gestion des enregistrements
-    # ------------------------------------------------------------------
     def record(self, **quantities: Any) -> None:
         """Sauvegarde l'état courant sous forme de dictionnaire."""
+        assert all(isinstance(k, str) for k in quantities.keys()), "Toutes les clés doivent être des chaînes"
         self._history.append(quantities.copy())
 
     def as_dataframe(self) -> pd.DataFrame:
@@ -67,88 +63,66 @@ class HistoryTracker:
         self._history.clear()
 
     # ------------------------------------------------------------------
-    #  Sauvegarde et chargement
-    # ------------------------------------------------------------------
     def save_pickle(self, path: str) -> None:
         """Sauvegarde l'historique complet dans un fichier .pkl"""
+        assert isinstance(path, str), "Le chemin doit être une chaîne"
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:
             pickle.dump(self._history, f)
-        if self.verbose>0:
-            logger.info(f"[HistoryTracker] Historique sauvegardé dans '{path}' ({len(self)} enregistrements)")
+        if self.verbose > 0:
+            logger.info(f"[HistoryTracker] Sauvegardé dans '{path}' ({len(self)} enregistrements)")
 
     @classmethod
     def load_pickle(cls, path: str) -> "HistoryTracker":
         """Recharge un HistoryTracker à partir d'un fichier pickle."""
+        assert os.path.exists(path), f"Fichier introuvable : {path}"
         with open(path, "rb") as f:
             data = pickle.load(f)
+        assert isinstance(data, list), "Le fichier ne contient pas une liste d'enregistrements"
         tracker = cls()
         tracker._history = data
-        if self.verbose>0:
+        if tracker.verbose > 0:
             logger.info(f"[HistoryTracker] Rechargé depuis '{path}' ({len(tracker)} enregistrements)")
         return tracker
 
     # ------------------------------------------------------------------
-    #  Visualisation
-    # ------------------------------------------------------------------
     def plot(self, list_param, list_label, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
         """
         Trace l'évolution d'un paramètre au fil des itérations.
-        Si show=False, chaque figure est sauvegardée dans base_dir avec un indice dans le nom.
-
-        Arguments :
-        -----------
-        list_param : str
-            List of parameters to draw on the same plot (scalar or vector)
-        list_param : str
-            List of labels to appear in the legend
-        iter_key : str
-            Key for X axis (default: 'iter')
-        show : bool
-            If True → plot the graphic else save in base_dir
-        base_dir : str | None
-            Store repository if show=False
-        kwargs :
-            Parameters to be passed to matplotlib.plot() (color, style, etc.)
+        Si show=False, chaque figure est sauvegardée dans base_dir.
         """
 
         df = pd.DataFrame(self._history.copy())
 
-        if df.empty:
-            raise ValueError("Aucune donnée enregistrée.")
+        assert not df.empty, "Aucune donnée enregistrée."
         for p in list_param:
-            if p not in df.columns:
-                raise KeyError(f"'{p}' is not a saved column. Available columns: {list(df.columns)}")
+            assert p in df.columns, f"'{p}' n'est pas une colonne connue : {list(df.columns)}"
 
-        # Data focus
+        # Extraction des données
         y_values = df[list_param]
         x = df[iter_key] if iter_key in df.columns else df.index
-        # Compute the number of components (should be equal to dim_x)
-        nb_components = y_values[list_param[0]].iloc[0].shape[0]
-        # print(f'nb_components={nb_components}')
+
+        # Vérifie que le premier élément est bien un vecteur
+        first = y_values[list_param[0]].iloc[0]
+        assert hasattr(first, "shape"), f"Le premier élément de '{list_param[0]}' n'est pas un vecteur numpy"
+        nb_components = first.shape[0]
 
         datafocus = pd.DataFrame()
         for p in list_param:
-            liste = []
-            for component in range(nb_components):
-                liste.append(f'{p}_{component}')
-            datafocus[liste] = df[p].apply(lambda x: pd.Series(x.flatten()))
-        
+            labels = [f'{p}_{component}' for component in range(nb_components)]
+            datafocus[labels] = df[p].apply(lambda x: pd.Series(x.flatten()))
+
         liste_ax = []
         for component in range(nb_components):
             fig, ax = plt.subplots(figsize=(6, 4))
             liste_ax.append(ax)
-            
-            liste = []
-            for p in list_param:
-                liste.append(f'{p}_{component}')
-            
-            for col, label in zip(liste, list_label):
+
+            labels = [f'{p}_{component}' for p in list_param]
+            for col, label in zip(labels, list_label):
                 datafocus[col].plot(ax=ax, label=label, alpha=0.5)
 
-            ax.legend() #title="Légende")
+            ax.legend()
             ax.set_xlabel(iter_key)
-            # ax.set_title(f"Évolution de '{param}' ({len(df)} points)")
             ax.grid(True, linestyle="--", alpha=0.6)
             ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
 
@@ -158,8 +132,8 @@ class HistoryTracker:
                 os.makedirs(base_dir or ".", exist_ok=True)
                 save_path = os.path.join(base_dir or ".", f"{basename}_{component}.png")
                 ax.figure.savefig(save_path, dpi=150, bbox_inches="tight")
-                if self.verbose>0:
-                    print(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
+                if self.verbose > 0:
+                    logger.info(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
                 plt.close(fig)
         return liste_ax
 
@@ -171,27 +145,29 @@ class HistoryTracker:
         return f"<HistoryTracker n_records={len(self)}>"
 
 
+# ======================================================================
 class A:
     """Classe jouet pour illustrer l'usage de HistoryTracker."""
 
-    def __init__(self, x0: float = 1.0, verbose: bool = True):
-        
-        if verbose not in [0, 1, 2]:
-            raise ValueError("verbose must be 0, 1 or 2")
-        
-        self.x       = x0
+    def __init__(self, x0: float = 1.0, verbose: int = 1):
+        assert isinstance(x0, (int, float)), "x0 doit être un nombre"
+        assert verbose in [0, 1, 2], "verbose doit être 0, 1 ou 2"
+
+        self.x = float(x0)
         self.verbose = verbose
         self.history = HistoryTracker(verbose=verbose)
 
     def iterate_gen(self, n: Optional[int] = None):
         """Générateur qui calcule x_{k+1} = cos(x_k)."""
+        assert n is None or (isinstance(n, int) and n >= 0), "n doit être un entier positif ou None"
+
         k = 0
         while n is None or k < n:
             new_x = np.cos(self.x)
             diff = abs(new_x - self.x)
             record = {"iter": k, "x": self.x, "new_x": new_x, "diff": diff}
             self.history.record(**record)
-            if self.verbose>1:
+            if self.verbose > 1:
                 logger.debug(f"[A] it={k} x={self.x:.4f} diff={diff:.4e}")
             yield record
             self.x = new_x
@@ -199,21 +175,21 @@ class A:
 
     def iterate_list(self, n: int):
         """Retourne la liste complète des itérations."""
+        assert isinstance(n, int) and n > 0, "n doit être un entier positif"
         return list(self.iterate_gen(n))
 
 
+# ======================================================================
 if __name__ == "__main__":
-    
     verbose = 1
-    
     graph_dir = os.path.join('.', 'data', 'plot')
-    os.makedirs(graph_dir, exist_ok=True)
     tracker_dir = os.path.join('.', 'data', 'historyTracker')
+    os.makedirs(graph_dir, exist_ok=True)
     os.makedirs(tracker_dir, exist_ok=True)
-    
+
     a = A(x0=1.0, verbose=verbose)
     for step in a.iterate_gen(5):
         print(step)
-    
-    a.history.plot("x", color="blue", show=False, base_dir=graph_dir)
+
+    a.history.plot(["x"], ["x"], color="blue", show=False, base_dir=graph_dir)
     a.history.save_pickle(os.path.join(tracker_dir, "history_run_a.pkl"))
