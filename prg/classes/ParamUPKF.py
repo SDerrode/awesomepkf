@@ -4,6 +4,7 @@
 import path, sys
 directory = path.Path(__file__)
 sys.path.append(directory.parent.parent)
+print(directory.parent.parent)
 
 import logging
 import warnings
@@ -12,6 +13,8 @@ from typing import Callable, Any
 import numpy as np
 
 from classes.ParamPKF import ActiveView
+from models.nonLinear import ModelFactory
+import numpy as np
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -27,7 +30,7 @@ class ParamUPKF:
     Manage UPKF parameters
     """
     
-    def __init__(self, dim_x, dim_y, verbose, g, mQ, z00, Pz00, alpha, beta, kappa):
+    def __init__(self, dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa, verbose):
         
         if not isinstance(dim_y, int) or dim_y <= 0:
             raise ValueError("⚠️ dim_y doit être un entier > 0")
@@ -146,7 +149,7 @@ class ParamUPKF:
     # Résumé
     # ------------------------------------------------------------------
     def summary(self):
-        """Affiche un résumé complet des matrices."""
+        """Display a complete summary of vectors and matrices"""
         def fmt(M: Any) -> str:
             if hasattr(M, "_parent"):
                 M = M._parent[M._rows, M._cols]
@@ -176,21 +179,12 @@ class ParamUPKF:
 if __name__ == "__main__":
     verbose = 1
 
-    # ------------------------------------------------------------------
-    # Test parameters
-    # ------------------------------------------------------------------
-    from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_ext_saturant
-    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_ext_saturant()
-    from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_cubique
-    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_cubique()
-    from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_sinus
-    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_sinus()
-    from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_gordon
-    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_gordon()
-    from models.nonLinear.nonLinear_x2_y1 import model_x2_y1
-    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x2_y1()
+    # Choose a model by its name
+    # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1']
+    model = ModelFactory.create("x1_y1_ext_saturant")
+    print(f'model={model}')
 
-    param = ParamUPKF(dim_x, dim_y, verbose, g, mQ, z00, Pz00, alpha, beta, kappa)
+    param = ParamUPKF(*model.get_params(), verbose)
     if verbose > 0:
         param.summary()
-    
+
