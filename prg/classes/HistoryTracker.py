@@ -206,9 +206,9 @@ if __name__ == "__main__":
     
     verbose = 1
     
-    graph_dir = os.path.join('.', 'dataGenerated', 'plot')
+    graph_dir = os.path.join('.', 'data', 'plot')
     os.makedirs(graph_dir, exist_ok=True)
-    tracker_dir = os.path.join('.', 'dataGenerated', 'historyTracker')
+    tracker_dir = os.path.join('.', 'data', 'historyTracker')
     os.makedirs(tracker_dir, exist_ok=True)
     
     a = A(x0=1.0, verbose=verbose)

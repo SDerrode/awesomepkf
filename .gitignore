@@ -5,8 +5,9 @@
 *.csv
 *.parquet
 
-/dataGenerated/historyTracker/*.pkl
-/dataGenerated/plot/*.png
+/data/historyTracker/*.pkl
+/data/plot/*.png
+/prg/tests
 
 # vdscodium
 AwesomePKF.code-workspace

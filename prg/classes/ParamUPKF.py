@@ -178,16 +178,16 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_ext_saturant
+    from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_ext_saturant
     dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_ext_saturant()
-    # from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_cubique
+    # from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_cubique
     # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_cubique()
-    # from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_sinus
+    # from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_sinus
     # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_sinus()
-    # from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_gordon
+    # from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_gordon
     # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_gordon()
 
-    # from models.UPKF.model_dimx2_dimy1_UKF import model_dim_x2_dim_y1
+    # from models.nonLinear.model_dimx2_dimy1_UKF import model_dim_x2_dim_y1
     # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x2_dim_y1()
 
     param = ParamUPKF(dim_x, dim_y, verbose, g, mQ, z00, Pz00, alpha, beta, kappa)
