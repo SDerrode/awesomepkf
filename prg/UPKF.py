@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Module UPKF #########################################################
+Module UPKF
 ####################################################################
-Implémente un filtre de Kalman couple Unscented (UPKF) 
+Unscented Pairwise Kalman filter (UPKF) implementation
 ####################################################################
 """
 
@@ -59,7 +59,7 @@ class UPKF:
         # short-cuts
         self.dim_x, self.dim_y, self.dim_xy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
         
-        # Poids moyenne Wm, et poids correlation Wc
+        # Meand weights Wm, and correlation weights Wc
         self.Wm    = np.full(2 * self.dim_x + 1, 1. / (2. * (self.dim_x + self.param.lambda_)))
         self.Wc    = np.copy(self.Wm)
         self.Wm[0] = self.param.lambda_ / (self.dim_x + self.param.lambda_)
@@ -69,7 +69,7 @@ class UPKF:
         self.save_pickle = save_pickle
         self._history    = HistoryTracker() if save_pickle else None
         
-        # Configuration du logger selon verbose
+        # Loger configuration according to verbose
         self._set_log_level()
 
         if self.verbose >= 1:
@@ -77,7 +77,7 @@ class UPKF:
 
 
     # ------------------------------------------------------------------
-    # Gestion du logging selon le niveau de verbosité
+    # Loger configuration according to verbose
     # ------------------------------------------------------------------
     def _set_log_level(self):
         if self.verbose == 0:
@@ -124,7 +124,7 @@ class UPKF:
             yield k, np.split(Zkp1_simul, [self.dim_x])
 
     def _sigma_points(self, x, P):
-        """Génère les 2n+1 sigma-points autour de x"""
+        """GGenerate the 2n_x+1 sigma points around x"""
         A = np.linalg.cholesky(P)
         sigma = [x]
         for i in range(self.dim_x):
@@ -135,7 +135,7 @@ class UPKF:
     def process_upkf(self, N=None, data_generator=None):
         """
         Generator of UPKF filter.
-        It makes use of data generator called data_generation().
+        It makes use of data generator called data_generator().
         """
         
         if not ((isinstance(N, int) and N > 0) or N is None):
@@ -151,7 +151,7 @@ class UPKF:
         ###################
        
         # First generated data sample
-        k, (xkp1, ykp1) = next(generator) # les parenthèses servent à déballer la liste de 2 élements
+        k, (xkp1, ykp1) = next(generator)   # Parenthesis are used to flatten the two items
 
         # Filtering of the first sample
         Xkp1_update   = self.param.z00[ 0:self.dim_x]
@@ -166,8 +166,8 @@ class UPKF:
             self._history.record(   iter                 = k,
                                     xkp1                 = xkp1.copy(),
                                     ykp1                 = ykp1.copy(),
-                                    Xkp1_predict         = Xkp1_predict,          # il n'y a pas de prédiction pour la premier
-                                    Pkp1_predict         = np.eye(self.dim_x),    # il n'y a pas de prédiction pour la premier
+                                    Xkp1_predict         = Xkp1_predict,          # No prediction for the first
+                                    Pkp1_predict         = np.eye(self.dim_x),    # No prediction for the first
                                     Xkp1_update          = Xkp1_update.copy(),
                                     PXXkp1_update        = PXXkp1_update.copy(),
                                     PXXkp1_update_Joseph = PXXkp1_update.copy())
@@ -178,9 +178,9 @@ class UPKF:
         # The next ones
         while N is None or k < N:
 
-            # on créé des nouveaux sigma points
+            # New sigma points
             sigma = self._sigma_points(Xkp1_update, PXXkp1_update)
-            # Propagation des sigma points
+            # Sigma points propagation through g function
             sigma_propag = []
             for e in sigma:
                 ey = np.vstack((e, ykp1))
@@ -209,9 +209,9 @@ class UPKF:
 
             # Get new observation from the data generator
             try:
-                k, (xkp1, ykp1) = next(generator) # parenthesis is used to flatten the list of two elements
+                k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two elements
             except StopIteration:
-                return # generator qui fournit les données est terminé, on arrête alors process_pkf
+                return # we stop as the data generator is stopped itself
 
             # Updating 
             ###############################################
@@ -256,7 +256,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
     # ------------------------------------------------------------------
-    base_dir     = os.path.join(".",      "dataGenerated")
+    base_dir     = os.path.join(".",      "data")
     tracker_dir  = os.path.join(base_dir, "historyTracker")
     datafile_dir = os.path.join(base_dir, "datafile")
     graph_dir    = os.path.join(base_dir, "plot")
@@ -266,16 +266,16 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_ext_saturant
+    from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_ext_saturant
     dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_ext_saturant()
-    # from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_sinus
+    # from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_sinus
     # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_sinus()
-    # from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_cubique
+    # from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_cubique
     # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_cubique()
-    # from models.UPKF.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_gordon
+    # from models.nonLinear.model_dimx1_dimy1_UKF import model_dim_x1_dim_y1_gordon
     # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x1_dim_y1_gordon()
 
-    # from models.UPKF.model_dimx2_dimy1_UKF import model_dim_x2_dim_y1
+    # from models.nonLinear.model_dimx2_dimy1_UKF import model_dim_x2_dim_y1
     # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x2_dim_y1()
 
 

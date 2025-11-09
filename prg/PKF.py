@@ -293,7 +293,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
     # ------------------------------------------------------------------
-    base_dir     = os.path.join(".",      "dataGenerated")
+    base_dir     = os.path.join(".",      "data")
     tracker_dir  = os.path.join(base_dir, "historyTracker")
     datafile_dir = os.path.join(base_dir, "datafile")
     graph_dir    = os.path.join(base_dir, "plot")
@@ -303,7 +303,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    from models.PKF.model_dimx1_dimy1 import model_dim_x1_dim_y1_from_Sigma
+    from models.linear.model_dimx1_dimy1 import model_dim_x1_dim_y1_from_Sigma
     dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dim_x1_dim_y1_from_Sigma()
     param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     if verbose > 0:
@@ -312,7 +312,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # dim_x = dim_y = 1 - Test parameters for (A, mQ) parametrization
     # ------------------------------------------------------------------
-    # from models.PKF.model_dimx1_dimy1 import model_dim_x1_dim_y1_from_A_mQ
+    # from models.linear.model_dimx1_dimy1 import model_dim_x1_dim_y1_from_A_mQ
     # dim_x, dim_y, A, mQ, z00, Pz00 = model_dim_x1_dim_y1_from_A_mQ()
     # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
     # if verbose > 0:
@@ -321,7 +321,7 @@ if __name__ == "__main__":
     # # ------------------------------------------------------------------
     # # dim_x = dim_y = 2 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
     # # ------------------------------------------------------------------
-    # from models.PKF.model_dimx2_dimy2 import model_dim_x2_dim_y2_from_Sigma
+    # from models.linear.model_dimx2_dimy2 import model_dim_x2_dim_y2_from_Sigma
     # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dim_x2_dim_y2_from_Sigma()
     # param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     # if verbose > 0:
@@ -330,7 +330,7 @@ if __name__ == "__main__":
     # # ------------------------------------------------------------------
     # # dim_x = dim_y = 2 - Test parameters for (A, mQ) parametrization
     # # ------------------------------------------------------------------
-    # from models.PKF.model_dimx2_dimy2 import model_dim_x2_dim_y2_from_A_mQ
+    # from models.linear.model_dimx2_dimy2 import model_dim_x2_dim_y2_from_A_mQ
     # dim_x, dim_y, A, mQ, z00, Pz00 = model_dim_x2_dim_y2_from_A_mQ()
     # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
     # if verbose > 0:
@@ -339,7 +339,7 @@ if __name__ == "__main__":
     # # ------------------------------------------------------------------
     # # dim_x = 3, dim_y = 1 - Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
     # # ------------------------------------------------------------------
-    # from models.PKF.model_dimx3_dimy1 import model_dim_x3_dim_y1_from_Sigma
+    # from models.linear.model_dimx3_dimy1 import model_dim_x3_dim_y1_from_Sigma
     # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_dim_x3_dim_y1_from_Sigma()
     # param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     # if verbose > 0:
@@ -348,7 +348,7 @@ if __name__ == "__main__":
     # # ------------------------------------------------------------------
     # # dim_x = 3, dim_y = 1 - Test parameters for (A, mQ) parametrization
     # # ------------------------------------------------------------------
-    # from models.PKF.model_dimx3_dimy1 import model_dim_x3_dim_y1_from_A_mQ
+    # from models.linear.model_dimx3_dimy1 import model_dim_x3_dim_y1_from_A_mQ
     # dim_x, dim_y, A, mQ, z00, Pz00 = model_dim_x3_dim_y1_from_A_mQ()
     # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
     # if verbose > 0:
