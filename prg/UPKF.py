@@ -266,31 +266,29 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_ext_saturant
-    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_ext_saturant()
+    # from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_ext_saturant
+    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_ext_saturant()
     # from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_cubique
     # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_cubique()
     # from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_sinus
     # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_sinus()
     # from models.nonLinear.nonLinear_x1_y1 import model_x1_y1_gordon
     # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x1_y1_gordon()
-    # from models.nonLinear.nonLinear_x2_y1 import model_dim_x2_dim_y1
-    # dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_dim_x2_dim_y1()
+    from models.nonLinear.nonLinear_x2_y1 import model_x2_y1
+    dim_x, dim_y, g, mQ, z00, Pz00, alpha, beta, kappa = model_x2_y1()
 
-
-    # ------------------------------------------------------------------
-    # Let's go
-    # ------------------------------------------------------------------
-    
     param = ParamUPKF(dim_x, dim_y, verbose, g, mQ, z00, Pz00, alpha, beta, kappa)
     if verbose > 0:
         param.summary()
 
+    # ------------------------------------------------------------------
+    # Let's go
+    # ------------------------------------------------------------------
+
     print("\nUPKF filtering with data generated from a UPKF... ")
     sKey   = None
     upkf_1 = UPKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
-    # Call with the default data simulator generator
-    listeUPKF_1 = upkf_1.process_N_data(N=N)
+    listeUPKF_1 = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
     # RMSE between simulated and the predicted and filtered
     first_arrays  = np.vstack([t[0] for t in listeUPKF_1])
@@ -308,18 +306,16 @@ if __name__ == "__main__":
 
         # pickle storing and plots
         upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
-        upkf_1.history.plot(list_param=["xkp1",             "Xkp1_update"], \
-                            list_label=["X - Ground Truth", "X - Filtered"], \
-                            basename='upkf_1', \
-                            show=False, base_dir=graph_dir)
+        upkf_1.history.plot(list_param=["xkp1",             "Xkp1_predict"  , "Xkp1_update"], \
+                            list_label=["X - Ground Truth", "X - Predicted", "X - Filtered"], \
+                            basename='upkf_1', show=False, base_dir=graph_dir)
 
     # datafile = 'data_dim2x2.parquet'
     # #datafile = 'data_dim1x1.csv'
     # print("\nUPKF filtering with data generated from a file... ")
     # upkf_2 = UPKF(param, save_pickle=save_pickle, verbose=verbose)
-    # # Call with a fil as data generator
-    # filename = os.path.join(datafile_dir, datafile)
-    # listeUPKF_2 = upkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, verbose))
+    # data_generator=file_data_generator(os.path.join(datafile_dir, datafile), dim_x, verbose)
+    # listeUPKF_2 = upkf_2.process_N_data(N=None, data_generator=data_generator) # Call with a file as data generator
     # # print(f'listeUPKF_2={listeUPKF_2}')
 
     # if save_pickle and upkf_2.history is not None:
@@ -331,8 +327,7 @@ if __name__ == "__main__":
 
     #     # pickle storing and plots
     #     upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_2.pkl"))
-    #     upkf_2.history.plot(list_param=["xkp1", "Xkp1_update"], \
-    #                        list_label=["X - Ground Truth", "X - Filtered"], \
-    #                        basename='upkf_2', \
-    #                        show=False, base_dir=graph_dir)
+    #     upkf_2.history.plot(list_param=["xkp1",             "Xkp1_predict"  , "Xkp1_update"], \
+    #                         list_label=["X - Ground Truth", "X - Predicted", "X - Filtered"], \
+    #                         basename='upkf_2', show=False, base_dir=graph_dir)
 
