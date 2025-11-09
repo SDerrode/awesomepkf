@@ -1,9 +1,10 @@
 import numpy as np
+from .base_model import BaseModel
 
-# Equivalent parametrizations for dim_x, dim_y = 3, 1
+# Nom du modèle
+MODEL_NAME = "A_mQ_x3_y1"
 
-# Homogeneous model
-def model_x3_y1_from_A_mQ():
+def create_model():
     
     dim_x, dim_y = 3, 1
     
@@ -21,26 +22,10 @@ def model_x3_y1_from_A_mQ():
     z00 = np.zeros(shape=(dim_x+dim_y, 1))
     Pz00 = np.eye(dim_x+dim_y)
 
-    return dim_x, dim_y, A, mQ, z00, Pz00
+    model = BaseModel(dim_x=dim_x, dim_y=dim_y, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
+    return model
 
-
-# Stationary model (equivalent to previous)
-def model_x3_y1_from_Sigma():
-    
-    dim_x, dim_y = 3, 1
-    
-    sxx = np.matrix([[1.0, 0.4, 0.4],
-                     [0.4, 1.0, 0.4],
-                     [0.4, 0.4, 1.0]])
-    b   = np.matrix([[0.6, 0.2, 0.4]])
-    syy = np.matrix([[1.0]])
-    a   = np.matrix([[0.5, 0.1, 0.2],
-                     [0.4, 0.6, 0.2],
-                     [0.4, 0.4, 0.5]])
-    d   = np.matrix([[0.0, 0.0, 0.0]])
-    e   = np.matrix([[0.2],
-                     [0.15],
-                     [0.25]])
-    c   = np.matrix([[0.3]])
-
-    return dim_x, dim_y, sxx, syy, a, b, c, d, e
+# Optionnel : permettre le test rapide du fichier
+if __name__ == "__main__":
+    m = create_model()
+    m.info()

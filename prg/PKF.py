@@ -23,6 +23,8 @@ from typing import Generator, Optional, Tuple
 
 import numpy as np
 
+# non linear models 
+from models.linear import BaseModel, all_models
 # A few utils functions that are used several times
 from others.Utils import rmse, file_data_generator, check_consistency, check_equality
 # Manage parameters for the PKF
@@ -296,39 +298,18 @@ if __name__ == "__main__":
     os.makedirs(graph_dir,   exist_ok=True)
 
     # ------------------------------------------------------------------
-    # Test parameters for (Sigma = (sxx, syy, a, b, c, d, e)) parametrization
+    # Test parameters for the Two ((A, mQ) or Sigma) parametrizations
     # ------------------------------------------------------------------
     
-    from models.linear.linear_x1_y1 import model_x1_y1_from_Sigma # dim_x = dim_y = 1
-    dim_x, dim_y, sxx, syy, a, b, c, d, e = model_x1_y1_from_Sigma()
+    model_module = all_models['Sigma_x1_y1']
+    model = model_module.create_model()
+    # print(f'model={model.info}')
+    # print(f'model={model.get_params()}')
     
-    # from models.linear.linear_x2_y2 import model_x2_y2_from_Sigma # dim_x = dim_y = 2
-    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_x2_y2_from_Sigma()
-    
-    # from models.linear.linear_x3_y1 import model_x3_y1_from_Sigma # dim_x = 3, dim_y = 1
-    # dim_x, dim_y, sxx, syy, a, b, c, d, e = model_x3_y1_from_Sigma()
-    
-    param = ParamPKF(dim_x, dim_y, verbose, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
+    params = model.get_params().copy()
+    param = ParamPKF(verbose, params.pop('dim_x'), params.pop('dim_y'), **params)
     if verbose > 0:
         param.summary()
-
-    # ------------------------------------------------------------------
-    # Test parameters for (A, mQ) parametrization
-    # ------------------------------------------------------------------
-    
-    # from models.linear.linear_x1_y1 import model_x1_y1_from_A_mQ # dim_x = dim_y = 1
-    # dim_x, dim_y, A, mQ, z00, Pz00 = model_x1_y1_from_A_mQ()
-    
-    # from models.linear.linear_x2_y2 import model_x2_y2_from_A_mQ # dim_x = dim_y = 2
-    # dim_x, dim_y, A, mQ, z00, Pz00 = model_x2_y2_from_A_mQ()
-    
-    # from models.linear.linear_x3_y1 import model_x3_y1_from_A_mQ # dim_x = 3, dim_y = 1
-    # dim_x, dim_y, A, mQ, z00, Pz00 = model_x3_y1_from_A_mQ()
-
-    # param = ParamPKF(dim_x, dim_y, verbose, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
-    # if verbose > 0:
-    #     param.summary()
-
 
     # ------------------------------------------------------------------
     # Let's go

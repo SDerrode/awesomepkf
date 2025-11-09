@@ -4,7 +4,6 @@
 import path, sys
 directory = path.Path(__file__)
 sys.path.append(directory.parent.parent)
-print(directory.parent.parent)
 
 import logging
 import warnings
@@ -183,6 +182,7 @@ if __name__ == "__main__":
     # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1']
     model = ModelFactory.create("x1_y1_ext_saturant")
     print(f'model={model}')
+    print(f'model={model.get_params()}')
 
     param = ParamUPKF(*model.get_params(), verbose)
     if verbose > 0:
