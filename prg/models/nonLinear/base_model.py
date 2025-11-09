@@ -1,3 +1,4 @@
+import inspect
 import numpy as np
 
 class BaseModel:
@@ -36,24 +37,43 @@ class BaseModel:
     # def hx(self, x, noise, dt):
     #     raise NotImplementedError
     
-    def g(self, z, noise, dt):
-        
-        if self.fx is None or self.hx is None:
-            raise NotImplementedError("Subclasses must implement both fx() and hx() methods.")
+    def g(self, z, noise_z, dt):
 
         if z.shape[0] != self.dim_xy:
             raise ValueError(f"z must have shape ({self.dim_xy}, 1), but got {z.shape}")
+        
+        if noise_z.shape[0] != self.dim_xy:
+            raise ValueError(f"noise_z must have shape ({self.dim_xy}, 1), but got {noise_z.shape}")
 
-        # Split state and noise vectors
-        x = z[:self.dim_x]
-        noise_x = noise[:self.dim_x]
-        noise_y = noise[self.dim_x:]
+        # Split state and noise_z vectors
+        x, y   = z[:self.dim_x], z[self.dim_x:]
+        nx, ny = noise_z[:self.dim_x], noise_z[self.dim_x:]
 
-        fx_val = self.fx(x, noise_x, dt)
-        hx_val = self.hx(fx_val, noise_y, dt)
+        # Fonction de calcul de la fonction znp1 =  g(zn) + bruit
+        return self._g(x, y, nx, ny, dt)
 
-        g_val = np.vstack((fx_val, hx_val))
-        return g_val
+        # # Travail sur fx
+        # sig = inspect.signature(self.fx)
+        # nb_parameters_fx = len(sig.parameters)
+        # if nb_parameters_fx == 4:                  # Cas avec retroactions
+        #     fx_val = self.fx(x, nx, y, dt)
+        # else:                                      # Cas classique
+        #     fx_val = self.fx(x, nx, dt)
+            
+        # # Travail sur hx
+        # sig = inspect.signature(self.hx)
+        # nb_parameters_hx = len(sig.parameters)
+        # if nb_parameters_hx == 4:                  # Cas avec retroactions
+        #     hx_val = self.hx(x, ny, y, dt)
+        # else:                                      # Cas classique
+        #     hx_val = self.hx(fx_val, ny, dt)
+
+        # # print(f'fx_val={fx_val}')
+        # # print(f'hx_val={hx_val}')
+        # g_val = np.vstack((fx_val, hx_val))
+        # # print(f'g_val={g_val}')
+        # # input('attente')
+        # return g_val
     
     # -------------------------------------------------------------------------
     # Utility methods

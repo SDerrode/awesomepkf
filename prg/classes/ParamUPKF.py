@@ -179,8 +179,8 @@ if __name__ == "__main__":
     verbose = 1
 
     # Choose a model by its name
-    # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1']
-    model = ModelFactory.create("x1_y1_ext_saturant")
+    # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
+    model = ModelFactory.create("x2_y1_withRetroactionsOfObservations")
     print(f'model={model}')
     print(f'model={model.get_params()}')
 

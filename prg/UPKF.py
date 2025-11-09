@@ -55,13 +55,14 @@ class UPKF:
             raise ValueError("verbose must be 0, 1 or 2")
 
         self.param     = param
+        self.dt        = 1
         self.verbose   = verbose
         self._seed_gen = SeedGenerator(sKey)
         
         # short-cuts
         self.dim_x, self.dim_y, self.dim_xy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
         
-        # Meand weights Wm, and correlation weights Wc
+        # Mean weights Wm, and correlation weights Wc
         self.Wm    = np.full(2 * self.dim_x + 1, 1. / (2. * (self.dim_x + self.param.lambda_)))
         self.Wc    = np.copy(self.Wm)
         self.Wm[0] = self.param.lambda_ / (self.dim_x + self.param.lambda_)
@@ -110,6 +111,7 @@ class UPKF:
         with W_{k+1} ~ N(0, mQ) and Z_1 ~ N(0, Q1).
         This generator can be replaced by a some data acquired in real-time.
         """
+        
         # Short-cuts
         z00, Pz00, g, mQ = self.param._z00, self.param._Pz00, self.param.g, self.param.mQ
         
@@ -122,7 +124,7 @@ class UPKF:
         zerosvector = np.zeros(shape=self.dim_xy)
         while N is None or k < N:
             k += 1
-            Zkp1_simul = g(Zkp1_simul, self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), k)
+            Zkp1_simul = g(Zkp1_simul, self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), self.dt)
             yield k, np.split(Zkp1_simul, [self.dim_x])
 
     def _sigma_points(self, x, P):
@@ -186,7 +188,7 @@ class UPKF:
             sigma_propag = []
             for e in sigma:
                 ey = np.vstack((e, ykp1))
-                sigma_propag.append( g(ey, np.zeros(self.dim_xy), k))
+                sigma_propag.append( g(ey, np.zeros(self.dim_xy), self.dt))
             # print(f'sigma_propag={sigma_propag}')
 
             #######################################
@@ -253,7 +255,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     save_pickle = True
     verbose     = 0
-    N           = 2000
+    N           = 2000 # > 20
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -270,7 +272,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     
     # Choose a model by its name
-    # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1']
+    # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
     model = ModelFactory.create("x2_y1")
     if verbose>0:
         print(f'model={model}')
@@ -289,9 +291,9 @@ if __name__ == "__main__":
     listeUPKF_1 = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
     # RMSE between simulated and the predicted and filtered
-    first_arrays  = np.vstack([t[0] for t in listeUPKF_1])
-    third_arrays  = np.vstack([t[2] for t in listeUPKF_1])
-    fourth_arrays = np.vstack([t[3] for t in listeUPKF_1])
+    first_arrays  = np.vstack([t[0] for t in listeUPKF_1])[20:]
+    third_arrays  = np.vstack([t[2] for t in listeUPKF_1])[20:]
+    fourth_arrays = np.vstack([t[3] for t in listeUPKF_1])[20:]
     print(f"RMSE (X, Esp[X] pred) : {rmse(first_arrays, third_arrays)}")
     print(f"RMSE (X, Esp[X] filt) : {rmse(first_arrays, fourth_arrays)}")
     
