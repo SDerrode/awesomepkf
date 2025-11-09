@@ -113,7 +113,7 @@ class PKF:
         Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
         yield k, np.split(Zkp1_simul, [dim_x])
 
-        # The next...
+        # The next ones...
         zerosvector = np.zeros(shape=self.param.dim_x+self.param.dim_y)
         while N is None or k < N:
             k += 1
@@ -121,10 +121,6 @@ class PKF:
                 self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1)
             yield k, np.split(Zkp1_simul, [dim_x])
 
-
-    # ------------------------------------------------------------------
-    # Vérification de cohérence
-    # ------------------------------------------------------------------
 
     def process_pkf(self, N=None, data_generator=None):
         """
@@ -139,14 +135,14 @@ class PKF:
         generator = data_generator if data_generator is not None else self._data_generation()
 
         # Short-cuts
-        A, mQ             = self.param.A, self.param.mQ
+        A, mQ                = self.param.A, self.param.mQ
         dim_x, dim_y, dim_xy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
 
         # The first
         ###################
        
         # First generated data sample
-        k, (xkp1, ykp1) = next(generator) # les parenthèses servent à déballer la liste de 2 élements
+        k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
 
         # Filtering of the first sample
         temp          = self.param.b.T @ np.linalg.inv(self.param.syy)
@@ -162,26 +158,26 @@ class PKF:
             self._history.record(   iter                 = k,
                                     xkp1                 = xkp1.copy(),
                                     ykp1                 = ykp1.copy(),
-                                    Xkp1_predict         = Xkp1_predict,                    # il n'y a pas de prédiction pour la premier
-                                    Pkp1_predict         = np.eye(dim_x),                   # il n'y a pas de prédiction pour la premier
-                                    ikp1                 = np.zeros(shape=(dim_y, 1)),      # il n'y a pas de prédiction pour la premier
-                                    Skp1                 = np.eye(dim_y),                   # il n'y a pas de prédiction pour la premier
-                                    Kkp1                 = np.zeros(shape=(dim_x, dim_y)),  # il n'y a pas de prédiction pour la premier
+                                    Xkp1_predict         = Xkp1_predict.copy(),             # No prediction for the first
+                                    Pkp1_predict         = np.eye(dim_x),                   # No prediction for the first
+                                    ikp1                 = np.zeros(shape=(dim_y, 1)),      # na
+                                    Skp1                 = np.eye(dim_y),                   # ina
+                                    Kkp1                 = np.zeros(shape=(dim_x, dim_y)),  # ina
                                     Xkp1_update_math     = Xkp1_update.copy(),
                                     PXXkp1_update_math   = PXXkp1_update.copy(),
                                     Xkp1_update_phys     = Xkp1_update.copy(),
                                     PXXkp1_update_phys   = PXXkp1_update.copy(),
                                     PXXkp1_update_Joseph = PXXkp1_update.copy())
         
-        yield xkp1, ykp1, Xkp1_predict, Xkp1_update, Xkp1_update
+        yield xkp1, ykp1, Xkp1_predict, Xkp1_update, Xkp1_update # the phys. and math. Xkp1_update are the same
 
         ###################
-        # The next
+        # The next ones
 
         temp2 = np.zeros(shape=(dim_xy, dim_xy))
         while N is None or k < N:
             
-            # nécessaire pour la forme de Joseph
+            # Required for Joseph form
             PXXk_update = PXXkp1_update.copy()
 
             #######################################
@@ -204,9 +200,9 @@ class PKF:
             
             # Get new observation from the data generator
             try:
-                k, (xkp1, ykp1) = next(generator) # parenthesis is used to flatten the list of two elements
+                k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
             except StopIteration:
-                # generator qui fournit les données est terminé, on arrête alors process_pkf
+                # return # we stop as the data generator is stopped itself
                 return
 
             # Updating with mathematical formulation
@@ -237,7 +233,6 @@ class PKF:
 
             Xkp1_update_phys          = Xkp1_update.copy()
             PXXkp1_update_phys        = PXXkp1_update.copy()
-            PXXkp1_update_Joseph_phys = PXXkp1_update_Joseph.copy()
 
             # Check if cov matrices are indeed cov matrices!
             check_consistency(Pkp1_predict         = Pkp1_predict, 
