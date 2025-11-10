@@ -6,8 +6,7 @@ import numpy as np
 
 # non linear models 
 from models.nonLinear import ModelFactory
-# # A few utils functions that are used several times
-# from others.Utils import rmse, file_data_generator, check_consistency, check_equality
+# A few utils functions that are used several times
 from others.Utils import rmse
 # Manage algorithms for the UPKF
 from classes.UPKF import UPKF

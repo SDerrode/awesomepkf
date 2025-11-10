@@ -3,6 +3,9 @@ from typing import Callable
 from .base_model import BaseModel
 import logging
 
+# A few utils functions that are used several times
+from others.Utils import check_consistency
+
 logger = logging.getLogger(__name__)
 
 class ModelCubique(BaseModel):
@@ -25,7 +28,8 @@ class ModelCubique(BaseModel):
         self.Pz00 = np.eye(self.dim_xy)
 
         if __debug__:  # ⚙️ ignoré en mode -O
-            self.check_consistency()
+                        check_consistency(mQ=self.mQ, Pz00=self.Pz00)
+
 
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, nx: np.ndarray, dt: float) -> np.ndarray:

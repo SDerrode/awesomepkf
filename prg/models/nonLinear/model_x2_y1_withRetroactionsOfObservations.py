@@ -3,6 +3,9 @@ from typing import Callable
 from .base_model import BaseModel
 import logging
 
+# A few utils functions that are used several times
+from others.Utils import check_consistency
+
 logger = logging.getLogger(__name__)
 
 class ModelX2Y1_withRetroactionsOfObservations(BaseModel):
@@ -27,7 +30,7 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModel):
         self.Pz00: np.ndarray = np.eye(self.dim_xy)
 
         if __debug__:
-            self.check_consistency()
+            check_consistency(mQ=self.mQ, Pz00=self.Pz00)
 
     # ------------------------------------------------------------------
     def _fxy(self, x: np.ndarray, nx: np.ndarray, y: np.ndarray, dt: float) -> np.ndarray:

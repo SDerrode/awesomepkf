@@ -15,6 +15,10 @@ from scipy.linalg import solve_discrete_lyapunov
 from models.linear import BaseModel, all_models
 from classes.ActiveView import ActiveView
 
+# A few utils functions that are used several times
+from others.Utils import is_covariance
+
+
 # ----------------------------------------------------------------------
 # Configuration du logging global
 # ----------------------------------------------------------------------
@@ -192,8 +196,8 @@ class ParamPKF:
     # ------------------------------------------------------------------
     def _update_A_views(self) -> None:
         def _callback() -> None:
+            self._update_Sigma_from_A_mQ()
             if __debug__:
-                self._update_Sigma_from_A_mQ()
                 self._check_consistency()
                 logger.info("[ActiveView] ✅ A, Sigma matrice updated")
 
@@ -204,8 +208,8 @@ class ParamPKF:
 
     def _update_mQ_views(self) -> None:
         def _callback() -> None:
+            self._update_Sigma_from_A_mQ()
             if __debug__:
-                self._update_Sigma_from_A_mQ()
                 self._check_consistency()
                 logger.debug("[ActiveView] ✅ mQ, Sigma matrices updated")
 
@@ -218,18 +222,10 @@ class ParamPKF:
     # Vérification de cohérence
     # ------------------------------------------------------------------
     def _check_consistency(self) -> None:
-        def _is_covariance(M: np.ndarray, name: str) -> None:
-            if not np.allclose(M, M.T, atol=1e-12):
-                logger.warning(f"⚠️ {name} matrix is not symmetrical")
-            eigvals = np.linalg.eigvals(M)
-            if np.any(eigvals < -1e-12):
-                logger.warning(f"⚠️ {name} matrix is not positive semi-definite (min eig = {eigvals.min():.3e})")
-            logger.debug(f"Eig of {name} matrix: {eigvals}")
-
         for attr, name in [('_mQ', 'mQ'), ('_Q1', 'Q1'), ('_Sigma', 'Sigma'),
                            ('_sxx', 'sxx'), ('_syy', 'syy'), ('_Pz00', 'Pz00')]:
             if hasattr(self, attr):
-                _is_covariance(getattr(self, attr), name)
+                is_covariance(getattr(self, attr), name)
 
     # ------------------------------------------------------------------
     # Getters / Setters
@@ -340,7 +336,7 @@ class ParamPKF:
             print("mQ = np.array(", repr(self.mQ.tolist()), ')')
             print("z00 = np.array(", repr(self.z00.tolist()), ')')
             print("Pz00 = np.array(", repr(self.Pz00.tolist()), ')')
-        # self._check_consistency()
+
 
 
 # ----------------------------------------------------------------------

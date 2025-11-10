@@ -14,6 +14,8 @@ import numpy as np
 
 from classes.ActiveView import ActiveView
 from models.nonLinear import ModelFactory
+# A few utils functions that are used several times
+from others.Utils import is_covariance
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -114,16 +116,8 @@ class ParamUPKF:
     # ------------------------------------------------------------------
     def _check_consistency(self) -> None:
         """Check internal matrices for symmetry and positive semi-definiteness."""
-        def _is_covariance(M: np.ndarray, name: str) -> None:
-            if not np.allclose(M, M.T, atol=1e-12):
-                logger.warning(f"⚠️ {name} matrix is not symmetrical")
-            eigvals = np.linalg.eigvals(M)
-            if np.any(eigvals < -1e-12):
-                logger.warning(f"⚠️ {name} matrix is not PSD (min eig={eigvals.min():.3e})")
-            logger.debug(f"Eig of {name} matrix: {eigvals}")
-
         if hasattr(self, "_mQ"):
-            _is_covariance(self._mQ, "mQ")
+            is_covariance(self._mQ, "mQ")
 
     # ------------------------------------------------------------------
     # Properties

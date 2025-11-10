@@ -171,6 +171,7 @@ def name_analysis(listStr):
 # ----------------------------------------------------------------------
 # Générateur de données à partir d'un fichier
 # ----------------------------------------------------------------------
+
 def file_data_generator(filename: str, dim_x: int, dim_y: int, verbose: int = 0) -> Generator[tuple[int, tuple[np.ndarray, np.ndarray]], None, None]:
     df: pd.DataFrame = read_unknown_file(filename, verbose=verbose)
     # print(df.head())
@@ -195,16 +196,20 @@ def file_data_generator(filename: str, dim_x: int, dim_y: int, verbose: int = 0)
 # ----------------------------------------------------------------------
 # Vérification cohérence des matrices
 # ----------------------------------------------------------------------
-def check_consistency(**kwargs: np.ndarray) -> None:
+
+def is_covariance(M: np.ndarray, name: str) -> None:
     tol = 1e-12
+    if not np.allclose(M, M.T, atol=tol):
+        logger.warning(f"⚠️ {name} matrix is not symmetrical")
+    eigvals = np.linalg.eigvals(M)
+    if np.any(eigvals < -tol):
+        logger.warning(f"⚠️ {name} matrix is not positive semi-definite (min eig = {eigvals.min():.3e})")
+    logger.debug(f"Eig of {name} matrix: {eigvals}")
+
+def check_consistency(**kwargs: np.ndarray) -> None:
     if __debug__:
         for name, M in kwargs.items():
-            if not np.allclose(M, M.T, atol=tol):
-                logger.warning(f"⚠️ {name} matrix is not symmetrical")
-            eigvals = np.linalg.eigvals(M)
-            if np.any(eigvals < -tol):
-                logger.warning(f"⚠️ {name} matrix is not PSD (min eig = {eigvals.min():.3e})")
-            logger.debug(f"Eig of {name} matrix: {eigvals}")
+            is_covariance(M, name)
 
 # ----------------------------------------------------------------------
 # Vérification égalité de matrices
