@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Callable
-from .base_model import BaseModel
+from .base_model_nonLinear import BaseModelNonLinear
 import logging
 
 # A few utils functions that are used several times
@@ -8,7 +8,7 @@ from others.Utils import check_consistency
 
 logger = logging.getLogger(__name__)
 
-class ModelCubique(BaseModel):
+class ModelCubique(BaseModelNonLinear):
     """
     Cubic nonlinear model with 1D state and 1D observation:
         f(x) = 0.9*x - 0.2*x^3

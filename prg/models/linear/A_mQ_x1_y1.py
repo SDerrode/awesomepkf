@@ -1,5 +1,5 @@
 import numpy as np
-from .base_model import BaseModel
+from .base_model_linear import BaseModelLinear
 
 # Nom du modèle
 MODEL_NAME = "A_mQ_x1_y1"
@@ -15,7 +15,7 @@ def create_model():
     z00 = np.zeros(shape=(dim_x+dim_y, 1))
     Pz00 = np.eye(dim_x+dim_y)
 
-    model = BaseModel(dim_x=dim_x, dim_y=dim_y, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
+    model = BaseModelLinear(dim_x=dim_x, dim_y=dim_y, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
     return model
 
 # Optionnel : permettre le test rapide du fichier

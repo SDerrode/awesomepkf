@@ -1,10 +1,11 @@
 # from linear import ModelFactory
 # import numpy as np
 
-from linear import BaseModel, all_models
+from linear import BaseModelLinear, all_models
 
-# Instancier un modèle directement depuis BaseModel
-m1 = BaseModel(dim_x=2, dim_y=1, A=[[1,0],[0,1]], mQ=[[1,0],[0,1]], z00=[0,0], Pz00=[[1,0],[0,1]])
+
+# Instancier un modèle directement depuis BaseModelLinear
+m1 = BaseModelLinear(dim_x=2, dim_y=1, A=[[1,0],[0,1]], mQ=[[1,0],[0,1]], z00=[0,0], Pz00=[[1,0],[0,1]])
 m1.info()
 
 # Lister tous les fichiers de modèles détectés

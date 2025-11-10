@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Callable
-from .base_model import BaseModel
+from .base_model_nonLinear import BaseModelNonLinear
 import logging
 
 # A few utils functions that are used several times
@@ -8,7 +8,7 @@ from others.Utils import check_consistency
 
 logger = logging.getLogger(__name__)
 
-class ModelX2Y1_withRetroactionsOfObservations(BaseModel):
+class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
     """
     Nonlinear model with retro-actions of observations.
     The model includes additive Gaussian process and observation noises.

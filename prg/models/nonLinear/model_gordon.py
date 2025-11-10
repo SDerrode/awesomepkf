@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Callable, Optional
-from .base_model import BaseModel
+from .base_model_nonLinear import BaseModelNonLinear
 import logging
 
 # A few utils functions that are used several times
@@ -8,7 +8,7 @@ from others.Utils import check_consistency
 
 logger = logging.getLogger(__name__)
 
-class ModelGordon(BaseModel):
+class ModelGordon(BaseModelNonLinear):
     """
     Gordon et al. (1993) nonlinear model:
         f(x) = 0.5*x + 25*x/(1 + x^2) + 8*cos(1.2*t)
