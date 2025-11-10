@@ -25,7 +25,7 @@ class ModelX2Y1(BaseModel):
     En mode optimisé (`python -O`), toutes les vérifications sont désactivées.
     """
 
-    name: str = "x2_y1"
+    MODEL_NAME: str = "x2_y1"
 
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, alpha=1e-3, beta=2.0, kappa=0.0)

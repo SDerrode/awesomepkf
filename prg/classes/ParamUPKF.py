@@ -41,6 +41,7 @@ class ParamUPKF:
 
     def __init__(
         self,
+        verbose: int,
         dim_x: int,
         dim_y: int,
         g: Callable,
@@ -49,8 +50,7 @@ class ParamUPKF:
         Pz00: np.ndarray,
         alpha: float,
         beta: float,
-        kappa: float,
-        verbose: int = 1
+        kappa: float
     ) -> None:
 
         if __debug__:

@@ -14,7 +14,7 @@ class ModelGordon(BaseModel):
     En mode optimisé (`python -O`), toutes les vérifications sont supprimées.
     """
 
-    name: str = "x1_y1_gordon"
+    MODEL_NAME: str = "x1_y1_gordon"
 
     def __init__(self) -> None:
         super().__init__(dim_x=1, dim_y=1, alpha=0.01, beta=2.0, kappa=0.0)

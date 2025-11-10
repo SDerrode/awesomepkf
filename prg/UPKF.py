@@ -204,6 +204,8 @@ class UPKF:
     def process_N_data(self, N: Optional[int], data_generator: Optional[Generator] = None) -> list:
         return list(self.process_upkf(N=N, data_generator=data_generator))
 
+    def simulate_N_data(self, N):
+        return list(self._data_generation(N))
 
 if __name__ == "__main__":
     """
@@ -234,14 +236,14 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    
-    # Choose a model by its name
+
     # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
     model = ModelFactory.create("x2_y1")
     if verbose>0:
         print(f'model={model}')
 
-    param = ParamUPKF(*model.get_params(), verbose)
+    params = model.get_params()
+    param = ParamUPKF(verbose, **params)
     if verbose > 0:
         param.summary()
 

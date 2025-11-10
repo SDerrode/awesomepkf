@@ -19,7 +19,7 @@ class ModelFactory:
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
                 if isinstance(attr, type) and issubclass(attr, BaseModel) and attr is not BaseModel:
-                    name = getattr(attr, "name", attr.__name__.lower().replace("model", ""))
+                    name = getattr(attr, "MODEL_NAME", attr.__name__.lower().replace("model", ""))
                     cls._registry[name] = attr
 
     @classmethod
