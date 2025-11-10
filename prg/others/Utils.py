@@ -22,29 +22,36 @@ def save_dataframe_to_csv(df, filepath, index=False):
     
     try:
         df.to_csv(path, encoding="utf-8", index=index, float_format="%.6f")
-        logger.info(f"✅ Fichier enregistré avec succès : {path.resolve()}")
+        if __debug__:
+            logger.info(f"✅ Fichier enregistré avec succès : {path.resolve()}")
     except Exception as e:
         logger.error(f"❌ Erreur lors de l'enregistrement du CSV : {e}")
         raise
 
-def data_to_dataframe(listData, dim_x, dim_y):
+def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
     """Convertit une liste de tuples PKF/UKF en DataFrame pandas."""
     
     data = []
     for idx, (x, y) in [(i, vals) for i, vals in listData]:
         # Validation des types
-        if not hasattr(x, "flatten") or not hasattr(y, "flatten"):
-            raise TypeError(f"Les éléments pour l'index {idx} ne sont pas des numpy.array valides.")
+        if __debug__:
+            if not hasattr(x, "flatten") or not hasattr(y, "flatten"):
+                raise TypeError(f"Les éléments pour l'index {idx} ne sont pas des numpy.array valides.")
         x_values = x.flatten()
         y_values = y.flatten()
-        if len(x_values) != dim_x or len(y_values) != dim_y:
-            raise ValueError(f"Taille inattendue des vecteurs à l'index {idx}: X={len(x_values)}, Y={len(y_values)}")
-        data.append([*x_values, *y_values])
+        if __debug__:
+            if len(x_values) != dim_x or len(y_values) != dim_y:
+                raise ValueError(f"Taille inattendue des vecteurs à l'index {idx}: X={len(x_values)}, Y={len(y_values)}")
+        if withoutX == True:
+            data.append([*y_values])
+        else:
+            data.append([*x_values, *y_values])
 
     # Création du DataFrame
     columns = []
-    for c in range(dim_x):
-        columns.append(f"X{c}")
+    if withoutX == False:
+        for c in range(dim_x):
+            columns.append(f"X{c}")
     for c in range(dim_y):
         columns.append(f"Y{c}")
     df = pd.DataFrame(data, columns=columns)
@@ -67,6 +74,7 @@ def rmse(X1: Union[np.ndarray, list], X2: Union[np.ndarray, list]) -> float:
 # ----------------------------------------------------------------------
 # Lecture de fichiers inconnus
 # ----------------------------------------------------------------------
+
 def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose: int = 0) -> pd.DataFrame:
     ext = os.path.splitext(filepath)[1].lower()
     try:
@@ -79,32 +87,45 @@ def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose: int = 0) 
         if verbose > 0:
             logger.info(f"🧬 Encodage détecté : {encoding} (confiance={confidence:.2f})")
 
-        # --- Lecture selon l'extension ---
+        # --- Lecture selon le type ---
         if ext == ".parquet":
-            if verbose > 0: logger.info(f"📦 Lecture Parquet : {filepath}")
             return pd.read_parquet(filepath)
         elif ext == ".json":
-            if verbose > 0: logger.info(f"🧾 Lecture JSON : {filepath}")
             return pd.read_json(filepath, encoding=encoding)
         elif ext in [".xlsx", ".xls"]:
-            if verbose > 0: logger.info(f"📊 Lecture Excel : {filepath}")
             return pd.read_excel(filepath)
         elif ext in [".csv", ".txt", ".dat", ".tsv", ""]:
-            if verbose > 0: logger.info(f"📑 Lecture texte délimité : {filepath}")
+            if verbose > 0:
+                logger.info(f"📑 Lecture texte délimité : {filepath}")
+            
+            # Lecture d’un échantillon
             with open(filepath, "r", encoding=encoding) as f:
-                sample_lines = [next(f) for _ in range(min(nrows_detect, 10))]
+                sample_lines = [next(f, '') for _ in range(min(nrows_detect, 10))]
                 sample = "".join(sample_lines)
-                try:
-                    dialect = csv.Sniffer().sniff(sample, delimiters=",;\t| ")
-                    sep = dialect.delimiter
-                except Exception:
-                    sep = ","
-                    if verbose > 0:
-                        logger.warning("⚠️ Séparateur non détecté, utilisation de ',' par défaut.")
+
+            # Tentative de détection du séparateur
+            try:
+                dialect = csv.Sniffer().sniff(sample, delimiters=",;\t| ")
+                sep = dialect.delimiter
                 has_header = csv.Sniffer().has_header(sample)
+            except csv.Error:
+                # Cas typique : une seule colonne sans délimiteur
+                sep = None
+                has_header = True
                 if verbose > 0:
-                    logger.info(f"➡️ Séparateur : '{sep}' | Header : {has_header}")
-            return pd.read_csv(filepath, sep=sep, header=0 if has_header else None, encoding=encoding)
+                    logger.warning("⚠️ Impossible de détecter le séparateur — lecture comme fichier à colonne unique.")
+            
+            if verbose > 0:
+                logger.info(f"➡️ Séparateur : {repr(sep)} | Header : {has_header}")
+            
+            # Lecture du fichier
+            if sep is None:
+                # Pas de séparateur détecté → une seule colonne
+                df = pd.read_csv(filepath, header=0 if has_header else None, encoding=encoding)
+            else:
+                df = pd.read_csv(filepath, sep=sep, header=0 if has_header else None, encoding=encoding)
+            
+            return df
         else:
             raise ValueError(f"❌ Format de fichier non reconnu : {ext}")
 
@@ -112,14 +133,63 @@ def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose: int = 0) 
         logger.error(f"❌ Erreur lors de la lecture du fichier {filepath} : {e}")
         raise
 
+def name_analysis(listStr):
+    """
+    Analyse une liste de noms de variables et renvoie :
+      - dim_x : nombre de noms commençant par 'X'
+      - dim_y : nombre de noms commençant par 'Y'
+      - OK : True si tous les 'X...' sont au début, sinon False
+      - autres : liste des chaînes ne commençant ni par 'X' ni par 'Y'
+    """
+    if not isinstance(listStr, (list, tuple)):
+        raise TypeError("L'entrée doit être une liste ou un tuple de chaînes.")
+    
+    # Comptages de base
+    dim_x = sum(s.startswith('X') for s in listStr)
+    dim_y = sum(s.startswith('Y') for s in listStr)
+    autres = [s for s in listStr if not (s.startswith('X') or s.startswith('Y'))]
+
+    # Vérification de l'ordre (tous les X doivent être avant les Y)
+    ok = True
+    x_ended = False
+    for s in listStr:
+        if s.startswith('X'):
+            if x_ended:
+                ok = False
+                break
+        elif s.startswith('Y'):
+            x_ended = True
+
+    return {
+        "dim_x": dim_x,
+        "dim_y": dim_y,
+        "OK": ok,
+        "autres": autres
+    }
+
+
 # ----------------------------------------------------------------------
 # Générateur de données à partir d'un fichier
 # ----------------------------------------------------------------------
-def file_data_generator(filename: str, dim_x: int, verbose: int = 0) -> Generator[tuple[int, tuple[np.ndarray, np.ndarray]], None, None]:
+def file_data_generator(filename: str, dim_x: int, dim_y: int, verbose: int = 0) -> Generator[tuple[int, tuple[np.ndarray, np.ndarray]], None, None]:
     df: pd.DataFrame = read_unknown_file(filename, verbose=verbose)
+    # print(df.head())
+    # print(list(df.columns))
+    dico = name_analysis(list(df.columns))
+    # print(f'dico={dico}')
+    # exit(1)
+    
+
+    if dico['dim_x'] != 0 and (dico['OK'] == False or dico['dim_x'] != dim_x or dico['dim_y']!= dim_y) : 
+        print(f'Expected dimensions : dim_x x dim_y = {dim_x} x {dim_y}')
+        print(f'Columns found in the file : {list(df.columns)}')
+        raise ValueError(f"❌ Format de fichier non reconnu ou non compatible: {dico}")
+
     for k, row in df.iterrows():
         values: np.ndarray = row.values.reshape(-1, 1)
-        xkp1, ykp1 = np.split(values, [dim_x])
+        xkp1, ykp1 = np.split(values, [dico['dim_x']])
+        # print(f'xkp1, ykp1={xkp1}, {ykp1}')
+        # exit(1)
         yield k, (xkp1, ykp1)
 
 # ----------------------------------------------------------------------
@@ -141,7 +211,7 @@ def check_consistency(**kwargs: np.ndarray) -> None:
 # ----------------------------------------------------------------------
 def check_equality(**kwargs: np.ndarray) -> None:
     if len(kwargs) < 2:
-        logger.warning("⚠️ _check_equality : need at least 2 matrices.")
+        logger.warning("⚠️ check_equality : need at least 2 matrices.")
         return
 
     names = list(kwargs.keys())

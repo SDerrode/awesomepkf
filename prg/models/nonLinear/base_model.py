@@ -73,7 +73,7 @@ class BaseModel:
     def check_consistency(self):
         """Check that covariance matrices are symmetric and positive semi-definite."""
         if not __debug__:
-            return  # 🔥 en mode optimisé, on saute ces vérifications
+            return  # en mode optimisé, on saute ces vérifications
         for name, M in {"mQ": self.mQ, "Pz00": self.Pz00}.items():
             if not np.allclose(M, M.T, atol=1e-12):
                 logger.warning(f"⚠️ Matrix {name} is not symmetric.")
