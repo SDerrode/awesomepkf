@@ -1,6 +1,6 @@
 import numpy as np
 
-class BaseModel:
+class BaseModelLinear:
     def __init__(self, **kwargs):
         self.dim_x  = kwargs.get('dim_x')
         self.dim_y  = kwargs.get('dim_y')

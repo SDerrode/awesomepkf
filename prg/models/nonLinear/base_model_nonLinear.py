@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-class BaseModel:
+class BaseModelNonLinear:
     """
     Base class for all non-linear models.
 

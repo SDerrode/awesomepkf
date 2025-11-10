@@ -1,5 +1,5 @@
 import numpy as np
-from .base_model import BaseModel
+from .base_model_linear import BaseModelLinear
 
 # Nom du modèle
 MODEL_NAME = "Sigma_x3_y1"
@@ -22,7 +22,7 @@ def create_model():
                      [0.25]])
     c   = np.matrix([[0.3]])
 
-    model = BaseModel(dim_x=dim_x, dim_y=dim_y,
+    model = BaseModelLinear(dim_x=dim_x, dim_y=dim_y,
                       sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
     return model
 

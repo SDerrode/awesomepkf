@@ -1,8 +1,8 @@
 import os
 import importlib
-from .base_model import BaseModel
+from .base_model_linear import BaseModelLinear
 
-__all__ = ['BaseModel', 'all_models', 'model_names']
+__all__ = ['BaseModelLinear', 'all_models', 'model_names']
 
 # Dictionnaires pour stocker les modèles et leurs noms
 all_models = {}
