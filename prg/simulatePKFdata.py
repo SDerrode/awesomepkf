@@ -8,8 +8,8 @@ import numpy as np
 
 # A few utils functions that are used several times
 from others.Utils import save_dataframe_to_csv, data_to_dataframe
-# PKF class
-from PKF import PKF
+# Manage algorithms for the PKF
+from classes.PKF import PKF
 # Parameters for PKF
 from classes.ParamPKF import ParamPKF
 # Linear models 
