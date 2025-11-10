@@ -23,7 +23,7 @@ from typing import Generator, Optional, Tuple
 
 import numpy as np
 
-# non linear models 
+# Linear models 
 from models.linear import BaseModel, all_models
 # A few utils functions that are used several times
 from others.Utils import rmse, file_data_generator, check_consistency, check_equality

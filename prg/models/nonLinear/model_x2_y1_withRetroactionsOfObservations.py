@@ -13,7 +13,7 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModel):
     En mode optimisé (`python -O`), toutes les vérifications sont désactivées.
     """
 
-    name: str = "x2_y1_withRetroactionsOfObservations"
+    MODEL_NAME: str = "x2_y1_withRetroactionsOfObservations"
 
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, alpha=1e-3, beta=2.0, kappa=0.0)

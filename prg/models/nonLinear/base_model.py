@@ -86,17 +86,16 @@ class BaseModel:
     # ------------------------------------------------------------------
     def get_params(self):
         """Retourne les paramètres principaux du modèle."""
-        return (
-            self.dim_x,
-            self.dim_y,
-            self.g,
-            self.mQ,
-            self.z00,
-            self.Pz00,
-            self.alpha,
-            self.beta,
-            self.kappa,
-        )
+        return {'dim_x': self.dim_x, 
+                'dim_y': self.dim_y, 
+                'g'    : self.g,
+                'mQ'   : self.mQ,
+                'z00'  : self.z00,
+                'Pz00' : self.Pz00,
+                'alpha': self.alpha,
+                'beta' : self.beta,
+                'kappa': self.kappa
+               }
 
     # ------------------------------------------------------------------
     def __repr__(self):

@@ -13,7 +13,7 @@ class ModelExtSaturant(BaseModel):
 
     En mode optimisé (`python -O`), toutes les vérifications sont désactivées.
     """
-    name = "x1_y1_ext_saturant"
+    MODEL_NAME = "x1_y1_ext_saturant"
 
     def __init__(self):
         super().__init__(dim_x=1, dim_y=1)

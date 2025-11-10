@@ -13,7 +13,7 @@ class ModelCubique(BaseModel):
 
     En mode optimisé (python -O), les vérifications sont désactivées pour accélérer l'exécution.
     """
-    name = "x1_y1_cubique"
+    MODEL_NAME = "x1_y1_cubique"
 
     def __init__(self):
         super().__init__(dim_x=1, dim_y=1)

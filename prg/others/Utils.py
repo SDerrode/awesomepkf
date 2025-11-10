@@ -7,6 +7,7 @@ import pandas as pd
 import csv
 import chardet
 from typing import Generator, Optional, Any, Union
+from pathlib import Path
 
 # ----------------------------------------------------------------------
 # Logging global
@@ -26,6 +27,30 @@ def save_dataframe_to_csv(df, filepath, index=False):
         logger.error(f"❌ Erreur lors de l'enregistrement du CSV : {e}")
         raise
 
+def data_to_dataframe(listData, dim_x, dim_y):
+    """Convertit une liste de tuples PKF/UKF en DataFrame pandas."""
+    
+    data = []
+    for idx, (x, y) in [(i, vals) for i, vals in listData]:
+        # Validation des types
+        if not hasattr(x, "flatten") or not hasattr(y, "flatten"):
+            raise TypeError(f"Les éléments pour l'index {idx} ne sont pas des numpy.array valides.")
+        x_values = x.flatten()
+        y_values = y.flatten()
+        if len(x_values) != dim_x or len(y_values) != dim_y:
+            raise ValueError(f"Taille inattendue des vecteurs à l'index {idx}: X={len(x_values)}, Y={len(y_values)}")
+        data.append([*x_values, *y_values])
+
+    # Création du DataFrame
+    columns = []
+    for c in range(dim_x):
+        columns.append(f"X{c}")
+    for c in range(dim_y):
+        columns.append(f"Y{c}")
+    df = pd.DataFrame(data, columns=columns)
+    # df.set_index("index", inplace=True)
+
+    return df
 
 # ----------------------------------------------------------------------
 # RMSE
