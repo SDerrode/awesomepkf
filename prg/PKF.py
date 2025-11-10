@@ -103,7 +103,7 @@ class PKF:
     # ------------------------------------------------------------------
     def _data_generation(self, N: Optional[int] = None) -> Generator[Tuple[int, np.ndarray], None, None]:
         """
-        Genrator for the simulation of Z_{k+1} = A * Z_k + W_{k+1}, 
+        Generator for the simulation of Z_{k+1} = A * Z_k + W_{k+1}, 
         with W_{k+1} ~ N(0, mQ) and Z_1 ~ N(0, Q1).
         This generator can be replaced by a some data acquired in real-time.
         """
@@ -229,7 +229,7 @@ class PKF:
             Xkp1_update   = Xkp1_predict + Kkp1 @ ikp1
             PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
             # Dans la forme de Joseph, j'utilise les sous-matrices de mQ, qui ne sont pas des matrices mais des ActiveView.
-            # pour revenir à un forme np.ndarray, j'utilise l'opérateur value (méthode définie dans la classe ActiveView de ParamPKF.py)
+            # pour revenir à un forme np.ndarray, j'utilise l'opérateur value (méthode définie dans la classe ActiveView )
             PXXkp1_update_Joseph =  (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value) @ PXXk_update @ (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value).T \
                 + self.param.mQ_xx.value - Kkp1 @ self.param.mQ_yx.value - self.param.mQ_xy.value @ Kkp1.T + Kkp1 @ self.param.mQ_yy.value @ Kkp1.T
 
@@ -271,6 +271,9 @@ class PKF:
 
     def process_N_data(self, N, data_generator=None):
         return list(self.process_pkf(N=N, data_generator=data_generator))
+    
+    def simulate_N_data(self, N):
+        return list(self._data_generation(N))
 
 
 
@@ -301,6 +304,7 @@ if __name__ == "__main__":
     # Test parameters for the Two ((A, mQ) or Sigma) parametrizations
     # ------------------------------------------------------------------
     
+    # Available : ['A_mQ_x1_y1', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x3_y1', 'A_mQ_x2_y2', 'Sigma_x2_y2', 'A_mQ_x1_y1_VPgreaterThan1']
     model_module = all_models['Sigma_x1_y1']
     model = model_module.create_model()
     # print(f'model={model.info}')
