@@ -1,3 +1,9 @@
+import path, sys
+directory = path.Path(__file__)
+sys.path.append(directory.parent.parent.parent)
+# print(directory.parent.parent.parent)
+# exit(1)
+
 import inspect
 import numpy as np
 import logging
@@ -5,7 +11,6 @@ import logging
 # Configuration du logger
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
 
 class BaseModel:
     """
@@ -36,18 +41,18 @@ class BaseModel:
         # ------------------------------------------------------------------
         # Dimensions et paramètres
         # ------------------------------------------------------------------
-        self.dim_x = dim_x
-        self.dim_y = dim_y
+        self.dim_x  = dim_x
+        self.dim_y  = dim_y
         self.dim_xy = dim_x + dim_y
 
         # UKF parameters
         self.alpha = alpha
-        self.beta = beta
+        self.beta  = beta
         self.kappa = kappa
 
         # Covariances et initialisations par défaut
-        self.mQ = np.eye(self.dim_xy)
-        self.z00 = np.zeros((self.dim_xy, 1))
+        self.mQ   = np.eye(self.dim_xy)
+        self.z00  = np.zeros((self.dim_xy, 1))
         self.Pz00 = np.eye(self.dim_xy)
 
     # ------------------------------------------------------------------
@@ -68,20 +73,6 @@ class BaseModel:
 
         # Appel de la fonction spécifique du modèle
         return self._g(x, y, nx, ny, dt)
-
-    # ------------------------------------------------------------------
-    def check_consistency(self):
-        """Check that covariance matrices are symmetric and positive semi-definite."""
-        if not __debug__:
-            return  # en mode optimisé, on saute ces vérifications
-        for name, M in {"mQ": self.mQ, "Pz00": self.Pz00}.items():
-            if not np.allclose(M, M.T, atol=1e-12):
-                logger.warning(f"⚠️ Matrix {name} is not symmetric.")
-            eigvals = np.linalg.eigvals(M)
-            if np.any(eigvals < -1e-12):
-                logger.warning(
-                    f"⚠️ Matrix {name} is not positive semi-definite (min eigenvalue = {eigvals.min():.3e})"
-                )
 
     # ------------------------------------------------------------------
     def get_params(self):
