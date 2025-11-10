@@ -8,8 +8,8 @@ from pathlib import Path
 
 # A few utils functions that are used several times
 from others.Utils import save_dataframe_to_csv, data_to_dataframe
-# PKF class
-from UPKF import UPKF
+# Manage algorithms for the UPKF
+from classes.UPKF import UPKF
 # Parameters for PKF
 from classes.ParamUPKF import ParamUPKF
 # non linear models 
