@@ -1,31 +1,31 @@
 import numpy as np
 from .base_model_linear import BaseModelLinear
 
-# Nom du modèle
-MODEL_NAME = "Sigma_x3_y1"
+# A few utils functions that are used several times
+from others.Utils import check_consistency
 
-def create_model():
+class Model_Sigma_x3_y1(BaseModelLinear):
+
+    # Nom du modèle
+    MODEL_NAME = "Sigma_x3_y1"
+
+    def __init__(self) -> None:
+        super().__init__(dim_x=3, dim_y=1, model_type="Sigma")
     
-    dim_x, dim_y = 3, 1
-    
-    sxx = np.matrix([[1.0, 0.4, 0.4],
-                     [0.4, 1.0, 0.4],
-                     [0.4, 0.4, 1.0]])
-    b   = np.matrix([[0.6, 0.2, 0.4]])
-    syy = np.matrix([[1.0]])
-    a   = np.matrix([[0.5, 0.1, 0.2],
-                     [0.4, 0.6, 0.2],
-                     [0.4, 0.4, 0.5]])
-    d   = np.matrix([[0.0, 0.0, 0.0]])
-    e   = np.matrix([[0.2],
-                     [0.15],
-                     [0.25]])
-    c   = np.matrix([[0.3]])
+        self.sxx = np.matrix([[1.0, 0.4, 0.4],
+                        [0.4, 1.0, 0.4],
+                        [0.4, 0.4, 1.0]])
+        self.b   = np.matrix([[0.6, 0.2, 0.4]])
+        self.syy = np.matrix([[1.0]])
+        self.a   = np.matrix([[0.5, 0.1, 0.2],
+                        [0.4, 0.6, 0.2],
+                        [0.4, 0.4, 0.5]])
+        self.d   = np.matrix([[0.0, 0.0, 0.0]])
+        self.e   = np.matrix([[0.2],
+                        [0.15],
+                        [0.25]])
+        self.c   = np.matrix([[0.3]])
 
-    model = BaseModelLinear(dim_x=dim_x, dim_y=dim_y,
-                      sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-    return model
+        if __debug__:
+            check_consistency(sxx=self.sxx, syy=self.syy)
 
-if __name__ == "__main__":
-    m = create_model()
-    m.info()

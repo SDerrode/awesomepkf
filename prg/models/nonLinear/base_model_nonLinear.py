@@ -4,13 +4,8 @@ sys.path.append(directory.parent.parent.parent)
 # print(directory.parent.parent.parent)
 # exit(1)
 
-import inspect
 import numpy as np
-import logging
 
-# Configuration du logger
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 class BaseModelNonLinear:
     """
@@ -30,7 +25,7 @@ class BaseModelNonLinear:
         kappa: float = 0.0,
     ):
         # ------------------------------------------------------------------
-        # Vérifications (actives uniquement en mode debug)
+        # Vérifications
         # ------------------------------------------------------------------
         assert isinstance(dim_x, int) and dim_x > 0, "dim_x doit être un entier positif"
         assert isinstance(dim_y, int) and dim_y > 0, "dim_y doit être un entier positif"
@@ -51,9 +46,9 @@ class BaseModelNonLinear:
         self.kappa = kappa
 
         # Covariances et initialisations par défaut
-        self.mQ   = np.eye(self.dim_xy)
-        self.z00  = np.zeros((self.dim_xy, 1))
-        self.Pz00 = np.eye(self.dim_xy)
+        # self.mQ   = np.eye(self.dim_xy)
+        # self.z00  = np.zeros((self.dim_xy, 1))
+        # self.Pz00 = np.eye(self.dim_xy)
 
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:

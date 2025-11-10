@@ -3,7 +3,7 @@ import pkgutil
 from pathlib import Path
 from .base_model_nonLinear import BaseModelNonLinear
 
-class ModelFactory:
+class ModelFactoryNonLinear:
     """Fabrique automatique : découvre et instancie tous les modèles du dossier."""
 
     _registry = {}
@@ -13,7 +13,7 @@ class ModelFactory:
         """Scanne tous les modules dans ce paquet et enregistre les sous-classes de BaseModelNonLinear."""
         package_dir = Path(__file__).parent
         for _, module_name, _ in pkgutil.iter_modules([str(package_dir)]):
-            if module_name == "base_model":
+            if module_name == "base_model_nonLinear":
                 continue
             module = importlib.import_module(f"{__package__}.{module_name}")
             for attr_name in dir(module):

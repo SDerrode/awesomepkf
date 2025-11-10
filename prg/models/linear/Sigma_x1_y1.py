@@ -1,25 +1,24 @@
 import numpy as np
 from .base_model_linear import BaseModelLinear
 
-# Nom du modèle
-MODEL_NAME = "Sigma_x1_y1"
+# A few utils functions that are used several times
+from others.Utils import check_consistency
 
-def create_model():
+class Model_Sigma_x1_y1(BaseModelLinear):
     
-    dim_x, dim_y = 1, 1
-    
-    sxx = np.matrix([[1]])
-    b   = np.matrix([[0.3]])
-    syy = np.matrix([[1]])
-    a   = np.matrix([[0.5]])
-    d   = np.matrix([[0.05]])
-    e   = np.matrix([[0.05]])
-    c   = np.matrix([[0.04]])
+    # Nom du modèle
+    MODEL_NAME = "Sigma_x1_y1"
 
-    model = BaseModelLinear(dim_x=dim_x, dim_y=dim_y,
-                      sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-    return model
+    def __init__(self) -> None:
+        super().__init__(dim_x=1, dim_y=1, model_type="Sigma")
 
-if __name__ == "__main__":
-    m = create_model()
-    m.info()
+        self.sxx = np.matrix([[1]])
+        self.b   = np.matrix([[0.3]])
+        self.syy = np.matrix([[1]])
+        self.a   = np.matrix([[0.5]])
+        self.d   = np.matrix([[0.05]])
+        self.e   = np.matrix([[0.05]])
+        self.c   = np.matrix([[0.04]])
+       
+        if __debug__:
+            check_consistency(sxx=self.sxx, syy=self.syy)

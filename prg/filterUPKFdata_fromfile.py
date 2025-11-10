@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 # non linear models 
-from models.nonLinear import ModelFactory
+from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
 from others.Utils import rmse, file_data_generator
 # Manage algorithms for the UPKF
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
-    model = ModelFactory.create("x2_y1")
+    model = ModelFactoryNonLinear.create("x2_y1")
     if verbose>0:
         print(f'model={model}')
 
@@ -84,7 +84,6 @@ if __name__ == "__main__":
         if verbose > 0:
             print("\nExtract of the resulting filtering with UPKF :")
             print(df.head())
-            # print(df.info())
 
         # pickle storing and plots
         upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_2.pkl"))
