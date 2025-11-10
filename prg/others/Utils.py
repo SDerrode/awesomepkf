@@ -14,6 +14,19 @@ from typing import Generator, Optional, Any, Union
 logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def save_dataframe_to_csv(df, filepath, index=False):
+    """Enregistre un DataFrame en CSV (UTF-8) sans sauvegarder l'index."""
+    path = Path(filepath)
+    path.parent.mkdir(parents=True, exist_ok=True)  # Crée le dossier si besoin
+    
+    try:
+        df.to_csv(path, encoding="utf-8", index=index, float_format="%.6f")
+        logger.info(f"✅ Fichier enregistré avec succès : {path.resolve()}")
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de l'enregistrement du CSV : {e}")
+        raise
+
+
 # ----------------------------------------------------------------------
 # RMSE
 # ----------------------------------------------------------------------
