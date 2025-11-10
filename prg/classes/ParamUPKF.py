@@ -13,7 +13,7 @@ from typing import Callable, Any
 import numpy as np
 
 from classes.ActiveView import ActiveView
-from models.nonLinear import ModelFactory
+from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
 from others.Utils import is_covariance
 
@@ -46,14 +46,7 @@ class ParamUPKF:
         verbose: int,
         dim_x: int,
         dim_y: int,
-        g: Callable,
-        mQ: np.ndarray,
-        z00: np.ndarray,
-        Pz00: np.ndarray,
-        alpha: float,
-        beta: float,
-        kappa: float
-    ) -> None:
+        **kwargs      ) -> None:
 
         if __debug__:
             assert isinstance(dim_x, int) and dim_x > 0, "dim_x must be int > 0"
@@ -64,20 +57,37 @@ class ParamUPKF:
         self.dim_y   = dim_y
         self.dim_xy  = dim_x + dim_y
         self.verbose = verbose
+        
+        # Configuration du logger selon verbose
         self._set_log_level()
 
-        self.g     = g
-        self._z00  = np.array(z00, dtype=float)
-        self._Pz00 = np.array(Pz00, dtype=float)
-        self._mQ   = np.array(mQ, dtype=float)
+        # Attribute initialization
+        self.g   = kwargs['g']
+        
+        self._mQ = np.array(kwargs['mQ'], dtype=float)
+        if self._mQ.shape != (self.dim_xy, self.dim_xy):
+            raise ValueError(f"⚠️ mQ doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
+        self._update_mQ_views()
+
+        self._z00 = np.array(kwargs['z00'], dtype=float)
+        if self._z00.shape != (self.dim_xy, 1):
+            raise ValueError(f"⚠️ z00 doit être un vecteur colonne ({self.dim_xy},1)")
+
+        self._Pz00 = np.array(kwargs['Pz00'], dtype=float)
+        if self._Pz00.shape != (self.dim_xy, self.dim_xy):
+            raise ValueError(f"⚠️ Pz00 doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
         self._update_mQ_views()
 
         # UKF parameters
-        self._alpha   = alpha
-        self._beta    = beta
-        self._kappa   = kappa
-        self._lambda_ = alpha**2 * (self.dim_x + kappa) - self.dim_x
+        self._alpha   = kwargs['alpha']
+        self._beta    = kwargs['beta']
+        self._kappa   = kwargs['kappa']
+        self._lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
         self._gamma   = np.sqrt(self.dim_x + self._lambda_)
+        
+        # Vérification des dimensions dès la création
+        if __debug__:
+            self._check_dimensions()
 
     # ------------------------------------------------------------------
     def __repr__(self) -> str:
@@ -98,13 +108,29 @@ class ParamUPKF:
             logger.setLevel(logging.DEBUG)
 
     # ------------------------------------------------------------------
+    # Vérification des dimensions
+    # ------------------------------------------------------------------
+    def _check_dimensions(self) -> None:
+        """Vérifie que toutes les matrices ont les dimensions attendues."""
+        expected_shapes = {
+            'mQ':    (self.dim_xy, self.dim_xy),
+            'z00':   (self.dim_xy, 1),
+            'Pz00':  (self.dim_xy, self.dim_xy),
+        }
+        for attr, shape in expected_shapes.items():
+            if hasattr(self, f"_{attr}"):
+                actual = getattr(self, f"_{attr}")
+                if actual.shape != shape:
+                    raise ValueError(f"⚠️ Matrice {attr} a une forme {actual.shape}, attendue {shape}")
+
+    # ------------------------------------------------------------------
     # Dynamic views on mQ
     # ------------------------------------------------------------------
     def _update_mQ_views(self) -> None:
         def _callback():
             if __debug__:
                 self._check_consistency()
-            logger.debug("[ActiveView] ✅ mQ matrices updated")
+                logger.debug("[ActiveView] ✅ mQ matrices updated")
 
         self._mQ_xx = ActiveView(self._mQ, slice(0, self.dim_x), slice(0, self.dim_x), _callback)
         self._mQ_xy = ActiveView(self._mQ, slice(0, self.dim_x), slice(self.dim_x, self.dim_xy), _callback)
@@ -116,8 +142,10 @@ class ParamUPKF:
     # ------------------------------------------------------------------
     def _check_consistency(self) -> None:
         """Check internal matrices for symmetry and positive semi-definiteness."""
-        if hasattr(self, "_mQ"):
-            is_covariance(self._mQ, "mQ")
+        for attr, name in [('_mQ', 'mQ'), ('_Pz00', 'Pz00')]:
+            if hasattr(self, attr):
+                is_covariance(getattr(self, attr), name)
+
 
     # ------------------------------------------------------------------
     # Properties
@@ -180,8 +208,8 @@ class ParamUPKF:
             print("========================")
             print("  Q_xx:\n  ", fmt(self.mQ_xx))
             print("  Q_yy:\n  ", fmt(self.mQ_yy))
-            print("========================")
-        if self.verbose > 1:
+        print("========================")
+        if self.verbose > 1: # Ready to copy in python code
             print("mQ = np.array(", repr(self.mQ.tolist()), ')')
             print("z00 = np.array(", repr(self.z00.tolist()), ')')
             print("Pz00 = np.array(", repr(self.Pz00.tolist()), ')')
@@ -196,10 +224,12 @@ class ParamUPKF:
 if __name__ == "__main__":
     verbose = 1
 
-    model = ModelFactory.create("x2_y1_withRetroactionsOfObservations")
+    # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
+    model = ModelFactoryNonLinear.create("x2_y1")
     print(f'model={model}')
     print(f'model.get_params()={model.get_params()}')
 
-    param = ParamUPKF(*model.get_params(), verbose=verbose)
+    params = model.get_params().copy()
+    param  = ParamUPKF(verbose, params.pop('dim_x'), params.pop('dim_y'), **params)
     if verbose > 0:
         param.summary()

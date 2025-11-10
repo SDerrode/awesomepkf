@@ -19,7 +19,7 @@ from typing import Generator, Optional, Tuple
 import numpy as np
 
 # non linear models 
-from models.nonLinear import ModelFactory
+# from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
 from others.Utils import rmse, file_data_generator, check_consistency, check_equality
 # Manage parameters for the UPKF
@@ -56,31 +56,29 @@ class UPKF:
             if verbose not in [0, 1, 2]:
                 raise ValueError("verbose must be 0, 1 or 2")
 
-        self.param: ParamUPKF = param
-        self.dt: int = 1
-        self.verbose: int = verbose
-        self._seed_gen: SeedGenerator = SeedGenerator(sKey)
+        self.param     = param
+        self.dt        = 1
+        self.verbose   = verbose
+        self._seed_gen = SeedGenerator(sKey)
 
         # Shortcuts
-        self.dim_x: int
-        self.dim_y: int
-        self.dim_xy: int
         self.dim_x, self.dim_y, self.dim_xy = param.dim_x, param.dim_y, param.dim_xy
 
+       # Create HistoryTracker only if save_pickle is True
+        self.save_pickle = save_pickle
+        self._history    = HistoryTracker() if save_pickle else None
+        
+        # Configuration du logger selon verbose
+        self._set_log_level()
+
+        if self.verbose >= 1:
+            logger.info(f"[PKF] Init with sKey={sKey}, verbose={verbose}, save_pickle={save_pickle}")
+
         # Mean weights Wm, and correlation weights Wc
-        self.Wm: np.ndarray = np.full(2 * self.dim_x + 1, 1. / (2. * (self.dim_x + param.lambda_)))
-        self.Wc: np.ndarray = np.copy(self.Wm)
+        self.Wm = np.full(2 * self.dim_x + 1, 1. / (2. * (self.dim_x + param.lambda_)))
+        self.Wc = np.copy(self.Wm)
         self.Wm[0] = param.lambda_ / (self.dim_x + param.lambda_)
         self.Wc[0] = param.lambda_ / (self.dim_x + param.lambda_) + (1. - param.alpha**2 + param.beta)
-
-        # HistoryTracker optional
-        self.save_pickle: bool = save_pickle
-        self._history: Optional[HistoryTracker] = HistoryTracker() if save_pickle else None
-
-        # Logging
-        self._set_log_level()
-        if __debug__ and self.verbose >= 1:
-            logger.info(f"[UPKF] Init with sKey={sKey}, verbose={verbose}, save_pickle={save_pickle}")
 
     # ------------------------------------------------------------------
     # Loger configuration according to verbose
@@ -114,12 +112,16 @@ class UPKF:
         Generator for the simulation of Z_{k+1} = A * Z_k + W_{k+1},
         with W_{k+1} ~ N(0, mQ) and Z_1 ~ N(0, Q1).
         """
+        # Short-cuts
         z00, Pz00, g, mQ = self.param._z00, self.param._Pz00, self.param.g, self.param.mQ
-        k: int = 0
-        Zkp1_simul: np.ndarray = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
+
+        # The first
+        k = 0
+        Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
         yield k, np.split(Zkp1_simul, [self.dim_x])
 
-        zerosvector: np.ndarray = np.zeros(self.dim_xy)
+        # The next ones...
+        zerosvector = np.zeros(self.dim_xy)
         while N is None or k < N:
             k += 1
             Zkp1_simul = g(Zkp1_simul, self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), self.dt)
@@ -143,15 +145,16 @@ class UPKF:
                 raise ValueError("N must be None or a number >0")
 
         generator = data_generator if data_generator is not None else self._data_generation()
-        g, mQ, dim_x = self.param.g, self.param.mQ, self.dim_x
+        g, mQ = self.param.g, self.param.mQ
 
-        # First sample
-        k, (xkp1, ykp1) = next(generator)
-        Xkp1_update: np.ndarray = self.param.z00[0:self.dim_x]
-        PXXkp1_update: np.ndarray = self.param.Pz00[0:self.dim_x, 0:self.dim_x]
+        # The first
+        ###################
+        k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
+        Xkp1_update     = self.param.z00[0:self.dim_x]
+        PXXkp1_update   = self.param.Pz00[0:self.dim_x, 0:self.dim_x]
         check_consistency(PXXkp1_update=PXXkp1_update)
 
-        Xkp1_predict: np.ndarray = np.zeros((self.dim_x, 1))
+        Xkp1_predict = np.zeros((self.dim_x, 1))
         if self.save_pickle and self._history is not None:
             self._history.record(iter=k,
                                  xkp1=xkp1.copy(),
@@ -163,30 +166,36 @@ class UPKF:
 
         yield xkp1, ykp1, Xkp1_predict, Xkp1_update
 
+        ###################
+        # The next ones
+
         while N is None or k < N:
             # Sigma points
             sigma = self._sigma_points(Xkp1_update, PXXkp1_update)
-            sigma_propag: list[np.ndarray] = [g(np.vstack((e, ykp1)), np.zeros((self.dim_xy,1)), self.dt) for e in sigma]
+            sigma_propag = [g(np.vstack((e, ykp1)), np.zeros((self.dim_xy,1)), self.dt) for e in sigma]
 
             # Prediction
-            Zkp1_predict: np.ndarray = np.sum(self.Wm[:, None, None] * sigma_propag, axis=0)
-            Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [dim_x])
-            Pkp1_predict: np.ndarray = mQ.copy()
-            for i in range(2 * dim_x + 1):
+            Zkp1_predict = np.sum(self.Wm[:, None, None] * sigma_propag, axis=0)
+            Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
+            Pkp1_predict = mQ.copy()
+            for i in range(2*self.dim_x+1):
                 temp = sigma_propag[i] - Zkp1_predict
                 Pkp1_predict += self.Wc[i] * np.outer(temp, temp)
 
-            M_top, M_bottom = np.vsplit(Pkp1_predict, [dim_x])
-            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top, [dim_x])
-            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom, [dim_x])
+            # Cutting Pkp1 into 4 blocks
+            M_top, M_bottom                = np.vsplit(Pkp1_predict, [self.dim_x])
+            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,        [self.dim_x])
+            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom,     [self.dim_x])
 
             try:
                 k, (xkp1, ykp1) = next(generator)
             except StopIteration:
+                # return # we stop as the data generator is stopped itself
                 return
 
-            Xkp1_update = Xkp1_predict + (PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)) @ (ykp1 - Ykp1_predict)
-            PXXkp1_update = PXXkp1_predict - PXYkp1_predict @ np.linalg.inv(PYYkp1_predict) @ PYXkp1_predict
+            accel         = PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)
+            Xkp1_update   = Xkp1_predict   + accel @ (ykp1 - Ykp1_predict)
+            PXXkp1_update = PXXkp1_predict - accel @ PYXkp1_predict
 
             check_consistency(Pkp1_predict=Pkp1_predict, PXXkp1_update=PXXkp1_update)
 

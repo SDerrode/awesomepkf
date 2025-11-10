@@ -1,31 +1,41 @@
-import os
 import importlib
+import pkgutil
+from pathlib import Path
 from .base_model_linear import BaseModelLinear
 
-__all__ = ['BaseModelLinear', 'all_models', 'model_names']
+class ModelFactoryLinear:
+    """Fabrique automatique : découvre et instancie tous les modèles du dossier."""
 
-# Dictionnaires pour stocker les modèles et leurs noms
-all_models = {}
-model_names = []
+    _registry = {}
 
-current_dir = os.path.dirname(__file__)
-for filename in os.listdir(current_dir):
-    if filename.endswith('.py') and filename not in ['__init__.py', 'base_model.py']:
-        module_name = f"{__name__}.{filename[:-3]}"
-        try:
-            module = importlib.import_module(module_name)
-            # print(f'module=', module)
+    @classmethod
+    def _discover_models(cls):
+        """Scanne tous les modules dans ce paquet et enregistre les sous-classes de BaseModelLinear."""
+        package_dir = Path(__file__).parent
+        for _, module_name, _ in pkgutil.iter_modules([str(package_dir)]):
+            if module_name == "base_model_linear":
+                continue
+            module = importlib.import_module(f"{__package__}.{module_name}")
+            for attr_name in dir(module):
+                attr = getattr(module, attr_name)
+                if isinstance(attr, type) and issubclass(attr, BaseModelLinear) and attr is not BaseModelLinear:
+                    name = getattr(attr, "MODEL_NAME", attr.__name__.lower().replace("model", ""))
+                    cls._registry[name] = attr
 
-            # Vérifier si le module définit MODEL_NAME
-            model_name = getattr(module, 'MODEL_NAME', None)
-            if model_name:
-                all_models[model_name] = module
-                model_names.append(model_name)
-            
-            # print(f'all_models=', all_models)
-            # input('ettteret')
-        except Exception as e:
-            print(f"Impossible de charger {module_name}: {e}")
+    @classmethod
+    def create(cls, name: str) -> BaseModelLinear:
+        """Crée un modèle par son nom."""
+        if not cls._registry:
+            cls._discover_models()
+        key = name.strip()
+        if key not in cls._registry:
+            raise ValueError(f"Modèle inconnu: '{key}'. "
+                             f"Disponibles: {list(cls._registry.keys())}")
+        return cls._registry[key]()
 
-# Rendre accessibles
-__all__.extend(['all_models', 'model_names'])
+    @classmethod
+    def list_models(cls):
+        """Retourne la liste des modèles disponibles."""
+        if not cls._registry:
+            cls._discover_models()
+        return list(cls._registry.keys())

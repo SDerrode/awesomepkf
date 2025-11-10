@@ -77,7 +77,6 @@ if __name__ == "__main__":
         if verbose > 0:
             print("\nExtract of the resulting filtering with PKF :")
             print(df.head())
-            # print(df.info())
 
         # pickle storing and plots
         pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))

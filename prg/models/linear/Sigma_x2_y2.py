@@ -1,32 +1,31 @@
 import numpy as np
 from .base_model_linear import BaseModelLinear
 
-# Nom du modèle
-MODEL_NAME = "Sigma_x2_y2"
+# A few utils functions that are used several times
+from others.Utils import check_consistency
 
-def create_model():
+class Model_Sigma_x2_y2(BaseModelLinear):
     
-    dim_x, dim_y = 2, 2
+    # Nom du modèle
+    MODEL_NAME = "Sigma_x2_y2"
     
-    sxx = np.matrix([[1.0, 0.4],
-                     [0.4, 1.0]])
-    b   = np.matrix([[0.6, 0.2],
-                     [0.2, 0.6]])
-    syy = np.matrix([[1.0, 0.3],
-                     [0.3, 1.0]])
-    a   = np.matrix([[0.5, 0.2],
-                     [0.2, 0.5]])
-    d   = np.matrix([[0.1, 0.05],
-                     [0.05,0.1]])
-    e   = np.matrix([[0.2, 0.15],
-                     [0.15,0.2]])
-    c   = np.matrix([[0.2, 0.1],
+    def __init__(self) -> None:
+        super().__init__(dim_x=2, dim_y=2, model_type="Sigma")
+
+        self.sxx = np.matrix([[1.0, 0.4],
+                        [0.4, 1.0]])
+        self.b   = np.matrix([[0.6, 0.2],
+                        [0.2, 0.6]])
+        self.syy = np.matrix([[1.0, 0.3],
+                        [0.3, 1.0]])
+        self.a   = np.matrix([[0.5, 0.2],
+                        [0.2, 0.5]])
+        self.d   = np.matrix([[0.1, 0.05],
+                        [0.05,0.1]])
+        self.e   = np.matrix([[0.2, 0.15],
+                        [0.15,0.2]])
+        self.c   = np.matrix([[0.2, 0.1],
                      [0.1, 0.2]])
 
-    model = BaseModelLinear(dim_x=dim_x, dim_y=dim_y,
-                      sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-    return model
-
-if __name__ == "__main__":
-    m = create_model()
-    m.info()
+        if __debug__:
+            check_consistency(sxx=self.sxx, syy=self.syy)

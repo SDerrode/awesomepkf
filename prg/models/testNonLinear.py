@@ -1,13 +1,13 @@
-from nonLinear import ModelFactory
+from nonLinear import ModelFactoryNonLinear
 import numpy as np
 
 if __name__ == "__main__":
     
     # Lister tous les fichiers de modèles détectés
-    print("Modèles détectés :", ModelFactory.list_models())
+    print("Modèles détectés :", ModelFactoryNonLinear.list_models())
 
     # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
-    model = ModelFactory.create("x1_y1_ext_saturant")
+    model = ModelFactoryNonLinear.create("x1_y1_ext_saturant")
     print(f'model={model}')
 
     params = model.get_params()

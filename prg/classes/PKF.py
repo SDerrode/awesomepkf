@@ -24,7 +24,7 @@ from typing import Generator, Optional, Tuple
 import numpy as np
 
 # Linear models 
-from models.linear import BaseModel, all_models
+from models.linear import BaseModelLinear#, all_models
 # A few utils functions that are used several times
 from others.Utils import rmse, file_data_generator, check_consistency, check_equality
 # Manage parameters for the PKF
@@ -61,8 +61,12 @@ class PKF:
             raise ValueError("verbose must be 0, 1 or 2")
 
         self.param     = param
+        self.dt        = 1
         self.verbose   = verbose
         self._seed_gen = SeedGenerator(sKey)
+        
+        # Shortcuts
+        self.dim_x, self.dim_y, self.dim_xy = param.dim_x, param.dim_y, param.dim_xy
 
         # Create HistoryTracker only if save_pickle is True
         self.save_pickle = save_pickle
@@ -75,9 +79,9 @@ class PKF:
             logger.info(f"[PKF] Init with sKey={sKey}, verbose={verbose}, save_pickle={save_pickle}")
 
     # ------------------------------------------------------------------
-    # Gestion du logging selon le niveau de verbosité
+    # Loger configuration according to verbose
     # ------------------------------------------------------------------
-    def _set_log_level(self):
+    def _set_log_level(self) -> None:
         if self.verbose == 0:
             logger.setLevel(logging.WARNING)
         elif self.verbose == 1:
@@ -92,6 +96,7 @@ class PKF:
     def seed_gen(self) -> int:
         """Return generator seed."""
         return self._seed_gen.seed
+
     @property
     def history(self) -> Optional[HistoryTracker]:
         """Return HistoryTracker object if save_pickle==True, else None."""
@@ -107,63 +112,57 @@ class PKF:
         This generator can be replaced by a some data acquired in real-time.
         """
         # Short-cuts
-        z00, Pz00, A, mQ, dim_x = self.param.z00, self.param.Pz00, self.param.A, self.param.mQ, self.param.dim_x
+        z00, Pz00, g, A, mQ = self.param.z00, self.param.Pz00, self.param.g, self.param.A, self.param.mQ
 
         # The first
         k = 0
         Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
-        yield k, np.split(Zkp1_simul, [dim_x])
+        yield k, np.split(Zkp1_simul, [self.dim_x])
 
         # The next ones...
-        zerosvector = np.zeros(shape=self.param.dim_x+self.param.dim_y)
+        zerosvector = np.zeros(shape=self.dim_xy)
         while N is None or k < N:
             k += 1
-            Zkp1_simul = A @ Zkp1_simul + \
-                self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1)
-            yield k, np.split(Zkp1_simul, [dim_x])
+            Zkp1_simul = A @ Zkp1_simul + self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1)
+            # Zkp1_simul = g(A @ Zkp1_simul, self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), self.dt)
+
+            yield k, np.split(Zkp1_simul, [self.dim_x])
 
 
-    def process_pkf(self, N=None, data_generator=None):
+    def process_upkf(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
         """
         Generator of PKF filter (mathematic and physicist formulations).
-        It makes use of data generator called _data_generation().
+        It makes use of data generator called data_generator().
         """
         
-        if not ((isinstance(N, int) and N > 0) or N is None):
-            raise ValueError("sKey must be None or a number >0")
+        if __debug__:
+            if not ((isinstance(N, int) and N > 0) or N is None):
+                raise ValueError("sKey must be None or a number >0")
         
         # Data generator
         generator = data_generator if data_generator is not None else self._data_generation()
 
         # Short-cuts
-        A, mQ                = self.param.A, self.param.mQ
-        dim_x, dim_y, dim_xy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
+        g, A, mQ = self.param.g, self.param.A, self.param.mQ
 
         # The first
         ###################
-       
-        # First generated data sample
         k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
-
-        # Filtering of the first sample
-        temp          = self.param.b.T @ np.linalg.inv(self.param.syy)
-        Xkp1_update   = temp @ ykp1
-        PXXkp1_update = self.param.sxx - temp @ self.param.b
-
-        # Check if cov matrices are indeed cov matrices!
+        temp            = self.param.b.T @ np.linalg.inv(self.param.syy)
+        Xkp1_update     = temp @ ykp1
+        PXXkp1_update   = self.param.sxx - temp @ self.param.b
         check_consistency(PXXkp1_update=PXXkp1_update)
 
-        # Store if save_pickle==True
-        Xkp1_predict = np.zeros(shape=(dim_x, 1))
+        Xkp1_predict = np.zeros(shape=(self.dim_x, 1))
         if self.save_pickle and self._history is not None:
             self._history.record(   iter                 = k,
                                     xkp1                 = xkp1.copy(),
                                     ykp1                 = ykp1.copy(),
-                                    Xkp1_predict         = Xkp1_predict.copy(),             # No prediction for the first
-                                    Pkp1_predict         = np.eye(dim_x),                   # No prediction for the first
-                                    ikp1                 = np.zeros(shape=(dim_y, 1)),      # na
-                                    Skp1                 = np.eye(dim_y),                   # ina
-                                    Kkp1                 = np.zeros(shape=(dim_x, dim_y)),  # ina
+                                    Xkp1_predict         = Xkp1_predict.copy(),              # No prediction for the first
+                                    Pkp1_predict         = np.eye(self.dim_x),               # No prediction for the first
+                                    ikp1                 = np.zeros(shape=(self.dim_y, 1)),           # na
+                                    Skp1                 = np.eye(self.dim_y),                        # na
+                                    Kkp1                 = np.zeros(shape=(self.dim_x, self.dim_y)),  # ina
                                     Xkp1_update_math     = Xkp1_update.copy(),
                                     PXXkp1_update_math   = PXXkp1_update.copy(),
                                     Xkp1_update_phys     = Xkp1_update.copy(),
@@ -175,7 +174,7 @@ class PKF:
         ###################
         # The next ones
 
-        temp2 = np.zeros(shape=(dim_xy, dim_xy))
+        temp2 = np.zeros(shape=(self.dim_xy, self.dim_xy))
         while N is None or k < N:
             
             # Required for Joseph form
@@ -185,15 +184,15 @@ class PKF:
             # Prediction
             #######################################
             temp1 = np.vstack((Xkp1_update, ykp1)) # here ykp1 still gives the previous : it is yk indeed!
-            temp2[0:dim_x, 0:dim_x] = PXXkp1_update
+            temp2[0:self.dim_x, 0:self.dim_x] = PXXkp1_update
 
             # Prediction
-            Xkp1_predict, Ykp1_predict = np.split(A @ temp1, [dim_x]) # Zkp1_predict = A @ temp1
+            Xkp1_predict, Ykp1_predict = np.split(A @ temp1, [self.dim_x]) # Zkp1_predict = A @ temp1
             Pkp1_predict               = A @ temp2 @ A.T + mQ
             # Cutting Pkp1 into 4 blocks
-            M_top, M_bottom                = np.vsplit(Pkp1_predict, [dim_x])
-            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,        [dim_x])
-            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom,     [dim_x])
+            M_top, M_bottom                = np.vsplit(Pkp1_predict, [self.dim_x])
+            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,        [self.dim_x])
+            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom,     [self.dim_x])
 
             #######################################
             # Update with a new observation
@@ -208,10 +207,9 @@ class PKF:
 
             # Updating with mathematical formulation
             ###############################################
-            Xkp1_update = Xkp1_predict + \
-                (PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)) @ (ykp1 - Ykp1_predict)
-            PXXkp1_update = PXXkp1_predict - \
-                PXYkp1_predict @ np.linalg.inv(PYYkp1_predict) @ PYXkp1_predict
+            accel         = PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)
+            Xkp1_update   = Xkp1_predict   + accel @ (ykp1 - Ykp1_predict)
+            PXXkp1_update = PXXkp1_predict - accel @ PYXkp1_predict
             # print(f'\nMATH : Xkp1_update={Xkp1_update}\nPXXkp1_update={PXXkp1_update}')
             
             Xkp1_update_math   = Xkp1_update.copy()
@@ -232,12 +230,12 @@ class PKF:
             PXXkp1_update_Joseph =  (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value) @ PXXk_update @ (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value).T \
                 + self.param.mQ_xx.value - Kkp1 @ self.param.mQ_yx.value - self.param.mQ_xy.value @ Kkp1.T + Kkp1 @ self.param.mQ_yy.value @ Kkp1.T
 
-            Xkp1_update_phys          = Xkp1_update.copy()
-            PXXkp1_update_phys        = PXXkp1_update.copy()
+            Xkp1_update_phys   = Xkp1_update.copy()
+            PXXkp1_update_phys = PXXkp1_update.copy()
 
             # Check if cov matrices are indeed cov matrices!
-            check_consistency(Pkp1_predict         = Pkp1_predict, 
-                              Skp1                 = Skp1, 
+            check_consistency(Pkp1_predict         = Pkp1_predict,
+                              Skp1                 = Skp1,
                               PXXkp1_update_math   = PXXkp1_update_math,
                               PXXkp1_update_phys   = PXXkp1_update_phys,
                               PXXkp1_update_Joseph = PXXkp1_update_Joseph)

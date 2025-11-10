@@ -4,6 +4,7 @@
 import path, sys
 directory = path.Path(__file__)
 sys.path.append(directory.parent.parent)
+print(directory.parent.parent)
 
 import logging
 from typing import Callable, Any, Union, Optional
@@ -12,12 +13,13 @@ import warnings
 import numpy as np
 from scipy.linalg import solve_discrete_lyapunov
 
-from models.linear import BaseModel, all_models
+# Linear models 
+from models.linear import BaseModelLinear, ModelFactoryLinear
 from classes.ActiveView import ActiveView
+
 
 # A few utils functions that are used several times
 from others.Utils import is_covariance
-
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -36,16 +38,15 @@ class ParamPKF:
     """
 
     def __init__(self, verbose: int, dim_x: int, dim_y: int, **kwargs):
-        if not isinstance(dim_y, int) or dim_y <= 0:
-            raise ValueError("⚠️ dim_y doit être un entier > 0")
-        if not isinstance(dim_x, int) or dim_x <= 0:
-            raise ValueError("⚠️ dim_x doit être un entier > 0")
-        if verbose not in [0, 1, 2]:
-            raise ValueError("⚠️ verbose doit être 0, 1 ou 2")
+        
+        if __debug__:
+            assert isinstance(dim_x, int) and dim_x > 0, "dim_x must be int > 0"
+            assert isinstance(dim_y, int) and dim_y > 0, "dim_y must be int > 0"
+            assert verbose in [0, 1, 2], "verbose must be 0, 1 or 2"
 
-        self.dim_y = dim_y
-        self.dim_x = dim_x
-        self.dim_xy = dim_x + dim_y
+        self.dim_y   = dim_y
+        self.dim_x   = dim_x
+        self.dim_xy  = dim_x + dim_y
         self.verbose = verbose
 
         # Configuration du logger selon verbose
@@ -67,40 +68,30 @@ class ParamPKF:
     # Constructeurs
     # ------------------------------------------------------------------
     def constructorFrom_A_mQ(self, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray) -> None:
-        self._A: np.ndarray = np.array(A, dtype=float)
-        if self._A.shape != (self.dim_xy, self.dim_xy):
-            raise ValueError(f"⚠️ A doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
+        self._A = np.array(A, dtype=float)
         if __debug__:
             eigvals = np.linalg.eigvals(self._A)
             if np.any(np.abs(eigvals) >= 1.0):
                 logger.warning(f"⚠️ Certaines valeurs propres de A ont un module >= 1 : {eigvals}")
         self._update_A_views()
 
-        self._mQ: np.ndarray = np.array(mQ, dtype=float)
-        if self._mQ.shape != (self.dim_xy, self.dim_xy):
-            raise ValueError(f"⚠️ mQ doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
+        self._mQ = np.array(mQ, dtype=float)
         self._update_mQ_views()
-
-        self._z00: np.ndarray = np.array(z00, dtype=float)
-        if self._z00.shape != (self.dim_xy, 1):
-            raise ValueError(f"⚠️ z00 doit être un vecteur colonne ({self.dim_xy},1)")
-
-        self._Pz00: np.ndarray = np.array(Pz00, dtype=float)
-        if self._Pz00.shape != (self.dim_xy, self.dim_xy):
-            raise ValueError(f"⚠️ Pz00 doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
+        self._z00 = np.array(z00, dtype=float)
+        self._Pz00 = np.array(Pz00, dtype=float)
 
         self._update_Sigma_from_A_mQ()
         self._check_consistency()
 
     def constructorFrom_Sigma(self, sxx: np.ndarray, syy: np.ndarray, a: np.ndarray, b: np.ndarray,
                               c: np.ndarray, d: np.ndarray, e: np.ndarray) -> None:
-        self._sxx: np.ndarray = np.array(sxx, dtype=float)
-        self._syy: np.ndarray = np.array(syy, dtype=float)
-        self._a: np.ndarray = np.array(a, dtype=float)
-        self._b: np.ndarray = np.array(b, dtype=float)
-        self._c: np.ndarray = np.array(c, dtype=float)
-        self._d: np.ndarray = np.array(d, dtype=float)
-        self._e: np.ndarray = np.array(e, dtype=float)
+        self._sxx = np.array(sxx, dtype=float)
+        self._syy = np.array(syy, dtype=float)
+        self._a   = np.array(a,   dtype=float)
+        self._b   = np.array(b,   dtype=float)
+        self._c   = np.array(c,   dtype=float)
+        self._d   = np.array(d,   dtype=float)
+        self._e   = np.array(e,   dtype=float)
 
         self._update_A_mQ_from_Sigma()
         self._check_consistency()
@@ -122,20 +113,20 @@ class ParamPKF:
     def _check_dimensions(self) -> None:
         """Vérifie que toutes les matrices ont les dimensions attendues."""
         expected_shapes = {
-            'A': (self.dim_xy, self.dim_xy),
-            'mQ': (self.dim_xy, self.dim_xy),
-            'z00': (self.dim_xy, 1),
-            'Pz00': (self.dim_xy, self.dim_xy),
-            'Q1': (self.dim_xy, self.dim_xy),
-            'Q2': (self.dim_xy, self.dim_xy),
+            'A':     (self.dim_xy, self.dim_xy),
+            'mQ':    (self.dim_xy, self.dim_xy),
+            'z00':   (self.dim_xy, 1),
+            'Pz00':  (self.dim_xy, self.dim_xy),
+            'Q1':    (self.dim_xy, self.dim_xy),
+            'Q2':    (self.dim_xy, self.dim_xy),
             'Sigma': (2*self.dim_xy, 2*self.dim_xy),
-            'sxx': (self.dim_x, self.dim_x),
-            'syy': (self.dim_y, self.dim_y),
-            'a': (self.dim_x, self.dim_x),
-            'b': (self.dim_y, self.dim_x),
-            'c': (self.dim_y, self.dim_y),
-            'd': (self.dim_y, self.dim_x),
-            'e': (self.dim_x, self.dim_y),
+            'sxx':   (self.dim_x, self.dim_x),
+            'syy':   (self.dim_y, self.dim_y),
+            'a':     (self.dim_x, self.dim_x),
+            'b':     (self.dim_y, self.dim_x),
+            'c':     (self.dim_y, self.dim_y),
+            'd':     (self.dim_y, self.dim_x),
+            'e':     (self.dim_x, self.dim_y),
         }
         for attr, shape in expected_shapes.items():
             if hasattr(self, f"_{attr}"):
@@ -221,6 +212,7 @@ class ParamPKF:
     # ------------------------------------------------------------------
     # Vérification de cohérence
     # ------------------------------------------------------------------
+    """Check internal matrices for symmetry and positive semi-definiteness."""
     def _check_consistency(self) -> None:
         for attr, name in [('_mQ', 'mQ'), ('_Q1', 'Q1'), ('_Sigma', 'Sigma'),
                            ('_sxx', 'sxx'), ('_syy', 'syy'), ('_Pz00', 'Pz00')]:
@@ -318,6 +310,7 @@ class ParamPKF:
         print("z00:\n", fmt(self.z00))
         print("Pz00:\n", fmt(self.Pz00))
         print("Sigma:\n", fmt(self._Sigma))
+        
         if self.verbose > 0:
             print("========================")
             print("  Q1:\n  ", fmt(self._Q1))
@@ -336,7 +329,9 @@ class ParamPKF:
             print("mQ = np.array(", repr(self.mQ.tolist()), ')')
             print("z00 = np.array(", repr(self.z00.tolist()), ')')
             print("Pz00 = np.array(", repr(self.Pz00.tolist()), ')')
-
+        
+        if __debug__:
+            self._check_consistency()
 
 
 # ----------------------------------------------------------------------
@@ -345,17 +340,12 @@ class ParamPKF:
 if __name__ == "__main__":
     verbose = 1
     
-    # Lister tous les fichiers de modèles détectés
-    # print("Modèles détectés :", list(all_models.keys()))
-
-    # Importer un modèle spécifique et accéder à ses fonctions/classes
     # Available : ['A_mQ_x1_y1', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x3_y1', 'A_mQ_x2_y2', 'Sigma_x2_y2', 'A_mQ_x1_y1_VPgreaterThan1']
-    model_module = all_models['Sigma_x2_y2']
-    model = model_module.create_model()
-    print(f'model={model.info}')
-    print(f'model={model.get_params()}')
+    model = ModelFactoryLinear.create("A_mQ_x1_y1")
+    print(f'model={model}')
+    print(f'model.get_params()={model.get_params()}')
     
     params = model.get_params().copy()
-    param = ParamPKF(verbose, params.pop('dim_x'), params.pop('dim_y'), **params)
+    param  = ParamPKF(verbose, params.pop('dim_x'), params.pop('dim_y'), **params)
     if verbose > 0:
         param.summary()

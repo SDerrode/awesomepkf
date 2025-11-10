@@ -1,12 +1,9 @@
 import numpy as np
 from typing import Callable
 from .base_model_nonLinear import BaseModelNonLinear
-import logging
 
 # A few utils functions that are used several times
 from others.Utils import check_consistency
-
-logger = logging.getLogger(__name__)
 
 class ModelExtSaturant(BaseModelNonLinear):
     """
