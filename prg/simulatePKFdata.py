@@ -15,10 +15,6 @@ from classes.ParamPKF import ParamPKF
 # Linear models 
 from models.linear import BaseModel, all_models
 
-
-
-
-
 if __name__ == "__main__":
     """
         python prg/simulatePKFdata.py
@@ -29,7 +25,8 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     save_pickle = False
     verbose     = 0
-    N           = 50 # > 20
+    N           = 10000 # > 20
+    sKey        = 41 # Int or None (so that it is generated automatically)
     
     # ------------------------------------------------------------------
     # Output repo for data
@@ -42,7 +39,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     
     # Available : ['A_mQ_x1_y1', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x3_y1', 'A_mQ_x2_y2', 'Sigma_x2_y2', 'A_mQ_x1_y1_VPgreaterThan1']
-    model_module = all_models['Sigma_x3_y1']
+    model_module = all_models['A_mQ_x3_y1']
     model        = model_module.create_model()
     print(f'model={model_module.MODEL_NAME}')
     # print(f'model={model.get_params()}')
@@ -56,9 +53,10 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Let's go
     # ------------------------------------------------------------------
+    
+    withoutX = False # If True : les données X simulées ne seront pas enregistrées dans le fichier
 
     print("\nPKF simulation")
-    sKey  = 41
     pkf = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     
     # Simulate data with the simulator generator
@@ -66,7 +64,11 @@ if __name__ == "__main__":
     # print(f'listData={listData}')
     
     # Save data as a dataframe using pandas
-    df       = data_to_dataframe(listData, dim_x, dim_y)
-    filepath = os.path.join(datafile_dir, f"dataPKF_{model_module.MODEL_NAME}_dim{dim_x}x{dim_y}.csv")
+    df       = data_to_dataframe(listData, dim_x, dim_y, withoutX=withoutX)
+    if withoutX == True:
+        filename = f"dataPKF_{model_module.MODEL_NAME}_dimy_{dim_y}.csv"
+    else:
+        filename = f"dataPKF_{model_module.MODEL_NAME}_dimxy_{dim_x}x{dim_y}.csv"
+    filepath = os.path.join(datafile_dir, filename)
     save_dataframe_to_csv(df, filepath)
     

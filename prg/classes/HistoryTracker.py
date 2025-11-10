@@ -86,7 +86,7 @@ class HistoryTracker:
         return tracker
 
     # ------------------------------------------------------------------
-    def plot(self, list_param, list_label, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
+    def plot(self, list_param, list_label, fenetre, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
         """
         Trace l'évolution d'un paramètre au fil des itérations.
         Si show=False, chaque figure est sauvegardée dans base_dir.
@@ -111,7 +111,9 @@ class HistoryTracker:
         for p in list_param:
             labels = [f'{p}_{component}' for component in range(nb_components)]
             datafocus[labels] = df[p].apply(lambda x: pd.Series(x.flatten()))
-
+        # On ne sélectione qu'une fenetre
+        df_subset = datafocus.iloc[fenetre['xmin']:fenetre['xmax']]
+        
         liste_ax = []
         for component in range(nb_components):
             fig, ax = plt.subplots(figsize=(6, 4))
@@ -119,9 +121,10 @@ class HistoryTracker:
 
             labels = [f'{p}_{component}' for p in list_param]
             for col, label in zip(labels, list_label):
-                datafocus[col].plot(ax=ax, label=label, alpha=0.5)
+                df_subset[col].plot(ax=ax, label=label, alpha=0.5)
 
             ax.legend()
+            ax.set_xlim(fenetre['xmin'], fenetre['xmax']-1)
             ax.set_xlabel(iter_key)
             ax.grid(True, linestyle="--", alpha=0.6)
             ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
