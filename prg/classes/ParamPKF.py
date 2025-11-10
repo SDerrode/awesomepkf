@@ -53,10 +53,10 @@ class ParamPKF:
         self._set_log_level()
 
         # Deux façons de construire un objet de cette classe
-        if len(kwargs.keys()) == 4:  # parametrization (A, mQ, z00, Pz00)
-            self.constructorFrom_A_mQ(kwargs['A'], kwargs['mQ'], kwargs['z00'], kwargs['Pz00'])
-        elif len(kwargs.keys()) == 7:  # parametrization (sxx, syy, a, b, c, d, e) --> Sigma
-            self.constructorFrom_Sigma(kwargs['sxx'], kwargs['syy'], kwargs['a'], kwargs['b'], kwargs['c'], kwargs['d'], kwargs['e'])
+        if len(kwargs.keys()) == 5:  # parametrization (A, mQ, z00, Pz00)
+            self.constructorFrom_A_mQ(kwargs['g'], kwargs['A'], kwargs['mQ'], kwargs['z00'], kwargs['Pz00'])
+        elif len(kwargs.keys()) == 8:  # parametrization (sxx, syy, a, b, c, d, e) --> Sigma
+            self.constructorFrom_Sigma(kwargs['g'], kwargs['sxx'], kwargs['syy'], kwargs['a'], kwargs['b'], kwargs['c'], kwargs['d'], kwargs['e'])
         else:
             logger.warning(f"⚠️ Le modèle n'est pas bien paramétré : {kwargs.keys()}")
 
@@ -67,7 +67,10 @@ class ParamPKF:
     # ------------------------------------------------------------------
     # Constructeurs
     # ------------------------------------------------------------------
-    def constructorFrom_A_mQ(self, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray) -> None:
+    def constructorFrom_A_mQ(self, g, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray) -> None:
+        
+        self._g = g
+        
         self._A = np.array(A, dtype=float)
         if __debug__:
             eigvals = np.linalg.eigvals(self._A)
@@ -83,8 +86,11 @@ class ParamPKF:
         self._update_Sigma_from_A_mQ()
         self._check_consistency()
 
-    def constructorFrom_Sigma(self, sxx: np.ndarray, syy: np.ndarray, a: np.ndarray, b: np.ndarray,
+    def constructorFrom_Sigma(self, g, sxx: np.ndarray, syy: np.ndarray, a: np.ndarray, b: np.ndarray,
                               c: np.ndarray, d: np.ndarray, e: np.ndarray) -> None:
+        
+        self._g = g
+        
         self._sxx = np.array(sxx, dtype=float)
         self._syy = np.array(syy, dtype=float)
         self._a   = np.array(a,   dtype=float)
@@ -133,7 +139,6 @@ class ParamPKF:
                 actual = getattr(self, f"_{attr}")
                 if actual.shape != shape:
                     raise ValueError(f"⚠️ Matrice {attr} a une forme {actual.shape}, attendue {shape}")
-
 
     # ------------------------------------------------------------------
     # Mise à jour des matrices dérivées
@@ -222,6 +227,9 @@ class ParamPKF:
     # ------------------------------------------------------------------
     # Getters / Setters
     # ------------------------------------------------------------------
+    @property
+    def g(self): return self._g
+    
     @property
     def Q1(self) -> np.ndarray: return self._Q1
     @property

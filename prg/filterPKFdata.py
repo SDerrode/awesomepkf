@@ -5,7 +5,7 @@ import os
 import numpy as np
 
 # Linear models 
-from models.linear import BaseModel, all_models
+from models.linear import BaseModelLinear, ModelFactoryLinear
 # A few utils functions that are used several times
 from others.Utils import rmse
 # Manage algorihtms for the PKF
@@ -41,13 +41,14 @@ if __name__ == "__main__":
     # Test parameters for the Two ((A, mQ) or Sigma) parametrizations
     # ------------------------------------------------------------------
     
-    # Available : ['A_mQ_x1_y1', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x3_y1', 'A_mQ_x2_y2', 'Sigma_x2_y2', 'A_mQ_x1_y1_VPgreaterThan1']
-    model_module = all_models['A_mQ_x3_y1']
-    model = model_module.create_model()
-    # print(f'model={model.info}')
-    # print(f'model={model.get_params()}')
+    # Available : ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
+    model = ModelFactoryLinear.create("A_mQ_x1_y1")
+    # print(f'model={model}')
+    # print(f'model.model_type={model.model_type}')
     
     params = model.get_params().copy()
+    # print(f'params={params}')
+
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param = ParamPKF(verbose, dim_x, dim_y, **params)
     if verbose > 0:

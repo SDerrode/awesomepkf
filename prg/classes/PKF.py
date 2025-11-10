@@ -24,7 +24,7 @@ from typing import Generator, Optional, Tuple
 import numpy as np
 
 # Linear models 
-from models.linear import BaseModelLinear#, all_models
+from models.linear import BaseModelLinear
 # A few utils functions that are used several times
 from others.Utils import rmse, file_data_generator, check_consistency, check_equality
 # Manage parameters for the PKF
@@ -117,19 +117,24 @@ class PKF:
         # The first
         k = 0
         Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
+        # print('Zkp1_simul=', Zkp1_simul)
+        # input('toptoptpoto')
         yield k, np.split(Zkp1_simul, [self.dim_x])
+        
 
         # The next ones...
         zerosvector = np.zeros(shape=self.dim_xy)
         while N is None or k < N:
             k += 1
-            Zkp1_simul = A @ Zkp1_simul + self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1)
-            # Zkp1_simul = g(A @ Zkp1_simul, self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), self.dt)
-
+            # Zkp1_simul = A @ Zkp1_simul + self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1)
+            Zkp1_simul = g(Zkp1_simul, self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), self.dt)
+            # print('Zkp1_simul=', Zkp1_simul)
+            # print(np.split(Zkp1_simul, [self.dim_x]))
+            # input('toptoptpoto')
             yield k, np.split(Zkp1_simul, [self.dim_x])
 
 
-    def process_upkf(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
+    def process_pkf(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
         """
         Generator of PKF filter (mathematic and physicist formulations).
         It makes use of data generator called data_generator().
@@ -148,9 +153,9 @@ class PKF:
         # The first
         ###################
         k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
-        temp            = self.param.b.T @ np.linalg.inv(self.param.syy)
+        temp            = self.param.Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(self.param.Pz00[self.dim_x:, self.dim_x:])
         Xkp1_update     = temp @ ykp1
-        PXXkp1_update   = self.param.sxx - temp @ self.param.b
+        PXXkp1_update   = self.param.Pz00[0:self.dim_x, 0:self.dim_x] - temp @ self.param.Pz00[self.dim_x:, 0:self.dim_x]
         check_consistency(PXXkp1_update=PXXkp1_update)
 
         Xkp1_predict = np.zeros(shape=(self.dim_x, 1))
@@ -187,7 +192,11 @@ class PKF:
             temp2[0:self.dim_x, 0:self.dim_x] = PXXkp1_update
 
             # Prediction
-            Xkp1_predict, Ykp1_predict = np.split(A @ temp1, [self.dim_x]) # Zkp1_predict = A @ temp1
+            # Zkp1_predict = A @ temp1
+            Zkp1_predict = g(temp1, np.zeros((self.dim_xy, 1)), self.dt)
+            # print(f'Zkp1_predict={Zkp1_predict}')
+            # input('tyutyutyut')
+            Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x]) # 
             Pkp1_predict               = A @ temp2 @ A.T + mQ
             # Cutting Pkp1 into 4 blocks
             M_top, M_bottom                = np.vsplit(Pkp1_predict, [self.dim_x])

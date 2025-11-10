@@ -108,6 +108,8 @@ class HistoryTracker:
         nb_components = first.shape[0]
 
         datafocus = pd.DataFrame()
+        # print(datafocus.head())
+        # exit(1)
         for p in list_param:
             labels = [f'{p}_{component}' for component in range(nb_components)]
             datafocus[labels] = df[p].apply(lambda x: pd.Series(x.flatten()))
