@@ -45,7 +45,7 @@ class UPKF:
         save_pickle: bool = False,
         verbose: int = 0
     ) -> None:
-        
+
         if __debug__:
             if not isinstance(param, ParamUPKF):
                 raise TypeError("param must be an object from class ParamUPKF")
@@ -145,24 +145,26 @@ class UPKF:
                 raise ValueError("N must be None or a number >0")
 
         generator = data_generator if data_generator is not None else self._data_generation()
+        # short-cuts
         g, mQ = self.param.g, self.param.mQ
 
         # The first
         ###################
         k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
-        Xkp1_update     = self.param.z00[0:self.dim_x]
-        PXXkp1_update   = self.param.Pz00[0:self.dim_x, 0:self.dim_x]
+        temp            = self.param.Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(self.param.Pz00[self.dim_x:, self.dim_x:])
+        Xkp1_update     = temp @ ykp1
+        PXXkp1_update   = self.param.Pz00[0:self.dim_x, 0:self.dim_x] - temp @ self.param.Pz00[self.dim_x:, 0:self.dim_x]
         check_consistency(PXXkp1_update=PXXkp1_update)
 
         Xkp1_predict = np.zeros((self.dim_x, 1))
         if self.save_pickle and self._history is not None:
             self._history.record(iter=k,
-                                 xkp1=xkp1.copy(),
-                                 ykp1=ykp1.copy(),
-                                 Xkp1_predict=Xkp1_predict,
-                                 PXXkp1_predict=np.eye(self.dim_x),
-                                 Xkp1_update=Xkp1_update.copy(),
-                                 PXXkp1_update=PXXkp1_update.copy())
+                                 xkp1          = xkp1.copy(),
+                                 ykp1          = ykp1.copy(),
+                                 Xkp1_predict  = Xkp1_predict,
+                                 PXXkp1_predict= np.eye(self.dim_x),
+                                 Xkp1_update   = Xkp1_update.copy(),
+                                 PXXkp1_update = PXXkp1_update.copy())
 
         yield xkp1, ykp1, Xkp1_predict, Xkp1_update
 
@@ -172,7 +174,7 @@ class UPKF:
         while N is None or k < N:
             # Sigma points
             sigma = self._sigma_points(Xkp1_update, PXXkp1_update)
-            sigma_propag = [g(np.vstack((e, ykp1)), np.zeros((self.dim_xy,1)), self.dt) for e in sigma]
+            sigma_propag = [g(np.vstack((e, ykp1)), np.zeros((self.dim_xy, 1)), self.dt) for e in sigma]  # here ykp1 still gives the previous : it is yk indeed!
 
             # Prediction
             Zkp1_predict = np.sum(self.Wm[:, None, None] * sigma_propag, axis=0)
@@ -190,8 +192,7 @@ class UPKF:
             try:
                 k, (xkp1, ykp1) = next(generator)
             except StopIteration:
-                # return # we stop as the data generator is stopped itself
-                return
+                return # we stop as the data generator is stopped itself
 
             accel         = PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)
             Xkp1_update   = Xkp1_predict   + accel @ (ykp1 - Ykp1_predict)

@@ -18,23 +18,20 @@ class BaseModelLinear:
         dim_y: int,
         model_type: str
     ):
-        # ------------------------------------------------------------------
         # Vérifications
-        # ------------------------------------------------------------------
         assert isinstance(dim_x, int) and dim_x > 0, "dim_x doit être un entier positif"
         assert isinstance(dim_y, int) and dim_y > 0, "dim_y doit être un entier positif"
     
-        # ------------------------------------------------------------------
         # Dimensions et types
-        # ------------------------------------------------------------------
         self.model_type = model_type
         self.dim_x      = dim_x
         self.dim_y      = dim_y
         self.dim_xy     = dim_x + dim_y
 
-     # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
-        """Compute z_{n+1} = g(z_n) + noise."""
+        """Compute z_{n+1} = A @ z_{n} + noise."""
+        return self.A @ z + noise_z
     
     # def info(self):
     #     print(f"Type de modèle : {self.model_type}")
@@ -46,10 +43,10 @@ class BaseModelLinear:
 
     def get_params(self):
         if self.model_type == 'AmQ':
-            return {'dim_x':self.dim_x, 'dim_y':self.dim_y, 'A':self.A, \
+            return {'g': self.g, 'dim_x':self.dim_x, 'dim_y':self.dim_y, 'A':self.A, \
                         'mQ':self.mQ, 'z00':self.z00, 'Pz00':self.Pz00}
         else:
-            return {'dim_x':self.dim_x, 'dim_y':self.dim_y, 'sxx':self.sxx, \
+            return {'g': self.g, 'dim_x':self.dim_x, 'dim_y':self.dim_y, 'sxx':self.sxx, \
                         'syy':self.syy, 'a':self.a, 'b':self.b, 'c':self.c, 'd':self.d, 'e':self.e}
 
     # ------------------------------------------------------------------

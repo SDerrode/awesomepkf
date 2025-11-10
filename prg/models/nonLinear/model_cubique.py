@@ -33,7 +33,7 @@ class ModelCubique(BaseModelNonLinear):
     def _fx(self, x: np.ndarray, nx: np.ndarray, dt: float) -> np.ndarray:
         """State transition with cubic nonlinearity and additive noise."""
         if __debug__:
-            assert isinstance(x, np.ndarray) and x.shape == (1, 1), f"x doit être (1,1), reçu {x.shape}"
+            assert isinstance(x,  np.ndarray) and x.shape  == (1, 1), f"x doit être (1,1), reçu {x.shape}"
             assert isinstance(nx, np.ndarray) and nx.shape == (1, 1), f"nx doit être (1,1), reçu {nx.shape}"
             assert isinstance(dt, (int, float)), "dt doit être un scalaire numérique"
         return 0.9 * x - 0.2 * x**3 + nx
@@ -42,7 +42,7 @@ class ModelCubique(BaseModelNonLinear):
     def _hx(self, x: np.ndarray, ny: np.ndarray, dt: float) -> np.ndarray:
         """Linear observation function with additive noise."""
         if __debug__:
-            assert isinstance(x, np.ndarray) and x.shape == (1, 1), f"x doit être (1,1), reçu {x.shape}"
+            assert isinstance(x,  np.ndarray) and x.shape  == (1, 1), f"x doit être (1,1), reçu {x.shape}"
             assert isinstance(ny, np.ndarray) and ny.shape == (1, 1), f"ny doit être (1,1), reçu {ny.shape}"
             assert isinstance(dt, (int, float)), "dt doit être un scalaire numérique"
         return x + ny
@@ -58,8 +58,8 @@ class ModelCubique(BaseModelNonLinear):
     ) -> np.ndarray:
         """Combine state and observation into stacked z_{n+1} vector."""
         if __debug__:
-            assert x.shape == (1, 1), f"x doit être (1,1), reçu {x.shape}"
-            assert y.shape == (1, 1), f"y doit être (1,1), reçu {y.shape}"
+            assert x.shape  == (1, 1), f"x doit être (1,1), reçu {x.shape}"
+            assert y.shape  == (1, 1), f"y doit être (1,1), reçu {y.shape}"
             assert nx.shape == (1, 1), f"nx doit être (1,1), reçu {nx.shape}"
             assert ny.shape == (1, 1), f"ny doit être (1,1), reçu {ny.shape}"
 
