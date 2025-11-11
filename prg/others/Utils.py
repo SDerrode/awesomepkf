@@ -60,9 +60,9 @@ def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
     return df
 
 # ----------------------------------------------------------------------
-# RMSE
+# MSE
 # ----------------------------------------------------------------------
-def rmse(X1: Union[np.ndarray, list], X2: Union[np.ndarray, list]) -> float:
+def mse(X1: Union[np.ndarray, list], X2: Union[np.ndarray, list]) -> float:
     X1_arr = np.asarray(X1).ravel()
     X2_arr = np.asarray(X2).ravel()
     if __debug__:

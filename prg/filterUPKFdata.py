@@ -7,7 +7,7 @@ import numpy as np
 # non linear models 
 from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
-from others.Utils import rmse
+from others.Utils import mse
 # Manage algorithms for the UPKF
 from classes.UPKF import UPKF
 # Manage parameters for the UPKF
@@ -66,12 +66,12 @@ if __name__ == "__main__":
     # print(listeUPKF_1[0:6])
     # exit(1)
 
-    # RMSE between simulated and the predicted and filtered
+    # MSE between simulated and the predicted and filtered
     first_arrays  = np.vstack([t[0] for t in listeUPKF_1])[20:]
     third_arrays  = np.vstack([t[2] for t in listeUPKF_1])[20:]
     fourth_arrays = np.vstack([t[3] for t in listeUPKF_1])[20:]
-    print(f"RMSE (X, Esp[X] pred) : {rmse(first_arrays, third_arrays)}")
-    print(f"RMSE (X, Esp[X] filt) : {rmse(first_arrays, fourth_arrays)}")
+    print(f"MSE (X, Esp[X] pred) : {mse(first_arrays, third_arrays)}")
+    print(f"MSE (X, Esp[X] filt) : {mse(first_arrays, fourth_arrays)}")
     
     if save_pickle and upkf_1.history is not None:
         df = upkf_1.history.as_dataframe()

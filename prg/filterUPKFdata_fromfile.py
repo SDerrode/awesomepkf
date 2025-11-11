@@ -7,7 +7,7 @@ import numpy as np
 # non linear models 
 from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
-from others.Utils import rmse, file_data_generator
+from others.Utils import mse, file_data_generator
 # Manage algorithms for the UPKF
 from classes.UPKF import UPKF
 # Manage parameters for the UPKF
@@ -66,18 +66,18 @@ if __name__ == "__main__":
 
     print("\nUPKF filtering with data generated from a file... ")
 
-    upkf_2 = UPKF(param, save_pickle=save_pickle, verbose=verbose)
-    filename = os.path.join(datafile_dir, datafile)
+    upkf_2      = UPKF(param, save_pickle=save_pickle, verbose=verbose)
+    filename    = os.path.join(datafile_dir, datafile)
     listeUPKF_2 = upkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
     # print(f'listeUPKF_2={listeUPKF_2}')
 
     if listeUPKF_2[1][0].shape != (0,1): # cela veut dire que l'on a une VT
-        # on ne peut donc calculer les RMSE
+        # on ne peut donc calculer les MSE
         first_arrays  = np.vstack([t[0] for t in listeUPKF_2])[20:]
         third_arrays  = np.vstack([t[2] for t in listeUPKF_2])[20:]
         fourth_arrays = np.vstack([t[3] for t in listeUPKF_2])[20:]
-        print(f"RMSE (X, Esp[X] pred) : {rmse(first_arrays, third_arrays)}")
-        print(f"RMSE (X, Esp[X] filt) : {rmse(first_arrays, fourth_arrays)}")
+        print(f"MSE (X, Esp[X] pred) : {mse(first_arrays, third_arrays)}")
+        print(f"MSE (X, Esp[X] filt) : {mse(first_arrays, fourth_arrays)}")
 
     if save_pickle and upkf_2.history is not None:
         df = upkf_2.history.as_dataframe()
