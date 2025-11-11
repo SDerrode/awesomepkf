@@ -42,15 +42,15 @@ class BaseModelLinear:
     #         print("Paramètres : sxx, syy, a, b, c, d, e")
 
     def get_params(self):
-        if self.model_type == 'AmQ':
+        if self.model_type == 'linear_AmQ':
             return {'g': self.g, 'dim_x':self.dim_x, 'dim_y':self.dim_y, 'A':self.A, \
                         'mQ':self.mQ, 'z00':self.z00, 'Pz00':self.Pz00}
-        else:
+        elif self.model_type == 'linear_Sigma':
             return {'g': self.g, 'dim_x':self.dim_x, 'dim_y':self.dim_y, 'sxx':self.sxx, \
                         'syy':self.syy, 'a':self.a, 'b':self.b, 'c':self.c, 'd':self.d, 'e':self.e}
+        else:
+            raise ValueError(f"⚠️ model_type should be 'linear_AmQ' or 'linear_Sigma' - Acutal value: {model_type}")
 
     # ------------------------------------------------------------------
     def __repr__(self):
-        return (
-            f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y}"
-        )
+        return f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y}"

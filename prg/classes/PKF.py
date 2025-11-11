@@ -117,20 +117,13 @@ class PKF:
         # The first
         k = 0
         Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
-        # print('Zkp1_simul=', Zkp1_simul)
-        # input('toptoptpoto')
         yield k, np.split(Zkp1_simul, [self.dim_x])
-        
 
         # The next ones...
         zerosvector = np.zeros(shape=self.dim_xy)
         while N is None or k < N:
             k += 1
-            # Zkp1_simul = A @ Zkp1_simul + self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1)
-            Zkp1_simul = g(Zkp1_simul, self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), self.dt)
-            # print('Zkp1_simul=', Zkp1_simul)
-            # print(np.split(Zkp1_simul, [self.dim_x]))
-            # input('toptoptpoto')
+            Zkp1_simul = A @ Zkp1_simul + self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1)
             yield k, np.split(Zkp1_simul, [self.dim_x])
 
 
@@ -192,10 +185,7 @@ class PKF:
             temp2[0:self.dim_x, 0:self.dim_x] = PXXkp1_update
 
             # Prediction
-            # Zkp1_predict = A @ temp1
-            Zkp1_predict = g(temp1, np.zeros((self.dim_xy, 1)), self.dt)
-            # print(f'Zkp1_predict={Zkp1_predict}')
-            # input('tyutyutyut')
+            Zkp1_predict = A @ temp1
             Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x]) # 
             Pkp1_predict               = A @ temp2 @ A.T + mQ
             # Cutting Pkp1 into 4 blocks

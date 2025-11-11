@@ -39,14 +39,16 @@ if __name__ == "__main__":
     # Test parameters for the Two ((A, mQ) or Sigma) parametrizations
     # ------------------------------------------------------------------
     
-    # Available : ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
-    model = ModelFactoryLinear.create("Sigma_x3_y1")
-    # print(f'model={model}')
-    # print(f'model.model_type={model.model_type}')
-    
-    params = model.get_params().copy()
+    # Available linear models: 
+    # ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
+    model = ModelFactoryLinear.create("A_mQ_x1_y1")
+    if verbose>0:
+        print(f'model={model}, {model.MODEL_NAME}')
+        print(f'model={model}')
+
+    params       = model.get_params().copy()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
-    param = ParamPKF(verbose, dim_x, dim_y, **params)
+    param        = ParamPKF(verbose, dim_x, dim_y, **params)
     if verbose > 0:
         param.summary()
 
@@ -54,8 +56,8 @@ if __name__ == "__main__":
     # Let's go
     # ------------------------------------------------------------------
     
-    withoutX = False # If True : les données X simulées ne seront pas enregistrées dans le fichier
-
+    withoutX = False # If True : simulated X will not be stored in the file
+    
     print("\nPKF simulation")
     pkf = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     
@@ -63,11 +65,10 @@ if __name__ == "__main__":
     listData = pkf.simulate_N_data(N=N)
     
     # Save data as a dataframe using pandas
-    df       = data_to_dataframe(listData, dim_x, dim_y, withoutX=withoutX)
+    df = data_to_dataframe(listData, dim_x, dim_y, withoutX=withoutX)
     if withoutX == True:
         filename = f"dataPKF_{model.MODEL_NAME}_dimy_{dim_y}.csv"
     else:
         filename = f"dataPKF_{model.MODEL_NAME}_dimxy_{dim_x}x{dim_y}.csv"
     filepath = os.path.join(datafile_dir, filename)
     save_dataframe_to_csv(df, filepath)
-    

@@ -5,10 +5,10 @@ import os
 import numpy as np
 
 # Linear models 
-from models.linear import BaseModelLinear, ModelFactoryLinear
+from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
 from others.Utils import mse
-# Manage algorihtms for the PKF
+# Manage algorithms for the PKF
 from classes.PKF import PKF
 # Manage parameters for the PKF
 from classes.ParamPKF import ParamPKF
@@ -41,17 +41,15 @@ if __name__ == "__main__":
     # Test parameters for the Two ((A, mQ) or Sigma) parametrizations
     # ------------------------------------------------------------------
     
-    # Available : ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
-    model = ModelFactoryLinear.create("A_mQ_x1_y1")
-    # print(f'model={model}')
-    # print(f'model.model_type={model.model_type}')
-    
-    params = model.get_params().copy()
-    # print(f'params={params}')
-
+    # Available linear models:
+    # ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
+    model        = ModelFactoryLinear.create("A_mQ_x1_y1")
+    params       = model.get_params().copy()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
-    param = ParamPKF(verbose, dim_x, dim_y, **params)
+    param        = ParamPKF(verbose, dim_x, dim_y, **params)
+    
     if verbose > 0:
+        print(f'model={model}')
         param.summary()
 
     # ------------------------------------------------------------------
@@ -81,9 +79,9 @@ if __name__ == "__main__":
 
         # pickle storing and plots
         pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
-        pkf_1.history.plot(list_param=["xkp1",             "Xkp1_update_math",                    "Xkp1_update_phys"], \
-                           list_label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
-                           fenetre   = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                           basename  ='pkf_1', \
+        pkf_1.history.plot(list_param= ["xkp1",             "Xkp1_update_math",                    "Xkp1_update_phys"], \
+                           list_label= ["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
+                           window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
+                           basename  = 'pkf_1', \
                            show=False, base_dir=graph_dir)
 

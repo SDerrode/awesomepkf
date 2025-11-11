@@ -4,8 +4,8 @@
 import os
 import numpy as np
 
-# Linear models 
-from models.linear import BaseModelLinear, ModelFactoryLinear
+# Linear models
+from models.linear import ModelFactoryLinear
 # # A few utils functions that are used several times
 from others.Utils import mse, file_data_generator
 # Manage algorithms for the PKF
@@ -40,17 +40,15 @@ if __name__ == "__main__":
     # Test parameters for the Two ((A, mQ) or Sigma) parametrizations
     # ------------------------------------------------------------------
     
-    # Available : ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
-    model = ModelFactoryLinear.create("Sigma_x3_y1")
-    # print(f'model={model}')
-    # print(f'model.model_type={model.model_type}')
-    
-    params = model.get_params().copy()
-    # print(f'params={params}')
-
+    # Available linear models:
+    # ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
+    model        = ModelFactoryLinear.create("A_mQ_x1_y1")
+    params       = model.get_params().copy()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
-    param = ParamPKF(verbose, dim_x, dim_y, **params)
+    param        = ParamPKF(verbose, dim_x, dim_y, **params)
+    
     if verbose > 0:
+        print(f'model={model}')
         param.summary()
 
     # ------------------------------------------------------------------
@@ -62,47 +60,44 @@ if __name__ == "__main__":
     # datafile = 'dataPKF_Sigma_x3_y1_dimxy_3x1.csv'
     # datafile = 'dataPKF_Sigma_x3_y1_dimy_1.csv'
     # datafile = 'dataPKF_Sigma_x3_y1_dimxy_3x1.csv'
-    datafile = 'dataPKF_A_mQ_x3_y1_dimxy_3x1.csv'
+    datafile = 'dataPKF_A_mQ_x1_y1_dimxy_1x1.csv'
     
     print("\nPKF filtering with data generated from a file... ")
     
     pkf_2      = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     filename   = os.path.join(datafile_dir, datafile)
     listePKF_2 = pkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
-    # print(f'listePKF_2={listePKF_2[0:5]}')
-    # print(listePKF_2[1][0].shape)
     
-    if listePKF_2[1][0].shape != (0,1): # cela veut dire que l'on a une VT
-        # on ne peut donc calculer les MSE
+    if listePKF_2[1][0].shape != (0,1): # We got a ground truth
+        # So it is possible to copute the MSE
         first_arrays  = np.vstack([t[0] for t in listePKF_2])[20:]
         third_arrays  = np.vstack([t[2] for t in listePKF_2])[20:]
         fourth_arrays = np.vstack([t[3] for t in listePKF_2])[20:]
         fith_arrays   = np.vstack([t[4] for t in listePKF_2])[20:]
-        # Calcul du MSE global
         print(f"MSE (X, Esp[X] pred) : {mse(first_arrays, third_arrays)}")
         print(f"MSE (X, Esp[X]_math) : {mse(first_arrays, fourth_arrays)}")
         print(f"MSE (X, Esp[X]_phys) : {mse(first_arrays, fith_arrays)}")
 
     if save_pickle and pkf_2.history is not None:
         df = pkf_2.history.as_dataframe()
-        print(df.head())
-        print(df.columns)
+        # print(df.head())
+        # print(df.columns)
         # exit(1)
         if verbose > 0:
-            print("\nExtract of the resulting filtering with PKF :")
+            print("\nExtract of the filtering with PKF :")
             print(df.head())
 
         # pickle storing and plots
         pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
-        if listePKF_2[1][0].shape != (0,1): # cela veut dire que l'on a une VT
-            pkf_2.history.plot(list_param=["xkp1",             "Xkp1_update_math",                    "Xkp1_update_phys"], \
-                               list_label=["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
-                               fenetre   = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                               basename  ='pkf_2', \
+        if listePKF_2[1][0].shape != (0,1): # We got a ground truth
+            pkf_2.history.plot(list_param= ["xkp1",             "Xkp1_update_math",                    "Xkp1_update_phys"], \
+                               list_label= ["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
+                               window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
+                               basename  = 'pkf_2', \
                                show=False, base_dir=graph_dir)
         else:
-            pkf_2.history.plot(list_param=["Xkp1_update_math",                    "Xkp1_update_phys"], \
-                               list_label=["X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
-                               fenetre   = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                               basename  ='pkf_2', \
+            pkf_2.history.plot(list_param= ["Xkp1_update_math",                    "Xkp1_update_phys"], \
+                               list_label= ["X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
+                               window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
+                               basename  = 'pkf_2', \
                                show=False, base_dir=graph_dir)

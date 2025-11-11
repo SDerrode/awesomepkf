@@ -47,8 +47,8 @@ class UPKF:
     ) -> None:
 
         if __debug__:
-            if not isinstance(param, ParamUPKF):
-                raise TypeError("param must be an object from class ParamUPKF")
+            # if not isinstance(param, ParamUPKF):
+            #     raise TypeError("param must be an object from class ParamUPKF")
             if not ((isinstance(sKey, int) and sKey > 0) or sKey is None):
                 raise ValueError("sKey must be None or a number>0")
             if not isinstance(save_pickle, bool):
