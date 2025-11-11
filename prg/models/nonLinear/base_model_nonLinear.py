@@ -20,35 +20,27 @@ class BaseModelNonLinear:
         self,
         dim_x: int,
         dim_y: int,
-        alpha: float = 1e-3,
-        beta: float = 2.0,
-        kappa: float = 0.0,
+        alpha: float    = 1e-3,
+        beta:  float    = 2.0,
+        kappa: float    = 0.0,
+        model_type: str = "nonlinear",
     ):
-        # ------------------------------------------------------------------
         # Vérifications
-        # ------------------------------------------------------------------
-        assert isinstance(dim_x, int) and dim_x > 0, "dim_x doit être un entier positif"
-        assert isinstance(dim_y, int) and dim_y > 0, "dim_y doit être un entier positif"
+        assert isinstance(dim_x, int) and dim_x > 0,          "dim_x doit être un entier positif"
+        assert isinstance(dim_y, int) and dim_y > 0,          "dim_y doit être un entier positif"
         assert isinstance(alpha, (float, int)) and alpha > 0, "alpha doit être positif"
-        assert isinstance(beta, (float, int)), "beta doit être un nombre"
-        assert isinstance(kappa, (float, int)), "kappa doit être un nombre"
+        assert isinstance(beta,  (float, int)),               "beta doit être un nombre"
+        assert isinstance(kappa, (float, int)),               "kappa doit être un nombre"
 
-        # ------------------------------------------------------------------
-        # Dimensions et paramètres
-        # ------------------------------------------------------------------
-        self.dim_x  = dim_x
-        self.dim_y  = dim_y
-        self.dim_xy = dim_x + dim_y
-
+        # Dimensions et types
+        self.model_type = model_type
+        self.dim_x      = dim_x
+        self.dim_y      = dim_y
+        self.dim_xy     = dim_x + dim_y
         # UKF parameters
-        self.alpha = alpha
-        self.beta  = beta
-        self.kappa = kappa
-
-        # Covariances et initialisations par défaut
-        # self.mQ   = np.eye(self.dim_xy)
-        # self.z00  = np.zeros((self.dim_xy, 1))
-        # self.Pz00 = np.eye(self.dim_xy)
+        self.alpha     = alpha
+        self.beta      = beta
+        self.kappa     = kappa
 
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:

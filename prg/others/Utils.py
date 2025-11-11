@@ -16,38 +16,38 @@ logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def save_dataframe_to_csv(df, filepath, index=False):
-    """Enregistre un DataFrame en CSV (UTF-8) sans sauvegarder l'index."""
+    """Save a DataFrame in CSV (UTF-8) without index."""
     path = Path(filepath)
     path.parent.mkdir(parents=True, exist_ok=True)  # Crée le dossier si besoin
     
     try:
         df.to_csv(path, encoding="utf-8", index=index, float_format="%.6f")
         if __debug__:
-            logger.info(f"✅ Fichier enregistré avec succès : {path.resolve()}")
+            logger.info(f"✅ File save with success at : {path.resolve()}")
     except Exception as e:
-        logger.error(f"❌ Erreur lors de l'enregistrement du CSV : {e}")
+        logger.error(f"❌ Something went wrong during saving of CSV : {e}")
         raise
 
 def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
-    """Convertit une liste de tuples PKF/UKF en DataFrame pandas."""
+    """Convert a list of tuples PKF/UKF into pandas DataFrame."""
     
     data = []
     for idx, (x, y) in [(i, vals) for i, vals in listData]:
         # Validation des types
         if __debug__:
             if not hasattr(x, "flatten") or not hasattr(y, "flatten"):
-                raise TypeError(f"Les éléments pour l'index {idx} ne sont pas des numpy.array valides.")
+                raise TypeError(f"The elts for {idx} are not valid numpy.array.")
         x_values = x.flatten()
         y_values = y.flatten()
         if __debug__:
             if len(x_values) != dim_x or len(y_values) != dim_y:
-                raise ValueError(f"Taille inattendue des vecteurs à l'index {idx}: X={len(x_values)}, Y={len(y_values)}")
+                raise ValueError(f"Unexpected size for vectors at index {idx}: X={len(x_values)}, Y={len(y_values)}")
         if withoutX == True:
             data.append([*y_values])
         else:
             data.append([*x_values, *y_values])
 
-    # Création du DataFrame
+    # dataframe
     columns = []
     if withoutX == False:
         for c in range(dim_x):
@@ -85,7 +85,7 @@ def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose: int = 0) 
             encoding = enc_info['encoding'] or 'utf-8'
             confidence = enc_info.get('confidence', 0)
         if verbose > 0:
-            logger.info(f"🧬 Encodage détecté : {encoding} (confiance={confidence:.2f})")
+            logger.info(f"🧬 Detected encoding : {encoding} (confidence={confidence:.2f})")
 
         # --- Lecture selon le type ---
         if ext == ".parquet":
@@ -116,7 +116,7 @@ def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose: int = 0) 
                     logger.warning("⚠️ Impossible de détecter le séparateur — lecture comme fichier à colonne unique.")
             
             if verbose > 0:
-                logger.info(f"➡️ Séparateur : {repr(sep)} | Header : {has_header}")
+                logger.info(f"➡️ Separator : {repr(sep)} | Header : {has_header}")
             
             # Lecture du fichier
             if sep is None:
@@ -127,10 +127,10 @@ def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose: int = 0) 
             
             return df
         else:
-            raise ValueError(f"❌ Format de fichier non reconnu : {ext}")
+            raise ValueError(f"❌ Unrecognized file format : {ext}")
 
     except Exception as e:
-        logger.error(f"❌ Erreur lors de la lecture du fichier {filepath} : {e}")
+        logger.error(f"❌ Something went wrong when reading file {filepath} : {e}")
         raise
 
 def name_analysis(listStr):

@@ -45,16 +45,17 @@ if __name__ == "__main__":
     # Test parameters
     # ------------------------------------------------------------------
 
-    # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
-    model = ModelFactoryNonLinear.create("x2_y1")
-    if verbose>0:
-        print(f'model={model}')
-
-    params = model.get_params()
-    dim_x, dim_y = params['dim_x'], params['dim_y']
-    param = ParamUPKF(verbose, **params)
+    # Available Non linear models: 
+    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
+    model        = ModelFactoryNonLinear.create("x2_y1")
+    params       = model.get_params()
+    dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
+    param        = ParamUPKF(verbose, dim_x, dim_y, **params)
+    
     if verbose > 0:
+        print(f'model={model}')
         param.summary()
+
 
     # ------------------------------------------------------------------
     # Let's go
@@ -81,10 +82,10 @@ if __name__ == "__main__":
 
         # pickle storing and plots
         upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
-        upkf_1.history.plot(list_param=["xkp1",             "Xkp1_predict"  , "Xkp1_update"], \
-                            list_label=["X - Ground Truth", "X - Predicted", "X - Filtered"], \
-                            fenetre   = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                            basename='upkf_1', show=False, base_dir=graph_dir)
+        upkf_1.history.plot(list_param= ["xkp1",             "Xkp1_predict"  , "Xkp1_update"], \
+                            list_label= ["X - Ground Truth", "X - Predicted", "X - Filtered"], \
+                            window    =  {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
+                            basename  = 'upkf_1', show=False, base_dir=graph_dir)
 
 
     elapsed = time.perf_counter() - start

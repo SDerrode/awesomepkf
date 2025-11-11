@@ -10,7 +10,7 @@ class Model_A_mQ_x3_y1(BaseModelLinear):
     MODEL_NAME = "A_mQ_x3_y1"
 
     def __init__(self) -> None:
-        super().__init__(dim_x=3, dim_y=1, model_type="AmQ")
+        super().__init__(dim_x=3, dim_y=1, model_type="linear_AmQ")
     
         self.A = np.array( [
             [0.6399176954732511, -0.1502057613168724, 0.07818930041152264, -0.18518518518518517],

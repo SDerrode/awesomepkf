@@ -10,26 +10,29 @@ class Model_Sigma_x2_y2(BaseModelLinear):
     MODEL_NAME = "Sigma_x2_y2"
     
     def __init__(self) -> None:
-        super().__init__(dim_x=2, dim_y=2, model_type="Sigma")
+        super().__init__(dim_x=2, dim_y=2, model_type="linear_Sigma")
 
         self.sxx = np.array([[1.0, 0.4],
-                        [0.4, 1.0]])
+                             [0.4, 1.0]])
         self.b   = np.array([[0.6, 0.2],
-                        [0.2, 0.6]])
+                             [0.2, 0.6]])
         self.syy = np.array([[1.0, 0.3],
-                        [0.3, 1.0]])
+                             [0.3, 1.0]])
         self.a   = np.array([[0.5, 0.2],
-                        [0.2, 0.5]])
+                             [0.2, 0.5]])
         self.d   = np.array([[0.1, 0.05],
-                        [0.05,0.1]])
+                             [0.05,0.1]])
         self.e   = np.array([[0.2, 0.15],
-                        [0.15,0.2]])
+                             [0.15,0.2]])
         self.c   = np.array([[0.2, 0.1],
-                     [0.1, 0.2]])
+                             [0.1, 0.2]])
 
         Q1     = np.block([[self.sxx, self.b.T], [self.b, self.syy]])
         Q2     = np.block([[self.a, self.e], [self.d, self.c]])
         self.A = Q2 @ np.linalg.inv(Q1)
+        eigvals = np.linalg.eigvals(self._A)
+        if np.any(np.abs(eigvals) >= 1.0):
+            raise ValueError(f"⚠️ The modulus of one Eigen value of A is >= 1 : {eigvals}")
 
         if __debug__:
             check_consistency(sxx=self.sxx, syy=self.syy)

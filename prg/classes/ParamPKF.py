@@ -4,7 +4,6 @@
 import path, sys
 directory = path.Path(__file__)
 sys.path.append(directory.parent.parent)
-print(directory.parent.parent)
 
 import logging
 from typing import Callable, Any, Union, Optional
@@ -13,11 +12,9 @@ import warnings
 import numpy as np
 from scipy.linalg import solve_discrete_lyapunov
 
-# Linear models 
+# Linear models
 from models.linear import BaseModelLinear, ModelFactoryLinear
 from classes.ActiveView import ActiveView
-
-
 # A few utils functions that are used several times
 from others.Utils import is_covariance
 
@@ -27,17 +24,26 @@ from others.Utils import is_covariance
 logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 # ----------------------------------------------------------------------
-# Classe ParamPKF
+# ParamPKF class
 # ----------------------------------------------------------------------
 class ParamPKF:
     """
-    Contient et gère les paramètres d’un filtre de Kalman couple.
-    Met automatiquement à jour les matrices dérivées à chaque modification.
+    Manage PKF parameters with optional debug checks.
+
+    Attributes:
+        verbose: logging level
+        dim_x, dim_y, dim_xy: state and observation dimensions
+        kwargs: models parameters
+        
     """
 
-    def __init__(self, verbose: int, dim_x: int, dim_y: int, **kwargs):
+    def __init__(
+        self,
+        verbose: int,
+        dim_x:   int,
+        dim_y:   int,
+        **kwargs ) -> None:
         
         if __debug__:
             assert isinstance(dim_x, int) and dim_x > 0, "dim_x must be int > 0"
@@ -49,7 +55,7 @@ class ParamPKF:
         self.dim_xy  = dim_x + dim_y
         self.verbose = verbose
 
-        # Configuration du logger selon verbose
+        # Logger config according to verbose
         self._set_log_level()
 
         # Deux façons de construire un objet de cette classe
@@ -60,16 +66,25 @@ class ParamPKF:
         else:
             logger.warning(f"⚠️ Le modèle n'est pas bien paramétré : {kwargs.keys()}")
 
-        # Vérification des dimensions dès la création
+        # In case where we use this class in an UPKF model (classical valuess)
+        self.alpha    = 1e-3
+        self.beta     = 2.0
+        self.kappa    = 0.0
+        self.lambda_  = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
+        self.gamma    = np.sqrt(self.dim_x + self.lambda_)
+
+        # Check dimensions of all matrices
         if __debug__:
             self._check_dimensions()
+
 
     # ------------------------------------------------------------------
     # Constructeurs
     # ------------------------------------------------------------------
     def constructorFrom_A_mQ(self, g, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray) -> None:
         
-        self._g = g
+        # The linear equation to update the système
+        self.g = g
         
         self._A = np.array(A, dtype=float)
         if __debug__:
@@ -80,7 +95,8 @@ class ParamPKF:
 
         self._mQ = np.array(mQ, dtype=float)
         self._update_mQ_views()
-        self._z00 = np.array(z00, dtype=float)
+
+        self._z00  = np.array(z00,  dtype=float)
         self._Pz00 = np.array(Pz00, dtype=float)
 
         self._update_Sigma_from_A_mQ()
@@ -89,7 +105,8 @@ class ParamPKF:
     def constructorFrom_Sigma(self, g, sxx: np.ndarray, syy: np.ndarray, a: np.ndarray, b: np.ndarray,
                               c: np.ndarray, d: np.ndarray, e: np.ndarray) -> None:
         
-        self._g = g
+        # The linear function to update the system equations
+        self.g = g
         
         self._sxx = np.array(sxx, dtype=float)
         self._syy = np.array(syy, dtype=float)
@@ -114,25 +131,24 @@ class ParamPKF:
             logger.setLevel(logging.DEBUG)
 
     # ------------------------------------------------------------------
-    # Vérification des dimensions
+    # Check dimensions
     # ------------------------------------------------------------------
     def _check_dimensions(self) -> None:
-        """Vérifie que toutes les matrices ont les dimensions attendues."""
         expected_shapes = {
-            'A':     (self.dim_xy, self.dim_xy),
-            'mQ':    (self.dim_xy, self.dim_xy),
-            'z00':   (self.dim_xy, 1),
-            'Pz00':  (self.dim_xy, self.dim_xy),
-            'Q1':    (self.dim_xy, self.dim_xy),
-            'Q2':    (self.dim_xy, self.dim_xy),
+            'A':     (  self.dim_xy,   self.dim_xy),
+            'mQ':    (  self.dim_xy,   self.dim_xy),
+            'z00':   (  self.dim_xy,             1),
+            'Pz00':  (  self.dim_xy,   self.dim_xy),
+            'Q1':    (  self.dim_xy,   self.dim_xy),
+            'Q2':    (  self.dim_xy,   self.dim_xy),
             'Sigma': (2*self.dim_xy, 2*self.dim_xy),
-            'sxx':   (self.dim_x, self.dim_x),
-            'syy':   (self.dim_y, self.dim_y),
-            'a':     (self.dim_x, self.dim_x),
-            'b':     (self.dim_y, self.dim_x),
-            'c':     (self.dim_y, self.dim_y),
-            'd':     (self.dim_y, self.dim_x),
-            'e':     (self.dim_x, self.dim_y),
+            'sxx':   (  self.dim_x,    self.dim_x ),
+            'syy':   (  self.dim_y,    self.dim_y ),
+            'a':     (  self.dim_x,    self.dim_x ),
+            'b':     (  self.dim_y,    self.dim_x ),
+            'c':     (  self.dim_y,    self.dim_y ),
+            'd':     (  self.dim_y,    self.dim_x ),
+            'e':     (  self.dim_x,    self.dim_y ),
         }
         for attr, shape in expected_shapes.items():
             if hasattr(self, f"_{attr}"):
@@ -141,46 +157,53 @@ class ParamPKF:
                     raise ValueError(f"⚠️ Matrice {attr} a une forme {actual.shape}, attendue {shape}")
 
     # ------------------------------------------------------------------
-    # Mise à jour des matrices dérivées
+    # Update derived matrices
     # ------------------------------------------------------------------
     def _update_A_mQ_from_Sigma(self) -> None:
-        self._Q1 = np.block([[self._sxx, self._b.T], [self._b, self._syy]])
-        self._Q2 = np.block([[self._a, self._e], [self._d, self._c]])
+        
+        self._Q1    = np.block([[self._sxx, self._b.T], [self._b, self._syy]])
+        self._Q2    = np.block([[self._a, self._e], [self._d, self._c]])
         self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
 
         self._A = self._Q2 @ np.linalg.inv(self._Q1)
+        if __debug__:
+            eigvals = np.linalg.eigvals(self._A)
+            if np.any(np.abs(eigvals) >= 1.0):
+                logger.warning(f"⚠️ Certaines valeurs propres de A ont un module >= 1 : {eigvals}")
         self._update_A_views()
+        
         self._mQ = self._Q1 - self._A @ self._Q2.T
         self._update_mQ_views()
 
-        self._z00 = np.zeros((self.dim_xy, 1))
+        self._z00  = np.zeros((self.dim_xy, 1))
         self._Pz00 = self._Q1.copy()
 
         if __debug__:
             self._check_dimensions()
 
     def _update_Sigma_from_A_mQ(self) -> None:
-        self._Q1 = solve_discrete_lyapunov(self._A, self._mQ)
-        self._Q2 = self._A @ self._Q1
+        self._Q1    = solve_discrete_lyapunov(self._A, self._mQ)
+        self._Q2    = self._A @ self._Q1
         self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
 
         # Vérification cohérence
-        Q_est = self._Q1 - self._A @ self._Q2.T
-        diff = self._mQ - Q_est
-        rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + 1e-12)
-        if rel_error > 1e-8 and __debug__:
-            logger.warning(f"⚠️ Incohérence : Q ≉ Q1 - A Q2^T (erreur relative = {rel_error:.2e})")
-            if self.verbose >= 2:
-                logger.debug(f"Différence :\n{diff}")
-        elif __debug__:
-            logger.debug(f"♻️ Vérification OK : ||Q - (Q1 - A Q2^T)||_rel = {rel_error:.2e}")
+        if __debug__:
+            Q_est = self._Q1 - self._A @ self._Q2.T
+            diff = self._mQ - Q_est
+            rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + 1e-12)
+            if rel_error > 1e-8:
+                logger.warning(f"⚠️ Incohérence : Q ≉ Q1 - A Q2^T (erreur relative = {rel_error:.2e})")
+                if self.verbose >= 2:
+                    logger.debug(f"Différence :\n{diff}")
+            else:
+                logger.debug(f"♻️ Vérification OK : ||Q - (Q1 - A Q2^T)||_rel = {rel_error:.2e}")
 
         # Sous-blocs
-        self._a = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x, 0:self.dim_x]
-        self._b = self._Sigma[self.dim_x:self.dim_xy, 0:self.dim_x]
-        self._c = self._Sigma[self.dim_xy+self.dim_x:2*self.dim_xy, self.dim_x:self.dim_xy]
-        self._d = self._Sigma[self.dim_xy+self.dim_x:2*self.dim_xy, 0:self.dim_x]
-        self._e = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x, self.dim_x:self.dim_xy]
+        self._a   = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x, 0:self.dim_x]
+        self._b   = self._Sigma[self.dim_x:self.dim_xy, 0:self.dim_x]
+        self._c   = self._Sigma[self.dim_xy+self.dim_x:2*self.dim_xy, self.dim_x:self.dim_xy]
+        self._d   = self._Sigma[self.dim_xy+self.dim_x:2*self.dim_xy, 0:self.dim_x]
+        self._e   = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x, self.dim_x:self.dim_xy]
         self._sxx = self._Sigma[0:self.dim_x, 0:self.dim_x]
         self._syy = self._Sigma[self.dim_x:self.dim_xy, self.dim_x:self.dim_xy]
 
@@ -188,7 +211,7 @@ class ParamPKF:
             self._check_dimensions()
 
     # ------------------------------------------------------------------
-    # Vues dynamiques
+    # Dynamic views on A and mQ
     # ------------------------------------------------------------------
     def _update_A_views(self) -> None:
         def _callback() -> None:
@@ -215,7 +238,7 @@ class ParamPKF:
         self._mQ_yy = ActiveView(self._mQ, slice(self.dim_x, self.dim_xy), slice(self.dim_x, self.dim_xy), _callback)
 
     # ------------------------------------------------------------------
-    # Vérification de cohérence
+    # Consistency checks
     # ------------------------------------------------------------------
     """Check internal matrices for symmetry and positive semi-definiteness."""
     def _check_consistency(self) -> None:
@@ -225,11 +248,11 @@ class ParamPKF:
                 is_covariance(getattr(self, attr), name)
 
     # ------------------------------------------------------------------
-    # Getters / Setters
+    # Getters / Setters and Properties
     # ------------------------------------------------------------------
-    @property
-    def g(self): return self._g
-    
+    # @property
+    # def g(self): return self._g
+
     @property
     def Q1(self) -> np.ndarray: return self._Q1
     @property
@@ -303,7 +326,7 @@ class ParamPKF:
     def mQ_yy(self) -> ActiveView: return self._mQ_yy
 
     # ------------------------------------------------------------------
-    # Résumé
+    # Summary
     # ------------------------------------------------------------------
     def summary(self) -> None:
         def fmt(M: Any) -> str:
@@ -343,7 +366,7 @@ class ParamPKF:
 
 
 # ----------------------------------------------------------------------
-# Exemples d'utilisation
+# Main program
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
     verbose = 1

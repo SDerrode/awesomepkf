@@ -16,7 +16,7 @@ class ModelExtSaturant(BaseModelNonLinear):
     MODEL_NAME = "x1_y1_ext_saturant"
 
     def __init__(self):
-        super().__init__(dim_x=1, dim_y=1)
+        super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
 
         # Covariances et initialisation
         self.mQ = np.array([

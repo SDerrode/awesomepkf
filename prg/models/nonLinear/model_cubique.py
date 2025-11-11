@@ -17,7 +17,7 @@ class ModelCubique(BaseModelNonLinear):
     MODEL_NAME = "x1_y1_cubique"
 
     def __init__(self):
-        super().__init__(dim_x=1, dim_y=1)
+        super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
         self.mQ = np.array([
             [1e-2, 0.0],
             [0.0, 1e-1]

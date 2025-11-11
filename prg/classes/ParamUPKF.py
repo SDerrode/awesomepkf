@@ -4,14 +4,14 @@
 import path, sys
 directory = path.Path(__file__)
 sys.path.append(directory.parent.parent)
-
-import sys
 from pathlib import Path
+
 import logging
 from typing import Callable, Any
 
 import numpy as np
 
+# Non linear models
 from classes.ActiveView import ActiveView
 from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
@@ -31,22 +31,18 @@ class ParamUPKF:
     Manage UPKF parameters with optional debug checks.
 
     Attributes:
-        dim_x, dim_y, dim_xy: state and observation dimensions
-        g: model function _g
-        mQ: process covariance matrix
-        z00: initial state vector
-        Pz00: initial covariance matrix
-        alpha, beta, kappa: UKF parameters
-        lambda_, gamma: derived UKF parameters
         verbose: logging level
+        dim_x, dim_y, dim_xy: state and observation dimensions
+        kwargs: models parameters
+        
     """
 
     def __init__(
         self,
         verbose: int,
-        dim_x: int,
-        dim_y: int,
-        **kwargs      ) -> None:
+        dim_x:   int,
+        dim_y:   int,
+        **kwargs ) -> None:
 
         if __debug__:
             assert isinstance(dim_x, int) and dim_x > 0, "dim_x must be int > 0"
@@ -58,7 +54,7 @@ class ParamUPKF:
         self.dim_xy  = dim_x + dim_y
         self.verbose = verbose
         
-        # Configuration du logger selon verbose
+        # Logger config according to verbose
         self._set_log_level()
 
         # Attribute initialization
@@ -79,13 +75,13 @@ class ParamUPKF:
         self._update_mQ_views()
 
         # UKF parameters
-        self._alpha   = kwargs['alpha']
-        self._beta    = kwargs['beta']
-        self._kappa   = kwargs['kappa']
-        self._lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
-        self._gamma   = np.sqrt(self.dim_x + self._lambda_)
+        self.alpha   = kwargs['alpha']
+        self.beta    = kwargs['beta']
+        self.kappa   = kwargs['kappa']
+        self.lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
+        self.gamma   = np.sqrt(self.dim_x + self.lambda_)
         
-        # Vérification des dimensions dès la création
+        # Check dimensions of all matrices
         if __debug__:
             self._check_dimensions()
 
@@ -108,10 +104,9 @@ class ParamUPKF:
             logger.setLevel(logging.DEBUG)
 
     # ------------------------------------------------------------------
-    # Vérification des dimensions
+    # Check dimensions
     # ------------------------------------------------------------------
     def _check_dimensions(self) -> None:
-        """Vérifie que toutes les matrices ont les dimensions attendues."""
         expected_shapes = {
             'mQ':    (self.dim_xy, self.dim_xy),
             'z00':   (self.dim_xy, 1),
@@ -146,20 +141,10 @@ class ParamUPKF:
             if hasattr(self, attr):
                 is_covariance(getattr(self, attr), name)
 
+    # ------------------------------------------------------------------
+    # Getters / Setters and Properties
+    # ------------------------------------------------------------------
 
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-    @property
-    def alpha(self) -> float: return self._alpha
-    @property
-    def lambda_(self) -> float: return self._lambda_
-    @property
-    def gamma(self) -> float: return self._gamma
-    @property
-    def beta(self) -> float: return self._beta
-    @property
-    def kappa(self) -> float: return self._kappa
     @property
     def z00(self) -> np.ndarray: return self._z00
     @property

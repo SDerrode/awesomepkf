@@ -6,21 +6,23 @@ import numpy as np
 
 # non linear models 
 from models.nonLinear import ModelFactoryNonLinear
+# Linear models
+from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
 from others.Utils import mse, file_data_generator
 # Manage algorithms for the UPKF
 from classes.UPKF import UPKF
+# Manage algorithms for the UPKF
+from classes.PKF import PKF
 # Manage parameters for the UPKF
 from classes.ParamUPKF import ParamUPKF
+# Manage parameters for the UPKF
+from classes.ParamPKF import ParamPKF
 
 if __name__ == "__main__":
     """
         python prg/filterUPKFdata_fromfile.py
     """
-    
-    import time
-    start = time.perf_counter()
-
     # ------------------------------------------------------------------
     # Constants
     # ------------------------------------------------------------------
@@ -41,18 +43,25 @@ if __name__ == "__main__":
     os.makedirs(graph_dir,    exist_ok=True)
 
     # ------------------------------------------------------------------
-    # Test parameters
+    # Test parameters Chose a linear or a non linear model by commenting
     # ------------------------------------------------------------------
 
-    # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
-    model = ModelFactoryNonLinear.create("x2_y1")
-    if verbose>0:
-        print(f'model={model}')
-
-    params = model.get_params()
-    dim_x, dim_y = params['dim_x'], params['dim_y']
-    param = ParamUPKF(verbose, **params)
+    # Available Non linear models: 
+    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
+    # model        = ModelFactoryNonLinear.create("x2_y1")
+    # params       = model.get_params()
+    # dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
+    # param        = ParamUPKF(verbose, dim_x, dim_y, **params)
+    
+    # Available Linear models: 
+    # ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
+    model        = ModelFactoryLinear.create("A_mQ_x1_y1")
+    params       = model.get_params().copy()
+    dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
+    param        = ParamPKF(verbose, dim_x, dim_y, **params)
+    
     if verbose > 0:
+        print(f'model={model}')
         param.summary()
 
     # ------------------------------------------------------------------
@@ -61,18 +70,18 @@ if __name__ == "__main__":
 
     #### ATTENTION Data dimensions in the file should be the same as model dimension above
     # datafile = 'dataUPKF_x2_y1_dimxy_2x1.parquet'
-    datafile = 'dataUPKF_x2_y1_dimxy_2x1.csv'
-    #datafile = 'dataUPKF_x2_y1_dimy_1.csv'
+    # datafile = 'dataUPKF_x2_y1_dimxy_2x1.csv'
+    # datafile = 'dataUPKF_x2_y1_dimy_1.csv'
+    datafile = 'dataUPKF_x1_y1_cubique_dimxy_1x1.csv'
 
     print("\nUPKF filtering with data generated from a file... ")
 
     upkf_2      = UPKF(param, save_pickle=save_pickle, verbose=verbose)
     filename    = os.path.join(datafile_dir, datafile)
     listeUPKF_2 = upkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
-    # print(f'listeUPKF_2={listeUPKF_2}')
 
-    if listeUPKF_2[1][0].shape != (0,1): # cela veut dire que l'on a une VT
-        # on ne peut donc calculer les MSE
+    if listeUPKF_2[1][0].shape != (0,1): # We got a ground truth
+        # So it is possible to copute the MSE
         first_arrays  = np.vstack([t[0] for t in listeUPKF_2])[20:]
         third_arrays  = np.vstack([t[2] for t in listeUPKF_2])[20:]
         fourth_arrays = np.vstack([t[3] for t in listeUPKF_2])[20:]
@@ -82,23 +91,18 @@ if __name__ == "__main__":
     if save_pickle and upkf_2.history is not None:
         df = upkf_2.history.as_dataframe()
         if verbose > 0:
-            print("\nExtract of the resulting filtering with UPKF :")
+            print("\nExtract of the filtering with UPKF :")
             print(df.head())
 
         # pickle storing and plots
         upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_2.pkl"))
-        if listeUPKF_2[1][0].shape != (0,1): # cela veut dire que l'on a une VT
-            upkf_2.history.plot(list_param=["xkp1",             "Xkp1_predict",  "Xkp1_update"], \
-                                list_label=["X - Ground Truth", "X - Predicted", "X - Filtered"], \
-                                fenetre   = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                                basename  ='upkf_2', show=False, base_dir=graph_dir)
+        if listeUPKF_2[1][0].shape != (0,1): # We got a ground truth
+            upkf_2.history.plot(list_param= ["xkp1",             "Xkp1_predict",  "Xkp1_update"], \
+                                list_label= ["X - Ground Truth", "X - Predicted", "X - Filtered"], \
+                                window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
+                                basename  = 'upkf_2', show=False, base_dir=graph_dir)
         else:
-            upkf_2.history.plot(list_param=["Xkp1_predict",   "Xkp1_update"], \
-                                list_label=[ "X - Predicted", "X - Filtered"], \
-                                fenetre   = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                                basename  ='upkf_2', show=False, base_dir=graph_dir)
-
-
-    elapsed = time.perf_counter() - start
-    print(f"Durée : {elapsed:.6f} s")
-    
+            upkf_2.history.plot(list_param= ["Xkp1_predict",   "Xkp1_update"], \
+                                list_label= [ "X - Predicted", "X - Filtered"], \
+                                window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
+                                basename  = 'upkf_2', show=False, base_dir=graph_dir)
