@@ -78,15 +78,16 @@ if __name__ == "__main__":
 
     upkf_2      = UPKF(param, save_pickle=save_pickle, verbose=verbose)
     filename    = os.path.join(datafile_dir, datafile)
-    listeUPKF_2 = upkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
+    listeUPKF = upkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
 
-    if listeUPKF_2[1][0].shape != (0,1): # We got a ground truth
+    if listeUPKF[0][0] is not None: # We got a ground truth
         # So it is possible to copute the MSE
-        first_arrays  = np.vstack([t[0] for t in listeUPKF_2])[20:]
-        third_arrays  = np.vstack([t[2] for t in listeUPKF_2])[20:]
-        fourth_arrays = np.vstack([t[3] for t in listeUPKF_2])[20:]
-        print(f"MSE (X, Esp[X] pred) : {mse(first_arrays, third_arrays)}")
-        print(f"MSE (X, Esp[X] filt) : {mse(first_arrays, fourth_arrays)}")
+        ref_arrays    = np.vstack([t[0] for t in listeUPKF])[20:]
+        first_arrays  = np.vstack([t[1] for t in listeUPKF])[20:]
+        third_arrays  = np.vstack([t[3] for t in listeUPKF])[20:]
+        fourth_arrays = np.vstack([t[4] for t in listeUPKF])[20:]
+        print(f"MSE (X, Esp[X] pred) : {mse(ref_arrays, third_arrays)}")
+        print(f"MSE (X, Esp[X] filt) : {mse(ref_arrays, fourth_arrays)}")
 
     if save_pickle and upkf_2.history is not None:
         df = upkf_2.history.as_dataframe()
@@ -96,13 +97,13 @@ if __name__ == "__main__":
 
         # pickle storing and plots
         upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_2.pkl"))
-        if listeUPKF_2[1][0].shape != (0,1): # We got a ground truth
-            upkf_2.history.plot(list_param= ["xkp1",             "Xkp1_predict",  "Xkp1_update"], \
-                                list_label= ["X - Ground Truth", "X - Predicted", "X - Filtered"], \
+        if listeUPKF[0][0] is not None: # We got a ground truth
+            upkf_2.history.plot(list_param= ["xkp1_true", "xkp1", "Xkp1_update" ], \
+                                list_label= ["X - Ground Truth", "X - Noisy", "X - Filtered"], \
                                 window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
                                 basename  = 'upkf_2', show=False, base_dir=graph_dir)
         else:
-            upkf_2.history.plot(list_param= ["Xkp1_predict",   "Xkp1_update"], \
-                                list_label= [ "X - Predicted", "X - Filtered"], \
+            upkf_2.history.plot(list_param= ["xkp1", "Xkp1_update"], \
+                                list_label= ["X - Noisy", "X - Filtered"], \
                                 window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
                                 basename  = 'upkf_2', show=False, base_dir=graph_dir)

@@ -56,23 +56,23 @@ if __name__ == "__main__":
         print(f'model={model}')
         param.summary()
 
-
     # ------------------------------------------------------------------
     # Let's go
     # ------------------------------------------------------------------
 
     print("\nUPKF filtering with data generated from a UPKF... ")
     upkf_1 = UPKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
-    listeUPKF_1 = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
-    # print(listeUPKF_1[0:6])
+    listeUPKF = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
+    # print(listeUPKF[0:6])
     # exit(1)
 
     # MSE between simulated and the predicted and filtered
-    first_arrays  = np.vstack([t[0] for t in listeUPKF_1])[20:]
-    third_arrays  = np.vstack([t[2] for t in listeUPKF_1])[20:]
-    fourth_arrays = np.vstack([t[3] for t in listeUPKF_1])[20:]
-    print(f"MSE (X, Esp[X] pred) : {mse(first_arrays, third_arrays)}")
-    print(f"MSE (X, Esp[X] filt) : {mse(first_arrays, fourth_arrays)}")
+    ref_arrays    = np.vstack([t[0] for t in listeUPKF])[20:]
+    first_arrays  = np.vstack([t[1] for t in listeUPKF])[20:]
+    third_arrays  = np.vstack([t[3] for t in listeUPKF])[20:]
+    fourth_arrays = np.vstack([t[4] for t in listeUPKF])[20:]
+    print(f"MSE (X, Esp[X] pred) : {mse(ref_arrays, third_arrays)}")
+    print(f"MSE (X, Esp[X] filt) : {mse(ref_arrays, fourth_arrays)}")
     
     if save_pickle and upkf_1.history is not None:
         df = upkf_1.history.as_dataframe()
@@ -82,8 +82,8 @@ if __name__ == "__main__":
 
         # pickle storing and plots
         upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
-        upkf_1.history.plot(list_param= ["xkp1",             "Xkp1_predict"  , "Xkp1_update"], \
-                            list_label= ["X - Ground Truth", "X - Predicted", "X - Filtered"], \
+        upkf_1.history.plot(list_param= ["xkp1",             "xkp1"  , "Xkp1_update"], \
+                            list_label= ["X - Ground Truth", "X - Noisy", "X - Filtered"], \
                             window    =  {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
                             basename  = 'upkf_1', show=False, base_dir=graph_dir)
 
