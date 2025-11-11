@@ -21,7 +21,7 @@ import numpy as np
 # non linear models 
 # from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
-from others.Utils import rmse, file_data_generator, check_consistency, check_equality
+from others.Utils import mse, file_data_generator, check_consistency, check_equality
 # Manage parameters for the UPKF
 from classes.ParamUPKF import ParamUPKF
 # Keep trace of execution (all parameters at all iterations)

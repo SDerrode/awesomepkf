@@ -7,7 +7,7 @@ import numpy as np
 # Linear models 
 from models.linear import BaseModelLinear, ModelFactoryLinear
 # # A few utils functions that are used several times
-from others.Utils import rmse, file_data_generator
+from others.Utils import mse, file_data_generator
 # Manage algorithms for the PKF
 from classes.PKF import PKF
 # Manage parameters for the PKF
@@ -73,15 +73,15 @@ if __name__ == "__main__":
     # print(listePKF_2[1][0].shape)
     
     if listePKF_2[1][0].shape != (0,1): # cela veut dire que l'on a une VT
-        # on ne peut donc calculer les RMSE
+        # on ne peut donc calculer les MSE
         first_arrays  = np.vstack([t[0] for t in listePKF_2])[20:]
         third_arrays  = np.vstack([t[2] for t in listePKF_2])[20:]
         fourth_arrays = np.vstack([t[3] for t in listePKF_2])[20:]
         fith_arrays   = np.vstack([t[4] for t in listePKF_2])[20:]
-        # Calcul du RMSE global
-        print(f"RMSE (X, Esp[X] pred) : {rmse(first_arrays, third_arrays)}")
-        print(f"RMSE (X, Esp[X]_math) : {rmse(first_arrays, fourth_arrays)}")
-        print(f"RMSE (X, Esp[X]_phys) : {rmse(first_arrays, fith_arrays)}")
+        # Calcul du MSE global
+        print(f"MSE (X, Esp[X] pred) : {mse(first_arrays, third_arrays)}")
+        print(f"MSE (X, Esp[X]_math) : {mse(first_arrays, fourth_arrays)}")
+        print(f"MSE (X, Esp[X]_phys) : {mse(first_arrays, fith_arrays)}")
 
     if save_pickle and pkf_2.history is not None:
         df = pkf_2.history.as_dataframe()
