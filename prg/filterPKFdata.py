@@ -57,19 +57,19 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     print("\nPKF filtering with data generated from a PKF... ")
-    pkf_1 = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
+    pkf_1   = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     # Call with the default data simulator generator
-    listePKF_1 = pkf_1.process_N_data(N=N)
+    listePKF = pkf_1.process_N_data(N=N)
 
     # Calcul du MSE entre le simulé et l'estimation math, et entre le simulé et l'estimation phys.
-    first_arrays  = np.vstack([t[0] for t in listePKF_1])[20:]
-    third_arrays  = np.vstack([t[2] for t in listePKF_1])[20:]
-    fourth_arrays = np.vstack([t[3] for t in listePKF_1])[20:]
-    fith_arrays   = np.vstack([t[4] for t in listePKF_1])[20:]
-    # Calcul du MSE global
-    print(f"MSE (X, Esp[X] pred) : {mse(first_arrays, third_arrays)}")
-    print(f"MSE (X, Esp[X]_math) : {mse(first_arrays, fourth_arrays)}")
-    print(f"MSE (X, Esp[X]_phys) : {mse(first_arrays, fith_arrays)}")
+    ref_arrays    = np.vstack([t[0] for t in listePKF])[20:]
+    first_arrays  = np.vstack([t[1] for t in listePKF])[20:]
+    third_arrays  = np.vstack([t[3] for t in listePKF])[20:]
+    fourth_arrays = np.vstack([t[4] for t in listePKF])[20:]
+    fith_arrays   = np.vstack([t[5] for t in listePKF])[20:]
+    print(f"MSE (X, Esp[X] pred) : {mse(ref_arrays, third_arrays)}")
+    print(f"MSE (X, Esp[X]_math) : {mse(ref_arrays, fourth_arrays)}")
+    print(f"MSE (X, Esp[X]_phys) : {mse(ref_arrays, fith_arrays)}")
     
     if save_pickle and pkf_1.history is not None:
         df = pkf_1.history.as_dataframe()
@@ -79,8 +79,8 @@ if __name__ == "__main__":
 
         # pickle storing and plots
         pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
-        pkf_1.history.plot(list_param= ["xkp1",             "Xkp1_update_math",                    "Xkp1_update_phys"], \
-                           list_label= ["X - Ground Truth", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
+        pkf_1.history.plot(list_param= ["xkp1_true", "xkp1", "Xkp1_update_math"], \
+                           list_label= ["X - Ground Truth", "X - Noisy", "X - Filtered"], \
                            window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
                            basename  = 'pkf_1', \
                            show=False, base_dir=graph_dir)

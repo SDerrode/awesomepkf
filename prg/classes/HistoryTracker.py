@@ -106,10 +106,8 @@ class HistoryTracker:
         first = y_values[list_param[0]].iloc[0]
         assert hasattr(first, "shape"), f"Le premier élément de '{list_param[0]}' n'est pas un vecteur numpy"
         nb_components = first.shape[0]
-
+        
         datafocus = pd.DataFrame()
-        # print(datafocus.head())
-        # exit(1)
         for p in list_param:
             labels = [f'{p}_{component}' for component in range(nb_components)]
             datafocus[labels] = df[p].apply(lambda x: pd.Series(x.flatten()))

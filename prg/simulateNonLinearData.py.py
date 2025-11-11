@@ -18,16 +18,17 @@ from classes.ParamUPKF import ParamUPKF
 
 if __name__ == "__main__":
     """
-        python prg/simulateUPKFdata.py
+        python prg/simulateNonLinearData.py
     """
  
     # ------------------------------------------------------------------
     # Constants
     # ------------------------------------------------------------------
     save_pickle = False
-    verbose     = 0
-    N           = 10000 # > 20
-    sKey        = 41 # Int or None (so that it is generated automatically)
+    verbose       = 0
+    N             = 10000 # > 20
+    sKey          = 41 # Int or None (so that it is generated automatically)
+    withoutX_True = False # If True : simulated X will not be stored in the file
     
     # ------------------------------------------------------------------
     # Output repo for data
@@ -56,8 +57,6 @@ if __name__ == "__main__":
     # Let's go
     # ------------------------------------------------------------------
 
-    withoutX = False # If True : simulated X will not be stored in the file
-
     print("\nUPKF simulation")
     upkf = UPKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     
@@ -65,11 +64,8 @@ if __name__ == "__main__":
     listData = upkf.simulate_N_data(N=N)
 
     # Save data as a dataframe using pandas
-    df = data_to_dataframe(listData, dim_x, dim_y, withoutX=withoutX)
-    if withoutX == True:
-        filename = f"dataUPKF_{model.MODEL_NAME}_dimy_{dim_y}.csv"
-    else:
-        filename = f"dataUPKF_{model.MODEL_NAME}_dimxy_{dim_x}x{dim_y}.csv"
+    df = data_to_dataframe(listData, dim_x, dim_y, withoutX_True=withoutX_True)
+    filename = f"dataUPKF_{model.MODEL_NAME}_dimxy_{dim_x}x{dim_y}.csv"
     filepath = os.path.join(datafile_dir, filename)
     save_dataframe_to_csv(df, filepath)
     

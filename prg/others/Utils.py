@@ -28,30 +28,34 @@ def save_dataframe_to_csv(df, filepath, index=False):
         logger.error(f"❌ Something went wrong during saving of CSV : {e}")
         raise
 
-def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
+def data_to_dataframe(listData, dim_x, dim_y, withoutX_True=False):
     """Convert a list of tuples PKF/UKF into pandas DataFrame."""
-    
     data = []
-    for idx, (x, y) in [(i, vals) for i, vals in listData]:
+    for idx, x_true, (x, y) in [(i, x_true, vals) for i, x_true, vals in listData]:
+        # print(idx, x_true, (x, y))
+        # input('bvcbvcbvcb')
         # Validation des types
         if __debug__:
             if not hasattr(x, "flatten") or not hasattr(y, "flatten"):
                 raise TypeError(f"The elts for {idx} are not valid numpy.array.")
-        x_values = x.flatten()
-        y_values = y.flatten()
+        x_true_values = x_true.flatten()
+        x_values      = x.flatten()
+        y_values      = y.flatten()
         if __debug__:
-            if len(x_values) != dim_x or len(y_values) != dim_y:
-                raise ValueError(f"Unexpected size for vectors at index {idx}: X={len(x_values)}, Y={len(y_values)}")
-        if withoutX == True:
-            data.append([*y_values])
-        else:
+            if len(x_true_values) != dim_x or len(x_values) != dim_x or len(y_values) != dim_y:
+                raise ValueError(f"Unexpected size for vectors at index {idx}: X_true={len(x_true_values)}, X={len(x_values)}, Y={len(y_values)}")
+        if withoutX_True == True:
             data.append([*x_values, *y_values])
+        else:
+            data.append([*x_true_values, *x_values, *y_values])
 
     # dataframe
     columns = []
-    if withoutX == False:
+    if withoutX_True == False:
         for c in range(dim_x):
-            columns.append(f"X{c}")
+            columns.append(f"True{c}")
+    for c in range(dim_x):
+        columns.append(f"X{c}")
     for c in range(dim_y):
         columns.append(f"Y{c}")
     df = pd.DataFrame(data, columns=columns)
@@ -145,12 +149,13 @@ def name_analysis(listStr):
         raise TypeError("L'entrée doit être une liste ou un tuple de chaînes.")
     
     # Comptages de base
+    dim_x_true = sum(s.startswith('True') for s in listStr)
     dim_x = sum(s.startswith('X') for s in listStr)
     dim_y = sum(s.startswith('Y') for s in listStr)
-    autres = [s for s in listStr if not (s.startswith('X') or s.startswith('Y'))]
+    autres = [s for s in listStr if not (s.startswith('X') or s.startswith('Y') or s.startswith('True'))]
 
     # Vérification de l'ordre (tous les X doivent être avant les Y)
-    ok = True
+    ok      = True
     x_ended = False
     for s in listStr:
         if s.startswith('X'):
@@ -161,10 +166,11 @@ def name_analysis(listStr):
             x_ended = True
 
     return {
-        "dim_x": dim_x,
-        "dim_y": dim_y,
-        "OK": ok,
-        "autres": autres
+        "dim_x_true": dim_x_true,
+        "dim_x"     : dim_x,
+        "dim_y"     : dim_y,
+        "Correct"   : ok,
+        "autres"    : autres
     }
 
 
@@ -173,25 +179,26 @@ def name_analysis(listStr):
 # ----------------------------------------------------------------------
 
 def file_data_generator(filename: str, dim_x: int, dim_y: int, verbose: int = 0) -> Generator[tuple[int, tuple[np.ndarray, np.ndarray]], None, None]:
-    df: pd.DataFrame = read_unknown_file(filename, verbose=verbose)
-    # print(df.head())
-    # print(list(df.columns))
+    df = read_unknown_file(filename, verbose=verbose)
     dico = name_analysis(list(df.columns))
-    # print(f'dico={dico}')
-    # exit(1)
-    
 
-    if dico['dim_x'] != 0 and (dico['OK'] == False or dico['dim_x'] != dim_x or dico['dim_y']!= dim_y) : 
+    if dico['dim_x_true'] != 0 and (dico['Correct'] == False or dico['dim_x_true'] != dim_x or dico['dim_x'] != dim_x or dico['dim_y']!= dim_y) : 
         print(f'Expected dimensions : dim_x x dim_y = {dim_x} x {dim_y}')
         print(f'Columns found in the file : {list(df.columns)}')
-        raise ValueError(f"❌ Format de fichier non reconnu ou non compatible: {dico}")
+        raise ValueError(f"❌ Pb with dico: {dico}")
+    # print(f'dico={dico}')
+    # exit(1)
 
     for k, row in df.iterrows():
-        values: np.ndarray = row.values.reshape(-1, 1)
-        xkp1, ykp1 = np.split(values, [dico['dim_x']])
-        # print(f'xkp1, ykp1={xkp1}, {ykp1}')
-        # exit(1)
-        yield k, (xkp1, ykp1)
+        values = row.values.reshape(-1, 1)
+        # print(values)
+        # input('popopopopo')
+        if dico['dim_x_true'] != 0:
+            x_true, xkp1, ykp1 = np.split(values, [dico['dim_x_true'], dico['dim_x_true']+dico['dim_x']])
+            yield k, x_true, (xkp1, ykp1)
+        else:
+            xkp1, ykp1 = np.split(values, [dico['dim_x']])
+            yield k, None, (xkp1, ykp1)
 
 # ----------------------------------------------------------------------
 # Vérification cohérence des matrices
@@ -227,11 +234,13 @@ def check_equality(**kwargs: np.ndarray) -> None:
         return
 
     ref       = matrices[0]
+    ref       = np.asarray(ref, dtype=float)
     ref_name  = names[0]
     tol       = 1e-10
     all_equal = True
 
     for name, M in zip(names[1:], matrices[1:]):
+        M   = np.asarray(M, dtype=float)
         if __debug__ and not np.allclose(ref, M, atol=tol, rtol=tol):
             diff_norm = np.linalg.norm(ref - M)
             logger.warning(f"⚠️ Matrices '{ref_name}' and '{name}' are different (‖Δ‖={diff_norm:.3e})")
