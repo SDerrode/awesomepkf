@@ -19,7 +19,7 @@ from typing import Generator, Optional, Tuple
 import numpy as np
 
 # A few utils functions that are used several times
-from others.Utils import check_consistency, check_equality
+from others.utils import check_consistency, check_equality
 # Manage parameters for the UPKF
 from classes.ParamUPKF import ParamUPKF
 # Keep trace of execution (all parameters at all iterations)

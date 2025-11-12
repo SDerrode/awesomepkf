@@ -7,7 +7,7 @@ import numpy as np
 # Linear models
 from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
-from others.Utils import mse, file_data_generator
+from others.utils import mse, file_data_generator
 # Manage algorithms for the PKF
 from classes.PKF import PKF
 # Manage parameters for the PKF
@@ -67,25 +67,18 @@ if __name__ == "__main__":
     pkf_2    = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     filename = os.path.join(datafile_dir, datafile)
     listePKF = pkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
-    # print(listePKF[0:2])
-    # print(len(listePKF))
-    # input('attente')
-    if listePKF[0][0] is not None: # We got a ground truth
-        # So it is possible to compute the MSE
-        ref_arrays    = np.vstack([t[0] for t in listePKF])[20:]
-        first_arrays  = np.vstack([t[1] for t in listePKF])[20:]
-        third_arrays  = np.vstack([t[3] for t in listePKF])[20:]
-        fourth_arrays = np.vstack([t[4] for t in listePKF])[20:]
-        fith_arrays   = np.vstack([t[5] for t in listePKF])[20:]
-        print(f"MSE (X, Esp[X] pred) : {mse(ref_arrays, third_arrays)}")
-        print(f"MSE (X, Esp[X]_math) : {mse(ref_arrays, fourth_arrays)}")
-        print(f"MSE (X, Esp[X]_phys) : {mse(ref_arrays, fith_arrays)}")
 
     if save_pickle and pkf_2.history is not None:
         df = pkf_2.history.as_dataframe()
         if verbose > 0:
             print("\nExtract of the filtering with PKF :")
             print(df.head())
+            
+        # print scoring
+        ListeA = ['xkp1_true',      'xkp1_true',          'xkp1',           'xkp1']
+        ListeB = ['Xkp1_predict',   'Xkp1_update_math',   'Xkp1_predict',   'Xkp1_update_math']
+        ListeC = ['PXXkp1_predict', 'PXXkp1_update_math', 'PXXkp1_predict', 'PXXkp1_update_math']
+        pkf_2.history.compute_errors(ListeA, ListeB, ListeC)
 
         # pickle storing and plots
         pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))

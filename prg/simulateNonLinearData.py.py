@@ -9,7 +9,7 @@ import numpy as np
 # non linear models 
 from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
-from others.Utils import save_dataframe_to_csv, data_to_dataframe
+from others.utils import save_dataframe_to_csv, data_to_dataframe
 # Manage algorithms for the UPKF
 from classes.UPKF import UPKF
 # Parameters for PKF

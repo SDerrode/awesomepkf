@@ -16,7 +16,7 @@ from scipy.linalg import solve_discrete_lyapunov
 from models.linear import BaseModelLinear, ModelFactoryLinear
 from classes.ActiveView import ActiveView
 # A few utils functions that are used several times
-from others.Utils import is_covariance
+from others.utils import is_covariance
 
 # ----------------------------------------------------------------------
 # Configuration du logging global

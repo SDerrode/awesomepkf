@@ -7,7 +7,7 @@ import numpy as np
 # non linear models 
 from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
-from others.Utils import mse
+from others.utils import mse
 # Manage algorithms for the UPKF
 from classes.UPKF import UPKF
 # Manage parameters for the UPKF
@@ -63,22 +63,18 @@ if __name__ == "__main__":
     print("\nUPKF filtering with data generated from a UPKF... ")
     upkf_1 = UPKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     listeUPKF = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
-    # print(listeUPKF[0:6])
-    # exit(1)
 
-    # MSE between simulated and the predicted and filtered
-    ref_arrays    = np.vstack([t[0] for t in listeUPKF])[20:]
-    first_arrays  = np.vstack([t[1] for t in listeUPKF])[20:]
-    third_arrays  = np.vstack([t[3] for t in listeUPKF])[20:]
-    fourth_arrays = np.vstack([t[4] for t in listeUPKF])[20:]
-    print(f"MSE (X, Esp[X] pred) : {mse(ref_arrays, third_arrays)}")
-    print(f"MSE (X, Esp[X] filt) : {mse(ref_arrays, fourth_arrays)}")
-    
     if save_pickle and upkf_1.history is not None:
         df = upkf_1.history.as_dataframe()
         if verbose > 0:
             print("\nExtract of the resulting filtering with UPKF :")
             print(df.head())
+            
+        # print scoring
+        ListeA = ['xkp1_true',      'xkp1_true',     'xkp1',           'xkp1']
+        ListeB = ['Xkp1_predict',   'Xkp1_update',   'Xkp1_predict',   'Xkp1_update']
+        ListeC = ['PXXkp1_predict', 'PXXkp1_update', 'PXXkp1_predict', 'PXXkp1_update']
+        upkf_1.history.compute_errors(ListeA, ListeB, ListeC)
 
         # pickle storing and plots
         upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
@@ -87,7 +83,5 @@ if __name__ == "__main__":
                             window    =  {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
                             basename  = 'upkf_1', show=False, base_dir=graph_dir)
 
-
     elapsed = time.perf_counter() - start
     print(f"Durée : {elapsed:.6f} s")
-    

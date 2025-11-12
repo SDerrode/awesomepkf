@@ -11,6 +11,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
+from others.utils import mse, compute_errors
+
+
 
 # ----------------------------------------------------------------------
 # Configuration globale du logging
@@ -84,6 +87,13 @@ class HistoryTracker:
         if tracker.verbose > 0:
             logger.info(f"[HistoryTracker] Rechargé depuis '{path}' ({len(tracker)} enregistrements)")
         return tracker
+
+    # ------------------------------------------------------------------
+    def compute_errors(self, ListeA, ListeB, ListeC):
+        df = pd.DataFrame(self._history.copy())
+        for a, b, c in zip(ListeA, ListeB, ListeC):
+            mse_total, mae, rmse, nees_mean = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy())
+            print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, rmse={rmse:.4f}, nees_mean={nees_mean:.4f}, mae={mae:.4f}")
 
     # ------------------------------------------------------------------
     def plot(self, list_param, list_label, window, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):

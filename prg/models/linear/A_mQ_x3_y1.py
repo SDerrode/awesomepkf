@@ -2,7 +2,7 @@ import numpy as np
 from .base_model_linear import BaseModelLinear
 
 # A few utils functions that are used several times
-from others.Utils import check_consistency
+from others.utils import check_consistency
 
 class Model_A_mQ_x3_y1(BaseModelLinear):
     
