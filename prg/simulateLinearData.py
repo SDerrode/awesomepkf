@@ -9,7 +9,7 @@ import numpy as np
 # Linear models
 from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
-from others.Utils import save_dataframe_to_csv, data_to_dataframe
+from others.utils import save_dataframe_to_csv, data_to_dataframe
 # Manage algorithms for the PKF
 from classes.PKF import PKF
 # Parameters for PKF

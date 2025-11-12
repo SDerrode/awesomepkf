@@ -3,7 +3,7 @@ from typing import Callable
 from .base_model_nonLinear import BaseModelNonLinear
 
 # A few utils functions that are used several times
-from others.Utils import check_consistency
+from others.utils import check_consistency
 
 class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
     """

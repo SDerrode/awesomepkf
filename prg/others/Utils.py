@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def save_dataframe_to_csv(df, filepath, index=False):
     """Save a DataFrame in CSV (UTF-8) without index."""
     path = Path(filepath)
-    path.parent.mkdir(parents=True, exist_ok=True)  # Crée le dossier si besoin
+    path.parent.mkdir(parents=True, exist_ok=True)
     
     try:
         df.to_csv(path, encoding="utf-8", index=index, float_format="%.6f")
@@ -66,15 +66,69 @@ def data_to_dataframe(listData, dim_x, dim_y, withoutX_True=False):
 # ----------------------------------------------------------------------
 # MSE
 # ----------------------------------------------------------------------
-def mse(X1: Union[np.ndarray, list], X2: Union[np.ndarray, list]) -> float:
-    X1_arr = np.asarray(X1).ravel()
-    X2_arr = np.asarray(X2).ravel()
+def mse(x_true, x_hat) -> float:
+    x_true_arr = np.asarray(x_true).ravel()
+    x_hat_arr = np.asarray(x_hat).ravel()
+    
     if __debug__:
-        if X1_arr.shape != X2_arr.shape:
-            raise ValueError(f"❌ Arrays must have the same shape : {X1_arr.shape} vs {X2_arr.shape}")
-    mse = np.mean((X1_arr - X2_arr) ** 2)
+        if x_true_arr.shape != x_hat_arr.shape:
+            raise ValueError(f"❌ Arrays must have the same shape : {x_true_arr.shape} vs {x_hat_arr.shape}")
+    mse = np.mean((x_true_arr - x_hat_arr) ** 2)
     return float(np.sqrt(mse))
 
+
+# ------------------------------------------------------------------
+
+def compute_errors(x_true, x_hat, P_list=None):
+    """
+    Calcule MSE, MAE, RMSE et NEES moyen entre deux séquences d'états.
+    
+    x_true, x_hat : listes ou colonnes pandas où chaque élément est un array (n,1) ou (n,)
+    P_list : liste ou ndarray de matrices covariance (n,n) pour chaque instant (facultatif)
+    
+    Retour : tuple (mse_total, mae, rmse, nees_mean) 
+    """
+    # transformer en listes simples si ndarray d'objets
+    if isinstance(x_true, np.ndarray) and x_true.dtype == object:
+        x_true = list(x_true)
+    if isinstance(x_hat, np.ndarray) and x_hat.dtype == object:
+        x_hat = list(x_hat)
+
+    # convertir en vecteur 1D par concaténation
+    X_true = [np.ravel(np.asarray(x)) for x in x_true]
+    X_hat  = [np.ravel(np.asarray(x)) for x in x_hat]
+
+    # concaténer pour calcul global
+    X_true_flat = np.concatenate(X_true)
+    X_hat_flat  = np.concatenate(X_hat)
+
+    # erreurs
+    diff = X_true_flat - X_hat_flat
+    mse_total = float(np.mean(diff**2))
+    mae = float(np.mean(np.abs(diff)))
+    rmse = float(np.sqrt(mse_total))
+
+    # NEES moyen (si P_list fourni)
+    nees_mean = None
+    if P_list is not None:
+        nees_vals = []
+        for e, P in zip([x_t - xh_t for x_t, xh_t in zip(X_true, X_hat)], P_list):
+            e = e.reshape(-1,1)
+            P = np.asarray(P)
+            try:
+                P_inv = np.linalg.inv(P)
+                nees_k = float(e.T @ P_inv @ e)
+                nees_vals.append(nees_k)
+            except np.linalg.LinAlgError:
+                # P singulière : on ignore
+                continue
+        if len(nees_vals) > 0:
+            nees_mean = float(np.mean(nees_vals))
+
+    return mse_total, mae, rmse, nees_mean
+
+
+    
 # ----------------------------------------------------------------------
 # Lecture de fichiers inconnus
 # ----------------------------------------------------------------------

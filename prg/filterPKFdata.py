@@ -7,7 +7,7 @@ import numpy as np
 # Linear models 
 from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
-from others.Utils import mse
+from others.utils import mse
 # Manage algorithms for the PKF
 from classes.PKF import PKF
 # Manage parameters for the PKF
@@ -61,21 +61,17 @@ if __name__ == "__main__":
     # Call with the default data simulator generator
     listePKF = pkf_1.process_N_data(N=N)
 
-    # Calcul du MSE entre le simulé et l'estimation math, et entre le simulé et l'estimation phys.
-    ref_arrays    = np.vstack([t[0] for t in listePKF])[20:]
-    first_arrays  = np.vstack([t[1] for t in listePKF])[20:]
-    third_arrays  = np.vstack([t[3] for t in listePKF])[20:]
-    fourth_arrays = np.vstack([t[4] for t in listePKF])[20:]
-    fith_arrays   = np.vstack([t[5] for t in listePKF])[20:]
-    print(f"MSE (X, Esp[X] pred) : {mse(ref_arrays, third_arrays)}")
-    print(f"MSE (X, Esp[X]_math) : {mse(ref_arrays, fourth_arrays)}")
-    print(f"MSE (X, Esp[X]_phys) : {mse(ref_arrays, fith_arrays)}")
-    
     if save_pickle and pkf_1.history is not None:
         df = pkf_1.history.as_dataframe()
         if verbose > 0:
             print("\nExtract of the resulting filtering with PKF :")
             print(df.head())
+
+        # print scoring
+        ListeA = ['xkp1_true',      'xkp1_true',          'xkp1',           'xkp1']
+        ListeB = ['Xkp1_predict',   'Xkp1_update_math',   'Xkp1_predict',   'Xkp1_update_math']
+        ListeC = ['PXXkp1_predict', 'PXXkp1_update_math', 'PXXkp1_predict', 'PXXkp1_update_math']
+        pkf_1.history.compute_errors(ListeA, ListeB, ListeC)
 
         # pickle storing and plots
         pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))

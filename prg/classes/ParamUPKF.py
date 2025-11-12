@@ -15,7 +15,7 @@ import numpy as np
 from classes.ActiveView import ActiveView
 from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
-from others.Utils import is_covariance
+from others.utils import is_covariance
 
 # ----------------------------------------------------------------------
 # Configuration du logging global

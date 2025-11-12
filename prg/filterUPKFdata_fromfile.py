@@ -9,7 +9,7 @@ from models.nonLinear import ModelFactoryNonLinear
 # Linear models
 from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
-from others.Utils import mse, file_data_generator
+from others.utils import mse, file_data_generator
 # Manage algorithms for the UPKF
 from classes.UPKF import UPKF
 # Manage algorithms for the UPKF
@@ -80,20 +80,17 @@ if __name__ == "__main__":
     filename    = os.path.join(datafile_dir, datafile)
     listeUPKF = upkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
 
-    if listeUPKF[0][0] is not None: # We got a ground truth
-        # So it is possible to copute the MSE
-        ref_arrays    = np.vstack([t[0] for t in listeUPKF])[20:]
-        first_arrays  = np.vstack([t[1] for t in listeUPKF])[20:]
-        third_arrays  = np.vstack([t[3] for t in listeUPKF])[20:]
-        fourth_arrays = np.vstack([t[4] for t in listeUPKF])[20:]
-        print(f"MSE (X, Esp[X] pred) : {mse(ref_arrays, third_arrays)}")
-        print(f"MSE (X, Esp[X] filt) : {mse(ref_arrays, fourth_arrays)}")
-
     if save_pickle and upkf_2.history is not None:
         df = upkf_2.history.as_dataframe()
         if verbose > 0:
             print("\nExtract of the filtering with UPKF :")
             print(df.head())
+            
+        # print scoring
+        ListeA = ['xkp1_true',      'xkp1_true',     'xkp1',           'xkp1']
+        ListeB = ['Xkp1_predict',   'Xkp1_update',   'Xkp1_predict',   'Xkp1_update']
+        ListeC = ['PXXkp1_predict', 'PXXkp1_update', 'PXXkp1_predict', 'PXXkp1_update']
+        upkf_2.history.compute_errors(ListeA, ListeB, ListeC)
 
         # pickle storing and plots
         upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_2.pkl"))

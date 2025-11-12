@@ -24,7 +24,7 @@ from typing import Generator, Optional, Tuple
 import numpy as np
 
 # A few utils functions that are used several times
-from others.Utils import check_consistency, check_equality
+from others.utils import check_consistency, check_equality
 # Manage parameters for the PKF
 from classes.ParamPKF import ParamPKF
 # Keep trace of execution (all parameters at all iterations)
