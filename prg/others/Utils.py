@@ -31,31 +31,27 @@ def save_dataframe_to_csv(df, filepath, index=False):
 def data_to_dataframe(listData, dim_x, dim_y, withoutX_True=False):
     """Convert a list of tuples PKF/UKF into pandas DataFrame."""
     data = []
-    for idx, x_true, (x, y) in [(i, x_true, vals) for i, x_true, vals in listData]:
-        # print(idx, x_true, (x, y))
-        # input('bvcbvcbvcb')
+    for idx, (x, y) in [(i, vals) for i, vals in listData]:
+
         # Validation des types
         if __debug__:
             if not hasattr(x, "flatten") or not hasattr(y, "flatten"):
                 raise TypeError(f"The elts for {idx} are not valid numpy.array.")
-        x_true_values = x_true.flatten()
-        x_values      = x.flatten()
-        y_values      = y.flatten()
+        x_values = x.flatten()
+        y_values = y.flatten()
         if __debug__:
-            if len(x_true_values) != dim_x or len(x_values) != dim_x or len(y_values) != dim_y:
-                raise ValueError(f"Unexpected size for vectors at index {idx}: X_true={len(x_true_values)}, X={len(x_values)}, Y={len(y_values)}")
+            if len(x_values) != dim_x or len(y_values) != dim_y:
+                raise ValueError(f"Unexpected size for vectors at index {idx}: X={len(x_values)}, Y={len(y_values)}")
         if withoutX_True == True:
-            data.append([*x_values, *y_values])
+            data.append([*y_values])
         else:
-            data.append([*x_true_values, *x_values, *y_values])
+            data.append([*x_values, *y_values])
 
     # dataframe
     columns = []
     if withoutX_True == False:
         for c in range(dim_x):
-            columns.append(f"True{c}")
-    for c in range(dim_x):
-        columns.append(f"X{c}")
+            columns.append(f"X{c}")
     for c in range(dim_y):
         columns.append(f"Y{c}")
     df = pd.DataFrame(data, columns=columns)
@@ -66,15 +62,15 @@ def data_to_dataframe(listData, dim_x, dim_y, withoutX_True=False):
 # ----------------------------------------------------------------------
 # MSE
 # ----------------------------------------------------------------------
-def mse(x_true, x_hat) -> float:
-    x_true_arr = np.asarray(x_true).ravel()
-    x_hat_arr = np.asarray(x_hat).ravel()
+# def mse(x_true, x_hat) -> float:
+#     x_true_arr = np.asarray(x_true).ravel()
+#     x_hat_arr = np.asarray(x_hat).ravel()
     
-    if __debug__:
-        if x_true_arr.shape != x_hat_arr.shape:
-            raise ValueError(f"❌ Arrays must have the same shape : {x_true_arr.shape} vs {x_hat_arr.shape}")
-    mse = np.mean((x_true_arr - x_hat_arr) ** 2)
-    return float(np.sqrt(mse))
+#     if __debug__:
+#         if x_true_arr.shape != x_hat_arr.shape:
+#             raise ValueError(f"❌ Arrays must have the same shape : {x_true_arr.shape} vs {x_hat_arr.shape}")
+#     mse = np.mean((x_true_arr - x_hat_arr) ** 2)
+#     return float(np.sqrt(mse))
 
 
 # ------------------------------------------------------------------
@@ -236,23 +232,19 @@ def file_data_generator(filename: str, dim_x: int, dim_y: int, verbose: int = 0)
     df = read_unknown_file(filename, verbose=verbose)
     dico = name_analysis(list(df.columns))
 
-    if dico['dim_x_true'] != 0 and (dico['Correct'] == False or dico['dim_x_true'] != dim_x or dico['dim_x'] != dim_x or dico['dim_y']!= dim_y) : 
+    if dico['dim_x'] != 0 and (dico['Correct'] == False  or dico['dim_x'] != dim_x or dico['dim_y']!= dim_y) : 
         print(f'Expected dimensions : dim_x x dim_y = {dim_x} x {dim_y}')
         print(f'Columns found in the file : {list(df.columns)}')
         raise ValueError(f"❌ Pb with dico: {dico}")
-    # print(f'dico={dico}')
-    # exit(1)
 
     for k, row in df.iterrows():
         values = row.values.reshape(-1, 1)
-        # print(values)
-        # input('popopopopo')
-        if dico['dim_x_true'] != 0:
-            x_true, xkp1, ykp1 = np.split(values, [dico['dim_x_true'], dico['dim_x_true']+dico['dim_x']])
-            yield k, x_true, (xkp1, ykp1)
-        else:
+        if dico['dim_x'] != 0:
             xkp1, ykp1 = np.split(values, [dico['dim_x']])
-            yield k, None, (xkp1, ykp1)
+            yield k, (xkp1, ykp1)
+        else:
+            ykp1 = values
+            yield k, (None, ykp1)
 
 # ----------------------------------------------------------------------
 # Vérification cohérence des matrices

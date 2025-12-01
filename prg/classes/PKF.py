@@ -114,22 +114,18 @@ class PKF:
 
         # The first
         k = 0
-        Zkp1_true  = np.zeros(shape=(self.dim_xy, 1))
         # Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=np.zeros(shape=(self.dim_xy)) +1.5, cov=Pz00).reshape(-1,1)
         Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
-        yield k, Zkp1_true[0:self.dim_x], np.split(Zkp1_simul, [self.dim_x])
+        yield k, np.split(Zkp1_simul, [self.dim_x])
 
         # The next ones...
         zerosvector = np.zeros(shape=(self.dim_xy))
         while N is None or k < N:
             k += 1
-            Zkp1_true  = A @ Zkp1_true
             temp       = A @ Zkp1_simul
             Zkp1_simul = temp + self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1)
-            # print(xkp1_true)
-            # print(Zkp1_simul)
-            # input('attet')
-            yield k, Zkp1_true[0:self.dim_x], np.split(Zkp1_simul, [self.dim_x])
+
+            yield k, np.split(Zkp1_simul, [self.dim_x])
 
 
     def process_pkf(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
@@ -150,10 +146,8 @@ class PKF:
 
         # The first
         ###################
-        k, xkp1_true, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
-        # print('PKF', k, xkp1_true, (xkp1, ykp1))
-        # input('arggg')
-        
+        k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
+ 
         temp            = self.param.Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(self.param.Pz00[self.dim_x:, self.dim_x:])
         Xkp1_update     = temp @ ykp1
         PXXkp1_update   = self.param.Pz00[0:self.dim_x, 0:self.dim_x] - temp @ self.param.Pz00[self.dim_x:, 0:self.dim_x]
@@ -162,8 +156,7 @@ class PKF:
         Xkp1_predict = np.zeros(shape=(self.dim_x, 1))
         if self.save_pickle and self._history is not None:
             self._history.record(   iter                 = k,
-                                    xkp1_true            = xkp1_true,
-                                    xkp1                 = xkp1.copy(),
+                                    xkp1                 = xkp1.copy if xkp1 is not None else None,
                                     ykp1                 = ykp1.copy(),
                                     Xkp1_predict         = Xkp1_predict.copy(),              # No prediction for the first
                                     PXXkp1_predict       = np.eye(self.dim_x),               # No prediction for the first
@@ -176,7 +169,7 @@ class PKF:
                                     PXXkp1_update_phys   = PXXkp1_update.copy(),
                                     PXXkp1_update_Joseph = PXXkp1_update.copy())
  
-        yield xkp1_true, xkp1, ykp1, Xkp1_predict, Xkp1_update, Xkp1_update # the phys. and math. Xkp1_update are the same
+        yield xkp1, ykp1, Xkp1_predict, Xkp1_update, Xkp1_update # the phys. and math. Xkp1_update are the same
 
         ###################
         # The next ones
@@ -208,12 +201,9 @@ class PKF:
             
             # Get new observation from the data generator
             try:
-                k, xkp1_true, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
-                # print('PKF', k, xkp1_true, (xkp1, ykp1))
-                # input('arggg')
+                k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
             except StopIteration:
-                # return # we stop as the data generator is stopped itself
-                return
+                return # we stop as the data generator is stopped itself
 
             # Updating with mathematical formulation
             ###############################################
@@ -260,8 +250,7 @@ class PKF:
             # Store if save_pickle==True
             if self.save_pickle and self._history is not None:
                 self._history.record(iter                 = k,
-                                     xkp1_true            = xkp1_true,
-                                     xkp1                 = xkp1.copy(),
+                                     xkp1                 = xkp1.copy if xkp1 is not None else None,
                                      ykp1                 = ykp1.copy(),
                                      Xkp1_predict         = Xkp1_predict,
                                      PXXkp1_predict       = PXXkp1_predict,
@@ -274,7 +263,7 @@ class PKF:
                                      PXXkp1_update_phys   = PXXkp1_update_phys,
                                      PXXkp1_update_Joseph = PXXkp1_update_Joseph)
 
-            yield xkp1_true, xkp1, ykp1, Xkp1_predict, Xkp1_update_math, Xkp1_update_phys
+            yield xkp1, ykp1, Xkp1_predict, Xkp1_update_math, Xkp1_update_phys
 
     def process_N_data(self, N, data_generator=None):
         return list(self.process_pkf(N=N, data_generator=data_generator))

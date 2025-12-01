@@ -28,7 +28,7 @@ if __name__ == "__main__":
     verbose       = 0
     N             = 10000 # > 20
     sKey          = 41 # Int or None (so that it is generated automatically)
-    withoutX_True = False # If True : simulated X will not be stored in the file
+    withoutX_True = True # If True : simulated X will not be stored in the file
     
     # ------------------------------------------------------------------
     # Output repo for data

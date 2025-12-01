@@ -7,7 +7,7 @@ import numpy as np
 # Linear models
 from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
-from others.utils import mse, file_data_generator
+from others.utils import compute_errors, file_data_generator
 # Manage algorithms for the PKF
 from classes.PKF import PKF
 # Manage parameters for the PKF
@@ -22,9 +22,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     save_pickle = True
     verbose     = 0
-    N           = 10000 # > 20
-    sKey        = 41 # Int or None (so that it is generated automatically)
-    
+
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
     # ------------------------------------------------------------------
@@ -75,24 +73,18 @@ if __name__ == "__main__":
             print(df.head())
             
         # print scoring
-        ListeA = ['xkp1_true',      'xkp1_true',          'xkp1',           'xkp1']
-        ListeB = ['Xkp1_predict',   'Xkp1_update_math',   'Xkp1_predict',   'Xkp1_update_math']
-        ListeC = ['PXXkp1_predict', 'PXXkp1_update_math', 'PXXkp1_predict', 'PXXkp1_update_math']
-        pkf_2.history.compute_errors(ListeA, ListeB, ListeC)
+        print(listePKF[0])
+        if listePKF[0][0] is not None:
+            ListeA = ['xkp1',           'xkp1']
+            ListeB = ['Xkp1_predict',   'Xkp1_update_math']
+            ListeC = ['PXXkp1_predict', 'PXXkp1_update_math']
+            pkf_2.history.compute_errors(ListeA, ListeB, ListeC)
 
         # pickle storing and plots
         pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
-        if listePKF[0][0] is not None: # We got a ground truth
-            # list_param= ["xkp1_true",        "xkp1",      "Xkp1_update_math",                    "Xkp1_update_phys"], \
-            # list_label= ["X - Ground Truth", "X - Noisy", "X - Filtered (mathematical version)", "X - Filtered (physical version)"], \
-            pkf_2.history.plot(list_param= ["xkp1_true", "xkp1", "Xkp1_update_math" ], \
-                               list_label= ["X - Ground Truth", "X - Noisy", "X - Filtered (mathematical version)"], \
-                               window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                               basename  = 'pkf_2', \
-                               show=False, base_dir=graph_dir)
-        else:
-            pkf_2.history.plot(list_param= ["xkp1", "Xkp1_update_math"], \
-                               list_label= ["X - Noisy", "X - Filtered (mathematical version)"], \
-                               window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                               basename  = 'pkf_2', \
-                               show=False, base_dir=graph_dir)
+        if listePKF[0][0] is not None:
+            pkf_2.history.plot(list_param= ["xkp1", "Xkp1_update_math" ], \
+                                list_label= ["X - Noisy", "X - Filtered (mathematical version)"], \
+                                window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
+                                basename  = 'pkf_2', \
+                                show=False, base_dir=graph_dir)
