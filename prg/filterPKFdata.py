@@ -7,7 +7,7 @@ import numpy as np
 # Linear models 
 from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
-from others.utils import mse
+from others.utils import compute_errors
 # Manage algorithms for the PKF
 from classes.PKF import PKF
 # Manage parameters for the PKF
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     
     # Available linear models:
     # ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
-    model        = ModelFactoryLinear.create("A_mQ_x1_y1")
+    model        = ModelFactoryLinear.create("Sigma_x3_y1")
     params       = model.get_params().copy()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamPKF(verbose, dim_x, dim_y, **params)
@@ -68,15 +68,15 @@ if __name__ == "__main__":
             print(df.head())
 
         # print scoring
-        ListeA = ['xkp1_true',      'xkp1_true',          'xkp1',           'xkp1']
-        ListeB = ['Xkp1_predict',   'Xkp1_update_math',   'Xkp1_predict',   'Xkp1_update_math']
-        ListeC = ['PXXkp1_predict', 'PXXkp1_update_math', 'PXXkp1_predict', 'PXXkp1_update_math']
+        ListeA = ['xkp1',           'xkp1']
+        ListeB = ['Xkp1_predict',   'Xkp1_update_math']
+        ListeC = ['PXXkp1_predict', 'PXXkp1_update_math']
         pkf_1.history.compute_errors(ListeA, ListeB, ListeC)
 
         # pickle storing and plots
         pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
-        pkf_1.history.plot(list_param= ["xkp1_true", "xkp1", "Xkp1_update_math"], \
-                           list_label= ["X - Ground Truth", "X - Noisy", "X - Filtered"], \
+        pkf_1.history.plot(list_param= ["xkp1",      "Xkp1_update_math"], \
+                           list_label= ["X - Noisy", "X - Filtered"], \
                            window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
                            basename  = 'pkf_1', \
                            show=False, base_dir=graph_dir)

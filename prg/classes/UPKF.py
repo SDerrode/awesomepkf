@@ -115,17 +115,15 @@ class UPKF:
 
         # The first
         k = 0
-        Zkp1_true  = np.zeros(shape=(self.dim_xy, 1))
         Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
-        yield k, Zkp1_true[0:self.dim_x], np.split(Zkp1_simul, [self.dim_x])
+        yield k, np.split(Zkp1_simul, [self.dim_x])
 
         # The next ones...
         zerosvector = np.zeros(self.dim_xy)
         while N is None or k < N:
             k += 1
-            Zkp1_true  = g(Zkp1_true, zerosvector.reshape(-1,1), self.dt)
             Zkp1_simul = g(Zkp1_simul, self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), self.dt)
-            yield k, Zkp1_true[0:self.dim_x], np.split(Zkp1_simul, [self.dim_x])
+            yield k, np.split(Zkp1_simul, [self.dim_x])
 
     def _sigma_points(self, x: np.ndarray, P: np.ndarray) -> np.ndarray:
         """Generate the 2*dim_x+1 sigma points around x"""
@@ -150,7 +148,7 @@ class UPKF:
 
         # The first
         ###################
-        k, xkp1_true, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
+        k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
         temp          = self.param.Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(self.param.Pz00[self.dim_x:, self.dim_x:])
         Xkp1_update   = temp @ ykp1
         PXXkp1_update = self.param.Pz00[0:self.dim_x, 0:self.dim_x] - temp @ self.param.Pz00[self.dim_x:, 0:self.dim_x]
@@ -158,16 +156,15 @@ class UPKF:
 
         Xkp1_predict = np.zeros((self.dim_x, 1))
         if self.save_pickle and self._history is not None:
-            self._history.record(iter=k,
-                                 xkp1_true     = xkp1_true,
-                                 xkp1          = xkp1.copy(),
+            self._history.record(iter          = k,
+                                 xkp1          = xkp1.copy() if xkp1 is not None else None,
                                  ykp1          = ykp1.copy(),
                                  Xkp1_predict  = Xkp1_predict,
                                  PXXkp1_predict= np.eye(self.dim_x),
                                  Xkp1_update   = Xkp1_update.copy(),
                                  PXXkp1_update = PXXkp1_update.copy())
 
-        yield xkp1_true, xkp1, ykp1, Xkp1_predict, Xkp1_update
+        yield xkp1, ykp1, Xkp1_predict, Xkp1_update
 
         ###################
         # The next ones
@@ -191,7 +188,7 @@ class UPKF:
             PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom,     [self.dim_x])
 
             try:
-                k, xkp1_true, (xkp1, ykp1) = next(generator)
+                k, (xkp1, ykp1) = next(generator)
             except StopIteration:
                 return # we stop as the data generator is stopped itself
 
@@ -202,16 +199,15 @@ class UPKF:
             check_consistency(Pkp1_predict=Pkp1_predict, PXXkp1_update=PXXkp1_update)
 
             if self.save_pickle and self._history is not None:
-                self._history.record(iter=k,
-                                     xkp1_true      = xkp1_true,
-                                     xkp1           = xkp1.copy(),
+                self._history.record(iter           = k,
+                                     xkp1           = xkp1.copy() if xkp1 is not None else None,
                                      ykp1           = ykp1.copy(),
                                      Xkp1_predict   = Xkp1_predict,
                                      PXXkp1_predict = PXXkp1_predict.copy(),
                                      Xkp1_update    = Xkp1_update.copy(),
                                      PXXkp1_update  = PXXkp1_update.copy())
 
-            yield xkp1_true, xkp1, ykp1, Xkp1_predict, Xkp1_update
+            yield xkp1, ykp1, Xkp1_predict, Xkp1_update
 
     def process_N_data(self, N: Optional[int], data_generator: Optional[Generator] = None) -> list:
         return list(self.process_upkf(N=N, data_generator=data_generator))

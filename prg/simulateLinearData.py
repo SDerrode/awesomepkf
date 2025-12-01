@@ -28,7 +28,7 @@ if __name__ == "__main__":
     verbose       = 0
     N             = 10000 # > 20
     sKey          = 41 # Int or None (so that it is generated automatically)
-    withoutX_True = False # If True : true X will not be stored in the file
+    withoutX_True = True # If True : true X will not be stored in the file
     
     # ------------------------------------------------------------------
     # Output repo for data
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     
     # Available linear models: 
     # ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
-    model = ModelFactoryLinear.create("Sigma_x3_y1")
+    model = ModelFactoryLinear.create("A_mQ_x1_y1")
     if verbose>0:
         print(f'model={model}, {model.MODEL_NAME}')
         print(f'model={model}')

@@ -7,7 +7,7 @@ import numpy as np
 # non linear models 
 from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
-from others.utils import mse
+from others.utils import compute_errors
 # Manage algorithms for the UPKF
 from classes.UPKF import UPKF
 # Manage parameters for the UPKF
@@ -18,9 +18,6 @@ if __name__ == "__main__":
     """
         python prg/filterUPKFdata.py
     """
-
-    import time
-    start = time.perf_counter()
 
     # ------------------------------------------------------------------
     # Constants
@@ -71,17 +68,15 @@ if __name__ == "__main__":
             print(df.head())
             
         # print scoring
-        ListeA = ['xkp1_true',      'xkp1_true',     'xkp1',           'xkp1']
-        ListeB = ['Xkp1_predict',   'Xkp1_update',   'Xkp1_predict',   'Xkp1_update']
-        ListeC = ['PXXkp1_predict', 'PXXkp1_update', 'PXXkp1_predict', 'PXXkp1_update']
+        ListeA = ['xkp1',           'xkp1']
+        ListeB = ['Xkp1_predict',   'Xkp1_update']
+        ListeC = ['PXXkp1_predict', 'PXXkp1_update']
         upkf_1.history.compute_errors(ListeA, ListeB, ListeC)
 
         # pickle storing and plots
         upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
         upkf_1.history.plot(list_param= ["xkp1",             "xkp1"  , "Xkp1_update"], \
                             list_label= ["X - Ground Truth", "X - Noisy", "X - Filtered"], \
-                            window    =  {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
+                            window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
                             basename  = 'upkf_1', show=False, base_dir=graph_dir)
 
-    elapsed = time.perf_counter() - start
-    print(f"Durée : {elapsed:.6f} s")
