@@ -28,7 +28,7 @@ if __name__ == "__main__":
     verbose       = 0
     N             = 10000 # > 20
     sKey          = 41 # Int or None (so that it is generated automatically)
-    withoutX_True = True # If True : simulated X will not be stored in the file
+    withoutX_True = False # If True : simulated X will not be stored in the file
     
     # ------------------------------------------------------------------
     # Output repo for data
@@ -41,8 +41,8 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     # Available non linear models:
-    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
-    model = ModelFactoryNonLinear.create("x1_y1_cubique")
+    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations']
+    model = ModelFactoryNonLinear.create("x2_y1_rapport")
     if verbose>0:
         print(f'model={model}, {model.MODEL_NAME}')
         print(f'model={model}')

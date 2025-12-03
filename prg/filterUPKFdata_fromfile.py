@@ -28,6 +28,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     save_pickle = True
     verbose     = 0
+    N = 10000
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -46,7 +47,7 @@ if __name__ == "__main__":
 
     # Available Non linear models: 
     # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
-    model        = ModelFactoryNonLinear.create("x1_y1_cubique")
+    model        = ModelFactoryNonLinear.create("x2_y1_withRetroactionsOfObservations")
     params       = model.get_params()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamUPKF(verbose, dim_x, dim_y, **params)
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     # datafile = 'dataUPKF_x2_y1_dimxy_2x1.parquet'
     # datafile = 'dataUPKF_x2_y1_dimxy_2x1.csv'
     # datafile = 'dataUPKF_x2_y1_dimy_1.csv'
-    datafile = 'dataUPKF_x1_y1_cubique_dimxy_1x1.csv'
+    datafile = 'dataUPKF_x2_y1_withRetroactionsOfObservations_dimxy_2x1.csv'
 
     print("\nUPKF filtering with data generated from a file... ")
 
