@@ -24,9 +24,9 @@ logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------
-# ParamUPKF class
+# ParamNonLinear class
 # ----------------------------------------------------------------------
-class ParamUPKF:
+class ParamNonLinear:
     """
     Manage UPKF parameters with optional debug checks.
 
@@ -74,12 +74,15 @@ class ParamUPKF:
             raise ValueError(f"⚠️ Pz00 doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
         self._update_mQ_views()
 
-        # UKF parameters
+        # UKF specific parameters
         self.alpha   = kwargs['alpha']
         self.beta    = kwargs['beta']
         self.kappa   = kwargs['kappa']
         self.lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
         self.gamma   = np.sqrt(self.dim_x + self.lambda_)
+        
+        # EKF specific parameters
+        self.jacobiens_g   = kwargs['jacobiens_g']
         
         # Check dimensions of all matrices
         if __debug__:
@@ -88,7 +91,7 @@ class ParamUPKF:
     # ------------------------------------------------------------------
     def __repr__(self) -> str:
         return (
-            f"<ParamUPKF(dim_y={self.dim_y}, dim_x={self.dim_x}, verbose={self.verbose}, "
+            f"<ParamNonLinear(dim_y={self.dim_y}, dim_x={self.dim_x}, verbose={self.verbose}, "
             f"alpha={self.alpha}, beta={self.beta}, kappa={self.kappa})>"
         )
 
@@ -161,7 +164,7 @@ class ParamUPKF:
         self._update_mQ_views()
         if __debug__:
             self._check_consistency()
-        logger.info("[ParamUPKF] ✅ mQ matrix updated")
+        logger.info("[ParamNonLinear] ✅ mQ matrix updated")
 
     @property
     def mQ_xx(self): return self._mQ_xx
@@ -182,7 +185,7 @@ class ParamUPKF:
                 M = M._parent[M._rows, M._cols]
             return np.array2string(M, formatter={'float_kind': lambda x: f"{x:6.2f}"})
 
-        print("=== ParamUPKF Summary ===")
+        print("=== ParamNonLinear Summary ===")
         print(f"dim_x={self.dim_x}, dim_y={self.dim_y}, verbose={self.verbose}\n")
         print("g:\n", self.g)
         print("mQ:\n", fmt(self.mQ))
@@ -215,6 +218,6 @@ if __name__ == "__main__":
     print(f'model.get_params()={model.get_params()}')
 
     params = model.get_params().copy()
-    param  = ParamUPKF(verbose, params.pop('dim_x'), params.pop('dim_y'), **params)
+    param  = ParamNonLinear(verbose, params.pop('dim_x'), params.pop('dim_y'), **params)
     if verbose > 0:
         param.summary()

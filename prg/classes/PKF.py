@@ -26,7 +26,7 @@ import numpy as np
 # A few utils functions that are used several times
 from others.utils import check_consistency, check_equality
 # Manage parameters for the PKF
-from classes.ParamPKF import ParamPKF
+from classes.ParamLinear import ParamLinear
 # Keep trace of execution (all parameters at all iterations)
 from classes.HistoryTracker import HistoryTracker
 # To manage the seed for random generation
@@ -44,13 +44,13 @@ class PKF:
 
     def __init__(
         self,
-        param: ParamPKF,
+        param: ParamLinear,
         sKey: Optional[int] = None,
         save_pickle: bool = False,
         verbose: int = 0):
         
-        if not isinstance(param, ParamPKF):
-            raise TypeError("param msut be an object from class ParamPKF")
+        if not isinstance(param, ParamLinear):
+            raise TypeError("param msut be an object from class ParamLinear")
         if not ((isinstance(sKey, int) and sKey > 0) or sKey is None):
             raise ValueError("sKey must be None or a number>0")
         if not isinstance(save_pickle, bool):

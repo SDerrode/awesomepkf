@@ -11,7 +11,7 @@ from others.utils import compute_errors, file_data_generator
 # Manage algorithms for the PKF
 from classes.PKF import PKF
 # Manage parameters for the PKF
-from classes.ParamPKF import ParamPKF
+from classes.ParamLinear import ParamLinear
 
 if __name__ == "__main__":
     """
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     model        = ModelFactoryLinear.create("Sigma_x3_y1")
     params       = model.get_params().copy()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
-    param        = ParamPKF(verbose, dim_x, dim_y, **params)
+    param        = ParamLinear(verbose, dim_x, dim_y, **params)
     
     if verbose > 0:
         print(f'model={model}')

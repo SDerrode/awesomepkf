@@ -13,7 +13,7 @@ from others.utils import save_dataframe_to_csv, data_to_dataframe
 # Manage algorithms for the UPKF
 from classes.UPKF import UPKF
 # Parameters for PKF
-from classes.ParamUPKF import ParamUPKF
+from classes.ParamNonLinear import ParamNonLinear
 
 
 if __name__ == "__main__":
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     params       = model.get_params().copy()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
-    param        = ParamUPKF(verbose, dim_x, dim_y, **params)
+    param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
     if verbose > 0:
         param.summary()
  

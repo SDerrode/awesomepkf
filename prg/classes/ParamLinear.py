@@ -25,9 +25,9 @@ logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------
-# ParamPKF class
+# ParamLinear class
 # ----------------------------------------------------------------------
-class ParamPKF:
+class ParamLinear:
     """
     Manage PKF parameters with optional debug checks.
 
@@ -291,7 +291,7 @@ class ParamPKF:
         self._update_Sigma_from_A_mQ()
         self._check_consistency()
         if __debug__:
-            logger.info("[ParamPKF] ✅ A matrix updates")
+            logger.info("[ParamLinear] ✅ A matrix updates")
 
     @property
     def A_xx(self) -> ActiveView: return self._A_xx
@@ -314,7 +314,7 @@ class ParamPKF:
         self._update_Sigma_from_A_mQ()
         self._check_consistency()
         if __debug__:
-            logger.info("[ParamPKF] ✅ mQ matrix updated")
+            logger.info("[ParamLinear] ✅ mQ matrix updated")
 
     @property
     def mQ_xx(self) -> ActiveView: return self._mQ_xx
@@ -334,7 +334,7 @@ class ParamPKF:
                 M = M._parent[M._rows, M._cols]
             return np.array2string(M, formatter={'float_kind': lambda x: f"{x:6.2f}"})
 
-        print("=== ParamPKF Summary ===")
+        print("=== ParamLinear Summary ===")
         print(f"dim_x={self.dim_x}, dim_y={self.dim_y}, verbose={self.verbose}\n")
         print("A:\n", fmt(self.A))
         print("mQ:\n", fmt(self.mQ))
@@ -377,6 +377,6 @@ if __name__ == "__main__":
     print(f'model.get_params()={model.get_params()}')
     
     params = model.get_params().copy()
-    param  = ParamPKF(verbose, params.pop('dim_x'), params.pop('dim_y'), **params)
+    param  = ParamLinear(verbose, params.pop('dim_x'), params.pop('dim_y'), **params)
     if verbose > 0:
         param.summary()
