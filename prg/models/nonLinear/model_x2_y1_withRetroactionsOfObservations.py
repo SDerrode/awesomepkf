@@ -16,7 +16,7 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
     MODEL_NAME: str = "x2_y1_withRetroactionsOfObservations"
 
     def __init__(self) -> None:
-        super().__init__(dim_x=2, dim_y=1, alpha=1e-3, beta=2.0, kappa=0.0, model_type="nonlinear")
+        super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
         self.mQ: np.ndarray = np.array([
             [1e-2, 0.0, 0.0],
