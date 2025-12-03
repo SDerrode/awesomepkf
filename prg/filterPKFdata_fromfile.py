@@ -65,7 +65,7 @@ if __name__ == "__main__":
     pkf_2    = Linear_PKF(param, save_pickle=save_pickle, verbose=verbose)
     filename = os.path.join(datafile_dir, datafile)
     listePKF = pkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
-    N        = listePKF[-1][0]
+    N        = listePKF[-1][0]+1
 
     if save_pickle and pkf_2.history is not None:
         df = pkf_2.history.as_dataframe()

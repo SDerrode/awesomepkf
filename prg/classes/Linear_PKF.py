@@ -252,16 +252,16 @@ class Linear_PKF:
                 self._history.record(iter                 = k,
                                      xkp1                 = xkp1.copy() if xkp1 is not None else None,
                                      ykp1                 = ykp1.copy(),
-                                     Xkp1_predict         = Xkp1_predict,
-                                     PXXkp1_predict       = PXXkp1_predict,
+                                     Xkp1_predict         = Xkp1_predict.copy(),
+                                     PXXkp1_predict       = PXXkp1_predict.copy(),
                                      ikp1                 = ikp1.copy(),
                                      Skp1                 = Skp1.copy(),
                                      Kkp1                 = Kkp1.copy(),
-                                     Xkp1_update_math     = Xkp1_update_math,
-                                     PXXkp1_update_math   = PXXkp1_update_math,
-                                     Xkp1_update_phys     = Xkp1_update_phys,
-                                     PXXkp1_update_phys   = PXXkp1_update_phys,
-                                     PXXkp1_update_Joseph = PXXkp1_update_Joseph)
+                                     Xkp1_update_math     = Xkp1_update_math.copy(),
+                                     PXXkp1_update_math   = PXXkp1_update_math.copy(),
+                                     Xkp1_update_phys     = Xkp1_update_phys.copy(),
+                                     PXXkp1_update_phys   = PXXkp1_update_phys.copy(),
+                                     PXXkp1_update_Joseph = PXXkp1_update_Joseph.copy())
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update_math, Xkp1_update_phys
 

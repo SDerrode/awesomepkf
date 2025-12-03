@@ -107,6 +107,9 @@ class NonLinear_PKF:
         # The first
         k = 0
         Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
+        # print(f'Zkp1_simul={Zkp1_simul}')
+        # exit(1)
+        
         yield k, np.split(Zkp1_simul, [self.dim_x])
 
         # The next ones...
