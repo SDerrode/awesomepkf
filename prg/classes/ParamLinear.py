@@ -66,12 +66,12 @@ class ParamLinear:
         else:
             logger.warning(f"⚠️ Le modèle n'est pas bien paramétré : {kwargs.keys()}")
 
-        # In case where we use this class in an UPKF model (classical valuess)
-        self.alpha    = 1e-3
-        self.beta     = 2.0
-        self.kappa    = 0.0
-        self.lambda_  = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
-        self.gamma    = np.sqrt(self.dim_x + self.lambda_)
+        # In case where we use this class in an UPKF model (classical values)
+        # self.alpha    = 1e-3
+        # self.beta     = 2.0
+        # self.kappa    = 0.0
+        # self.lambda_  = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
+        # self.gamma    = np.sqrt(self.dim_x + self.lambda_)
 
         # Check dimensions of all matrices
         if __debug__:

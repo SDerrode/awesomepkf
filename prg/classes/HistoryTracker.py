@@ -124,31 +124,28 @@ class HistoryTracker:
         # On ne sélectione qu'une window
         df_subset = datafocus.iloc[window['xmin']:window['xmax']]
         
-        liste_ax = []
+        fig, axes = plt.subplots(nb_components, 1, figsize=(10, 5), sharex=True)
         for component in range(nb_components):
-            fig, ax = plt.subplots(figsize=(6, 4))
-            liste_ax.append(ax)
 
             labels = [f'{p}_{component}' for p in list_param]
             for col, label in zip(labels, list_label):
-                df_subset[col].plot(ax=ax, label=label, alpha=0.5)
+                df_subset[col].plot(ax=axes[component], label=label, alpha=0.5)
 
-            ax.legend()
-            ax.set_xlim(window['xmin'], window['xmax']-1)
-            ax.set_xlabel(iter_key)
-            ax.grid(True, linestyle="--", alpha=0.6)
-            ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+            axes[component].legend()
+            axes[component].set_xlim(window['xmin'], window['xmax']-1)
+            axes[component].set_xlabel(iter_key)
+            axes[component].grid(True, linestyle="--", alpha=0.6)
+            axes[component].xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
 
-            if show:
-                plt.show()
-            else:
-                os.makedirs(base_dir or ".", exist_ok=True)
-                save_path = os.path.join(base_dir or ".", f"{basename}_{component}.png")
-                ax.figure.savefig(save_path, dpi=150, bbox_inches="tight")
-                if self.verbose > 0:
-                    logger.info(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
-                plt.close(fig)
-        return liste_ax
+        if show:
+            plt.show()
+        else:
+            os.makedirs(base_dir or ".", exist_ok=True)
+            save_path = os.path.join(base_dir or ".", f"{basename}_{component}.png")
+            fig.savefig(save_path, dpi=150, bbox_inches="tight")
+            if self.verbose > 0:
+                logger.info(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
+            plt.close(fig)
 
     # ------------------------------------------------------------------
     def __len__(self) -> int:

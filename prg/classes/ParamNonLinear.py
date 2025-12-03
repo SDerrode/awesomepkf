@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # ----------------------------------------------------------------------
 class ParamNonLinear:
     """
-    Manage UPKF parameters with optional debug checks.
+    Manage Non linear parameters with optional debug checks.
 
     Attributes:
         verbose: logging level
@@ -74,14 +74,14 @@ class ParamNonLinear:
             raise ValueError(f"⚠️ Pz00 doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
         self._update_mQ_views()
 
-        # UKF specific parameters
+        # UPKF specific parameters
         self.alpha   = kwargs['alpha']
         self.beta    = kwargs['beta']
         self.kappa   = kwargs['kappa']
         self.lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
         self.gamma   = np.sqrt(self.dim_x + self.lambda_)
         
-        # EKF specific parameters
+        # EPKF specific parameters
         self.jacobiens_g   = kwargs['jacobiens_g']
         
         # Check dimensions of all matrices
@@ -212,8 +212,9 @@ class ParamNonLinear:
 if __name__ == "__main__":
     verbose = 1
 
-    # Available : ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
-    model = ModelFactoryNonLinear.create("x2_y1")
+    # Available non linear models:
+    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations']
+    model = ModelFactoryNonLinear.create("x2_y1_rapport")
     print(f'model={model}')
     print(f'model.get_params()={model.get_params()}')
 
