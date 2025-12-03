@@ -39,7 +39,7 @@ logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class PKF:
+class Linear_PKF:
     """Implementation of PKF according to the mathematical and classical formulations."""
 
     def __init__(
@@ -120,7 +120,7 @@ class PKF:
 
         # The next ones...
         zerosvector = np.zeros(shape=(self.dim_xy))
-        while N is None or k < N:
+        while N is None or k+1 < N:
             k += 1
             temp       = A @ Zkp1_simul
             Zkp1_simul = temp + self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1)
@@ -156,7 +156,7 @@ class PKF:
         Xkp1_predict = np.zeros(shape=(self.dim_x, 1))
         if self.save_pickle and self._history is not None:
             self._history.record(   iter                 = k,
-                                    xkp1                 = xkp1.copy if xkp1 is not None else None,
+                                    xkp1                 = xkp1.copy() if xkp1 is not None else None,
                                     ykp1                 = ykp1.copy(),
                                     Xkp1_predict         = Xkp1_predict.copy(),              # No prediction for the first
                                     PXXkp1_predict       = np.eye(self.dim_x),               # No prediction for the first
@@ -169,13 +169,13 @@ class PKF:
                                     PXXkp1_update_phys   = PXXkp1_update.copy(),
                                     PXXkp1_update_Joseph = PXXkp1_update.copy())
  
-        yield xkp1, ykp1, Xkp1_predict, Xkp1_update, Xkp1_update # the phys. and math. Xkp1_update are the same
+        yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update, Xkp1_update # the phys. and math. Xkp1_update are the same
 
         ###################
         # The next ones
 
         temp2 = np.zeros(shape=(self.dim_xy, self.dim_xy))
-        while N is None or k < N:
+        while N is None or k+1 < N:
             
             # Required for Joseph form
             PXXk_update = PXXkp1_update.copy()
@@ -250,7 +250,7 @@ class PKF:
             # Store if save_pickle==True
             if self.save_pickle and self._history is not None:
                 self._history.record(iter                 = k,
-                                     xkp1                 = xkp1.copy if xkp1 is not None else None,
+                                     xkp1                 = xkp1.copy() if xkp1 is not None else None,
                                      ykp1                 = ykp1.copy(),
                                      Xkp1_predict         = Xkp1_predict,
                                      PXXkp1_predict       = PXXkp1_predict,
@@ -263,7 +263,7 @@ class PKF:
                                      PXXkp1_update_phys   = PXXkp1_update_phys,
                                      PXXkp1_update_Joseph = PXXkp1_update_Joseph)
 
-            yield xkp1, ykp1, Xkp1_predict, Xkp1_update_math, Xkp1_update_phys
+            yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update_math, Xkp1_update_phys
 
     def process_N_data(self, N, data_generator=None):
         return list(self.process_pkf(N=N, data_generator=data_generator))

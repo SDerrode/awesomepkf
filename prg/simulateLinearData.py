@@ -11,8 +11,8 @@ from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
 from others.utils import save_dataframe_to_csv, data_to_dataframe
 # Manage algorithms for the PKF
-from classes.PKF import PKF
-# Parameters for PKF
+from classes.Linear_PKF import Linear_PKF
+# Parameters linear model
 from classes.ParamLinear import ParamLinear
 
 
@@ -26,9 +26,9 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     save_pickle   = False
     verbose       = 0
-    N             = 10000 # > 20
+    N             = 100 # > 20
     sKey          = 41 # Int or None (so that it is generated automatically)
-    withoutX_True = True # If True : true X will not be stored in the file
+    withoutX_True = False # If True : true X will not be stored in the file
     
     # ------------------------------------------------------------------
     # Output repo for data
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     
     # Available linear models: 
     # ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
-    model = ModelFactoryLinear.create("A_mQ_x1_y1")
+    model = ModelFactoryLinear.create("A_mQ_x3_y1")
     if verbose>0:
         print(f'model={model}, {model.MODEL_NAME}')
         print(f'model={model}')
@@ -58,13 +58,13 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     
     print("\nPKF simulation")
-    pkf = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
+    pkf = Linear_PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     
     # Simulate data with the simulator generator
     listData = pkf.simulate_N_data(N=N)
     
     # Save data as a dataframe using pandas
     df = data_to_dataframe(listData, dim_x, dim_y, withoutX_True=withoutX_True)
-    filename = f"dataPKF_{model.MODEL_NAME}_dimxy_{dim_x}x{dim_y}.csv"
+    filename = f"dataLinear_{model.MODEL_NAME}_dimxy_{dim_x}x{dim_y}.csv"
     filepath = os.path.join(datafile_dir, filename)
     save_dataframe_to_csv(df, filepath)

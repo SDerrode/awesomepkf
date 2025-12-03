@@ -84,6 +84,7 @@ def compute_errors(x_true, x_hat, P_list=None):
     
     Retour : tuple (mse_total, mae, rmse, nees_mean) 
     """
+    
     # transformer en listes simples si ndarray d'objets
     if isinstance(x_true, np.ndarray) and x_true.dtype == object:
         x_true = list(x_true)

@@ -9,8 +9,8 @@ from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
 from others.utils import compute_errors, file_data_generator
 # Manage algorithms for the PKF
-from classes.PKF import PKF
-# Manage parameters for the PKF
+from classes.Linear_PKF import Linear_PKF
+# Manage Linear parameters
 from classes.ParamLinear import ParamLinear
 
 if __name__ == "__main__":
@@ -54,17 +54,18 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     #### ATTENTION Data dimensions in the file should be the same as model dimension above
-    # datafile = 'dataPKF_Sigma_x3_y1_dimxy_3x1.parquet'
-    # datafile = 'dataPKF_Sigma_x3_y1_dimxy_3x1.csv'
-    datafile = 'dataPKF_Sigma_x3_y1_dimxy_3x1.csv'
-    # datafile = 'dataPKF_Sigma_x3_y1_dimxy_3x1.csv'
-    # datafile = 'dataPKF_A_mQ_x1_y1_dimxy_1x1.csv'
+    # datafile = 'dataLinear_Sigma_x3_y1_dimxy_3x1.parquet'
+    # datafile = 'dataLinear_Sigma_x3_y1_dimxy_3x1.csv'
+    # datafile = 'dataLinear_Sigma_x3_y1_dimxy_3x1.csv'
+    datafile = 'dataLinear_A_mQ_x3_y1_dimxy_3x1.csv'
+    # datafile = 'dataLinear_A_mQ_x1_y1_dimxy_1x1.csv'
     
     print("\nPKF filtering with data generated from a file... ")
     
-    pkf_2    = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
+    pkf_2    = Linear_PKF(param, save_pickle=save_pickle, verbose=verbose)
     filename = os.path.join(datafile_dir, datafile)
     listePKF = pkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
+    N        = listePKF[-1][0]
 
     if save_pickle and pkf_2.history is not None:
         df = pkf_2.history.as_dataframe()
@@ -73,8 +74,7 @@ if __name__ == "__main__":
             print(df.head())
             
         # print scoring
-        print(listePKF[0])
-        if listePKF[0][0] is not None:
+        if listePKF[0][1] is not None:
             ListeA = ['xkp1',           'xkp1']
             ListeB = ['Xkp1_predict',   'Xkp1_update_math']
             ListeC = ['PXXkp1_predict', 'PXXkp1_update_math']
@@ -82,9 +82,9 @@ if __name__ == "__main__":
 
         # pickle storing and plots
         pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
-        if listePKF[0][0] is not None:
-            pkf_2.history.plot(list_param= ["xkp1", "Xkp1_update_math" ], \
-                                list_label= ["X - Noisy", "X - Filtered (mathematical version)"], \
-                                window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                                basename  = 'pkf_2', \
+        if listePKF[0][1] is not None:
+            pkf_2.history.plot( list_param = ["xkp1", "Xkp1_update_math" ], \
+                                list_label = ["X - Noisy", "X - Filtered (mathematical version)"], \
+                                window     = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
+                                basename   = 'pkf_2', \
                                 show=False, base_dir=graph_dir)

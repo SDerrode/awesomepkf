@@ -9,8 +9,8 @@ from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
 from others.utils import compute_errors
 # Manage algorithms for the UPKF
-from classes.UPKF import UPKF
-# Manage parameters for the UPKF
+from classes.NonLinear_UPKF import NonLinear_UPKF
+# Manage non parameters
 from classes.ParamNonLinear import ParamNonLinear
 
 
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     print("\nUPKF filtering with data generated from a UPKF... ")
-    upkf_1 = UPKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
+    upkf_1 = NonLinear_UPKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     listeUPKF = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
     if save_pickle and upkf_1.history is not None:

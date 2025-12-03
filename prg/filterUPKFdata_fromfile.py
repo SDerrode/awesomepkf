@@ -10,13 +10,13 @@ from models.nonLinear import ModelFactoryNonLinear
 from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
 from others.utils import compute_errors, file_data_generator
+# Manage algorithms for non linear UPKF
+from classes.NonLinear_UPKF import NonLinear_UPKF
 # Manage algorithms for the UPKF
-from classes.UPKF import UPKF
-# Manage algorithms for the UPKF
-from classes.PKF import PKF
-# Manage parameters for the UPKF
+from classes.Linear_PKF import Linear_PKF
+# Manage non linear 
 from classes.ParamNonLinear import ParamNonLinear
-# Manage parameters for the UPKF
+# Manage linear parameters
 from classes.ParamLinear import ParamLinear
 
 if __name__ == "__main__":
@@ -28,7 +28,6 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     save_pickle = True
     verbose     = 0
-    N = 10000
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -46,7 +45,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     # Available Non linear models: 
-    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
+    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x2_y1', 'x1_y1_sinus', 'x2_y1_withRetroactionsOfObservations', 'x2_y1']
     model        = ModelFactoryNonLinear.create("x2_y1_withRetroactionsOfObservations")
     params       = model.get_params()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
@@ -68,16 +67,18 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     #### ATTENTION Data dimensions in the file should be the same as model dimension above
-    # datafile = 'dataUPKF_x2_y1_dimxy_2x1.parquet'
-    # datafile = 'dataUPKF_x2_y1_dimxy_2x1.csv'
-    # datafile = 'dataUPKF_x2_y1_dimy_1.csv'
-    datafile = 'dataUPKF_x2_y1_withRetroactionsOfObservations_dimxy_2x1.csv'
+    # datafile = 'dataNonLinear_x2_y1_dimxy_2x1.parquet'
+    # datafile = 'dataNonLinear_x2_y1_dimxy_2x1.csv'
+    datafile = 'dataNonLinear_x2_y1_dimxy_2x1.csv'
+    # datafile = 'dataNonLinear_x2_y1_withRetroactionsOfObservations_dimxy_2x1.csv'
+    # datafile = 'dataNonLinear_x2_y1_rapport_dimxy_2x1.csv'
 
     print("\nUPKF filtering with data generated from a file... ")
 
-    upkf_2      = UPKF(param, save_pickle=save_pickle, verbose=verbose)
+    upkf_2      = NonLinear_UPKF(param, save_pickle=save_pickle, verbose=verbose)
     filename    = os.path.join(datafile_dir, datafile)
     listeUPKF = upkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
+    N = listeUPKF[-1][0]
 
     if save_pickle and upkf_2.history is not None:
         df = upkf_2.history.as_dataframe()
@@ -86,7 +87,7 @@ if __name__ == "__main__":
             print(df.head())
 
         # print scoring
-        if listeUPKF[0][0] is not None:
+        if listeUPKF[0][1] is not None:
             ListeA = ['xkp1',           'xkp1']
             ListeB = ['Xkp1_predict',   'Xkp1_update']
             ListeC = ['PXXkp1_predict', 'PXXkp1_update']
@@ -94,9 +95,10 @@ if __name__ == "__main__":
 
         # pickle storing and plots
         upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_2.pkl"))
-        if listeUPKF[0][0] is not None:
+        if listeUPKF[0][1] is not None:
             upkf_2.history.plot(list_param= ["xkp1", "Xkp1_update" ], \
                                 list_label= ["X - Noisy", "X - Filtered"], \
-                                window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
+                                # window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
+                                window    = {'xmin': 0, 'xmax': N }, \
                                 basename  = 'upkf_2', show=False, base_dir=graph_dir)
 
