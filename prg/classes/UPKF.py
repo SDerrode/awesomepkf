@@ -21,7 +21,7 @@ import numpy as np
 # A few utils functions that are used several times
 from others.utils import check_consistency, check_equality
 # Manage parameters for the UPKF
-from classes.ParamUPKF import ParamUPKF
+from classes.ParamNonLinear import ParamNonLinear
 # Keep trace of execution (all parameters at all iterations)
 from classes.HistoryTracker import HistoryTracker
 # To manage the seed for random generation
@@ -45,8 +45,8 @@ class UPKF:
     ) -> None:
 
         if __debug__:
-            # if not isinstance(param, ParamUPKF):
-            #     raise TypeError("param must be an object from class ParamUPKF")
+            # if not isinstance(param, ParamNonLinear):
+            #     raise TypeError("param must be an object from class ParamNonLinear")
             if not ((isinstance(sKey, int) and sKey > 0) or sKey is None):
                 raise ValueError("sKey must be None or a number>0")
             if not isinstance(save_pickle, bool):

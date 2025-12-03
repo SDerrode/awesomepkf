@@ -15,9 +15,9 @@ from classes.UPKF import UPKF
 # Manage algorithms for the UPKF
 from classes.PKF import PKF
 # Manage parameters for the UPKF
-from classes.ParamUPKF import ParamUPKF
+from classes.ParamNonLinear import ParamNonLinear
 # Manage parameters for the UPKF
-from classes.ParamPKF import ParamPKF
+from classes.ParamLinear import ParamLinear
 
 if __name__ == "__main__":
     """
@@ -50,14 +50,14 @@ if __name__ == "__main__":
     model        = ModelFactoryNonLinear.create("x2_y1_withRetroactionsOfObservations")
     params       = model.get_params()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
-    param        = ParamUPKF(verbose, dim_x, dim_y, **params)
+    param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
     
     # Available Linear models: 
     # ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
     # model        = ModelFactoryLinear.create("A_mQ_x1_y1")
     # params       = model.get_params().copy()
     # dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
-    # param        = ParamPKF(verbose, dim_x, dim_y, **params)
+    # param        = ParamLinear(verbose, dim_x, dim_y, **params)
     
     if verbose > 0:
         print(f'model={model}')

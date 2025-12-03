@@ -13,7 +13,7 @@ from others.utils import save_dataframe_to_csv, data_to_dataframe
 # Manage algorithms for the PKF
 from classes.PKF import PKF
 # Parameters for PKF
-from classes.ParamPKF import ParamPKF
+from classes.ParamLinear import ParamLinear
 
 
 if __name__ == "__main__":
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     params       = model.get_params().copy()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
-    param        = ParamPKF(verbose, dim_x, dim_y, **params)
+    param        = ParamLinear(verbose, dim_x, dim_y, **params)
     if verbose > 0:
         param.summary()
 
