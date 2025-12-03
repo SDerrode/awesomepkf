@@ -8,15 +8,15 @@ import numpy as np
 from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
 from others.utils import compute_errors
-# Manage algorithms for the UPKF
-from classes.NonLinear_UPKF import NonLinear_UPKF
+# Manage algorithms for the EPKF
+from classes.NonLinear_EPKF import NonLinear_EPKF
 # Manage non linear parameters
 from classes.ParamNonLinear import ParamNonLinear
 
 
 if __name__ == "__main__":
     """
-        python prg/filterUPKFdata.py
+        python prg/filterEPKFdata.py
     """
 
     # ------------------------------------------------------------------
@@ -57,26 +57,25 @@ if __name__ == "__main__":
     # Let's go
     # ------------------------------------------------------------------
 
-    print("\nUPKF filtering with data generated from a UPKF... ")
-    upkf_1 = NonLinear_UPKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
-    listeUPKF = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
+    print("\nEPKF filtering with data generated from a EPKF... ")
+    epkf_1 = NonLinear_EPKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
+    listeEPKF = epkf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
-    if save_pickle and upkf_1.history is not None:
-        df = upkf_1.history.as_dataframe()
+    if save_pickle and epkf_1.history is not None:
+        df = epkf_1.history.as_dataframe()
         if verbose > 0:
-            print("\nExtract of the resulting filtering with UPKF :")
+            print("\nExtract of the resulting filtering with EPKF :")
             print(df.head())
             
         # print scoring
         ListeA = ['xkp1',           'xkp1']
         ListeB = ['Xkp1_predict',   'Xkp1_update']
         ListeC = ['PXXkp1_predict', 'PXXkp1_update']
-        upkf_1.history.compute_errors(ListeA, ListeB, ListeC)
+        epkf_1.history.compute_errors(ListeA, ListeB, ListeC)
 
         # pickle storing and plots
-        upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
-        upkf_1.history.plot(list_param= ["xkp1",             "xkp1"  , "Xkp1_update"], \
+        epkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
+        epkf_1.history.plot(list_param= ["xkp1",             "xkp1"  , "Xkp1_update"], \
                             list_label= ["X - Ground Truth", "X - Noisy", "X - Filtered"], \
                             window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                            basename  = 'upkf_1', show=False, base_dir=graph_dir)
-
+                            basename  = 'epkf_1', show=False, base_dir=graph_dir)

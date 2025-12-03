@@ -58,7 +58,7 @@ class BaseModelNonLinear:
 
     # ------------------------------------------------------------------
 
-    def jacobiens_g(z: np.ndarray, x1: np.ndarray, dt: float):
+    def jacobiens_g(self, z: np.ndarray, x1: np.ndarray, dt: float):
         if __debug__:  # ⚙️ ces vérifs seront ignorées avec python -O
             assert isinstance(z, np.ndarray), "z doit être un numpy.ndarray"
             assert z.ndim == 2 and z.shape[1] == 1, f"z doit avoir une forme (N,1), reçu {z.shape}"

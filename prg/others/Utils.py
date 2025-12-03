@@ -21,7 +21,7 @@ def save_dataframe_to_csv(df, filepath, index=False):
     path.parent.mkdir(parents=True, exist_ok=True)
     
     try:
-        df.to_csv(path, encoding="utf-8", index=index, float_format="%.6f")
+        df.to_csv(path, encoding="utf-8", index=index, float_format="%.15f")
         if __debug__:
             logger.info(f"✅ File save with success at : {path.resolve()}")
     except Exception as e:
@@ -231,6 +231,10 @@ def name_analysis(listStr):
 
 def file_data_generator(filename: str, dim_x: int, dim_y: int, verbose: int = 0) -> Generator[tuple[int, tuple[np.ndarray, np.ndarray]], None, None]:
     df = read_unknown_file(filename, verbose=verbose)
+    # print(df.head())
+    # print(df.dtypes)
+    # print("{:.15f}".format(df["X0"].iloc[0]))
+    # exit(1)
     dico = name_analysis(list(df.columns))
 
     if dico['dim_x'] != 0 and (dico['Correct'] == False  or dico['dim_x'] != dim_x or dico['dim_y']!= dim_y) : 

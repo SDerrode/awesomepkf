@@ -76,13 +76,13 @@ class ModelX2Y1(BaseModelNonLinear):
         return g_val
 
     # ------------------------------------------------------------------
-    def _jacobiens_g(x, y, x1, dt):
+    def _jacobiens_g(self, x, y, x1, dt):
         dg1dx1 = 1
         dg1dx2 = dt
         dg2dx1 = -dt*self.alpham*np.cos(x[0])
         dg2dx2 = 1 - dt*self.betam
-        F = np.array([[dg1dx1, dg1dx2], [dg2dx1, dg2dx2]])
+        F = np.array([[dg1dx1, dg1dx2], [dg2dx1.item(), dg2dx2]])
         dg3dx1 = 2*x1[0]/(1.+x1[0]**2)**2
         dg3dx2 = self.gammam*np.cos(x1[1])
-        H = np.array([[dg3dx1, dg3dx2]])
+        H = np.array([[dg3dx1.item(), dg3dx2.item()]])
         return np.block([[F, np.zeros((2,1))],[H@F, np.zeros((1,1))]]), np.block([[np.eye(2), np.zeros((2,1))], [H, np.eye(1)]])
