@@ -24,8 +24,8 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     save_pickle = True
     verbose     = 0
-    N           = 10000 # > 20
-    sKey        = 41 # Int or None (so that it is generated automatically)
+    N           = 200 # > 20
+    sKey        = 68 # Int or None (so that it is generated automatically)
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     # Available non linear models:
     # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations']
-    model        = ModelFactoryNonLinear.create("x2_y1")
+    model        = ModelFactoryNonLinear.create("x2_y1_withRetroactionsOfObservations")
     params       = model.get_params()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
@@ -66,7 +66,7 @@ if __name__ == "__main__":
         if verbose > 0:
             print("\nExtract of the resulting filtering with EPKF :")
             print(df.head())
-            
+
         # print scoring
         ListeA = ['xkp1',           'xkp1']
         ListeB = ['Xkp1_predict',   'Xkp1_update']
@@ -75,7 +75,10 @@ if __name__ == "__main__":
 
         # pickle storing and plots
         epkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
-        epkf_1.history.plot(list_param= ["xkp1",             "xkp1"  , "Xkp1_update"], \
-                            list_label= ["X - Ground Truth", "X - Noisy", "X - Filtered"], \
-                            window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                            basename  = 'epkf_1', show=False, base_dir=graph_dir)
+        title = f"'{model.MODEL_NAME}' model data filtered with EPKF"
+        epkf_1.history.plot(title,
+                            list_param= ["xkp1"  , "Xkp1_update"], \
+                            list_label= ["x true", "x estimated"], \
+                            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
+                            window    = {'xmin':0, 'xmax': N }, \
+                            basename  = f'epkf_1_{model.MODEL_NAME}', show=False, base_dir=graph_dir)

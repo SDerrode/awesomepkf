@@ -24,7 +24,7 @@ if __name__ == "__main__":
     save_pickle = True
     verbose     = 0
     N           = 10000 # > 20
-    sKey        = 41 # Int or None (so that it is generated automatically)
+    sKey        = 68 # Int or None (so that it is generated automatically)
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -75,9 +75,10 @@ if __name__ == "__main__":
 
         # pickle storing and plots
         pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
-        pkf_1.history.plot(list_param= ["xkp1",      "Xkp1_update_math"], \
-                           list_label= ["X - Noisy", "X - Filtered"], \
+        title = f"'{model.MODEL_NAME}' model data filtered with PKF"
+        pkf_1.history.plot(title,
+                           list_param= ["xkp1",   "Xkp1_update_math"], \
+                           list_label= ["x true", "x estimated"], \
                            window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                           basename  = 'pkf_1', \
-                           show=False, base_dir=graph_dir)
+                           basename  = f'pkf_1_{model.MODEL_NAME}', show=False, base_dir=graph_dir)
 

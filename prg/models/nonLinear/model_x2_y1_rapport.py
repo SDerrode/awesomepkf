@@ -32,57 +32,87 @@ class ModelX2Y1(BaseModelNonLinear):
         self.betam  = 0.1
         self.gammam = 0.5
         self.mQ     = np.diag([1E-4, 1E-4, 1e-4])
-
-        self.z00  = np.zeros((self.dim_xy, 1))
-        self.Pz00 = np.eye(self.dim_xy)
+        self.z00    = np.zeros((self.dim_xy, 1))
+        self.Pz00   = np.eye(self.dim_xy)
 
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
 
     # ------------------------------------------------------------------
-    def _fx(self, x: np.ndarray, nx: np.ndarray, dt: float) -> np.ndarray:
+    def _fx(self, x, t, dt):
         """State transition function f(x) with process noise."""
 
-        x1, x2   = x.flatten()
-        nx1, nx2 = nx.flatten()
+        x1, x2 = x.flatten()
+        t1, t2 = t.flatten()
         return np.array([
-            x1 + dt*x2                                         + nx1,
-            x2 - dt*(self.alpham * np.sin(x1) + self.betam * x2) + nx2
+            x1 + dt*x2                                           + t1,
+            x2 - dt*(self.alpham * np.sin(x1) + self.betam * x2) + t2
         ]).reshape(-1, 1)
 
 
     # ------------------------------------------------------------------
-    def _hx(self, x: np.ndarray, ny: np.ndarray, dt: float) -> np.ndarray:
+    def _hx(self, x, u, dt):
         """Measurement function h(x) with observation noise."""
 
         x1, x2 = x.flatten()
+        u      = u.flatten()[0]
+
         return np.array([
-            x1**2 / (1. + x1**2) + self.gammam * np.sin(x2) + ny
+            x1**2 / (1. + x1**2) + self.gammam * np.sin(x2) + u
         ]).reshape(-1, 1)
 
     # ------------------------------------------------------------------
-    def _g(self, x: np.ndarray, y: np.ndarray, nx: np.ndarray, ny: np.ndarray, dt: float) -> np.ndarray:
+    def _g(self, x, y, t, u, dt):
         """Combine state and observation using Wojciech’s formulation."""
         if __debug__:
-            assert x.shape  == (2, 1), f"x  must be (2,1), got {x.shape}"
-            assert y.shape  == (1, 1), f"y  must be (1,1), got {y.shape}"
-            assert nx.shape == (2, 1), f"nx must be (2,1), got {nx.shape}"
-            assert ny.shape == (1, 1), f"ny must be (1,1), got {ny.shape}"
+            assert x.shape == (2, 1), f"x must be (2,1), got {x.shape}"
+            assert y.shape == (1, 1), f"y must be (1,1), got {y.shape}"
+            assert t.shape == (2, 1), f"t must be (2,1), got {t.shape}"
+            assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
             assert isinstance(dt, (float, int)), "dt must be a float"
 
-        fx_val = self._fx(x,      nx, dt)
-        hx_val = self._hx(fx_val, ny, dt)
-        g_val  = np.vstack((fx_val, hx_val))
-        return g_val
+        fx_val = self._fx(x,      t, dt)
+        hx_val = self._hx(fx_val, u, dt)
+        return np.vstack((fx_val, hx_val))
 
     # ------------------------------------------------------------------
-    def _jacobiens_g(self, x, y, x1, dt):
-        dg1dx1 = 1
-        dg1dx2 = dt
-        dg2dx1 = -dt*self.alpham*np.cos(x[0])
-        dg2dx2 = 1 - dt*self.betam
-        F = np.array([[dg1dx1, dg1dx2], [dg2dx1.item(), dg2dx2]])
-        dg3dx1 = 2*x1[0]/(1.+x1[0]**2)**2
-        dg3dx2 = self.gammam*np.cos(x1[1])
-        H = np.array([[dg3dx1.item(), dg3dx2.item()]])
-        return np.block([[F, np.zeros((2,1))],[H@F, np.zeros((1,1))]]), np.block([[np.eye(2), np.zeros((2,1))], [H, np.eye(1)]])
+    def _jacobiens_g(self, x, y, t, u, dt):
+        if __debug__:
+            assert x.shape == (2, 1), f"x must be (2,1), got {x.shape}"
+            assert y.shape == (1, 1), f"y must be (1,1), got {y.shape}"
+            assert t.shape == (2, 1), f"t must be (2,1), got {t.shape}"
+            assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
+            assert isinstance(dt, (float, int)), "dt must be a float"
+
+        x1, x2   = x.flatten()
+        t1, t2 = t.flatten()
+        y1       = y.flatten()[0]
+        # u       = u.flatten()[0]
+        
+        A = x1 + dt*x2 + t1
+        B = x2 - dt*(self.alpham*np.sin(x1) + self.betam*x2) + t2
+        Z = 2*A/(1.+A**2)**2
+        W = np.cos(B)
+        An = np.array([[1.,                                          dt,                                          0.],
+                       [-self.alpham*dt*np.cos(x1),                  1. - self.betam * dt,                        0.],
+                       [Z - self.alpham*dt*np.cos(x1)*self.gammam*W, Z*dt + (1. - self.betam * dt)*self.gammam*W, 0.]])
+        Bn = np.array([[1., 0.,            0.],
+                       [0., 1.,            0.],
+                       [Z,  self.gammam*W, 1.]])
+        
+        # dg1dx1 = 1
+        # dg1dx2 = dt
+        # dg2dx1 = -dt*self.alpham*np.cos(x[0])
+        # dg2dx2 = 1 - dt*self.betam
+        # Fn = np.array([[dg1dx1, dg1dx2], [dg2dx1.item(), dg2dx2]])
+        # dg3dx1 = 2*x1[0]/(1.+x1[0]**2)**2
+        # dg3dx2 = self.gammam*np.cos(x1[1])
+        # Hn = np.array([[dg3dx1.item(), dg3dx2.item()]])
+        
+        # An = np.block([[Fn, np.zeros((2,1))],[Hn@Fn, np.zeros((1,1))]])
+        # Bn = np.block([[np.eye(2), np.zeros((2,1))], [Hn, np.eye(1)]])
+        
+        # print(f'An={An}')
+        # print(f'Bn={Bn}')
+        # exit(1)
+        return An, Bn

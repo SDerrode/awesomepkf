@@ -95,9 +95,11 @@ if __name__ == "__main__":
         # pickle storing and plots
         upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_2.pkl"))
         if listeUPKF[0][1] is not None:
-            upkf_2.history.plot(list_param= ["xkp1", "Xkp1_update" ], \
-                                list_label= ["X - Noisy", "X - Filtered"], \
+            title = f"'{model.MODEL_NAME}' model data filtered with UPKF"
+            upkf_2.history.plot(title,
+                                list_param= ["xkp1",   "Xkp1_update" ], \
+                                list_label= ["x true", "x estimated"], \
                                 # window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
                                 window    = {'xmin': 0, 'xmax': N }, \
-                                basename  = 'upkf_2', show=False, base_dir=graph_dir)
+                                basename  = f'upkf_2_{model.MODEL_NAME}', show=False, base_dir=graph_dir)
 

@@ -27,7 +27,7 @@ if __name__ == "__main__":
     save_pickle   = False
     verbose       = 0
     N             = 100 # > 20
-    sKey          = 41 # Int or None (so that it is generated automatically)
+    sKey          = 68 # Int or None (so that it is generated automatically)
     withoutX_True = False # If True : true X will not be stored in the file
     
     # ------------------------------------------------------------------

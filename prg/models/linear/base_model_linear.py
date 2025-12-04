@@ -53,4 +53,4 @@ class BaseModelLinear:
 
     # ------------------------------------------------------------------
     def __repr__(self):
-        return f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y}"
+        return f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y})"

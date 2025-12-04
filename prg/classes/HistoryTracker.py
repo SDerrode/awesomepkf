@@ -96,7 +96,7 @@ class HistoryTracker:
             print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, rmse={rmse:.4f}, nees_mean={nees_mean:.4f}, mae={mae:.4f}")
 
     # ------------------------------------------------------------------
-    def plot(self, list_param, list_label, window, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
+    def plot(self, title, list_param, list_label, window, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
         """
         Trace l'évolution d'un paramètre au fil des itérations.
         Si show=False, chaque figure est sauvegardée dans base_dir.
@@ -125,6 +125,7 @@ class HistoryTracker:
         df_subset = datafocus.iloc[window['xmin']:window['xmax']]
         
         fig, axes = plt.subplots(nb_components, 1, figsize=(10, 5), sharex=True)
+        fig.suptitle(title)
         for component in range(nb_components):
 
             labels = [f'{p}_{component}' for p in list_param]
@@ -133,7 +134,8 @@ class HistoryTracker:
 
             axes[component].legend()
             axes[component].set_xlim(window['xmin'], window['xmax']-1)
-            axes[component].set_xlabel(iter_key)
+            axes[component].set_xlabel('n')
+            # axes[component].set_xlabel(iter_key)
             axes[component].grid(True, linestyle="--", alpha=0.6)
             axes[component].xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
 
@@ -141,7 +143,7 @@ class HistoryTracker:
             plt.show()
         else:
             os.makedirs(base_dir or ".", exist_ok=True)
-            save_path = os.path.join(base_dir or ".", f"{basename}_{component}.png")
+            save_path = os.path.join(base_dir or ".", f"{basename}.png")
             fig.savefig(save_path, dpi=150, bbox_inches="tight")
             if self.verbose > 0:
                 logger.info(f"[HistoryTracker] Graphique sauvegardé : {save_path}")

@@ -73,13 +73,12 @@ class NonLinear_EPKF(NonLinear_PKF):
         while N is None or k < N:
             
             Zkp1_predict  = g( np.vstack([Xkp1_update, ykp1]), np.zeros(shape=(self.dim_xy, 1)), self.dt)
+            An, Bn        = jg(np.vstack([Xkp1_update, ykp1]), np.zeros(shape=(self.dim_xy, 1)), self.dt)
             Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
-            An, Bn        = jg(np.vstack([Xkp1_update, ykp1]), Zkp1_predict[:self.dim_x], self.dt)
             # print('Zkp1_predict=', Zkp1_predict)
             # print('An=', An, ', Bn=', Bn)
             # input('tretret')
-            
-            
+
             Pkp1_predict = Bn @ mQ @ Bn.T + An @ np.block(
                 [[PXXkp1_update,                      np.zeros((self.dim_x, self.dim_y))],
                  [np.zeros((self.dim_y, self.dim_x)), np.zeros((self.dim_y, self.dim_y))]]) @ An.T  # Calcul de la covariance de (x_i, y_i) sachant y_1:i-1 en utilisant la recursion
@@ -95,8 +94,6 @@ class NonLinear_EPKF(NonLinear_PKF):
                 return # we stop as the data generator is stopped itself
 
             accel         = PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)
-            # print(f'ykp1={ykp1}')
-            # input('trtrtrr')
             Xkp1_update   = Xkp1_predict   + accel @ (ykp1 - Ykp1_predict)
             PXXkp1_update = PXXkp1_predict - accel @ PYXkp1_predict
 
