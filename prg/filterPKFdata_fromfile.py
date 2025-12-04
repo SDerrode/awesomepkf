@@ -83,8 +83,9 @@ if __name__ == "__main__":
         # pickle storing and plots
         pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
         if listePKF[0][1] is not None:
-            pkf_2.history.plot( list_param = ["xkp1", "Xkp1_update_math" ], \
-                                list_label = ["X - Noisy", "X - Filtered (mathematical version)"], \
+            title = f"'{model.MODEL_NAME}' model data filtered with PKF"
+            pkf_2.history.plot( title,
+                                list_param = ["xkp1",   "Xkp1_update_math" ], \
+                                list_label = ["x true", "x estimated"], \
                                 window     = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                                basename   = 'pkf_2', \
-                                show=False, base_dir=graph_dir)
+                                basename   = f'pkf_2_{model.MODEL_NAME}', show=False, base_dir=graph_dir)

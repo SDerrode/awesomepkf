@@ -58,17 +58,22 @@ class BaseModelNonLinear:
 
     # ------------------------------------------------------------------
 
-    def jacobiens_g(self, z: np.ndarray, x1: np.ndarray, dt: float):
+    def jacobiens_g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
+        
         if __debug__:  # ⚙️ ces vérifs seront ignorées avec python -O
             assert isinstance(z, np.ndarray), "z doit être un numpy.ndarray"
+            assert isinstance(noise_z, np.ndarray), "noise_z doit être un numpy.ndarray"
             assert z.ndim == 2 and z.shape[1] == 1, f"z doit avoir une forme (N,1), reçu {z.shape}"
+            assert noise_z.ndim == 2 and noise_z.shape[1] == 1, f"noise_z doit avoir une forme (N,1), reçu {noise_z.shape}"
             assert z.shape[0] == self.dim_xy, f"z doit avoir une taille {self.dim_xy}, reçu {z.shape[0]}"
-            
-        # Split state vector
-        x, y = np.split(z, [self.dim_x])
-        
+            assert noise_z.shape[0] == self.dim_xy, f"noise_z doit avoir une taille {self.dim_xy}, reçu {noise_z.shape[0]}"
+
+        # Split state and noise vectors
+        x, y   = np.split(z,       [self.dim_x])
+        nx, ny = np.split(noise_z, [self.dim_x])
+
         # Appel de la fonction spécifique du modèle
-        return self._jacobiens_g(x, y, x1, dt)
+        return self._jacobiens_g(x, y, nx, ny, dt)
 
     # ------------------------------------------------------------------
     def get_params(self):
@@ -87,4 +92,4 @@ class BaseModelNonLinear:
 
     # ------------------------------------------------------------------
     def __repr__(self):
-        return ( f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y}")
+        return ( f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y})")
