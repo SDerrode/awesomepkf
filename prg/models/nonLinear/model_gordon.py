@@ -10,85 +10,70 @@ class ModelGordon(BaseModelNonLinear):
     Gordon et al. (1993) nonlinear model:
         f(x) = 0.5*x + 25*x/(1 + x^2) + 8*cos(1.2*t)
         h(x) = 0.05*x^2
-
-    En mode optimisé (`python -O`), toutes les vérifications sont supprimées.
     """
 
     MODEL_NAME: str = "x1_y1_gordon"
 
     def __init__(self) -> None:
-        super().__init__(dim_x=1, dim_y=1, alpha=0.01, beta=2.0, kappa=0.0, model_type="nonlinear")
+        super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
         
-        self.mQ: np.ndarray = np.array([
-            [1e-2, 0.0],
-            [0.0,  1e-1]
-        ])
-        self.z00: np.ndarray = np.zeros((self.dim_xy, 1))
-        self.Pz00: np.ndarray = np.eye(self.dim_xy)
+        self.mQ   = np.diag([1E-4, 1E-4])
+        self.z00  = np.zeros((self.dim_xy, 1))
+        self.Pz00 = np.eye(self.dim_xy)
 
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
 
     # ------------------------------------------------------------------
-    def _fx(self, x: np.ndarray, nx: np.ndarray, dt: float) -> np.ndarray:
+    def _fx(self, x, t, dt) -> np.ndarray:
         """
         State transition with additive noise.
-        Args:
-            x: (dim_x, 1) state vector
-            nx: (dim_x, 1) process noise
-            dt: time increment
-        Returns:
-            New state vector (dim_x, 1)
         """
-        if __debug__:
-            assert isinstance(x, np.ndarray) and x.shape == (1, 1), f"x doit être (1,1), reçu {x.shape}"
-            assert isinstance(nx, np.ndarray) and nx.shape == (1, 1), f"nx doit être (1,1), reçu {nx.shape}"
-            assert isinstance(dt, (int, float)), "dt doit être un scalaire numérique"
-
-        return 0.5 * x + 25 * x / (1 + x**2) + 8 * np.cos(1.2 * dt) + nx
+        x1 = x.flatten()[0]
+        t1 = t.flatten()[0]
+        return 0.5*x1 + 25*x1 / (1.+x1**2) + 8*np.cos(1.2*dt) + t1
 
     # ------------------------------------------------------------------
-    def _hx(self, x: np.ndarray, ny: np.ndarray, dt: float) -> np.ndarray:
+    def _hx(self, x, u, dt) -> np.ndarray:
         """
         Measurement function with additive noise.
-        Args:
-            x: (dim_x, 1) state vector
-            ny: (dim_y, 1) measurement noise
-            dt: time increment
-        Returns:
-            Observation vector (dim_y, 1)
         """
-        if __debug__:
-            assert isinstance(x, np.ndarray) and x.shape == (1, 1), f"x doit être (1,1), reçu {x.shape}"
-            assert isinstance(ny, np.ndarray) and ny.shape == (1, 1), f"ny doit être (1,1), reçu {ny.shape}"
-            assert isinstance(dt, (int, float)), "dt doit être un scalaire numérique"
-
-        return 0.05 * x**2 + ny
+        x1 = x.flatten()[0]
+        u1 = u.flatten()[0]
+        return 0.05 * x1**2 + u1
 
     # ------------------------------------------------------------------
-    def _g(
-        self,
-        x: np.ndarray,
-        y: np.ndarray,
-        nx: np.ndarray,
-        ny: np.ndarray,
-        dt: float
-    ) -> np.ndarray:
-        """
-        Combine state and observation using Wojciech’s formulation.
-        Args:
-            x, y, nx, ny: (1, 1) vectors
-            dt: time increment
-        Returns:
-            Combined vector (dim_x + dim_y, 1)
-        """
+    def _g(self, x, y, t, u, dt):
+        """Combine state and observation using Wojciech’s formulation."""
         if __debug__:
             assert x.shape == (1, 1), f"x doit être (1,1), reçu {x.shape}"
             assert y.shape == (1, 1), f"y doit être (1,1), reçu {y.shape}"
-            assert nx.shape == (1, 1), f"nx doit être (1,1), reçu {nx.shape}"
-            assert ny.shape == (1, 1), f"ny doit être (1,1), reçu {ny.shape}"
+            assert t.shape == (1, 1), f"t doit être (1,1), reçu {t.shape}"
+            assert u.shape == (1, 1), f"u doit être (1,1), reçu {u.shape}"
 
-        fx_val: np.ndarray = self._fx(x, nx, dt)
-        hx_val: np.ndarray = self._hx(fx_val, ny, dt)
-        g_val: np.ndarray = np.vstack((fx_val, hx_val))
-        return g_val
+        fx_val = self._fx(x,      t, dt)
+        hx_val = self._hx(fx_val, u, dt)
+        return np.vstack((fx_val, hx_val))
+
+    # ------------------------------------------------------------------
+    def _jacobiens_g(self, x, y, t, u, dt):
+        if __debug__:
+            assert x.shape == (1, 1), f"x doit être (1,1), reçu {x.shape}"
+            assert y.shape == (1, 1), f"y doit être (1,1), reçu {y.shape}"
+            assert t.shape == (1, 1), f"t doit être (1,1), reçu {t.shape}"
+            assert u.shape == (1, 1), f"u doit être (1,1), reçu {u.shape}"
+        x1 = x.flatten()[0]
+        t1 = t.flatten()[0]
+        y1 = y.flatten()[0]
+        #u1 = u.flatten()[0]
+        
+        A = 0.5*x1 + 25*x1 / (1.+x1**2) + 8*np.cos(1.2*dt) + t1
+        An = np.array([[0.5+25.*(1.-x1**2)/(1.+x1**2)**2, 0.],
+                       [0.1*A*(0.5+25.*(1.-x1**2)/(1.+x1**2)**2), 0.]])
+        Bn = np.array([[1.,    0.],
+                       [0.1*A, 1.]])
+        
+        # print(f'An={An}')
+        # print(f'Bn={Bn}')
+        # exit(1)
+        return An, Bn

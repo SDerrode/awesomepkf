@@ -49,7 +49,6 @@ class ModelX2Y1(BaseModelNonLinear):
             x2 - dt*(self.alpham * np.sin(x1) + self.betam * x2) + t2
         ]).reshape(-1, 1)
 
-
     # ------------------------------------------------------------------
     def _hx(self, x, u, dt):
         """Measurement function h(x) with observation noise."""
@@ -92,13 +91,13 @@ class ModelX2Y1(BaseModelNonLinear):
         A = x1 + dt*x2 + t1
         B = x2 - dt*(self.alpham*np.sin(x1) + self.betam*x2) + t2
         Z = 2*A/(1.+A**2)**2
-        W = np.cos(B)
-        An = np.array([[1.,                                          dt,                                          0.],
-                       [-self.alpham*dt*np.cos(x1),                  1. - self.betam * dt,                        0.],
-                       [Z - self.alpham*dt*np.cos(x1)*self.gammam*W, Z*dt + (1. - self.betam * dt)*self.gammam*W, 0.]])
-        Bn = np.array([[1., 0.,            0.],
-                       [0., 1.,            0.],
-                       [Z,  self.gammam*W, 1.]])
+        W = self.gammam*np.cos(B)
+        An = np.array([[1.,                              dt,                              0.],
+                       [-self.alpham*dt*np.cos(x1),      1. - self.betam * dt,            0.],
+                       [Z - self.alpham*dt*np.cos(x1)*W, Z*dt + (1. - self.betam * dt)*W, 0.]])
+        Bn = np.array([[1., 0., 0.],
+                       [0., 1., 0.],
+                       [Z,  W,  1.]])
         
         # dg1dx1 = 1
         # dg1dx2 = dt

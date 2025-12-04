@@ -16,7 +16,7 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
-        self.mQ   = np.diag([1E-4, 1E-4, 1e-4])
+        self.mQ   = np.diag([1E-1, 1E-1, 1e-1])
         self.z00  = np.zeros((self.dim_xy, 1))
         self.Pz00 = np.eye(self.dim_xy)
 

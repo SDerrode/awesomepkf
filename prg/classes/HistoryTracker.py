@@ -125,6 +125,8 @@ class HistoryTracker:
         df_subset = datafocus.iloc[window['xmin']:window['xmax']]
         
         fig, axes = plt.subplots(nb_components, 1, figsize=(10, 5), sharex=True)
+        if nb_components == 1:
+            axes = [axes]
         fig.suptitle(title)
         for component in range(nb_components):
 
