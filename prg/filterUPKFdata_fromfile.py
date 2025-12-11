@@ -44,8 +44,8 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     # Available non linear models:
-    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations']
-    model        = ModelFactoryNonLinear.create("x2_y1_rapport")
+    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x1_y1_withRetroactions', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations']
+    model        = ModelFactoryNonLinear.create("x1_y1_withRetroactions")
     params       = model.get_params()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
