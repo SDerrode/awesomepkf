@@ -24,7 +24,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     save_pickle = True
     verbose     = 0
-    N           = 200 # > 20
+    N           = 10000 # > 20
     sKey        = 68 # Int or None (so that it is generated automatically)
     
     # ------------------------------------------------------------------
@@ -43,8 +43,8 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     # Available non linear models:
-    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations']
-    model        = ModelFactoryNonLinear.create("x2_y1_withRetroactionsOfObservations")
+    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x1_y1_withRetroactions', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations']
+    model        = ModelFactoryNonLinear.create("x1_y1_withRetroactions")
     params       = model.get_params()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
@@ -77,8 +77,8 @@ if __name__ == "__main__":
         epkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
         title = f"'{model.MODEL_NAME}' model data filtered with EPKF"
         epkf_1.history.plot(title,
-                            list_param= ["xkp1"  , "Xkp1_update"], \
-                            list_label= ["x true", "x estimated"], \
+                            list_param= ["xkp1"  , "Xkp1_update", "ykp1"], \
+                            list_label= ["x true", "x estimated", "y"], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
                             window    = {'xmin':0, 'xmax': N }, \
                             basename  = f'epkf_1_{model.MODEL_NAME}', show=False, base_dir=graph_dir)

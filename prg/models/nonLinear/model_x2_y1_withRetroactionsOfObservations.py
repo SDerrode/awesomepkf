@@ -16,9 +16,12 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
-        self.mQ   = np.diag([1E-1, 1E-1, 1e-1])
+        self.mQ   = np.diag([1E-1, 1E-1, 1E-1])
         self.z00  = np.zeros((self.dim_xy, 1))
         self.Pz00 = np.eye(self.dim_xy)
+        
+        
+        self.a, self.b, self.c, self.d, self.e, self.f = 0.5, 0.1, 0.3, 0.8, -0.2, 0.5
 
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
@@ -34,8 +37,8 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         t1, t2 = t.flatten()
 
         return np.array([
-             0.5 * x1 + 0.1 * x2 + 0.3 * np.tanh(y1) + t1,
-             0.8 * x2            - 0.2 * np.sin(y1)  + t2
+            self.a * x1 + self.b * x2 + self.c * np.tanh(y1) + t1,
+            self.d * x2               + self.e * np.sin(y1)  + t2
         ]).reshape(-1, 1)
 
     # ------------------------------------------------------------------
@@ -46,10 +49,10 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
 
         x1, x2 = x.flatten()
         y1     = y.flatten()[0]
-        u     = u.flatten()[0]
+        u      = u.flatten()[0]
 
         return np.array([
-            x1**2 + 0.5*y1 + u
+            x1**2 + self.f*y1 + u
         ]).reshape(-1, 1)
 
     # ------------------------------------------------------------------
@@ -83,9 +86,9 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         y1       = y.flatten()[0]
         # u       = u.flatten()[0]
 
-        An = np.array([[0.5,   0.1,  0.3*(1.-np.tanh(y1)**2)],
-                       [0.,    0.8, -0.2*np.cos(y1)         ],
-                       [2.*x1, 0.,   0.5]                   ])
+        An = np.array([[self.a, self.b,  self.c*(1.-np.tanh(y1)**2)],
+                       [0.,    self.d, self.e*np.cos(y1)         ],
+                       [2.*x1, 0.,   self.f]                   ])
 
         Bn = np.eye(self.dim_xy)
         
