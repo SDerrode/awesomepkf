@@ -22,13 +22,13 @@ def save_dataframe_to_csv(df, filepath, index=False):
     
     try:
         df.to_csv(path, encoding="utf-8", index=index, float_format="%.15f")
-        if __debug__:
-            logger.info(f"✅ File save with success at : {path.resolve()}")
+        # if __debug__:
+        #     logger.info(f"✅ File save with success at : {path.resolve()}")
     except Exception as e:
         logger.error(f"❌ Something went wrong during saving of CSV : {e}")
         raise
 
-def data_to_dataframe(listData, dim_x, dim_y, withoutX_True=False):
+def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
     """Convert a list of tuples PKF/UKF into pandas DataFrame."""
     data = []
     for idx, (x, y) in [(i, vals) for i, vals in listData]:
@@ -42,14 +42,14 @@ def data_to_dataframe(listData, dim_x, dim_y, withoutX_True=False):
         if __debug__:
             if len(x_values) != dim_x or len(y_values) != dim_y:
                 raise ValueError(f"Unexpected size for vectors at index {idx}: X={len(x_values)}, Y={len(y_values)}")
-        if withoutX_True == True:
+        if withoutX == True:
             data.append([*y_values])
         else:
             data.append([*x_values, *y_values])
 
     # dataframe
     columns = []
-    if withoutX_True == False:
+    if withoutX == False:
         for c in range(dim_x):
             columns.append(f"X{c}")
     for c in range(dim_y):

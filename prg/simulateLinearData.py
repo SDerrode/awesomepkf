@@ -14,21 +14,38 @@ from others.utils import save_dataframe_to_csv, data_to_dataframe
 from classes.Linear_PKF import Linear_PKF
 # Parameters linear model
 from classes.ParamLinear import ParamLinear
-
+# Parser d'options
+from others.parser    import *
 
 if __name__ == "__main__":
     """
-    python prg/simulateLinearData.py
+    USAGES:
+        python prg/simulateLinearData.py
+        python prg/simulateLinearData.py --verbose 0 --linearModelName A_mQ_x1_y1 --sKey 303 --dataFileName test.csv
     """
     
     # ------------------------------------------------------------------
-    # Constants
+    # Constants (default value) - Parser
     # ------------------------------------------------------------------
-    save_pickle   = False
-    verbose       = 0
-    N             = 10000 # > 20
-    sKey          = 303   # Int or None (so that it is generated automatically)
-    withoutX_True = False # If True : true X will not be stored in the file
+
+    parser = argparse.ArgumentParser(description='Simulate linear data')
+    addParseToParser(parser, ['linearModelName', 'dataFileName', 'N', 'sKey', 'withoutX'])
+    args   = parser.parse_args()
+    
+    traceplot       = args.traceplot
+    verbose         = args.verbose
+    withoutX        = args.withoutX # If True : true X will not be stored in the file
+    N               = args.N
+    sKey            = args.sKey   # Int>0 or None (so that it is generated automatically)
+    linearModelName = args.linearModelName
+    dataFileName    = args.dataFileName
+    if dataFileName == None:
+        dataFileName = f"dataLinear_{linearModelName}.csv"
+    if sKey is not None and sKey < 0:
+        parser.error("sKey must be >= 0")
+    if N < 200:
+        parser.error("N must be >= 200")
+    # exit(1)
     
     # ------------------------------------------------------------------
     # Output repo for data
@@ -37,12 +54,11 @@ if __name__ == "__main__":
     datafile_dir = os.path.join(base_dir, "datafile")
 
     # ------------------------------------------------------------------
-    # Test parameters for the Two ((A, mQ) or Sigma) parametrizations
+    # Test parameters
     # ------------------------------------------------------------------
     
     # Available linear models: 
-    # ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
-    model = ModelFactoryLinear.create("A_mQ_x3_y1")
+    model = ModelFactoryLinear.create(linearModelName)
     if verbose>0:
         print(f'model={model}, {model.MODEL_NAME}')
         print(f'model={model}')
@@ -56,15 +72,14 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Let's go
     # ------------------------------------------------------------------
-    
-    print("\nPKF simulation")
-    pkf = Linear_PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
+    if verbose>0:
+        print("\nPKF simulation")
+    pkf = Linear_PKF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
     
     # Simulate data with the simulator generator
     listData = pkf.simulate_N_data(N=N)
     
     # Save data as a dataframe using pandas
-    df = data_to_dataframe(listData, dim_x, dim_y, withoutX_True=withoutX_True)
-    filename = f"dataLinear_{model.MODEL_NAME}_dimxy_{dim_x}x{dim_y}.csv"
-    filepath = os.path.join(datafile_dir, filename)
+    df = data_to_dataframe(listData, dim_x, dim_y, withoutX=withoutX)
+    filepath = os.path.join(datafile_dir, dataFileName)
     save_dataframe_to_csv(df, filepath)

@@ -12,14 +12,13 @@ find ./data/datafile       -type f ! -name ".gitkeep" -delete
 find ./data/historyTracker -type f ! -name ".gitkeep" -delete
 find ./data/plot           -type f ! -name ".gitkeep" -delete
 
-# python prg/filterPKFdata.py
-# python prg/filterEPKFdata.py
-# python prg/filterUPKFdata.py
+python prg/simulateLinearData.py      --N 1000 --linearModelName    A_mQ_x1_y1             --dataFileName test.csv   --verbose 0             --sKey 303
+python prg/filterPKFdata_fromfile.py           --linearModelName    A_mQ_x1_y1             --dataFileName test.csv   --verbose 0 --traceplot
 
-python prg/simulateLinearData.py
-python prg/filterPKFdata_fromfile.py
+python prg/simulateNonLinearData.py   --N 1000 --nonLinearModelName x1_y1_withRetroactions --dataFileName testNL.csv --verbose 0             --sKey 303
+python prg/filterEPKFdata_fromfile.py          --nonLinearModelName x1_y1_withRetroactions --dataFileName testNL.csv --verbose 0 --traceplot
+python prg/filterUPKFdata_fromfile.py          --nonLinearModelName x1_y1_withRetroactions --dataFileName testNL.csv --verbose 0 --traceplot
 
-python prg/simulateNonLinearData.py
-python prg/filterEPKFdata_fromfile.py
-python prg/filterUPKFdata_fromfile.py
-
+python prg/filterPKFdata.py           --N 1000 --linearModelName    A_mQ_x1_y1                                       --verbose 0 --traceplot --sKey 303
+python prg/filterEPKFdata.py          --N 1000 --nonLinearModelName x1_y1_withRetroactions                           --verbose 0 --traceplot --sKey 303
+python prg/filterUPKFdata.py          --N 1000 --nonLinearModelName x1_y1_withRetroactions                           --verbose 0 --traceplot --sKey 303
