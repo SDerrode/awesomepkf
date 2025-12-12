@@ -14,22 +14,39 @@ from others.utils import save_dataframe_to_csv, data_to_dataframe
 from classes.NonLinear_PKF import NonLinear_PKF
 # Parameters for PKF
 from classes.ParamNonLinear import ParamNonLinear
-
+# Parser d'options
+from others.parser    import *
 
 if __name__ == "__main__":
     """
+    USAGES:
         python prg/simulateNonLinearData.py
+        python prg/simulateNonLinearData.py --N 1000 --verbose 0 --nonLinearModelName x1_y1_withRetroactions --sKey 303 --dataFileName testNL.csv
     """
- 
+
     # ------------------------------------------------------------------
-    # Constants
+    # Constants (default value) - Parser
     # ------------------------------------------------------------------
-    save_pickle = False
-    verbose       = 0
-    N             = 10000 # > 20
-    sKey          = 303 # Int or None (so that it is generated automatically)
-    withoutX_True = False # If True : simulated X will not be stored in the file
+
+    parser = argparse.ArgumentParser(description='Simulate non linear data')
+    addParseToParser(parser, ['nonLinearModelName', 'dataFileName', 'N', 'sKey', 'withoutX'])
+    args   = parser.parse_args()
     
+    traceplot          = args.traceplot
+    verbose            = args.verbose
+    withoutX           = args.withoutX
+    N                  = args.N
+    sKey               = args.sKey
+    nonLinearModelName = args.nonLinearModelName
+    dataFileName       = args.dataFileName
+    if dataFileName == None:
+        dataFileName = f"dataNonLinear_{nonLinearModelName}.csv"
+    if sKey is not None and sKey < 0:
+        parser.error("sKey must be >= 0")
+    if N < 200:
+        parser.error("N must be >= 200")
+    # exit(1)
+
     # ------------------------------------------------------------------
     # Output repo for data
     # ------------------------------------------------------------------
@@ -41,7 +58,6 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     # Available non linear models:
-    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x1_y1_withRetroactions', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations']
     model = ModelFactoryNonLinear.create("x1_y1_withRetroactions")
     if verbose>0:
         print(f'model={model}, {model.MODEL_NAME}')
@@ -56,16 +72,15 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Let's go
     # ------------------------------------------------------------------
-
-    print("Non Linear data simulation")
-    upkf = NonLinear_PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
+    if verbose>0:
+        print("Non Linear data simulation")
+    upkf = NonLinear_PKF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
     
     # Simulate data with the simulator generator
     listData = upkf.simulate_N_data(N=N)
 
     # Save data as a dataframe using pandas
-    df = data_to_dataframe(listData, dim_x, dim_y, withoutX_True=withoutX_True)
-    filename = f"dataNonLinear_{model.MODEL_NAME}_dimxy_{dim_x}x{dim_y}.csv"
-    filepath = os.path.join(datafile_dir, filename)
+    df = data_to_dataframe(listData, dim_x, dim_y, withoutX=withoutX)
+    filepath = os.path.join(datafile_dir, dataFileName)
     save_dataframe_to_csv(df, filepath)
     

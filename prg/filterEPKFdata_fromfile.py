@@ -20,16 +20,31 @@ from classes.Linear_PKF import Linear_PKF
 # Manage non linear and linear parameters
 from classes.ParamNonLinear import ParamNonLinear
 from classes.ParamLinear import ParamLinear
+# Parser d'options
+from others.parser    import *
 
 if __name__ == "__main__":
     """
+    USAGES:
         python prg/filterEPKFdata_fromfile.py
+        python prg/filterEPKFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --dataFileName testNL.csv
+        
     """
+    
     # ------------------------------------------------------------------
-    # Constants
+    # Constants (default value) - Parser
     # ------------------------------------------------------------------
-    save_pickle = True
-    verbose     = 0
+
+    parser = argparse.ArgumentParser(description='Filter non linear data from file with EPKF')
+    addParseToParser(parser, ['nonLinearModelName', 'dataFileName'])
+    args   = parser.parse_args()
+
+    traceplot          = args.traceplot
+    verbose            = args.verbose
+    nonLinearModelName = args.nonLinearModelName
+    dataFileName       = args.dataFileName
+    if dataFileName == None:
+        dataFileName = f"dataLinear_{nonLinearModelName}.csv"
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -46,15 +61,11 @@ if __name__ == "__main__":
     # Test parameters Chose a linear or a non linear model by commenting
     # ------------------------------------------------------------------
 
-    # Available non linear models:
-    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x1_y1_withRetroactions', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations']
-    model        = ModelFactoryNonLinear.create("x1_y1_withRetroactions")
+    model        = ModelFactoryNonLinear.create(nonLinearModelName)
     params       = model.get_params()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
     
-    # Available Linear models: 
-    # ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
     # model        = ModelFactoryLinear.create("A_mQ_x1_y1")
     # params       = model.get_params().copy()
     # dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
@@ -68,21 +79,15 @@ if __name__ == "__main__":
     # Let's go
     # ------------------------------------------------------------------
 
-    #### ATTENTION Data dimensions in the file should be the same as model dimension above
-    # datafile = 'dataNonLinear_x2_y1_dimxy_2x1.parquet'
-    # datafile = 'dataNonLinear_x2_y1_dimxy_2x1.csv'
-    # datafile = 'dataNonLinear_x2_y1_dimxy_2x1.csv'
-    # datafile = 'dataNonLinear_x2_y1_withRetroactionsOfObservations_dimxy_2x1.csv'
-    datafile = 'dataNonLinear_x1_y1_withRetroactions_dimxy_1x1.csv'
+    if verbose > 0:
+        print("\nEPKF filtering with data generated from a file with data... ")
 
-    print("\nEPKF filtering with data generated from a file with data... ")
-
-    epkf_2      = NonLinear_EPKF(param, save_pickle=save_pickle, verbose=verbose)
-    filename    = os.path.join(datafile_dir, datafile)
+    epkf_2    = NonLinear_EPKF(param, save_pickle=traceplot, verbose=verbose)
+    filename  = os.path.join(datafile_dir, dataFileName)
     listeEPKF = epkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
     N = listeEPKF[-1][0] + 1
 
-    if save_pickle and epkf_2.history is not None:
+    if traceplot and epkf_2.history is not None:
         df = epkf_2.history.as_dataframe()
         if verbose > 0:
             print("\nExtract of the filtering with EPKF :")
@@ -90,25 +95,28 @@ if __name__ == "__main__":
 
         # print scoring
         if listeEPKF[0][1] is not None:
-            ListeA = ['xkp1',           'xkp1']
-            ListeB = ['Xkp1_predict',   'Xkp1_update']
-            ListeC = ['PXXkp1_predict', 'PXXkp1_update']
+            # ListeA = ['xkp1',           'xkp1']
+            # ListeB = ['Xkp1_predict',   'Xkp1_update']
+            # ListeC = ['PXXkp1_predict', 'PXXkp1_update']
+            ListeA = ['xkp1']
+            ListeB = ['Xkp1_update']
+            ListeC = ['PXXkp1_update']
             epkf_2.history.compute_errors(ListeA, ListeB, ListeC)
 
         # pickle storing and plots
         epkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_2.pkl"))
         if listeEPKF[0][1] is not None:
-            title = f"'{model.MODEL_NAME}' model data filtered with EPKF"
+            title = f"'{nonLinearModelName}' model data filtered with EPKF"
             epkf_2.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
                             window    = {'xmin':20, 'xmax': 120 }, \
-                            basename  = f'epkf_2_{model.MODEL_NAME}_observations', show=False, base_dir=graph_dir)
+                            basename  = f'epkf_2_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
             epkf_2.history.plot(title, 
                             list_param= ["xkp1"  , "Xkp1_update"], \
                             list_label= ["x true", "x estimated"], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
                             window    = {'xmin':20, 'xmax': 120 }, \
-                            basename  = f'epkf_2_{model.MODEL_NAME}', show=False, base_dir=graph_dir)
+                            basename  = f'epkf_2_{nonLinearModelName}', show=False, base_dir=graph_dir)
 
