@@ -25,7 +25,7 @@ if __name__ == "__main__":
     save_pickle = True
     verbose     = 0
     N           = 10000 # > 20
-    sKey        = 68 # Int or None (so that it is generated automatically)
+    sKey        = 303 # Int or None (so that it is generated automatically)
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -57,7 +57,7 @@ if __name__ == "__main__":
     # Let's go
     # ------------------------------------------------------------------
 
-    print("\nUPKF filtering with data generated from a UPKF... ")
+    print("\nUPKF filtering with data generated from a non-linear model...")
     upkf_1 = NonLinear_UPKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     listeUPKF = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
@@ -66,7 +66,7 @@ if __name__ == "__main__":
         if verbose > 0:
             print("\nExtract of the resulting filtering with UPKF :")
             print(df.head())
-            
+
         # print scoring
         ListeA = ['xkp1',           'xkp1']
         ListeB = ['Xkp1_predict',   'Xkp1_update']
@@ -76,10 +76,17 @@ if __name__ == "__main__":
         # pickle storing and plots
         upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
         title = f"'{model.MODEL_NAME}' model data filtered with UPKF"
+        # Les observations
         upkf_1.history.plot(title, 
-                            list_param= ["xkp1"  , "Xkp1_update", "ykp1"], \
-                            list_label= ["x true", "x estimated", "y"], \
+                            list_param= ["ykp1"], \
+                            list_label= ["Observations y"], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-                            window    = {'xmin':0, 'xmax': N }, \
+                            window    = {'xmin':20, 'xmax': 120 }, \
+                            basename  = f'upkf_1_{model.MODEL_NAME}_observations', show=False, base_dir=graph_dir)
+        upkf_1.history.plot(title, 
+                            list_param= ["xkp1"  , "Xkp1_update"], \
+                            list_label= ["x true", "x estimated"], \
+                            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
+                            window    = {'xmin':20, 'xmax': 120 }, \
                             basename  = f'upkf_1_{model.MODEL_NAME}', show=False, base_dir=graph_dir)
 

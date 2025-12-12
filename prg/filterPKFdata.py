@@ -9,7 +9,7 @@ from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
 from others.utils import compute_errors
 # Manage algorithms for the PKF
-from classes.PKF import PKF
+from classes.Linear_PKF import Linear_PKF
 # Manage parameters for the PKF
 from classes.ParamLinear import ParamLinear
 
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     save_pickle = True
     verbose     = 0
     N           = 10000 # > 20
-    sKey        = 68 # Int or None (so that it is generated automatically)
+    sKey        = 303 # Int or None (so that it is generated automatically)
     
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -56,8 +56,8 @@ if __name__ == "__main__":
     # Let's go
     # ------------------------------------------------------------------
 
-    print("\nPKF filtering with data generated from a PKF... ")
-    pkf_1   = PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
+    print("\nPKF filtering with data generated from a linear model...")
+    pkf_1   = Linear_PKF(param, sKey=sKey, save_pickle=save_pickle, verbose=verbose)
     # Call with the default data simulator generator
     listePKF = pkf_1.process_N_data(N=N)
 
@@ -76,9 +76,16 @@ if __name__ == "__main__":
         # pickle storing and plots
         pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
         title = f"'{model.MODEL_NAME}' model data filtered with PKF"
-        pkf_1.history.plot(title,
-                           list_param= ["xkp1",   "Xkp1_update_math"], \
-                           list_label= ["x true", "x estimated"], \
-                           window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                           basename  = f'pkf_1_{model.MODEL_NAME}', show=False, base_dir=graph_dir)
+        pkf_1.history.plot(title, 
+                            list_param= ["ykp1"], \
+                            list_label= ["Observations y"], \
+                            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
+                            window    = {'xmin':20, 'xmax': 120 }, \
+                            basename  = f'pkf_1_{model.MODEL_NAME}_observations', show=False, base_dir=graph_dir)
+        pkf_1.history.plot(title, 
+                            list_param= ["xkp1"  , "Xkp1_update_math"], \
+                            list_label= ["x true", "x estimated"], \
+                            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
+                            window    = {'xmin':20, 'xmax': 120 }, \
+                            basename  = f'pkf_1_{model.MODEL_NAME}', show=False, base_dir=graph_dir)
 

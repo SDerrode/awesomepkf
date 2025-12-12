@@ -73,9 +73,9 @@ if __name__ == "__main__":
     # datafile = 'dataNonLinear_x2_y1_dimxy_2x1.csv'
     # datafile = 'dataNonLinear_x2_y1_dimxy_2x1.csv'
     # datafile = 'dataNonLinear_x2_y1_withRetroactionsOfObservations_dimxy_2x1.csv'
-    datafile = 'dataNonLinear_x2_y1_rapport_dimxy_2x1.csv'
+    datafile = 'dataNonLinear_x1_y1_withRetroactions_dimxy_1x1.csv'
 
-    print("\nEPKF filtering with data generated from a file... ")
+    print("\nEPKF filtering with data generated from a file with data... ")
 
     epkf_2      = NonLinear_EPKF(param, save_pickle=save_pickle, verbose=verbose)
     filename    = os.path.join(datafile_dir, datafile)
@@ -99,10 +99,16 @@ if __name__ == "__main__":
         epkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_2.pkl"))
         if listeEPKF[0][1] is not None:
             title = f"'{model.MODEL_NAME}' model data filtered with EPKF"
-            epkf_2.history.plot(title,
-                                list_param= ["xkp1",   "Xkp1_update" ], \
-                                list_label= ["x true", "x estimated"], \
-                                # window    = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                                window    = {'xmin': 0, 'xmax': N }, \
-                                basename  = f'epkf_2_{model.MODEL_NAME}', show=False, base_dir=graph_dir)
+            epkf_2.history.plot(title, 
+                            list_param= ["ykp1"], \
+                            list_label= ["Observations y"], \
+                            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
+                            window    = {'xmin':20, 'xmax': 120 }, \
+                            basename  = f'epkf_2_{model.MODEL_NAME}_observations', show=False, base_dir=graph_dir)
+            epkf_2.history.plot(title, 
+                            list_param= ["xkp1"  , "Xkp1_update"], \
+                            list_label= ["x true", "x estimated"], \
+                            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
+                            window    = {'xmin':20, 'xmax': 120 }, \
+                            basename  = f'epkf_2_{model.MODEL_NAME}', show=False, base_dir=graph_dir)
 
