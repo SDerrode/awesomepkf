@@ -90,7 +90,7 @@ if __name__ == "__main__":
         epkf_1.history.compute_errors(ListeA, ListeB, ListeC)
 
         # pickle storing and plots
-        epkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_1.pkl"))
+        epkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_epfk_1.pkl"))
         title = f"'{nonLinearModelName}' model data filtered with EPKF"
         epkf_1.history.plot(title, 
                             list_param= ["ykp1"], \
