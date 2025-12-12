@@ -60,7 +60,7 @@ if __name__ == "__main__":
     datafile = 'dataLinear_A_mQ_x3_y1_dimxy_3x1.csv'
     # datafile = 'dataLinear_A_mQ_x1_y1_dimxy_1x1.csv'
     
-    print("\nPKF filtering with data generated from a file... ")
+    print("\nPKF filtering with data generated from a file with data...")
     
     pkf_2    = Linear_PKF(param, save_pickle=save_pickle, verbose=verbose)
     filename = os.path.join(datafile_dir, datafile)
@@ -84,8 +84,15 @@ if __name__ == "__main__":
         pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
         if listePKF[0][1] is not None:
             title = f"'{model.MODEL_NAME}' model data filtered with PKF"
-            pkf_2.history.plot( title,
-                                list_param = ["xkp1",   "Xkp1_update_math" ], \
-                                list_label = ["x true", "x estimated"], \
-                                window     = {'xmin': min(50, N), 'xmax': min(min(50, N)+50, N) }, \
-                                basename   = f'pkf_2_{model.MODEL_NAME}', show=False, base_dir=graph_dir)
+            pkf_2.history.plot(title, 
+                            list_param= ["ykp1"], \
+                            list_label= ["Observations y"], \
+                            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
+                            window    = {'xmin':20, 'xmax': 120 }, \
+                            basename  = f'pkf_2_{model.MODEL_NAME}_observations', show=False, base_dir=graph_dir)
+            pkf_2.history.plot(title, 
+                            list_param= ["xkp1"  , "Xkp1_update_math"], \
+                            list_label= ["x true", "x estimated"], \
+                            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
+                            window    = {'xmin':20, 'xmax': 120 }, \
+                            basename  = f'pkf_2_{model.MODEL_NAME}', show=False, base_dir=graph_dir)

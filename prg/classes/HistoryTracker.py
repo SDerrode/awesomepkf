@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
 from others.utils import compute_errors
-
+from others.plot_settings import *
 
 
 # ----------------------------------------------------------------------
@@ -93,7 +93,8 @@ class HistoryTracker:
         df = pd.DataFrame(self._history.copy())
         for a, b, c in zip(ListeA, ListeB, ListeC):
             mse_total, mae, rmse, nees_mean = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy())
-            print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, rmse={rmse:.4f}, nees_mean={nees_mean:.4f}, mae={mae:.4f}")
+            # print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, rmse={rmse:.4f}, nees_mean={nees_mean:.4f}, mae={mae:.4f}")
+            print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, mae={mae:.4f}, nees_mean={nees_mean:.4f}")
 
     # ------------------------------------------------------------------
     def plot(self, title, list_param, list_label, window, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
@@ -124,10 +125,10 @@ class HistoryTracker:
         # On ne sélectione qu'une window
         df_subset = datafocus.iloc[window['xmin']:window['xmax']]
         
-        fig, axes = plt.subplots(nb_components, 1, figsize=(10, 5), sharex=True)
+        fig, axes = plt.subplots(nb_components, 1, figsize=(7,3), sharex=True, facecolor=facecolor)
         if nb_components == 1:
             axes = [axes]
-        fig.suptitle(title)
+        fig.suptitle(title, y=0.85, fontsize=BIGGER_SIZE)
         for component in range(nb_components):
 
             labels = [f'{p}_{component}' for p in list_param]
@@ -146,7 +147,7 @@ class HistoryTracker:
         else:
             os.makedirs(base_dir or ".", exist_ok=True)
             save_path = os.path.join(base_dir or ".", f"{basename}.png")
-            fig.savefig(save_path, dpi=150, bbox_inches="tight")
+            fig.savefig(save_path, dpi=dpi, bbox_inches="tight", facecolor=facecolor)
             if self.verbose > 0:
                 logger.info(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
             plt.close(fig)
