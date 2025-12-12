@@ -81,11 +81,11 @@ if __name__ == "__main__":
         # print scoring
         if listePKF[0][1] is not None:
             # ListeA = ['xkp1',           'xkp1']
-            # ListeB = ['Xkp1_predict_math',   'Xkp1_update_math']
-            # ListeC = ['PXXkp1_predict_math', 'PXXkp1_update_math']
+            # ListeB = ['Xkp1_predict',   'Xkp1_update']
+            # ListeC = ['PXXkp1_predict', 'PXXkp1_update']
             ListeA = ['xkp1']
-            ListeB = ['Xkp1_update_math']
-            ListeC = ['PXXkp1_update_math']
+            ListeB = ['Xkp1_update']
+            ListeC = ['PXXkp1_update']
             pkf_2.history.compute_errors(ListeA, ListeB, ListeC)
 
         # pickle storing and plots
@@ -95,12 +95,14 @@ if __name__ == "__main__":
             pkf_2.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \
+                            list_covar = [None], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
                             window    = {'xmin':20, 'xmax': 120 }, \
                             basename  = f'pkf_2_{linearModelName}_observations', show=False, base_dir=graph_dir)
             pkf_2.history.plot(title, 
-                            list_param= ["xkp1"  , "Xkp1_update_math"], \
+                            list_param= ["xkp1"  , "Xkp1_update"], \
                             list_label= ["x true", "x estimated"], \
+                            list_covar = [None, "PXXkp1_update"], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
                             window    = {'xmin':20, 'xmax': 120 }, \
                             basename  = f'pkf_2_{linearModelName}', show=False, base_dir=graph_dir)

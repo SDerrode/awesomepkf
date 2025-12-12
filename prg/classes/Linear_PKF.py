@@ -163,8 +163,8 @@ class Linear_PKF:
                                     ikp1                 = np.zeros(shape=(self.dim_y, 1)),           # na
                                     Skp1                 = np.eye(self.dim_y),                        # na
                                     Kkp1                 = np.zeros(shape=(self.dim_x, self.dim_y)),  # na
-                                    Xkp1_update_math     = Xkp1_update.copy(),
-                                    PXXkp1_update_math   = PXXkp1_update.copy(),
+                                    Xkp1_update          = Xkp1_update.copy(),
+                                    PXXkp1_update        = PXXkp1_update.copy(),
                                     Xkp1_update_phys     = Xkp1_update.copy(),
                                     PXXkp1_update_phys   = PXXkp1_update.copy(),
                                     PXXkp1_update_Joseph = PXXkp1_update.copy())
@@ -211,9 +211,6 @@ class Linear_PKF:
             Xkp1_update   = Xkp1_predict   + accel @ (ykp1 - Ykp1_predict)
             PXXkp1_update = PXXkp1_predict - accel @ PYXkp1_predict
             
-            Xkp1_update_math   = Xkp1_update.copy()
-            PXXkp1_update_math = PXXkp1_update.copy()
-            
             # Updating with physical formulation
             ###############################################
             # innovation (expectation and variance)
@@ -235,16 +232,16 @@ class Linear_PKF:
             # Check if cov matrices are indeed cov matrices!
             check_consistency(Pkp1_predict         = Pkp1_predict,
                               Skp1                 = Skp1,
-                              PXXkp1_update_math   = PXXkp1_update_math,
+                              PXXkp1_update        = PXXkp1_update,
                               PXXkp1_update_phys   = PXXkp1_update_phys,
                               PXXkp1_update_Joseph = PXXkp1_update_Joseph)
             # Check if all cov matrices are identical
-            check_equality(   PXXkp1_update_math   = PXXkp1_update_math,
+            check_equality(   PXXkp1_update        = PXXkp1_update,
                               PXXkp1_update_phys   = PXXkp1_update_phys,
                               PXXkp1_update_Joseph = PXXkp1_update_Joseph)
 
             # Check if all expectations vectors are identical
-            check_equality(   Xkp1_update_math     = Xkp1_update_math,
+            check_equality(   Xkp1_update          = Xkp1_update,
                               Xkp1_update_phys     = Xkp1_update_phys)
 
             # Store if save_pickle==True
@@ -257,13 +254,13 @@ class Linear_PKF:
                                      ikp1                 = ikp1.copy(),
                                      Skp1                 = Skp1.copy(),
                                      Kkp1                 = Kkp1.copy(),
-                                     Xkp1_update_math     = Xkp1_update_math.copy(),
-                                     PXXkp1_update_math   = PXXkp1_update_math.copy(),
+                                     Xkp1_update     = Xkp1_update.copy(),
+                                     PXXkp1_update   = PXXkp1_update.copy(),
                                      Xkp1_update_phys     = Xkp1_update_phys.copy(),
                                      PXXkp1_update_phys   = PXXkp1_update_phys.copy(),
                                      PXXkp1_update_Joseph = PXXkp1_update_Joseph.copy())
 
-            yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update_math, Xkp1_update_phys
+            yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update, Xkp1_update_phys
 
     def process_N_data(self, N, data_generator=None):
         return list(self.process_pkf(N=N, data_generator=data_generator))
