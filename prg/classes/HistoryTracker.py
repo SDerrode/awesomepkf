@@ -97,50 +97,65 @@ class HistoryTracker:
             print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, mae={mae:.4f}, nees_mean={nees_mean:.4f}")
 
     # ------------------------------------------------------------------
-    def plot(self, title, list_param, list_label, window, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
+    def plot(self, title, list_param, list_label, list_covar, window, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
         """
-        Trace l'évolution d'un paramètre au fil des itérations.
+        Trace l'évolution des états 
         Si show=False, chaque figure est sauvegardée dans base_dir.
         """
 
-        df = pd.DataFrame(self._history.copy())
-
+        df = pd.DataFrame(self._history.copy()).iloc[window['xmin']:window['xmax']]
         assert not df.empty, "Aucune donnée enregistrée."
         for p in list_param:
             assert p in df.columns, f"'{p}' n'est pas une colonne connue : {list(df.columns)}"
 
-        # Extraction des données
-        y_values = df[list_param]
-        x = df[iter_key] if iter_key in df.columns else df.index
-
         # Vérifie que le premier élément est bien un vecteur
-        first = y_values[list_param[0]].iloc[0]
+        first = df[list_param[0]].iloc[0]
         assert hasattr(first, "shape"), f"Le premier élément de '{list_param[0]}' n'est pas un vecteur numpy"
+        # On récupère le nombre de composantes de X
         nb_components = first.shape[0]
+        # print('nb_components=', nb_components)
         
-        datafocus = pd.DataFrame()
-        for p in list_param:
-            labels = [f'{p}_{component}' for component in range(nb_components)]
-            datafocus[labels] = df[p].apply(lambda x: pd.Series(x.flatten()))
-        # On ne sélectione qu'une window
-        df_subset = datafocus.iloc[window['xmin']:window['xmax']]
-        
-        fig, axes = plt.subplots(nb_components, 1, figsize=(7,3), sharex=True, facecolor=facecolor)
-        if nb_components == 1:
-            axes = [axes]
+        df_subset     = pd.DataFrame()
+        df_subset_var = pd.DataFrame()
+        list_labels_p = []
+        list_labels_e = []
+        for p, e in zip(list_param, list_covar):
+            
+            list_labels_p_local = []
+            list_labels_e_local = []
+            for component in range(nb_components):
+                list_labels_p_local.append(f'{p}_{component}')
+                list_labels_e_local.append(f'{e}_{component}')
+            list_labels_p += list_labels_p_local
+            list_labels_e += list_labels_e_local
+
+            df_subset[list_labels_p_local] = df[p].apply(lambda x: pd.Series(x.flatten()))
+            if e!= None:
+                df_subset_var[list_labels_e_local] = df[e].apply(lambda x: pd.Series(x.diagonal()))
+
+        fig, axes = plt.subplots(nb_components, 1, figsize=(7, 2*nb_components), sharex=True, facecolor=facecolor)
+        if nb_components == 1: axes = [axes]
         fig.suptitle(title, y=0.85, fontsize=BIGGER_SIZE)
-        for component in range(nb_components):
 
-            labels = [f'{p}_{component}' for p in list_param]
-            for col, label in zip(labels, list_label):
-                df_subset[col].plot(ax=axes[component], label=label, alpha=0.5)
+        for i, (col_p, col_e) in enumerate(zip(list_labels_p, list_labels_e)):
+            j = i%nb_components
+            k = i // nb_components
+            # print(f'   toto - i={i}, j={j}, col_p={col_p}, col_e={col_e}, label_p={list_label[k]}')
+            df_subset[col_p].plot(ax=axes[j], label=list_label[k], alpha=0.5)
+            if not 'None' in col_e:
+                # On dessine l'enveloppe
+                y_upper   = df_subset[col_p] + 2*np.sqrt(df_subset_var[col_e])
+                y_lower   = df_subset[col_p] - 2.*np.sqrt(df_subset_var[col_e])
+                last_line = axes[j].lines[-1]       # dernière courbe tracée
+                color     = last_line.get_color()
+                axes[j].fill_between(df_subset.index, y_lower, y_upper, color=color, alpha=0.1, label=f'{list_label[k]} +/- 2*std')
 
-            axes[component].legend()
-            axes[component].set_xlim(window['xmin'], window['xmax']-1)
-            axes[component].set_xlabel('n')
-            # axes[component].set_xlabel(iter_key)
-            axes[component].grid(True, linestyle="--", alpha=0.6)
-            axes[component].xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+        axes[-1].legend()
+        axes[-1].set_xlim(window['xmin'], window['xmax']-1)
+        axes[-1].set_xlabel('n')
+        # axes[-1].set_xlabel(iter_key)
+        axes[-1].grid(True, linestyle="--", alpha=0.6)
+        axes[-1].xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
 
         if show:
             plt.show()
