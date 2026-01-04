@@ -58,12 +58,13 @@ class ModelSinus(BaseModelNonLinear):
             assert y.shape == (1, 1), f"y doit être (1,1), reçu {y.shape}"
             assert t.shape == (1, 1), f"t doit être (1,1), reçu {t.shape}"
             assert u.shape == (1, 1), f"u doit être (1,1), reçu {u.shape}"
+        
         x1 = x.flatten()[0]
         t1 = t.flatten()[0]
         y1 = y.flatten()[0]
         #u1 = u.flatten()[0]
         
-        A = 0.8*x1 + 0.3*np.sin(x1) + t1
+        A  = 0.8*x1 + 0.3*np.sin(x1) + t1
         An = np.array([[0.8+0.3*np.cos(x1),        0.],
                        [2.*A*(0.8+0.3*np.cos(x1)), 0.]])
         Bn = np.array([[1.,   0.],

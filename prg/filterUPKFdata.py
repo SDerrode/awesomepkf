@@ -40,7 +40,7 @@ if __name__ == "__main__":
     if N < 200:
         parser.error("N must be >= 200")
     # exit(1)
-    
+
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
     # ------------------------------------------------------------------
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     params       = model.get_params()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
-    
+
     if verbose > 0:
         print(f'model={model}')
         param.summary()
