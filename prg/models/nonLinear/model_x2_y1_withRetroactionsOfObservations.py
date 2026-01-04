@@ -19,8 +19,7 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         self.mQ   = np.diag([1E-1, 1E-1, 1E-1])
         self.z00  = np.zeros((self.dim_xy, 1))
         self.Pz00 = np.eye(self.dim_xy)
-        
-        
+
         self.a, self.b, self.c, self.d, self.e, self.f = 0.5, 0.1, 0.3, 0.8, -0.2, 0.5
 
         if __debug__:
