@@ -15,8 +15,8 @@ find ./data/plot           -type f ! -name ".gitkeep" -delete
 # =========================
 # Définition des variables
 # =========================
-N_LINEAR=1000
-N_NONLINEAR=1000
+N_LINEAR=10000
+N_NONLINEAR=10000
 LINEAR_MODEL="A_mQ_x1_y1"
 NONLINEAR_MODEL="x1_y1_withRetroactions"
 DATA_LINEAR="test.csv"
