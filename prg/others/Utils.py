@@ -77,52 +77,51 @@ def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
 
 def compute_errors(x_true, x_hat, P_list=None):
     """
-    Calcule MSE, MAE, RMSE et NEES moyen entre deux séquences d'états.
+    Calcul MSE, MAE, RMSE et NEES moyen entre deux séquences d'états.
     
     x_true, x_hat : listes ou colonnes pandas où chaque élément est un array (n,1) ou (n,)
     P_list : liste ou ndarray de matrices covariance (n,n) pour chaque instant (facultatif)
     
-    Retour : tuple (mse_total, mae, rmse, nees_mean) 
+    Retour : tuple (mse_total, list_mses_per_dim, mae, rmse, nees_mean) 
     """
-    
-    # transformer en listes simples si ndarray d'objets
-    if isinstance(x_true, np.ndarray) and x_true.dtype == object:
-        x_true = list(x_true)
-    if isinstance(x_hat, np.ndarray) and x_hat.dtype == object:
-        x_hat = list(x_hat)
 
-    # convertir en vecteur 1D par concaténation
-    X_true = [np.ravel(np.asarray(x)) for x in x_true]
-    X_hat  = [np.ravel(np.asarray(x)) for x in x_hat]
+    # Conversion en tableaux 
+    x_true  = np.hstack(x_true).T      # on empile horizontalement puis on transpose
+    x_hat   = np.hstack(x_hat).T       # on empile horizontalement puis on transpose
+    tab_cov = np.stack(P_list, axis=0) # empile le long du premier axe
+
+    # Calcul de la MSE par colonne
+    errors  = x_true - x_hat  # forme (1000, 2)
+    list_mses_per_dim = np.mean(errors**2, axis=0)
+    # print(errors)
+    # print('max=', np.max(errors[:, 0]))
+    # print('arg max=', np.argmax(errors[:, 0]))
+    # print("MSE par colonne :", mse_col)
+    # exit(1)
 
     # concaténer pour calcul global
-    X_true_flat = np.concatenate(X_true)
-    X_hat_flat  = np.concatenate(X_hat)
-
-    # erreurs
-    diff = X_true_flat - X_hat_flat
-    mse_total = float(np.mean(diff**2))
-    mae = float(np.mean(np.abs(diff)))
-    rmse = float(np.sqrt(mse_total))
+    x_true_flat       = np.concatenate(x_true)
+    x_hat_flat        = np.concatenate(x_hat)
+    errors_flat       = x_true_flat - x_hat_flat
+    mse_total         = float(np.mean(errors_flat**2))
+    mae               = float(np.mean(np.abs(errors_flat)))
+    rmse              = float(np.sqrt(mse_total))
 
     # NEES moyen (si P_list fourni)
-    nees_mean = None
-    if P_list is not None:
-        nees_vals = []
-        for e, P in zip([x_t - xh_t for x_t, xh_t in zip(X_true, X_hat)], P_list):
-            e = e.reshape(-1,1)
-            P = np.asarray(P)
-            try:
-                P_inv = np.linalg.inv(P)
-                nees_k = float(e.T @ P_inv @ e)
-                nees_vals.append(nees_k)
-            except np.linalg.LinAlgError:
-                # P singulière : on ignore
-                continue
-        if len(nees_vals) > 0:
-            nees_mean = float(np.mean(nees_vals))
+    
+    nees_all = np.zeros(errors.shape[0])
+    for k in range(errors.shape[0]):
+        ek = errors[k].reshape(-1, 1)   # colonne (2,1)
+        Pk = tab_cov[k]                 # (2,2)
+        try:
+            Pk_inv = np.linalg.inv(Pk)
+            nees_all[k] = float(ek.T @ Pk_inv @ ek)# scalaire
+        except np.linalg.LinAlgError:
+            # P singulière : on ignore
+            continue
+    nees_mean = np.mean(nees_all)
 
-    return mse_total, mae, rmse, nees_mean
+    return mse_total, list_mses_per_dim, mae, rmse, nees_mean
 
 
     

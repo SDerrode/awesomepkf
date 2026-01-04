@@ -11,6 +11,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
+# pour éviter l'info sur le symbol sigma dans le label de la figure
+import logging
+logging.getLogger("matplotlib").setLevel(logging.WARNING)
+
 from others.utils import compute_errors
 from others.plot_settings import *
 
@@ -92,9 +96,9 @@ class HistoryTracker:
     def compute_errors(self, ListeA, ListeB, ListeC):
         df = pd.DataFrame(self._history.copy())
         for a, b, c in zip(ListeA, ListeB, ListeC):
-            mse_total, mae, rmse, nees_mean = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy())
+            mse_total, list_mse_per_dim, mae, rmse, nees_mean = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy())
             # print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, rmse={rmse:.4f}, nees_mean={nees_mean:.4f}, mae={mae:.4f}")
-            print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, mae={mae:.4f}, nees_mean={nees_mean:.4f}")
+            print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, list_mse_per_dim={list_mse_per_dim}, mae={mae:.4f}, nees_mean={nees_mean:.4f}")
 
     # ------------------------------------------------------------------
     def plot(self, title, list_param, list_label, list_covar, window, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
@@ -148,13 +152,13 @@ class HistoryTracker:
                 y_lower   = df_subset[col_p] - 2.*np.sqrt(df_subset_var[col_e])
                 last_line = axes[j].lines[-1]       # dernière courbe tracée
                 color     = last_line.get_color()
-                axes[j].fill_between(df_subset.index, y_lower, y_upper, color=color, alpha=0.1, label=f'{list_label[k]} +/- 2*std')
-
+                axes[j].fill_between(df_subset.index, y_lower, y_upper, color=color, alpha=0.2, label=f'{list_label[k]} ± 2*'+r'$𝛔$')
+                axes[j].grid(True, linestyle="--", alpha=0.6)
         axes[-1].legend()
         axes[-1].set_xlim(window['xmin'], window['xmax']-1)
         axes[-1].set_xlabel('n')
         # axes[-1].set_xlabel(iter_key)
-        axes[-1].grid(True, linestyle="--", alpha=0.6)
+        
         axes[-1].xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
 
         if show:
