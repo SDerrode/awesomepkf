@@ -117,9 +117,9 @@ class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
         # y1     = y.flatten()[0]
         # u     = u.flatten()[0]
 
-        An = np.array([[a,            b*(1.-np.tanh(x2)**2), 0.],
-                       [d*np.cos(x1), c,                     0.],
-                       [d*np.cos(x1), c,                     0.]])
+        An = np.array([[self.a,            self.b*(1.-np.tanh(x2)**2), 0.],
+                       [self.d*np.cos(x1), self.c,                     0.],
+                       [self.d*np.cos(x1), self.c,                     0.]])
         Bn = np.array([[1., 0., 0.],
                        [0., 1., 0.],
                        [0., 1., 0.]])
