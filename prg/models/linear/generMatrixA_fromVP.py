@@ -8,7 +8,7 @@ if __name__ == "__main__":
     Q, _ = np.linalg.qr(np.random.randn(n, n))  # matrice orthogonale
 
     # Créer une matrice diagonale avec au moins une valeur propre > 1
-    eigenvalues = np.array([1.2, 0.5])  # 1.2 > 1
+    eigenvalues = np.array([0.85, 0.95])  # 1.2 > 1
     D = np.diag(eigenvalues)
 
     # Construire la matrice finale : A = Q D Q^T
