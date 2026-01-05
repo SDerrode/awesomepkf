@@ -21,7 +21,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python prg/simulateLinearData.py
-        python prg/simulateLinearData.py --verbose 0 --linearModelName A_mQ_x1_y1 --sKey 303 --dataFileName test.csv
+        python prg/simulateLinearData.py --N 1000 --verbose 0 --linearModelName A_mQ_x1_y1 --sKey 303 --dataFileName test.csv
     """
     
     # ------------------------------------------------------------------

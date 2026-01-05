@@ -38,7 +38,7 @@ def addParseToParser(parser, listOptions):
             'help': 'Set the random generator seed (default: None)'
         },
         'linearModelName': {
-            'choices': ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 
+            'choices': ['A_mQ_x1_y1', 'A_mQ_x2_y1_augmented', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x2_y2', 
                         'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1'],
             'default': 'A_mQ_x3_y1',
             'help': 'Linear model to process data (default: A_mQ_x3_y1)'
