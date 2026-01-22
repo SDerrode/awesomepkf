@@ -148,7 +148,7 @@ class HistoryTracker:
             df_subset[col_p].plot(ax=axes[j], label=list_label[k], alpha=0.5)
             if not 'None' in col_e:
                 # On dessine l'enveloppe
-                y_upper   = df_subset[col_p] + 2*np.sqrt(df_subset_var[col_e])
+                y_upper   = df_subset[col_p] + 2.*np.sqrt(df_subset_var[col_e])
                 y_lower   = df_subset[col_p] - 2.*np.sqrt(df_subset_var[col_e])
                 last_line = axes[j].lines[-1]       # dernière courbe tracée
                 color     = last_line.get_color()
@@ -158,8 +158,12 @@ class HistoryTracker:
         axes[-1].set_xlim(window['xmin'], window['xmax']-1)
         axes[-1].set_xlabel('n')
         # axes[-1].set_xlabel(iter_key)
-        
-        axes[-1].xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+
+        # Nettoyage explicite de l’axe partagé
+        axes[-1].minorticks_off()
+        axes[-1].xaxis.set_major_locator(mticker.MaxNLocator(nbins=5, integer=True))
+        # Optionnel mais très efficace
+        fig.canvas.draw_idle()
 
         if show:
             plt.show()

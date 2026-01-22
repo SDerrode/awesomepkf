@@ -72,6 +72,9 @@ class NonLinear_EPKF(NonLinear_PKF):
 
         while N is None or k < N:
             
+            # Required for Joseph form
+            PXXk_update = PXXkp1_update.copy()
+            
             Zkp1_predict  = g( np.vstack([Xkp1_update, ykp1]), np.zeros(shape=(self.dim_xy, 1)), self.dt)
             An, Bn        = jg(np.vstack([Xkp1_update, ykp1]), np.zeros(shape=(self.dim_xy, 1)), self.dt)
             Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
@@ -95,11 +98,21 @@ class NonLinear_EPKF(NonLinear_PKF):
 
             accel         = PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)
             Xkp1_update   = Xkp1_predict   + accel @ (ykp1 - Ykp1_predict)
-            PXXkp1_update = PXXkp1_predict - accel @ PYXkp1_predict
-
             # print(f'Xkp1_update={Xkp1_update}')
+            PXXkp1_update = PXXkp1_predict - accel @ PYXkp1_predict
             # print(f'PXXkp1_update={PXXkp1_update}')
-            # input('Atetnet')
+            # S = PYYkp1_predict
+            # K = PXYkp1_predict @ np.linalg.inv(S)
+            # PXXkp1_update = PXXkp1_predict - K @ PXYkp1_predict.T
+            # print(f'PXXkp1_update={PXXkp1_update}')
+            # PXXkp1_update = PXXkp1_predict - K @ S @ K.T
+            # print(f'PXXkp1_update={PXXkp1_update}')
+            # PXXkp1_update = PXXkp1_predict - K @ PXYkp1_predict.T - PXYkp1_predict @ K.T + K @ S @ K.T
+            # Q = Bn @ Bn.T
+            # PXXkp1_update = (An[0:self.dim_x, 0:self.dim_x] - K @ An[self.dim_x:self.dim_xy, 0:self.dim_x]) @ PXXk_update @ (An[0:self.dim_x, 0:self.dim_x] - K @ An[self.dim_x:self.dim_xy, 0:self.dim_x]).T \
+            #     +Q[0:self.dim_x, 0:self.dim_x] - K @ Q[0:self.dim_x, self.dim_x:self.dim_xy].T - Q[0:self.dim_x, self.dim_x:self.dim_xy] @ K.T + K @ Q[self.dim_x:self.dim_xy, self.dim_x:self.dim_xy] @ K.T
+            # print(f'PXXkp1_update={PXXkp1_update}')
+            # input('Attente')
 
             check_consistency(Pkp1_predict=Pkp1_predict, PXXkp1_update=PXXkp1_update)
 

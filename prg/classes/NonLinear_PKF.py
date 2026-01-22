@@ -57,7 +57,7 @@ class NonLinear_PKF:
         self._seed_gen = SeedGenerator(sKey)
 
         # Shortcuts
-        self.dim_x, self.dim_y, self.dim_xy = param.dim_x, param.dim_y, param.dim_xy
+        self.dim_x, self.dim_y, self.dim_xy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
 
        # Create HistoryTracker only if save_pickle is True
         self.save_pickle = save_pickle

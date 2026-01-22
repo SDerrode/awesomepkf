@@ -62,19 +62,6 @@ def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
 # ----------------------------------------------------------------------
 # MSE
 # ----------------------------------------------------------------------
-# def mse(x_true, x_hat) -> float:
-#     x_true_arr = np.asarray(x_true).ravel()
-#     x_hat_arr = np.asarray(x_hat).ravel()
-    
-#     if __debug__:
-#         if x_true_arr.shape != x_hat_arr.shape:
-#             raise ValueError(f"❌ Arrays must have the same shape : {x_true_arr.shape} vs {x_hat_arr.shape}")
-#     mse = np.mean((x_true_arr - x_hat_arr) ** 2)
-#     return float(np.sqrt(mse))
-
-
-# ------------------------------------------------------------------
-
 def compute_errors(x_true, x_hat, P_list=None):
     """
     Calcul MSE, MAE, RMSE et NEES moyen entre deux séquences d'états.
@@ -124,9 +111,8 @@ def compute_errors(x_true, x_hat, P_list=None):
     return mse_total, list_mses_per_dim, mae, rmse, nees_mean
 
 
-    
 # ----------------------------------------------------------------------
-# Lecture de fichiers inconnus
+# Lecture ribuste de fichiers de données
 # ----------------------------------------------------------------------
 
 def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose: int = 0) -> pd.DataFrame:
@@ -276,9 +262,9 @@ def check_equality(**kwargs: np.ndarray) -> None:
         logger.warning("⚠️ check_equality : need at least 2 matrices.")
         return
 
-    names = list(kwargs.keys())
+    names    = list(kwargs.keys())
     matrices = list(kwargs.values())
-    shapes = [m.shape for m in matrices]
+    shapes   = [m.shape for m in matrices]
     if __debug__ and len(set(shapes)) != 1:
         logger.warning(f"⚠️ Matrices are not identically shaped ! {shapes}")
         return
@@ -286,7 +272,7 @@ def check_equality(**kwargs: np.ndarray) -> None:
     ref       = matrices[0]
     ref       = np.asarray(ref, dtype=float)
     ref_name  = names[0]
-    tol       = 1e-10
+    tol       = 1e-12
     all_equal = True
 
     for name, M in zip(names[1:], matrices[1:]):

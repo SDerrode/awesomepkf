@@ -33,7 +33,7 @@ class BaseModelNonLinear:
         self.dim_xy     = dim_x + dim_y
 
         # UKF parameters
-        self.alpha     = 1e-3
+        self.alpha     = 0.25 # si on veut W_O^{(c)} faiblement négatif, on prend alpha entre 0.25 et 0.3
         self.beta      = 2.
         self.kappa     = 0.
 
