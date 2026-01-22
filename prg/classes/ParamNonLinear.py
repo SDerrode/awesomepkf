@@ -59,7 +59,7 @@ class ParamNonLinear:
 
         # Attribute initialization
         self.g   = kwargs['g']
-        
+
         self._mQ = np.array(kwargs['mQ'], dtype=float)
         if self._mQ.shape != (self.dim_xy, self.dim_xy):
             raise ValueError(f"⚠️ mQ doit être carrée de dimension ({self.dim_xy},{self.dim_xy})")
@@ -82,7 +82,7 @@ class ParamNonLinear:
         self.gamma   = np.sqrt(self.dim_x + self.lambda_)
         
         # EPKF specific parameters
-        self.jacobiens_g   = kwargs['jacobiens_g']
+        self.jacobiens_g = kwargs['jacobiens_g']
         
         # Check dimensions of all matrices
         if __debug__:

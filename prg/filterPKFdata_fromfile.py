@@ -97,12 +97,12 @@ if __name__ == "__main__":
                             list_label= ["Observations y"], \
                             list_covar = [None], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-                            window    = {'xmin':20, 'xmax': 120 }, \
+                            window    = {'xmin':0, 'xmax': 800 }, \
                             basename  = f'pkf_2_{linearModelName}_observations', show=False, base_dir=graph_dir)
             pkf_2.history.plot(title, 
                             list_param= ["xkp1"  , "Xkp1_update"], \
                             list_label= ["x true", "x estimated"], \
                             list_covar = [None, "PXXkp1_update"], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-                            window    = {'xmin':20, 'xmax': 120 }, \
+                            window    = {'xmin':0, 'xmax': 800 }, \
                             basename  = f'pkf_2_{linearModelName}', show=False, base_dir=graph_dir)

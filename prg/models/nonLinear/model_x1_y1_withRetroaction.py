@@ -39,7 +39,7 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         # (a,b,c,d) = (0.99,\;1.2,\;0.9,\;1.5)
         # Expected behaviour: persistent oscillations of moderate amplitude; nonlinear terms drive and sustain the cycles.
         # Numeric tips: choose \(x_0,y_0\) small but nonzero, \(\sigma\) very small (e.g.\ 0.005) to reveal deterministic oscillation, \(N\ge 300\).
-        self.mQ   = np.diag([0.1, 0.5]) # [0.5, 0.5] : Avec ce bruit le UPKF se perd, alors que le EKF suit a peu près
+        self.mQ  = np.array([[0.5, 0.2], [0.2, 0.5]]) #np.diag([0.1, 0.1, 0.]), np.diag([0.1, 0.5]) # [0.5, 0.5] : Avec ce bruit le UPKF se perd, alors que le EKF suit a peu près
         self.z00  = np.array([[0.], [0.]])
         self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5
         
