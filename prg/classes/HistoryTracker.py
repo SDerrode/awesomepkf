@@ -95,16 +95,15 @@ class HistoryTracker:
         return tracker
 
     # ------------------------------------------------------------------
-    def compute_errors(self, ListeA, ListeB, ListeC):
+    def compute_errors(self, ListeA, ListeB, ListeC, ListeD, ListeE):
         df = self.as_dataframe()
         
         from rich.pretty import Pretty
         from rich.console import Console
 
-        for a, b, c in zip(ListeA, ListeB, ListeC):
-            report = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy())
-            # print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, list_mses_per_dim={list_mses_per_dim}, mae={mae:.4f}, list_maes_per_dim={list_maes_per_dim}, nees_mean={nees_mean:.4f}")
-            print(f"ERROR ({a.ljust(16)}, {b.ljust(16)})")
+        for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
+            report = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), df[d].to_numpy(), df[e].to_numpy())
+            print(f"ERROR ({a}, {b})")
             console = Console()
             console.print(
                 Pretty(

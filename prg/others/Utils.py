@@ -63,7 +63,7 @@ def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
 # ----------------------------------------------------------------------
 # MSE
 # ----------------------------------------------------------------------
-def compute_errors(x_true, x_hat, P_list):
+def compute_errors(x_true, x_hat, P_list, i_list, S_list):
     """
     Calcul MSE, MAE, RMSE et NEES moyen entre deux séquences d'états.
     
@@ -97,29 +97,36 @@ def compute_errors(x_true, x_hat, P_list):
     # NEES moyen
     nees_all = np.zeros(errors.shape[0])
     for k in range(errors.shape[0]):
-        ek = errors[k].reshape(-1, 1)   # colonne (2,1)
-        # print(f'ek={ek}')
-        Pk = tab_cov[k]                 # (2,2)
-        # print(f'Pk={Pk}')
+        ek = errors[k].reshape(-1, 1)
+        Pk = tab_cov[k]
         try:
             Pk_inv = np.linalg.inv(Pk)
-            nees_all[k] = float(ek.T @ Pk_inv @ ek)# scalaire
-            # print(f'nees_all[k]={nees_all[k]}')
-            # tut= (ek[0]**2 * Pk_inv[0,0]).item()
-            # print(f'tut={tut}')
-            # input('attente')
-        except np.linalg.LinAlgError:
+            nees_all[k] = float(ek.T @ Pk_inv @ ek)
+        except:
             # print('P singulière : on ignore')
             # input('pause')
             continue
-        # print(f'Pk_inv={Pk_inv}')
-        # input('attente')
     nees_mean = np.mean(nees_all)
+    
+    # NIS moyen
+    nis_all = np.zeros(i_list.shape[0])
+    for k in range(i_list.shape[0]):
+        ik = i_list[k]
+        Sk = S_list[k]
+        try:
+            Sk_inv = np.linalg.inv(Sk)
+            nis_all[k] = float(ik.T @ Sk_inv @ ik)
+        except:
+            # print('P singulière : on ignore')
+            # input('pause')
+            continue
+    nis_mean = np.mean(nis_all)
     
     report = {
         "mse_total" : mse_total,
         "mae_total" : mae_total,
         "nees_mean" : nees_mean,
+        "nis_mean"  : nis_mean,
     }
     
     if dim_x>1:
@@ -127,7 +134,6 @@ def compute_errors(x_true, x_hat, P_list):
         report["list_maes_per_dim"] = list_maes_per_dim,
 
     return report
-    # return mse_total, list_mses_per_dim, mae_total, list_maes_per_dim, rmse, nees_mean
 
 
 # ----------------------------------------------------------------------

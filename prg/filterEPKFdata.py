@@ -81,13 +81,12 @@ if __name__ == "__main__":
             print(df.head())
 
         # print scoring
-        # ListeA = ['xkp1',           'xkp1']
-        # ListeB = ['Xkp1_predict',   'Xkp1_update']
-        # ListeC = ['PXXkp1_predict', 'PXXkp1_update']
         ListeA = ['xkp1']
         ListeB = ['Xkp1_update']
         ListeC = ['PXXkp1_update']
-        epkf_1.history.compute_errors(ListeA, ListeB, ListeC)
+        ListeD = ['ikp1']
+        ListeE = ['Skp1']
+        epkf_1.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
 
         # pickle storing and plots
         epkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_epfk_1.pkl"))

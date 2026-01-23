@@ -80,13 +80,12 @@ if __name__ == "__main__":
             
         # print scoring
         if listePKF[0][1] is not None:
-            # ListeA = ['xkp1',           'xkp1']
-            # ListeB = ['Xkp1_predict',   'Xkp1_update']
-            # ListeC = ['PXXkp1_predict', 'PXXkp1_update']
             ListeA = ['xkp1']
             ListeB = ['Xkp1_update']
             ListeC = ['PXXkp1_update']
-            pkf_2.history.compute_errors(ListeA, ListeB, ListeC)
+            ListeD = ['ikp1']
+            ListeE = ['Skp1']
+            pkf_2.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
 
         # pickle storing and plots
         pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
