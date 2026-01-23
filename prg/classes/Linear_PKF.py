@@ -24,7 +24,7 @@ from typing import Generator, Optional, Tuple
 import numpy as np
 
 # A few utils functions that are used several times
-from others.utils import check_consistency, check_equality
+from others.utils import check_consistency, diagnose_covariance, check_equality
 # Manage parameters for the PKF
 from classes.ParamLinear import ParamLinear
 # Keep trace of execution (all parameters at all iterations)
@@ -137,8 +137,7 @@ class Linear_PKF:
         if __debug__:
             if not ((isinstance(N, int) and N > 0) or N is None):
                 raise ValueError("sKey must be None or a number >0")
-        
-        # Data generator
+
         generator = data_generator if data_generator is not None else self._data_generation()
 
         # Short-cuts
@@ -148,10 +147,20 @@ class Linear_PKF:
         ###################
         k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
  
-        temp            = self.param.Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(self.param.Pz00[self.dim_x:, self.dim_x:])
-        Xkp1_update     = temp @ ykp1
-        PXXkp1_update   = self.param.Pz00[0:self.dim_x, 0:self.dim_x] - temp @ self.param.Pz00[self.dim_x:, 0:self.dim_x]
-        check_consistency(PXXkp1_update=PXXkp1_update)
+        # temp            = self.param.Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(self.param.Pz00[self.dim_x:, self.dim_x:])
+        # Xkp1_update     = temp @ ykp1
+        # PXXkp1_update   = self.param.Pz00[0:self.dim_x, 0:self.dim_x] - temp @ self.param.Pz00[self.dim_x:, 0:self.dim_x]
+        Xkp1_update       = xkp1
+        PXXkp1_update     = self.param.Pz00[0:self.dim_x, 0:self.dim_x] 
+        # print(f'PXXkp1_update={PXXkp1_update}')
+        # input('attente')
+        # check_consistency(PXXkp1_update=PXXkp1_update)
+        verdict, report = diagnose_covariance(PXXkp1_update)
+        if verdict != None:
+            print(f'PXXkp1_update={PXXkp1_update}')
+            print(f'report for PXXkp1_update - iteration k={k}:')
+            print(report)
+            input('attente')
 
         Xkp1_predict = np.zeros(shape=(self.dim_x, 1))
         if self.save_pickle and self._history is not None:
@@ -173,7 +182,6 @@ class Linear_PKF:
 
         ###################
         # The next ones
-
         temp2 = np.zeros(shape=(self.dim_xy, self.dim_xy))
         while N is None or k+1 < N:
             
@@ -183,23 +191,29 @@ class Linear_PKF:
             #######################################
             # Prediction
             #######################################
-            temp1 = np.vstack((Xkp1_update, ykp1)) # here ykp1 still gives the previous : it is yk indeed!
+            Xkp1_update_augmented = np.vstack([Xkp1_update, ykp1]) # here ykp1 still gives the previous : it is yk indeed!
             temp2[0:self.dim_x, 0:self.dim_x] = PXXkp1_update
 
             # Prediction
-            Zkp1_predict = A @ temp1
+            Zkp1_predict = A @ Xkp1_update_augmented
             Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x]) # 
             Pkp1_predict               = A @ temp2 @ A.T + mQ
+            # print(f'Zkp1_predict={Zkp1_predict}')
+            # print(f'Pkp1_predict={Pkp1_predict}')
+            # check_consistency(Pkp1_predict=Pkp1_predict)
+            verdict, report = diagnose_covariance(Pkp1_predict)
+            if verdict != None:
+                print(f'Pkp1_predict={Pkp1_predict}')
+                print(f'report for Pkp1_predict - iteration k={k}:')
+                print(report)
+                input('attente')
+            
             # Cutting Pkp1 into 4 blocks
             M_top, M_bottom                = np.vsplit(Pkp1_predict, [self.dim_x])
             PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,        [self.dim_x])
             PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom,     [self.dim_x])
 
-            #######################################
-            # Update with a new observation
-            #######################################
-            
-            # Get new observation from the data generator
+            # New data
             try:
                 k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
             except StopIteration:
@@ -219,12 +233,26 @@ class Linear_PKF:
             # Kalman gain
             Kkp1  = PXYkp1_predict @ np.linalg.inv(Skp1)
             # Updating expectation and variance, and variance in Joseph form
-            Xkp1_update   = Xkp1_predict + Kkp1 @ ikp1
+            Xkp1_update   = Xkp1_predict   + Kkp1 @ ikp1
             PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
             # Dans la forme de Joseph, j'utilise les sous-matrices de mQ, qui ne sont pas des matrices mais des ActiveView.
             # pour revenir à un forme np.ndarray, j'utilise l'opérateur value (méthode définie dans la classe ActiveView )
-            PXXkp1_update_Joseph =  (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value) @ PXXk_update @ (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value).T \
+            PXXkp1_update_Joseph = (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value) @ PXXk_update @ (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value).T \
                 + self.param.mQ_xx.value - Kkp1 @ self.param.mQ_yx.value - self.param.mQ_xy.value @ Kkp1.T + Kkp1 @ self.param.mQ_yy.value @ Kkp1.T
+
+            verdict, report = diagnose_covariance(PXXkp1_update)
+            if verdict != None:
+                print(f'PXXkp1_update={PXXkp1_update}')
+                print(f'report for PXXkp1_update - iteration k={k}:')
+                print(report)
+                input('attente')
+                
+            verdict, report = diagnose_covariance(PXXkp1_update_Joseph)
+            if verdict != None:
+                print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}')
+                print(f'report for PXXkp1_update_Joseph - iteration k={k}:')
+                print(report)
+                input('attente')
 
             Xkp1_update_phys   = Xkp1_update.copy()
             PXXkp1_update_phys = PXXkp1_update.copy()
@@ -254,8 +282,8 @@ class Linear_PKF:
                                      ikp1                 = ikp1.copy(),
                                      Skp1                 = Skp1.copy(),
                                      Kkp1                 = Kkp1.copy(),
-                                     Xkp1_update     = Xkp1_update.copy(),
-                                     PXXkp1_update   = PXXkp1_update.copy(),
+                                     Xkp1_update          = Xkp1_update.copy(),
+                                     PXXkp1_update        = PXXkp1_update.copy(),
                                      Xkp1_update_phys     = Xkp1_update_phys.copy(),
                                      PXXkp1_update_phys   = PXXkp1_update_phys.copy(),
                                      PXXkp1_update_Joseph = PXXkp1_update_Joseph.copy())
