@@ -28,7 +28,6 @@ if __name__ == "__main__":
     USAGES:
         python prg/filterEPKFdata_fromfile.py
         python prg/filterEPKFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --dataFileName testNL.csv
-        
     """
     
     # ------------------------------------------------------------------
@@ -112,13 +111,13 @@ if __name__ == "__main__":
                             list_label= ["Observations y"], \
                             list_covar = [None], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-                            window    = {'xmin': 0, 'xmax': 2000 }, \
+                            window    = {'xmin': 2300, 'xmax': 2500 }, \
                             basename  = f'epkf_2_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
             epkf_2.history.plot(title, 
                             list_param= ["xkp1"  , "Xkp1_update"], \
                             list_label= ["x true", "x estimated"], \
                             list_covar = [None, "PXXkp1_update"], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-                           window    = {'xmin': 0, 'xmax': 2000 }, \
+                            window    = {'xmin': 2300, 'xmax': 2500 }, \
                             basename  = f'epkf_2_{nonLinearModelName}', show=False, base_dir=graph_dir)
 

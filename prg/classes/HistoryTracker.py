@@ -6,6 +6,8 @@ import pickle
 import logging
 from typing import Any, Optional
 
+from rich import print
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -94,11 +96,23 @@ class HistoryTracker:
 
     # ------------------------------------------------------------------
     def compute_errors(self, ListeA, ListeB, ListeC):
-        df = pd.DataFrame(self._history.copy())
+        df = self.as_dataframe()
+        
+        from rich.pretty import Pretty
+        from rich.console import Console
+
         for a, b, c in zip(ListeA, ListeB, ListeC):
-            mse_total, list_mse_per_dim, mae, rmse, nees_mean = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy())
-            # print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, rmse={rmse:.4f}, nees_mean={nees_mean:.4f}, mae={mae:.4f}")
-            print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, list_mse_per_dim={list_mse_per_dim}, mae={mae:.4f}, nees_mean={nees_mean:.4f}")
+            report = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy())
+            # print(f"ERROR ({a.ljust(16)}, {b.ljust(16)}) : mse={mse_total:.4f}, list_mses_per_dim={list_mses_per_dim}, mae={mae:.4f}, list_maes_per_dim={list_maes_per_dim}, nees_mean={nees_mean:.4f}")
+            print(f"ERROR ({a.ljust(16)}, {b.ljust(16)})")
+            console = Console()
+            console.print(
+                Pretty(
+                    report,
+                    expand_all=True,
+                    indent_guides=True
+                )
+            )
 
     # ------------------------------------------------------------------
     def plot(self, title, list_param, list_label, list_covar, window, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
@@ -107,7 +121,7 @@ class HistoryTracker:
         Si show=False, chaque figure est sauvegardée dans base_dir.
         """
 
-        df = pd.DataFrame(self._history.copy()).iloc[window['xmin']:window['xmax']]
+        df = self.as_dataframe().iloc[window['xmin']:window['xmax']]
         assert not df.empty, "Aucune donnée enregistrée."
         for p in list_param:
             assert p in df.columns, f"'{p}' n'est pas une colonne connue : {list(df.columns)}"

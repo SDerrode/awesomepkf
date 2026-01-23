@@ -11,10 +11,11 @@ from __future__ import annotations
 
 from typing import Generator, Optional, Tuple
 import numpy as np
+from rich import print
 
 from classes.NonLinear_PKF import NonLinear_PKF
 # A few utils functions that are used several times
-from others.utils import check_consistency#, check_equality
+from others.utils import check_consistency, diagnose_covariance#, check_equality
 
 class NonLinear_UPKF(NonLinear_PKF):
     """Implementation of UPKF."""
@@ -67,6 +68,7 @@ class NonLinear_UPKF(NonLinear_PKF):
                 raise ValueError("N must be None or a number >0")
 
         generator = data_generator if data_generator is not None else self._data_generation()
+        
         # short-cuts
         Pz00, g, mQ = self.param._Pz00, self.param.g, self.param.mQ
 
@@ -80,7 +82,13 @@ class NonLinear_UPKF(NonLinear_PKF):
         PXXkp1_update     = Pz00[0:self.dim_x, 0:self.dim_x] 
         # print(f'PXXkp1_update={PXXkp1_update}')
         # input('attente')
-        check_consistency(PXXkp1_update=PXXkp1_update)
+        # check_consistency(PXXkp1_update=PXXkp1_update)
+        verdict, report = diagnose_covariance(PXXkp1_update)
+        if verdict != None:
+            print(f'PXXkp1_update={PXXkp1_update}')
+            print(f'report for PXXkp1_update - iteration k={k}:')
+            print(report)
+            input('attente')
 
         Xkp1_predict = np.zeros((self.dim_x, 1))
         if self.save_pickle and self._history is not None:
@@ -96,7 +104,7 @@ class NonLinear_UPKF(NonLinear_PKF):
 
         ###################
         # The next ones
-
+        accel_zero = np.zeros(shape=(self.dim_xy, 1))
         while N is None or k < N:
             # Sigma points
             # print(f'Xkp1_update={Xkp1_update}')
@@ -104,7 +112,7 @@ class NonLinear_UPKF(NonLinear_PKF):
             sigma = self._sigma_points(Xkp1_update, PXXkp1_update)
             # print(f'sigma[1]={sigma[1]}')
             
-            sigma_propag = [g(np.vstack((e, ykp1)), np.zeros((self.dim_xy, 1)), self.dt) for e in sigma]  # here ykp1 still gives the previous : it is yk indeed!
+            sigma_propag = [g(np.vstack((e, ykp1)), accel_zero, self.dt) for e in sigma]  # here ykp1 still gives the previous : it is yk indeed!
             # print(f'sigma_propag[1]={sigma_propag[1]}')
 
             Zkp1_predict = np.sum(self.Wm[:, None, None] * sigma_propag, axis=0)
@@ -115,51 +123,69 @@ class NonLinear_UPKF(NonLinear_PKF):
                 Pkp1_predict += self.Wc[i] * np.outer(diff, diff)
             # print(f'Zkp1_predict={Zkp1_predict}')
             # print(f'Pkp1_predict={Pkp1_predict}')
-            # input('tretretret')
-            check_consistency(Pkp1_predict=Pkp1_predict)
+            # check_consistency(Pkp1_predict=Pkp1_predict)
+            verdict, report = diagnose_covariance(Pkp1_predict)
+            if verdict != None:
+                print(f'Pkp1_predict={Pkp1_predict}')
+                print(f'report for Pkp1_predict - iteration k={k}:')
+                print(report)
+                input('attente')
 
             # Cutting Pkp1 into 4 blocks
             M_top, M_bottom                = np.vsplit(Pkp1_predict, [self.dim_x])
             PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,        [self.dim_x])
             PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom,     [self.dim_x])
-            
-            # print(f'PXYkp1_predict={PXYkp1_predict}')
-            # print(f'PYYkp1_predict={PYYkp1_predict}')
-            # input('pause')
 
+            # New data
             try:
                 k, (xkp1, ykp1) = next(generator)
             except StopIteration:
                 return # we stop as the data generator is stopped itself
 
-            accel         = PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)
-            Xkp1_update   = Xkp1_predict   + accel @ (ykp1 - Ykp1_predict)
+            ikp1          = ykp1 - Ykp1_predict
+            Skp1          = PYYkp1_predict
+            Kkp1          = PXYkp1_predict @ np.linalg.inv(Skp1)
+            Xkp1_update   = Xkp1_predict   + Kkp1 @ ikp1
             # forme non robuste numériquement
-            # PXXkp1_update = PXXkp1_predict - accel @ PYXkp1_predict
+            # PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
             # print(f'Xkp1_update={Xkp1_update}')
 
             # Forme de joseph, robuste numériquement
-            # PXXkp1_update = PXXkp1_predict - accel @ PYXkp1_predict
+            # PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
             # print(f'PXXkp1_update={PXXkp1_update}')
-            S             = PYYkp1_predict
-            K             = PXYkp1_predict @ np.linalg.inv(S)
-            # PXXkp1_update = PXXkp1_predict - K @ S @ K.T
+            
+            # PXXkp1_update = PXXkp1_predict - Kkp1 @ Skp1 @ Kkp1.T
             # print(f'PXXkp1_predict={PXXkp1_predict}')
-            # print(f'K @ S @ K.T={K @ S @ K.T}')
+            # print(f'Kkp1 @ Skp1 @ Kkp1.T={Kkp1 @ Skp1 @ Kkp1.T}')
             # print(f'PXXkp1_update={PXXkp1_update}')
-            PXXkp1_update = PXXkp1_predict - K @ PXYkp1_predict.T - PXYkp1_predict @ K.T + K @ S @ K.T
+            PXXkp1_update = PXXkp1_predict - Kkp1 @ PXYkp1_predict.T - PXYkp1_predict @ Kkp1.T + Kkp1 @ Skp1 @ Kkp1.T
             # print(f'PXXkp1_update={PXXkp1_update}')
-            # input('attente')
-
-            check_consistency(PXXkp1_update=PXXkp1_update)
-
+            verdict, report = diagnose_covariance(PXXkp1_update)
+            if verdict != None:
+                print(f'PXXkp1_update={PXXkp1_update}')
+                print(f'report for PXXkp1_update - iteration k={k}:')
+                print(report)
+                input('attente')
+                
             if self.save_pickle and self._history is not None:
                 self._history.record(iter           = k,
                                      xkp1           = xkp1.copy() if xkp1 is not None else None,
                                      ykp1           = ykp1.copy(),
                                      Xkp1_predict   = Xkp1_predict.copy(),
                                      PXXkp1_predict = PXXkp1_predict.copy(),
+                                     ikp1           = ikp1.copy(),
+                                     Skp1           = Skp1.copy(),
+                                     Kkp1           = Kkp1.copy(),
                                      Xkp1_update    = Xkp1_update.copy(),
                                      PXXkp1_update  = PXXkp1_update.copy())
+            # if k>=2382 and k<2390:
+            #     print(self._history.last())
+            #     print(f'sigma_propag[1]={sigma_propag[1]}')
+            #     verdict, report = diagnose_covariance(PXXkp1_update)
+            #     if verdict != None:
+            #       print(f'PXXkp1_update={PXXkp1_update}')
+            #       print(f'report for PXXkp1_update - iteration k={k}:')
+            #       print(report)
+            #       input('attente')
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update

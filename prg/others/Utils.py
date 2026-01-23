@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import logging
 import numpy as np
+np.set_printoptions(precision=4, suppress=True)
 import pandas as pd
 import csv
 import chardet
@@ -62,14 +63,14 @@ def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
 # ----------------------------------------------------------------------
 # MSE
 # ----------------------------------------------------------------------
-def compute_errors(x_true, x_hat, P_list=None):
+def compute_errors(x_true, x_hat, P_list):
     """
     Calcul MSE, MAE, RMSE et NEES moyen entre deux séquences d'états.
     
     x_true, x_hat : listes ou colonnes pandas où chaque élément est un array (n,1) ou (n,)
-    P_list : liste ou ndarray de matrices covariance (n,n) pour chaque instant (facultatif)
+    P_list : liste ou ndarray de matrices covariance (n,n) pour chaque instant
     
-    Retour : tuple (mse_total, list_mses_per_dim, mae, rmse, nees_mean) 
+    Retour : dictionary with several error measures
     """
 
     # Conversion en tableaux 
@@ -77,42 +78,60 @@ def compute_errors(x_true, x_hat, P_list=None):
     x_hat   = np.hstack(x_hat).T       # on empile horizontalement puis on transpose
     tab_cov = np.stack(P_list, axis=0) # empile le long du premier axe
 
-    # Calcul de la MSE par colonne
-    errors  = x_true - x_hat  # forme (1000, 2)
-    list_mses_per_dim = np.mean(errors**2, axis=0)
-    # print(errors)
-    # print('max=', np.max(errors[:, 0]))
-    # print('arg max=', np.argmax(errors[:, 0]))
-    # print("MSE par colonne :", mse_col)
-    # exit(1)
-
     # concaténer pour calcul global
-    x_true_flat       = np.concatenate(x_true)
-    x_hat_flat        = np.concatenate(x_hat)
-    errors_flat       = x_true_flat - x_hat_flat
-    mse_total         = float(np.mean(errors_flat**2))
-    mae               = float(np.mean(np.abs(errors_flat)))
-    rmse              = float(np.sqrt(mse_total))
+    x_true_flat = np.concatenate(x_true)
+    x_hat_flat  = np.concatenate(x_hat)
+    errors_flat = x_true_flat - x_hat_flat
+    mse_total   = float(np.mean(errors_flat**2))
+    mae_total   = float(np.mean(np.abs(errors_flat)))
+    rmse        = float(np.sqrt(mse_total))
 
-    # NEES moyen (si P_list fourni)
-    
+    # Calcul de la MSE et MAE par colonne si nb colone > 1
+    errors  = x_true - x_hat  # forme (1000, 2)
+    # nb de colonnes
+    dim_x = errors.shape[1]
+    if dim_x>1:
+        list_mses_per_dim = np.mean(errors**2,      axis=0)
+        list_maes_per_dim = np.mean(np.abs(errors), axis=0)
+
+    # NEES moyen
     nees_all = np.zeros(errors.shape[0])
     for k in range(errors.shape[0]):
         ek = errors[k].reshape(-1, 1)   # colonne (2,1)
+        # print(f'ek={ek}')
         Pk = tab_cov[k]                 # (2,2)
+        # print(f'Pk={Pk}')
         try:
             Pk_inv = np.linalg.inv(Pk)
             nees_all[k] = float(ek.T @ Pk_inv @ ek)# scalaire
+            # print(f'nees_all[k]={nees_all[k]}')
+            # tut= (ek[0]**2 * Pk_inv[0,0]).item()
+            # print(f'tut={tut}')
+            # input('attente')
         except np.linalg.LinAlgError:
-            # P singulière : on ignore
+            # print('P singulière : on ignore')
+            # input('pause')
             continue
+        # print(f'Pk_inv={Pk_inv}')
+        # input('attente')
     nees_mean = np.mean(nees_all)
+    
+    report = {
+        "mse_total" : mse_total,
+        "mae_total" : mae_total,
+        "nees_mean" : nees_mean,
+    }
+    
+    if dim_x>1:
+        report["list_mses_per_dim"] = list_mses_per_dim,
+        report["list_maes_per_dim"] = list_maes_per_dim,
 
-    return mse_total, list_mses_per_dim, mae, rmse, nees_mean
+    return report
+    # return mse_total, list_mses_per_dim, mae_total, list_maes_per_dim, rmse, nees_mean
 
 
 # ----------------------------------------------------------------------
-# Lecture ribuste de fichiers de données
+# Lecture robuste de fichiers de données
 # ----------------------------------------------------------------------
 
 def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose: int = 0) -> pd.DataFrame:
@@ -254,6 +273,7 @@ def check_consistency(**kwargs: np.ndarray) -> None:
         for name, M in kwargs.items():
             is_covariance(M, name)
 
+
 # ----------------------------------------------------------------------
 # Vérification égalité de matrices
 # ----------------------------------------------------------------------
@@ -286,3 +306,92 @@ def check_equality(**kwargs: np.ndarray) -> None:
         logger.warning("⚠️ Some matrices are different — see messages above.")
         if __debug__:
             input("Waiting for you!")
+
+
+def diagnose_covariance(
+    P,
+    cond_warn    = 1e8,
+    cond_fail    = 1e12,
+    eig_tol      = 1e-15,
+    symmetry_tol = 1e-15,
+):
+    """
+    Diagnostic numérique d'une matrice de covariance.
+
+    Returns
+    -------
+    report : dict
+        Diagnostic détaillé avec indicateurs et verdicts.
+    """
+
+    P = np.asarray(P)
+    n = P.shape[0]
+
+    report = {}
+
+    # 1) Symétrie
+    sym_err = np.linalg.norm(P - P.T, ord='fro')
+    report["symmetry_error"] = sym_err
+    report["is_symmetric"] = sym_err < symmetry_tol
+
+    # 2) Valeurs propres (matrice symétrique → eigh)
+    eigvals = np.linalg.eigvalsh(P)
+    lam_min = eigvals.min()
+    lam_max = eigvals.max()
+
+    report["eigenvalues"] = eigvals
+    report["lambda_min"] = lam_min
+    report["lambda_max"] = lam_max
+    report["is_psd"] = lam_min >= -eig_tol
+    report["near_singular"] = lam_min < eig_tol
+
+    # 3) Nombre de condition (norme 2)
+    try:
+        cond = np.linalg.cond(P)
+    except np.linalg.LinAlgError:
+        cond = np.inf
+
+    report["condition_number"] = cond
+    report["ill_conditioned"] = cond > cond_warn
+    report["numerically_singular"] = cond > cond_fail
+
+    # 4) Stabilité de l'inversion
+    inv_residual = None
+    try:
+        P_inv = np.linalg.inv(P)
+        I_approx = P @ P_inv
+        inv_residual = np.linalg.norm(
+            I_approx - np.eye(n), ord='fro'
+        )
+    except np.linalg.LinAlgError:
+        inv_residual = np.inf
+
+    report["inverse_residual"] = inv_residual
+
+    # 5) Cholesky (test pratique clé)
+    try:
+        np.linalg.cholesky(P)
+        chol_ok = True
+    except np.linalg.LinAlgError:
+        chol_ok = False
+
+    report["cholesky_ok"] = chol_ok
+
+    # Verdict global
+    if not report["is_symmetric"]:
+        verdict = "❌ Non symétrique (bug numérique)"
+    elif not report["is_psd"]:
+        verdict = "❌ Pas PSD (covariance invalide)"
+    elif not chol_ok:
+        verdict = "🚨 Cholesky échoue (quasi-singulière)"
+    elif report["numerically_singular"]:
+        verdict = "🚨 Numériquement singulière"
+    elif report["ill_conditioned"]:
+        verdict = "⚠️ Mal conditionnée"
+    else:
+        verdict = None
+
+    report["verdict"] = verdict
+
+    return verdict, report
+
