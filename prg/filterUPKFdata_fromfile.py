@@ -94,7 +94,7 @@ if __name__ == "__main__":
     if traceplot and upkf_2.history is not None:
         df = upkf_2.history.as_dataframe()
         if verbose > 0:
-            print("\nExtract of the filtering with UPKF :")
+            print("\nExcerpt of the filtering with UPKF :")
             print(df.head())
 
         # print scoring
@@ -107,7 +107,7 @@ if __name__ == "__main__":
             upkf_2.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
 
         # pickle storing and plots
-        upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upfk_2.pkl"))
+        upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upkf_2.pkl"))
         if listeUPKF[0][1] is not None:
             title = f"'{nonLinearModelName}' model data filtered with UPKF"
             upkf_2.history.plot(title, 

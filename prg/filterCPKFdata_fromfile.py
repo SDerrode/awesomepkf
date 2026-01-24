@@ -4,17 +4,14 @@
 import os
 import numpy as np
 
-import os
-import numpy as np
-
 # non linear models 
 from models.nonLinear import ModelFactoryNonLinear
 # Linear models
 from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
 from others.utils import compute_errors, file_data_generator
-# Manage algorithms for non linear EPKF
-from classes.NonLinear_EPKF import NonLinear_EPKF
+# Manage algorithms for non linear CPKF
+from classes.NonLinear_CPKF import NonLinear_CPKF
 # Manage algorithms for the PKF
 from classes.Linear_PKF import Linear_PKF
 # Manage non linear and linear parameters
@@ -26,25 +23,33 @@ from others.parser    import *
 if __name__ == "__main__":
     """
     USAGES:
-        python prg/filterEPKFdata_fromfile.py
-        python prg/filterEPKFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --dataFileName testNL.csv
+        python prg/filterCPKFdata_fromfile.py
+        python prg/filterCPKFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --dataFileName testNL.csv
     """
-    
+
     # ------------------------------------------------------------------
     # Constants (default value) - Parser
     # ------------------------------------------------------------------
 
-    parser = argparse.ArgumentParser(description='Filter non linear data from file with EPKF')
-    addParseToParser(parser, ['nonLinearModelName', 'dataFileName'])
+    parser = argparse.ArgumentParser(description='Filter non linear data from file with CPKF')
+    addParseToParser(parser, ['nonLinearModelName', 'dataFileName', 'N', 'sKey', 'withoutX'])
     args   = parser.parse_args()
-
+    
     traceplot          = args.traceplot
     verbose            = args.verbose
+    withoutX           = args.withoutX # If True : true X will not be stored in the file
+    N                  = args.N
+    sKey               = args.sKey   # Int>0 or None (so that it is generated automatically)
     nonLinearModelName = args.nonLinearModelName
     dataFileName       = args.dataFileName
     if dataFileName == None:
-        dataFileName = f"dataLinear_{nonLinearModelName}.csv"
-
+        dataFileName = f"dataNonLinear_{nonLinearModelName}.csv"
+    if sKey is not None and sKey < 0:
+        parser.error("sKey must be >= 0")
+    if N < 200:
+        parser.error("N must be >= 200")
+    # exit(1)
+    
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
     # ------------------------------------------------------------------
@@ -57,7 +62,7 @@ if __name__ == "__main__":
     os.makedirs(graph_dir,    exist_ok=True)
 
     # ------------------------------------------------------------------
-    # Test parameters Chose a linear or a non linear model by commenting
+    # Test parameters. Chose a linear or a non linear model by commenting
     # ------------------------------------------------------------------
 
     model        = ModelFactoryNonLinear.create(nonLinearModelName)
@@ -79,44 +84,45 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     if verbose > 0:
-        print("\nEPKF filtering with data generated from a file with data... ")
+        print("\nCPKF filtering with data generated from a file with data...")
 
-    epkf_2    = NonLinear_EPKF(param, save_pickle=traceplot, verbose=verbose)
+    cpkf_2    = NonLinear_CPKF(param, save_pickle=traceplot, verbose=verbose)
     filename  = os.path.join(datafile_dir, dataFileName)
-    listeEPKF = epkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
-    N = listeEPKF[-1][0] + 1
+    listeCPKF = cpkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
+    N = listeCPKF[-1][0]+1
 
-    if traceplot and epkf_2.history is not None:
-        df = epkf_2.history.as_dataframe()
+    if traceplot and cpkf_2.history is not None:
+        df = cpkf_2.history.as_dataframe()
         if verbose > 0:
-            print("\nExcerpt of the filtering with EPKF :")
+            print("\nExcerpt of the filtering with CPKF :")
             print(df.head())
 
         # print scoring
-        if listeEPKF[0][1] is not None:
+        if listeCPKF[0][1] is not None:
             ListeA = ['xkp1']
             ListeB = ['Xkp1_update']
             ListeC = ['PXXkp1_update']
             ListeD = ['ikp1']
             ListeE = ['Skp1']
-            epkf_2.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
+            cpkf_2.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
 
         # pickle storing and plots
-        epkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_epfk_2.pkl"))
-        if listeEPKF[0][1] is not None:
-            title = f"'{nonLinearModelName}' model data filtered with EPKF"
-            epkf_2.history.plot(title, 
+        cpkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_cpkf_2.pkl"))
+        if listeCPKF[0][1] is not None:
+            title = f"'{nonLinearModelName}' model data filtered with CPKF"
+            cpkf_2.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \
                             list_covar = [None], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
                             window    = {'xmin': 2300, 'xmax': 2500 }, \
-                            basename  = f'epkf_2_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
-            epkf_2.history.plot(title, 
+                            basename  = f'cpkf_2_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
+            cpkf_2.history.plot(title, 
                             list_param= ["xkp1"  , "Xkp1_update"], \
                             list_label= ["x true", "x estimated"], \
                             list_covar = [None, "PXXkp1_update"], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
                             window    = {'xmin': 2300, 'xmax': 2500 }, \
-                            basename  = f'epkf_2_{nonLinearModelName}', show=False, base_dir=graph_dir)
+                            # window    = {'xmin':8180, 'xmax': 8220 }, \
+                            basename  = f'cpkf_2_{nonLinearModelName}', show=False, base_dir=graph_dir)
 

@@ -75,7 +75,7 @@ if __name__ == "__main__":
     if traceplot and pkf_2.history is not None:
         df = pkf_2.history.as_dataframe()
         if verbose > 0:
-            print("\nExtract of the filtering with PKF :")
+            print("\nExcerpt of the filtering with PKF :")
             print(df.head())
             
         # print scoring

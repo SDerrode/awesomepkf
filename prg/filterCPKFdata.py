@@ -8,8 +8,8 @@ import numpy as np
 from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
 from others.utils import compute_errors
-# Manage algorithms for the UPKF
-from classes.NonLinear_UPKF import NonLinear_UPKF
+# Manage algorithms for the CPKF
+from classes.NonLinear_CPKF import NonLinear_CPKF
 # Manage non linear parameters
 from classes.ParamNonLinear import ParamNonLinear
 # Parser d'options
@@ -18,15 +18,15 @@ from others.parser    import *
 if __name__ == "__main__":
     """
     USAGES:
-        python prg/filterUPKFdata.py
-        python prg/filterUPKFdata.py --N 1000 --nonLinearModelName x1_y1_withRetroactions --sKey 303 --verbose 0 --traceplot
+        python prg/filterCPKFdata.py
+        python prg/filterCPKFdata.py --N 1000 --nonLinearModelName x1_y1_withRetroactions --sKey 303 --verbose 0 --traceplot
     """
 
     # ------------------------------------------------------------------
     # Constants (default value) - Parser
     # ------------------------------------------------------------------
 
-    parser = argparse.ArgumentParser(description='Simulate and filter non linear data with UPKF')
+    parser = argparse.ArgumentParser(description='Simulate and filter non linear data with CPKF')
     addParseToParser(parser, ['nonLinearModelName', 'N', 'sKey'])
     args   = parser.parse_args()
     
@@ -70,14 +70,14 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     if verbose > 0:
-        print("\nUPKF filtering with data generated from a non-linear model...")
-    upkf_1    = NonLinear_UPKF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
-    listeUPKF = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
+        print("\CPKF filtering with data generated from a non-linear model...")
+    cpkf_1    = NonLinear_CPKF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
+    listeCPKF = cpkf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
-    if traceplot and upkf_1.history is not None:
-        df = upkf_1.history.as_dataframe()
+    if traceplot and cpkf_1.history is not None:
+        df = cpkf_1.history.as_dataframe()
         if verbose > 0:
-            print("\nExtract of the resulting filtering with UPKF :")
+            print("\nExtract of the resulting filtering with CPKF :")
             print(df.head())
 
         # print scoring
@@ -86,24 +86,24 @@ if __name__ == "__main__":
         ListeC = ['PXXkp1_update']
         ListeD = ['ikp1']
         ListeE = ['Skp1']
-        upkf_1.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
+        cpkf_1.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
 
         # pickle storing and plots
-        upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upkf_1.pkl"))
-        title = f"'{nonLinearModelName}' model data filtered with UPKF"
+        cpkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_cpkf_1.pkl"))
+        title = f"'{nonLinearModelName}' model data filtered with CPKF"
         # Les observations
-        upkf_1.history.plot(title, 
+        cpkf_1.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \
                             list_covar = [None], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
                             window    = {'xmin':20, 'xmax': 120 }, \
-                            basename  = f'upkf_1_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
-        upkf_1.history.plot(title, 
+                            basename  = f'cpkf_1_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
+        cpkf_1.history.plot(title, 
                             list_param= ["xkp1"  , "Xkp1_update"], \
                             list_label= ["x true", "x estimated"], \
                             list_covar = [None, "PXXkp1_update"], \
                             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
                             window    = {'xmin':20, 'xmax': 120 }, \
-                            basename  = f'upkf_1_{nonLinearModelName}', show=False, base_dir=graph_dir)
+                            basename  = f'cpkf_1_{nonLinearModelName}', show=False, base_dir=graph_dir)
 
