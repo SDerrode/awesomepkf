@@ -19,7 +19,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python prg/filterUPKFdata.py
-        python prg/filterUPKFdata.py --N 1000 --nonLinearModelName x1_y1_withRetroactions --sKey 303 --verbose 0 --traceplot
+        python prg/filterUPKFdata.py --N 1000 --nonLinearModelName x1_y1_withRetroactions --sKey 303  --sigmaSet wan2000 --verbose 0 --traceplot
     """
 
     # ------------------------------------------------------------------
@@ -27,10 +27,11 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     parser = argparse.ArgumentParser(description='Simulate and filter non linear data with UPKF')
-    addParseToParser(parser, ['nonLinearModelName', 'N', 'sKey'])
+    addParseToParser(parser, ['nonLinearModelName', 'N', 'sKey', 'sigmaSet'])
     args   = parser.parse_args()
     
     traceplot          = args.traceplot
+    sigmaSet           = args.sigmaSet
     verbose            = args.verbose
     N                  = args.N
     sKey               = args.sKey 
@@ -71,7 +72,7 @@ if __name__ == "__main__":
 
     if verbose > 0:
         print("\nUPKF filtering with data generated from a non-linear model...")
-    upkf_1    = NonLinear_UPKF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
+    upkf_1    = NonLinear_UPKF(sigmaSet, param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
     listeUPKF = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
     if traceplot and upkf_1.history is not None:

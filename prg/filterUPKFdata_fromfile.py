@@ -24,7 +24,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python prg/filterUPKFdata_fromfile.py
-        python prg/filterUPKFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --dataFileName testNL.csv
+        python prg/filterUPKFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --sigmaSet wan2000 --dataFileName testNL.csv
     """
 
     # ------------------------------------------------------------------
@@ -32,10 +32,11 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     parser = argparse.ArgumentParser(description='Filter non linear data from file with UPKF')
-    addParseToParser(parser, ['nonLinearModelName', 'dataFileName', 'N', 'sKey', 'withoutX'])
+    addParseToParser(parser, ['nonLinearModelName', 'dataFileName', 'N', 'sKey', 'withoutX', 'sigmaSet'])
     args   = parser.parse_args()
     
     traceplot          = args.traceplot
+    sigmaSet           = args.sigmaSet
     verbose            = args.verbose
     withoutX           = args.withoutX # If True : true X will not be stored in the file
     N                  = args.N
@@ -86,7 +87,7 @@ if __name__ == "__main__":
     if verbose > 0:
         print("\nUPKF filtering with data generated from a file with data...")
 
-    upkf_2    = NonLinear_UPKF(param, save_pickle=traceplot, verbose=verbose)
+    upkf_2    = NonLinear_UPKF(sigmaSet, param, save_pickle=traceplot, verbose=verbose)
     filename  = os.path.join(datafile_dir, dataFileName)
     listeUPKF = upkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
     N = listeUPKF[-1][0]+1

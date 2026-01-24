@@ -17,11 +17,33 @@ from classes.NonLinear_PKF import NonLinear_PKF
 # A few utils functions that are used several times
 from others.utils import check_consistency, diagnose_covariance#, check_equality
 
+# XX.py
+from classes.SigmaPointsSet import SigmaPointsSet
+
+class FilterConfig:
+    def __init__(self, sigma_point_set, dim_x, param):
+        self.sigma_point_set = sigma_point_set
+        self.dim_x = dim_x
+        self.param = param
+
+    def create_sigma_point_set(self) -> SigmaPointsSet:
+        try:
+            cls = SigmaPointsSet.registry[self.sigma_point_set]
+        except KeyError:
+            raise ValueError(
+                f"Jeu de sigma-points inconnu '{self.sigma_point_set}'. "
+                f"Disponibles : {list(SigmaPointsSet.registry.keys())}"
+            )
+
+        return cls(dim_x=self.dim_x, param=self.param)
+
+
 class NonLinear_UPKF(NonLinear_PKF):
     """Implementation of UPKF."""
 
     def __init__(
         self,
+        sigma_point_set: str,
         param,
         sKey: Optional[int] = None,
         save_pickle: bool = False,
@@ -30,24 +52,27 @@ class NonLinear_UPKF(NonLinear_PKF):
 
         super().__init__(param, sKey, save_pickle, verbose)
 
-        # Mean weights Wm, and correlation weights Wc
-        self.Wm = np.full(2 * self.dim_x + 1, 1. / (2. * (self.dim_x + self.param.lambda_)))
-        self.Wc = np.copy(self.Wm)
-        self.Wm[0] = self.param.lambda_ / (self.dim_x + self.param.lambda_)
-        self.Wc[0] = self.param.lambda_ / (self.dim_x + self.param.lambda_) + (1. - self.param.alpha**2 + self.param.beta)
-        # print(f'self.Wm={self.Wm}')
-        # print(f'self.Wc={self.Wc}')
-        # input('PARAM4')
+        self.sigma_point_set = sigma_point_set
+
+        cfg = FilterConfig(
+            sigma_point_set = self.sigma_point_set,
+            dim_x           = self.param.dim_x,
+            param           = self.param
+        )
+
+        self.sigma_point_set_obj = cfg.create_sigma_point_set()
 
 
-    def _sigma_points(self, x: np.ndarray, P: np.ndarray) -> np.ndarray:
-        """Generate the 2*dim_x+1 sigma points around x"""
-        A = np.linalg.cholesky(P)
-        sigma = [x]
-        for i in range(self.dim_x):
-            sigma.append(x + self.param.gamma * A[:, i].reshape(-1,1))
-            sigma.append(x - self.param.gamma * A[:, i].reshape(-1,1))
-        return np.array(sigma)
+    def create_sigma_point_set(self) -> SigmaPointsSet:
+        try:
+            cls = SigmaPointsSet.registry[self.sigma_point_set]
+        except KeyError:
+            raise ValueError(
+                f"Jeu de sigma-points inconnu '{self.sigma_point_set}'. "
+                f"Disponibles : {list(SigmaPointsSet.registry.keys())}"
+            )
+
+        return cls(dim_x=self.dim_x)
 
     def process_nonlinearfilter(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
         """
@@ -99,18 +124,19 @@ class NonLinear_UPKF(NonLinear_PKF):
             # Sigma points
             # print(f'Xkp1_update={Xkp1_update}')
             # print(f'PXXkp1_update={PXXkp1_update}')
-            sigma = self._sigma_points(Xkp1_update, PXXkp1_update)
+            
+            sigma = self.sigma_point_set_obj._sigma_point(Xkp1_update, PXXkp1_update)
             # print(f'sigma[1]={sigma[1]}')
             
             sigma_propag = [g(np.vstack((e, ykp1)), accel_zero, self.dt) for e in sigma]  # here ykp1 still gives the previous : it is yk indeed!
             # print(f'sigma_propag[1]={sigma_propag[1]}')
 
-            Zkp1_predict = np.sum(self.Wm[:, None, None] * sigma_propag, axis=0)
+            Zkp1_predict = np.sum(self.sigma_point_set_obj.Wm[:, None, None] * sigma_propag, axis=0)
             Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
             Pkp1_predict = mQ.copy()
-            for i in range(len(sigma_propag)):
+            for i in range(self.sigma_point_set_obj.nbSigmaPoint):
                 diff = sigma_propag[i] - Zkp1_predict
-                Pkp1_predict += self.Wc[i] * np.outer(diff, diff)
+                Pkp1_predict += self.sigma_point_set_obj.Wc[i] * np.outer(diff, diff)
             # print(f'Zkp1_predict={Zkp1_predict}')
             # print(f'Pkp1_predict={Pkp1_predict}')
             # check_consistency(Pkp1_predict=Pkp1_predict)
@@ -132,10 +158,10 @@ class NonLinear_UPKF(NonLinear_PKF):
             except StopIteration:
                 return # we stop as the data generator is stopped itself
 
-            ikp1          = ykp1 - Ykp1_predict
-            Skp1          = PYYkp1_predict
-            Kkp1          = PXYkp1_predict @ np.linalg.inv(Skp1)
-            Xkp1_update   = Xkp1_predict   + Kkp1 @ ikp1
+            ikp1        = ykp1 - Ykp1_predict
+            Skp1        = PYYkp1_predict
+            Kkp1        = PXYkp1_predict @ np.linalg.inv(Skp1)
+            Xkp1_update = Xkp1_predict   + Kkp1 @ ikp1
             # forme non robuste numériquement
             # PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
             # print(f'Xkp1_update={Xkp1_update}')
