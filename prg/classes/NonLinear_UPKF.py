@@ -29,20 +29,12 @@ class NonLinear_UPKF(NonLinear_PKF):
     ) -> None:
 
         super().__init__(param, sKey, save_pickle, verbose)
-        
-        # print(self.param.alpha)
-        # print(self.param.beta)
-        # print(self.param.kappa)
-        # print(self.param.lambda_)
-        # print(self.param.gamma)
-        
 
         # Mean weights Wm, and correlation weights Wc
         self.Wm = np.full(2 * self.dim_x + 1, 1. / (2. * (self.dim_x + self.param.lambda_)))
         self.Wc = np.copy(self.Wm)
         self.Wm[0] = self.param.lambda_ / (self.dim_x + self.param.lambda_)
         self.Wc[0] = self.param.lambda_ / (self.dim_x + self.param.lambda_) + (1. - self.param.alpha**2 + self.param.beta)
-        
         # print(f'self.Wm={self.Wm}')
         # print(f'self.Wc={self.Wc}')
         # input('PARAM4')
@@ -51,12 +43,10 @@ class NonLinear_UPKF(NonLinear_PKF):
     def _sigma_points(self, x: np.ndarray, P: np.ndarray) -> np.ndarray:
         """Generate the 2*dim_x+1 sigma points around x"""
         A = np.linalg.cholesky(P)
-        sigma: list[np.ndarray] = [x]
+        sigma = [x]
         for i in range(self.dim_x):
             sigma.append(x + self.param.gamma * A[:, i].reshape(-1,1))
             sigma.append(x - self.param.gamma * A[:, i].reshape(-1,1))
-        # print(f'x={x}')
-        # print(f'sigma[0]={sigma[0]}')
         return np.array(sigma)
 
     def process_nonlinearfilter(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
@@ -118,7 +108,7 @@ class NonLinear_UPKF(NonLinear_PKF):
             Zkp1_predict = np.sum(self.Wm[:, None, None] * sigma_propag, axis=0)
             Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
             Pkp1_predict = mQ.copy()
-            for i in range(2*self.dim_x+1):
+            for i in range(len(sigma_propag)):
                 diff = sigma_propag[i] - Zkp1_predict
                 Pkp1_predict += self.Wc[i] * np.outer(diff, diff)
             # print(f'Zkp1_predict={Zkp1_predict}')
