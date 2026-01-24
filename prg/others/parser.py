@@ -43,6 +43,11 @@ def addParseToParser(parser, listOptions):
             'default': 'A_mQ_x3_y1',
             'help': 'Linear model to process data (default: A_mQ_x3_y1)'
         },
+        'sigmaSet': {
+            'choices': ['wan2000', 'cpkf', 'lerner2002'],
+            'default': 'wan2000',
+            'help': 'Sigma set points to use with UPKF (default: wan2000)'
+        },
         'nonLinearModelName': {
             'choices': ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 
                         'x1_y1_withRetroactions', 'x2_y1_withRetroactions_augmented', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations'],
