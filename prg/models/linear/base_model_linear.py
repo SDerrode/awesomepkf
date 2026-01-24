@@ -49,7 +49,7 @@ class BaseModelLinear:
             return {'g': self.g, 'dim_x':self.dim_x, 'dim_y':self.dim_y, 'sxx':self.sxx, \
                         'syy':self.syy, 'a':self.a, 'b':self.b, 'c':self.c, 'd':self.d, 'e':self.e}
         else:
-            raise ValueError(f"⚠️ model_type should be 'linear_AmQ' or 'linear_Sigma' - Acutal value: {model_type}")
+            raise ValueError(f"⚠️ model_type should be 'linear_AmQ' or 'linear_Sigma' - Actual value: {model_type}")
 
     # ------------------------------------------------------------------
     def __repr__(self):

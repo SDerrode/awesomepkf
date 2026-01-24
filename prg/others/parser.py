@@ -44,7 +44,7 @@ def addParseToParser(parser, listOptions):
             'help': 'Linear model to process data (default: A_mQ_x3_y1)'
         },
         'sigmaSet': {
-            'choices': ['wan2000', 'cpkf', 'lerner2002'],
+            'choices': ['julier1995', 'wan2000', 'cpkf', 'lerner2002'],
             'default': 'wan2000',
             'help': 'Sigma set points to use with UPKF (default: wan2000)'
         },
