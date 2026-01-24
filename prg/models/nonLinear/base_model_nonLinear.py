@@ -23,8 +23,8 @@ class BaseModelNonLinear:
         model_type: str = "nonlinear",
     ):
         # Vérifications
-        assert isinstance(dim_x, int) and dim_x > 0,          "dim_x doit être un entier positif"
-        assert isinstance(dim_y, int) and dim_y > 0,          "dim_y doit être un entier positif"
+        assert isinstance(dim_x, int) and dim_x > 0, "dim_x doit être un entier positif"
+        assert isinstance(dim_y, int) and dim_y > 0, "dim_y doit être un entier positif"
 
         # Dimensions et types
         self.model_type = model_type
@@ -33,9 +33,10 @@ class BaseModelNonLinear:
         self.dim_xy     = dim_x + dim_y
 
         # UKF parameters
-        self.alpha     = 0.25 # si on veut W_O^{(c)} faiblement négatif, on prend alpha entre 0.25 et 0.3
-        self.beta      = 2.
-        self.kappa     = 0.
+        self.alpha       = 0.25 # si on veut W_O^{(c)} faiblement négatif, on prend alpha entre 0.25 et 0.3
+        self.beta        = 2.
+        self.kappa       = 0.
+        self.kappaJulier = 3. - self.dim_x
 
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
@@ -82,9 +83,10 @@ class BaseModelNonLinear:
                 'dim_y'      : self.dim_y,
                 'g'          : self.g,
                 'jacobiens_g': self.jacobiens_g,  # pour EPKF
-                'alpha'      : self.alpha,        # pour UPKF
-                'beta'       : self.beta,         # pour UPKF
-                'kappa'      : self.kappa,        # pour UPKF
+                'alpha'      : self.alpha,        # pour UPKF merwe
+                'beta'       : self.beta,         # pour UPKF merwe
+                'kappa'      : self.kappa,        # pour UPKF merwe
+                'kappaJulier': self.kappaJulier,  # pour UPKF julier
                 'mQ'         : self.mQ,
                 'z00'        : self.z00,
                 'Pz00'       : self.Pz00,
