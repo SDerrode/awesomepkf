@@ -93,18 +93,18 @@ if __name__ == "__main__":
         upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upkf_1.pkl"))
         title = f"'{nonLinearModelName}' model data filtered with UPKF"
         # Les observations
+        # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
+        window    = {'xmin':0, 'xmax': 300 }
         upkf_1.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \
                             list_covar = [None], \
-                            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-                            window    = {'xmin':20, 'xmax': 120 }, \
+                            window    = window, \
                             basename  = f'upkf_1_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
         upkf_1.history.plot(title, 
-                            list_param= ["xkp1"  , "Xkp1_update"], \
-                            list_label= ["x true", "x estimated"], \
+                            list_param = ["xkp1"  , "Xkp1_update"], \
+                            list_label = ["x true", "x estimated"], \
                             list_covar = [None, "PXXkp1_update"], \
-                            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-                            window    = {'xmin':20, 'xmax': 120 }, \
-                            basename  = f'upkf_1_{nonLinearModelName}', show=False, base_dir=graph_dir)
+                            window     = window, \
+                            basename   = f'upkf_1_{nonLinearModelName}', show=False, base_dir=graph_dir)
 
