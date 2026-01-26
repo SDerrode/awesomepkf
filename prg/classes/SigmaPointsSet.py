@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Type
 import warnings
 import numpy as np
+from itertools import product
 
 eps = 1E-12
 
@@ -194,5 +195,57 @@ class SetLERNER2002(SigmaPointsSet, key="lerner2002"):
                 sigma.append(x - delta_plus)
                 sigma.append(x + delta_minus)
                 sigma.append(x - delta_minus)
+
+        return np.array(sigma)
+
+
+
+class SetIto2000(SigmaPointsSet, key="ito2000"):
+    """
+    Set defined in the paper:
+    K. Ito and K. Xiong, “Gaussian filters for nonlinear filtering problems,” IEEE Trans. Autom. Control, vol. 45, no. 5, pp. 910–927, May 2000.
+    Attention, il y a un paramètre p et le nombre de points explose en p^dim_x. Donc pour dim_x = 1,2, rester sur p<=4.
+    """
+    def __init__(self, dim_x, param):
+        super().__init__(dim_x)
+        
+        self.p            = 4
+        self.nbSigmaPoint = self.p**self.dim_x
+        
+        self.Wm = np.zeros(shape=(self.nbSigmaPoint))
+        xi_1d, w_1d = np.polynomial.hermite.hermgauss(self.p)
+
+        # Produit tensoriel
+        self.Xi = np.array(list(product(xi_1d, repeat=self.dim_x)))
+        self.Wm = np.prod(np.array(list(product(w_1d, repeat=self.dim_x))), axis=1)
+
+        # Normalisation (important)
+        self.Wm /= np.pi ** (self.dim_x / 2)
+        # print(f'self.Wm={self.Wm}')
+        if not np.isclose(self.Wm.sum(), 1.0, atol=eps):
+            raise ValueError(f"Wm weights do not sum to 1 (sum={self.Wm.sum()})")
+
+        self.Wc     = np.copy(self.Wm)
+
+
+    def _sigma_point(self, x, P): # self.x + S @ xi
+        
+        x = np.atleast_2d(x).reshape(-1,1)  # (dim_x,1)
+
+        # Compute Cholesky factor
+        sqrt_P = self._chol(P)
+        
+        sigma = []
+        for xi in self.Xi:
+            # print(f'xi=', xi)
+            # print(f'x=', x)
+            # print((sqrt_P @ xi).reshape(self.dim_x, 1))
+            sigma.append( x + (sqrt_P @ xi).reshape(self.dim_x, 1))
+        #     input('apuse')
+        
+        # print(len(sigma))
+        # print(sigma[0])
+        # print(sigma[1])
+        # exit(1)
 
         return np.array(sigma)
