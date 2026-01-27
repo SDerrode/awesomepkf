@@ -1,8 +1,8 @@
-import path, sys
-directory = path.Path(__file__)
-sys.path.append(directory.parent.parent.parent)
-# print(directory.parent.parent.parent)
-# exit(1)
+from pathlib import Path
+import sys
+
+directory = Path(__file__)
+sys.path.append(str(directory.parent.parent.parent))
 
 import numpy as np
 
@@ -13,7 +13,7 @@ class BaseModelNonLinear:
 
     Fournit une structure unifiée pour les fonctions fx, hx et g,
     ainsi qu'une gestion cohérente des paramètres et matrices de covariance.
-    En mode optimisé (lancé avec `python -O`), les vérifications sont désactivées.
+    En mode optimisé (lancé avec `python3 -O`), les vérifications sont désactivées.
     """
 
     def __init__(
@@ -42,7 +42,7 @@ class BaseModelNonLinear:
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
         """Compute z_{n+1} = g(z_n) + noise."""
 
-        if __debug__:  # ⚙️ ces vérifs seront ignorées avec python -O
+        if __debug__:  # ⚙️ ces vérifs seront ignorées avec python3 -O
             assert isinstance(z, np.ndarray), "z doit être un numpy.ndarray"
             assert isinstance(noise_z, np.ndarray), "noise_z doit être un numpy.ndarray"
             assert z.ndim == 2 and z.shape[1] == 1, f"z doit avoir une forme (N,1), reçu {z.shape}"
@@ -61,7 +61,7 @@ class BaseModelNonLinear:
 
     def jacobiens_g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
         
-        if __debug__:  # ⚙️ ces vérifs seront ignorées avec python -O
+        if __debug__:  # ⚙️ ces vérifs seront ignorées avec python3 -O
             assert isinstance(z, np.ndarray), "z doit être un numpy.ndarray"
             assert isinstance(noise_z, np.ndarray), "noise_z doit être un numpy.ndarray"
             assert z.ndim == 2 and z.shape[1] == 1, f"z doit avoir une forme (N,1), reçu {z.shape}"

@@ -23,8 +23,8 @@ from others.parser    import *
 if __name__ == "__main__":
     """
     USAGES:
-        python prg/filterUPKFdata_fromfile.py
-        python prg/filterUPKFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --sigmaSet julier1995 --dataFileName testNL.csv
+        python3 prg/filterUPKFdata_fromfile.py
+        python3 prg/filterUPKFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --sigmaSet julier1995 --dataFileName testNL.csv
     """
 
     # ------------------------------------------------------------------
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         if listeUPKF[0][1] is not None:
             title = f"'{nonLinearModelName}' model data filtered with UPKF"
             # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-            window    = {'xmin':0, 'xmax': 300 }
+            window    = {'xmin':2300, 'xmax': 2500 }
             upkf_2.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \

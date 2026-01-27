@@ -1,8 +1,8 @@
-import path, sys
-directory = path.Path(__file__)
-sys.path.append(directory.parent.parent.parent)
-# print(directory.parent.parent.parent)
-# exit(1)
+from pathlib import Path
+import sys
+
+directory = Path(__file__)
+sys.path.append(str(directory.parent.parent.parent))
 
 import numpy as np
 

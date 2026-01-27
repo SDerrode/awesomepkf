@@ -18,8 +18,8 @@ from others.parser    import *
 if __name__ == "__main__":
     """
     USAGES:
-        python prg/filterEPKFdata.py
-        python prg/filterEPKFdata.py --N 1000 --nonLinearModelName x1_y1_withRetroactions --sKey 303 --verbose 0 --traceplot
+        python3 prg/filterEPKFdata.py
+        python3 prg/filterEPKFdata.py --N 1000 --nonLinearModelName x1_y1_withRetroactions --sKey 303 --verbose 0 --traceplot
     """
     
     # ------------------------------------------------------------------
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         epkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_epfk_1.pkl"))
         title = f"'{nonLinearModelName}' model data filtered with EPKF"
         # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-        window    = {'xmin':0, 'xmax': 300 }
+        window    = {'xmin':2300, 'xmax': 2500 }
         epkf_1.history.plot(title, 
                             list_param = ["ykp1"], \
                             list_label = ["Observations y"], \

@@ -19,8 +19,8 @@ from others.parser    import *
 if __name__ == "__main__":
     """
     USAGES:
-        python prg/filterPKFdata.py
-        python prg/filterPKFdata.py --N 1000 --linearModelName A_mQ_x1_y1 --sKey 303 --verbose 0 --traceplot
+        python3 prg/filterPKFdata.py
+        python3 prg/filterPKFdata.py --N 1000 --linearModelName A_mQ_x1_y1 --sKey 303 --verbose 0 --traceplot
     """
     
     # ------------------------------------------------------------------
