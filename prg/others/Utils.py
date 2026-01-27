@@ -72,11 +72,16 @@ def compute_errors(x_true, x_hat, P_list, i_list, S_list):
     
     Retour : dictionary with several error measures
     """
+    
+    # print(f'type(P_list)={type(P_list)}')
+    # print(f'type(S_list)={type(S_list)}')
+    # print(S_list[0:3])
 
     # Conversion en tableaux 
     x_true  = np.hstack(x_true).T      # on empile horizontalement puis on transpose
     x_hat   = np.hstack(x_hat).T       # on empile horizontalement puis on transpose
-    tab_cov = np.stack(P_list, axis=0) # empile le long du premier axe
+    tab_Pk = np.stack(P_list, axis=0) # empile le long du premier axe
+    tab_Sk = np.stack(S_list, axis=0) # empile le long du premier axe
 
     # concaténer pour calcul global
     x_true_flat = np.concatenate(x_true)
@@ -97,28 +102,48 @@ def compute_errors(x_true, x_hat, P_list, i_list, S_list):
     # NEES moyen
     nees_all = np.zeros(errors.shape[0])
     for k in range(errors.shape[0]):
-        ek = errors[k].reshape(-1, 1)
-        Pk = tab_cov[k]
+        ek = errors[k].reshape(-1, 1)  # Assure un vecteur colonne
+        Pk = tab_Pk[k]
+        # print(f'ek={ek}')
+        # print(f'Pk={Pk}')
+
         try:
-            Pk_inv = np.linalg.inv(Pk)
-            nees_all[k] = float(ek.T @ Pk_inv @ ek)
-        except:
-            # print('P singulière : on ignore')
-            # input('pause')
+            # Inverse robuste : pseudo-inverse si nécessaire
+            Pk_inv = np.linalg.pinv(Pk)  # gère aussi les matrices singulières
+            # print(f'Pk_inv={Pk_inv}')
+            
+            # NEES : ek.T @ Pk_inv @ ek
+            nees_value = float((ek.T @ Pk_inv @ ek).squeeze())  # squeeze + float pour toute dimension
+            nees_all[k] = nees_value
+            # print(f'nees_all[{k}]={nees_value}')
+            
+        except Exception as e:
+            print(f"Erreur lors du calcul de NEES : {e}")
+            nees_all[k] = np.nan  # on peut mettre NaN si on ne peut pas calculer
+            print('P singulière : on ignore')
+            input('pause')
             continue
     nees_mean = np.mean(nees_all)
-    
+
     # NIS moyen
     nis_all = np.zeros(i_list.shape[0])
     for k in range(i_list.shape[0]):
-        ik = i_list[k]
-        Sk = S_list[k]
+        ik = i_list[k].reshape(-1, 1)  # Assure un vecteur colonne
+        Sk = tab_Sk[k]
+
         try:
-            Sk_inv = np.linalg.inv(Sk)
-            nis_all[k] = float(ik.T @ Sk_inv @ ik)
-        except:
-            # print('P singulière : on ignore')
-            # input('pause')
+            # Inverse robuste (gère les matrices singulières)
+            Sk_inv = np.linalg.pinv(Sk)
+            
+            # Calcul du NIS
+            nis_value = float((ik.T @ Sk_inv @ ik).squeeze())
+            nis_all[k] = nis_value
+
+        except Exception as e:
+            print(f"Erreur lors du calcul du NIS à l'indice {k} : {e}")
+            nis_all[k] = np.nan  # On peut mettre NaN pour signaler l'erreur et continuer
+            print('P singulière : on ignore')
+            input('pause')
             continue
     nis_mean = np.mean(nis_all)
     

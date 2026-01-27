@@ -112,6 +112,9 @@ class NonLinear_UPKF(NonLinear_PKF):
                                  ykp1          = ykp1.copy(),
                                  Xkp1_predict  = Xkp1_predict.copy(),
                                  PXXkp1_predict= np.eye(self.dim_x),
+                                 ikp1          = np.zeros(shape=(self.dim_y)),
+                                 Skp1          = np.eye(self.dim_y),
+                                 Kkp1          = np.zeros(shape=(self.dim_x, self.dim_y)),
                                  Xkp1_update   = Xkp1_update.copy(),
                                  PXXkp1_update = PXXkp1_update.copy())
 
