@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import path, sys
-directory = path.Path(__file__)
-sys.path.append(directory.parent.parent)
 from pathlib import Path
+import sys
+
+directory = Path(__file__)
+sys.path.append(str(directory.parent.parent))
 
 import logging
 from typing import Callable, Any

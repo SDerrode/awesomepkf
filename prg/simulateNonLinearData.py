@@ -20,8 +20,8 @@ from others.parser    import *
 if __name__ == "__main__":
     """
     USAGES:
-        python prg/simulateNonLinearData.py
-        python prg/simulateNonLinearData.py --N 1000 --verbose 0 --nonLinearModelName x1_y1_withRetroactions --sKey 303 --dataFileName testNL.csv
+        python3 prg/simulateNonLinearData.py
+        python3 prg/simulateNonLinearData.py --N 1000 --verbose 0 --nonLinearModelName x1_y1_withRetroactions --sKey 303 --dataFileName testNL.csv
     """
 
     # ------------------------------------------------------------------

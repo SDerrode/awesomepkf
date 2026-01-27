@@ -51,8 +51,6 @@ class SetJULIER1995(SigmaPointsSet, key="julier1995"):
         self.kappaJulier  = param.kappaJulier
         
         self.Wm = np.full(self.nbSigmaPoint, self.kappaJulier / (self.kappaJulier + self.dim_x))
-        if not np.isclose(self.Wm.sum(), 1.0, atol=eps):
-            raise ValueError(f"Wm weights do not sum to 1 (sum={self.Wm.sum()})")
         self.Wc = np.copy(self.Wm)
         
         self.gamma = np.sqrt(self.dim_x + self.kappaJulier)

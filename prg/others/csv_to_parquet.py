@@ -44,7 +44,7 @@ def csv_to_parquet(csv_file_path, parquet_file_path, engine='pyarrow'):
 # --- Exemple d'utilisation ---
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        logger.error("Usage : python csv_to_parquet.py <fichier.csv> <fichier.parquet>")
+        logger.error("Usage : python3 csv_to_parquet.py <fichier.csv> <fichier.parquet>")
     else:
         csv_file = sys.argv[1]
         parquet_file = sys.argv[2]
