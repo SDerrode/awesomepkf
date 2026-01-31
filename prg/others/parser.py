@@ -23,6 +23,8 @@ def addParseToParser(parser, listOptions):
         help='Save parameters trace on disk and plot figures (default: False if not specified)'
     )
 
+
+
     # =========================
     # Options optionnelles configurables
     # =========================
@@ -31,6 +33,11 @@ def addParseToParser(parser, listOptions):
             'type': int,
             'default': 5000,
             'help': 'Set the number of samples to process (default: 5000)'
+        },
+        'NbParticles': {
+            'type': int,
+            'default': 1000,
+            'help': 'Set the number of samples to process (default: 1000)'
         },
         'sKey': {
             'type': int,

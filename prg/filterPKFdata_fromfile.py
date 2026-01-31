@@ -14,6 +14,8 @@ from classes.Linear_PKF import Linear_PKF
 from classes.ParamLinear import ParamLinear
 # Parser d'options
 from others.parser    import *
+# Parser d'options
+from others.plot_settings import WINDOW
 
 if __name__ == "__main__":
     """
@@ -34,7 +36,7 @@ if __name__ == "__main__":
     verbose         = args.verbose
     linearModelName = args.linearModelName
     dataFileName    = args.dataFileName
-    if dataFileName == None:
+    if dataFileName is None:
         dataFileName = f"dataLinear_{linearModelName}.csv"
 
     # ------------------------------------------------------------------
@@ -73,10 +75,9 @@ if __name__ == "__main__":
     N        = listePKF[-1][0]+1
 
     if traceplot and pkf_2.history is not None:
-        df = pkf_2.history.as_dataframe()
         if verbose > 0:
             print("\nExcerpt of the filtering with PKF :")
-            print(df.head())
+            print(pkf_2.history.as_dataframe().head())
             
         # print scoring
         if listePKF[0][1] is not None:
@@ -91,17 +92,15 @@ if __name__ == "__main__":
         pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
         if listePKF[0][1] is not None:
             title = f"'{linearModelName}' model data filtered with PKF"
-            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-            window    = {'xmin':0, 'xmax': 300 }
             pkf_2.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \
                             list_covar = [None], \
-                            window    = window, \
+                            window    = WINDOW, \
                             basename  = f'pkf_2_{linearModelName}_observations', show=False, base_dir=graph_dir)
             pkf_2.history.plot(title, 
                             list_param= ["xkp1"  , "Xkp1_update"], \
                             list_label= ["x true", "x estimated"], \
                             list_covar = [None, "PXXkp1_update"], \
-                            window    = window, \
+                            window    = WINDOW, \
                             basename  = f'pkf_2_{linearModelName}', show=False, base_dir=graph_dir)

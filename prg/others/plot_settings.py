@@ -4,6 +4,9 @@
 import matplotlib
 import matplotlib.pyplot as plt
 
+WINDOW     = {'xmin':0, 'xmax':400}
+# window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }
+
 dpi        = 150
 facecolor  = '#AAAAAA'
 plt.rcParams['axes.prop_cycle'] = plt.cycler(
