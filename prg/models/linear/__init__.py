@@ -1,7 +1,7 @@
 import importlib
 import pkgutil
 from pathlib import Path
-from .base_model_linear import BaseModelLinear
+from .base_model_linear import *
 
 class ModelFactoryLinear:
     """Fabrique automatique : découvre et instancie tous les modèles du dossier."""
@@ -13,14 +13,17 @@ class ModelFactoryLinear:
         """Scanne tous les modules dans ce paquet et enregistre les sous-classes de BaseModelLinear."""
         package_dir = Path(__file__).parent
         for _, module_name, _ in pkgutil.iter_modules([str(package_dir)]):
-            if module_name == "base_model_linear":
+            if module_name in ["base_model_linear", "LinearSigma", "LinearAmQ"]:
                 continue
             module = importlib.import_module(f"{__package__}.{module_name}")
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if isinstance(attr, type) and issubclass(attr, BaseModelLinear) and attr is not BaseModelLinear:
+                if isinstance(attr, type) and (issubclass(attr, LinearAmQ) or issubclass(attr, LinearSigma)) \
+                    and attr is not BaseModelLinear and attr is not LinearAmQ  and attr is not LinearSigma :
+                    
                     name = getattr(attr, "MODEL_NAME", attr.__name__.lower().replace("model", ""))
                     cls._registry[name] = attr
+
 
     @classmethod
     def create(cls, name: str) -> BaseModelLinear:

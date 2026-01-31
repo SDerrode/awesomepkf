@@ -1,44 +1,39 @@
-
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve
+from .base_model_linear import LinearSigma  # On utilise directement la sous-classe LinearSigma
 
-from .base_model_linear import BaseModelLinear
 
-# A few utils functions that are used several times
-from others.utils import check_consistency
+class Model_Sigma_x3_y1(LinearSigma):
+    """
+    Modèle linéaire Sigma avec dim_x=3 et dim_y=1.
 
-class Model_Sigma_x3_y1(BaseModelLinear):
+    Paramétrisation : A, sxx, syy, a, b, c, d, e
+    Calcul robuste de la matrice de transition A à partir de Q1 et Q2.
+    """
 
-    # Nom du modèle
     MODEL_NAME = "Sigma_x3_y1"
 
     def __init__(self) -> None:
-        super().__init__(dim_x=3, dim_y=1, model_type="linear_Sigma")
+        
+        # Dimensions x=3, y=1
+        dim_x = 3
+        dim_y = 1
     
-        self.sxx = np.array([[1.0, 0.4, 0.4],
+        sxx = np.array([[1.0, 0.4, 0.4],
                         [0.4, 1.0, 0.4],
                         [0.4, 0.4, 1.0]])
-        self.b   = np.array([[0.6, 0.2, 0.4]])
-        self.syy = np.array([[1.0]])
-        self.a   = np.array([[0.5, 0.1, 0.2],
+        b   = np.array([[0.6, 0.2, 0.4]])
+        syy = np.array([[1.0]])
+        a   = np.array([[0.5, 0.1, 0.2],
                         [0.4, 0.6, 0.2],
                         [0.4, 0.4, 0.5]])
-        self.d   = np.array([[0.0, 0.0, 0.0]])
-        self.e   = np.array([[0.2],
+        d   = np.array([[0.0, 0.0, 0.0]])
+        e   = np.array([[0.2],
                         [0.15],
                         [0.25]])
-        self.c   = np.array([[0.3]])
+        c   = np.array([[0.3]])
 
-        Q1     = np.block([[self.sxx, self.b.T], [self.b, self.syy]])
-        Q2     = np.block([[self.a, self.e], [self.d, self.c]])
-        # self.A = Q2 @ np.linalg.inv(Q1)
-        #calcul robuste
-        c, low = cho_factor(Q1)
-        self.A = Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
-        eigvals = np.linalg.eigvals(self.A)
-        if np.any(np.abs(eigvals) >= 1.0):
-            raise ValueError(f"⚠️ The modulus of one Eigen value of A is >= 1 : {eigvals}")
+        # Appel du constructeur de la sous-classe LinearSigma
+        super().__init__(dim_x=dim_x, dim_y=dim_y, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
 
-        if __debug__:
-            check_consistency(sxx=self.sxx, syy=self.syy)
-
+        # initialisation commune à tous les modèle sigma
+        self._initSigma()

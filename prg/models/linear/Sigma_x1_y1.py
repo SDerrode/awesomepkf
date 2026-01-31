@@ -1,38 +1,34 @@
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve
-
-from .base_model_linear import BaseModelLinear
+from .base_model_linear import LinearSigma  # On utilise directement la sous-classe LinearSigma
 
 
+class Model_Sigma_x1_y1(LinearSigma):
+    """
+    Modèle linéaire Sigma avec dim_x=1 et dim_y=1.
 
-# A few utils functions that are used several times
-from others.utils import check_consistency
+    Paramétrisation : A, sxx, syy, a, b, c, d, e
+    Calcul robuste de la matrice de transition A à partir de Q1 et Q2.
+    """
 
-class Model_Sigma_x1_y1(BaseModelLinear):
-    
-    # Nom du modèle
     MODEL_NAME = "Sigma_x1_y1"
 
     def __init__(self) -> None:
-        super().__init__(dim_x=1, dim_y=1, model_type="linear_Sigma")
+        # Dimensions x=1, y=1
+        dim_x = 1
+        dim_y = 1
 
-        self.sxx = np.array([[1]])
-        self.b   = np.array([[0.3]])
-        self.syy = np.array([[1]])
-        self.a   = np.array([[0.5]])
-        self.d   = np.array([[0.05]])
-        self.e   = np.array([[0.05]])
-        self.c   = np.array([[0.04]])
+        # Paramètres Sigma
+        sxx = np.array([[1]])
+        syy = np.array([[1]])
+        a   = np.array([[0.5]])
+        b   = np.array([[0.3]])
+        c   = np.array([[0.04]])
+        d   = np.array([[0.05]])
+        e   = np.array([[0.05]])
+
+        # Appel du constructeur de la sous-classe LinearSigma
+        super().__init__(dim_x=dim_x, dim_y=dim_y, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
+
+        # initialisation commune à tous les modèle sigma
+        self._initSigma()
         
-        Q1     = np.block([[self.sxx, self.b.T], [self.b, self.syy]])
-        Q2     = np.block([[self.a, self.e], [self.d, self.c]])
-        # self.A = Q2 @ np.linalg.inv(Q1)
-        #calcul robuste
-        c, low = cho_factor(Q1)
-        self.A = Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
-        eigvals = np.linalg.eigvals(self.A)
-        if np.any(np.abs(eigvals) >= 1.0):
-            raise ValueError(f"⚠️ The modulus of one Eigen value of A is >= 1 : {eigvals}")
-
-        if __debug__:
-            check_consistency(sxx=self.sxx, syy=self.syy)
