@@ -37,11 +37,11 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     parser = argparse.ArgumentParser(description='Filter non linear data from file with PF')
-    addParseToParser(parser, ['nonLinearModelName', 'dataFileName', 'NbParticles'])
+    addParseToParser(parser, ['nonLinearModelName', 'dataFileName', 'nbParticles'])
     args   = parser.parse_args()
 
     resample_threshold = 0.5
-    NbParticles        = args.NbParticles
+    nbParticles        = args.nbParticles
     traceplot          = args.traceplot
     verbose            = args.verbose
     nonLinearModelName = args.nonLinearModelName
@@ -83,9 +83,9 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     if verbose > 0:
-        print(f"\nPF filtering (NbParticles={NbParticles}, resample_threshold={resample_threshold}) with data generated from a file with data... ")
+        print(f"\nPF filtering (nbParticles={nbParticles}, resample_threshold={resample_threshold}) with data generated from a file with data... ")
 
-    pf_2     = NonLinear_PF(param, NbParticles=NbParticles, resample_threshold=resample_threshold, save_pickle=traceplot, verbose=verbose)
+    pf_2     = NonLinear_PF(param, nbParticles=nbParticles, resample_threshold=resample_threshold, save_pickle=traceplot, verbose=verbose)
     filename = os.path.join(datafile_dir, dataFileName)
     listePF  = pf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
     N = listePF[-1][0] + 1

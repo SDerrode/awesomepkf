@@ -24,9 +24,9 @@ from others.utils import check_consistency, diagnose_covariance#, check_equality
 class NonLinear_PF(NonLinear_PKF):
     """Implementation of PF."""
 
-    def __init__(self, param,  NbParticles=1000, resample_threshold=0.5, sKey=None, save_pickle=False, verbose=0):
+    def __init__(self, param,  nbParticles=1000, resample_threshold=0.5, sKey=None, save_pickle=False, verbose=0):
         super().__init__(param, sKey, save_pickle, verbose)
-        self.NbParticles        = NbParticles
+        self.nbParticles        = nbParticles
         self.resample_threshold = resample_threshold
 
     # ======================================================
@@ -74,12 +74,12 @@ class NonLinear_PF(NonLinear_PKF):
         Z_particles = np.random.multivariate_normal(
             mean=np.zeros(self.dim_xy),
             cov=self.param.Pz00,
-            size=self.NbParticles
+            size=self.nbParticles
         )
 
         # Conditioning on observed y_0
         Z_particles[:, self.dim_x:] = ykp1.ravel()
-        weights                     = np.ones(self.NbParticles) / self.NbParticles
+        weights                     = np.ones(self.nbParticles) / self.nbParticles
 
         # ==========================
         # Update estimate
@@ -104,7 +104,7 @@ class NonLinear_PF(NonLinear_PKF):
                                  PXXkp1_predict= PXXkp1_predict.copy(),
                                  Xkp1_update   = Xkp1_update.copy(),
                                  PXXkp1_update = PXXkp1_update.copy(),
-                                 ESS           = self.NbParticles)
+                                 ESS           = self.nbParticles)
 
         yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
 
@@ -124,10 +124,10 @@ class NonLinear_PF(NonLinear_PKF):
             noise = np.random.multivariate_normal(
                 mean = np.zeros(self.dim_xy),
                 cov  = mQ,
-                size = self.NbParticles
+                size = self.nbParticles
             )
 
-            for i in range(self.NbParticles):
+            for i in range(self.nbParticles):
                 zi = Z_particles[i].reshape(-1, 1)
                 Z_particles[i] = (
                     g(zi, accel_zero, self.dt).ravel()
@@ -191,7 +191,7 @@ class NonLinear_PF(NonLinear_PKF):
             det_S  = np.linalg.det(PYYkp1_predict)
             norm   = 1.0 / np.sqrt((2 * np.pi) ** self.dim_y * det_S)
 
-            for i in range(self.NbParticles):
+            for i in range(self.nbParticles):
                 yi = Z_particles[i, self.dim_x:]
                 innov = y_obs - yi
                 weights[i] *= norm * np.exp(
@@ -208,10 +208,10 @@ class NonLinear_PF(NonLinear_PKF):
 
             ess = 1.0 / np.sum(weights ** 2)
 
-            if ess < self.resample_threshold * self.NbParticles:
+            if ess < self.resample_threshold * self.nbParticles:
                 idx = systematic_resample(weights)
                 Z_particles = Z_particles[idx]
-                weights.fill(1.0 / self.NbParticles)
+                weights.fill(1.0 / self.nbParticles)
                 
             # print(f'ess={ess}')
             

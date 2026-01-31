@@ -29,9 +29,11 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     parser = argparse.ArgumentParser(description='Simulate and filter non linear data with PF')
-    addParseToParser(parser, ['nonLinearModelName', 'N', 'sKey'])
+    addParseToParser(parser, ['nonLinearModelName', 'N', 'sKey', 'nbParticles'])
     args   = parser.parse_args()
     
+    resample_threshold = 0.5
+    nbParticles        = args.nbParticles
     traceplot          = args.traceplot
     verbose            = args.verbose
     N                  = args.N
@@ -72,7 +74,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     if verbose > 0:
-        print("\nPF filtering (NbParticles={NbParticles}, resample_threshold={resample_threshold}) with data generated from a non-linear model...")
+        print(f"\nPF filtering (nbParticles={nbParticles}, resample_threshold={resample_threshold}) with data generated from a non-linear model...")
     pf_1    = NonLinear_PF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
     listePF = pf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
