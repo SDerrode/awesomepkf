@@ -1,31 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# import os
-# import pickle
-# import logging
-# from typing import Any, Optional
-
-# from rich import print
-
-# import numpy as np
-# import pandas as pd
-# import matplotlib.pyplot as plt
-# import matplotlib.ticker as mticker
-
-# # pour éviter l'info sur le symbol sigma dans le label de la figure
-# import logging
-# logging.getLogger("matplotlib").setLevel(logging.WARNING)
-
-
-# import numpy as np
-# np.seterr(invalid="raise")
-
-# EPS_ABS = 1e-12     # seuil absolu (bruit machine)
-# EPS_REL = 1e-6      # seuil relatif à l'échelle
-
-
-
 import os
 import pickle
 import logging
@@ -37,7 +12,6 @@ import matplotlib.ticker as mticker
 
 from others.utils import compute_errors
 from others.plot_settings import *
-
 
 # Seuils numériques pour le calcul ±2σ
 EPS_ABS = 1e-12  # seuil absolu (bruit machine)
