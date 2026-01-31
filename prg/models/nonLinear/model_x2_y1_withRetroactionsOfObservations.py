@@ -1,8 +1,5 @@
 import numpy as np
-from typing import Callable
 from .base_model_nonLinear import BaseModelNonLinear
-
-# A few utils functions that are used several times
 from others.utils import check_consistency
 
 class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
@@ -30,7 +27,6 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         """
         Nonlinear state function with retro-action on observation.
         """
-
         x1, x2 = x.flatten()
         y1     = y.flatten()[0]
         t1, t2 = t.flatten()
@@ -45,7 +41,6 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         """
         Nonlinear observation function with retro-action on previous observation.
         """
-
         x1, x2 = x.flatten()
         y1     = y.flatten()[0]
         u      = u.flatten()[0]
@@ -71,8 +66,10 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         return np.vstack((gx_val, gy_val))
 
     # ------------------------------------------------------------------
-
     def _jacobiens_g(self, x, y, t, u, dt):
+        """
+        Jacobians of combined state and observation function.
+        """
         if __debug__:
             assert x.shape == (2, 1), f"x must be (2,1), got {x.shape}"
             assert y.shape == (1, 1), f"y must be (1,1), got {y.shape}"
@@ -80,18 +77,15 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
             assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
             assert isinstance(dt, (float, int)), "dt must be a float"
 
-        x1, x2   = x.flatten()
-        # t1, t2 = t.flatten()
-        y1       = y.flatten()[0]
-        # u       = u.flatten()[0]
+        x1, x2 = x.flatten()
+        y1     = y.flatten()[0]
 
-        An = np.array([[self.a, self.b,  self.c*(1.-np.tanh(y1)**2)],
-                       [0.,    self.d, self.e*np.cos(y1)         ],
-                       [2.*x1, 0.,   self.f]                   ])
+        An = np.array([
+            [self.a, self.b,  self.c*(1.-np.tanh(y1)**2)],
+            [0.,    self.d,  self.e*np.cos(y1)          ],
+            [2.*x1, 0.,      self.f                      ]
+        ])
 
         Bn = np.eye(self.dim_xy)
-        
-        # print(f'An={An}')
-        # print(f'Bn={Bn}')
-        # exit(1)
+
         return An, Bn
