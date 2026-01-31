@@ -39,7 +39,7 @@ if __name__ == "__main__":
     sKey               = args.sKey
     nonLinearModelName = args.nonLinearModelName
     dataFileName       = args.dataFileName
-    if dataFileName == None:
+    if dataFileName is None:
         dataFileName = f"dataNonLinear_{nonLinearModelName}.csv"
     if sKey is not None and sKey < 0:
         parser.error("sKey must be >= 0")

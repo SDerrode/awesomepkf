@@ -101,17 +101,30 @@ class HistoryTracker:
         from rich.pretty import Pretty
         from rich.console import Console
 
-        for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
-            report = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), df[d].to_numpy(), df[e].to_numpy())
-            print(f"ERROR ({a}, {b})")
-            console = Console()
-            console.print(
-                Pretty(
-                    report,
-                    expand_all=True,
-                    indent_guides=True
+        if ListeD is None or ListeE is None: # for particle filter
+            for a, b, c  in zip(ListeA, ListeB, ListeC):
+                report = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), None, None)
+                print(f"ERROR ({a}, {b})")
+                console = Console()
+                console.print(
+                    Pretty(
+                        report,
+                        expand_all=True,
+                        indent_guides=True
+                    )
                 )
-            )
+        else:
+            for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
+                report = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), df[d].to_numpy(), df[e].to_numpy())
+                print(f"ERROR ({a}, {b})")
+                console = Console()
+                console.print(
+                    Pretty(
+                        report,
+                        expand_all=True,
+                        indent_guides=True
+                    )
+                )
 
     # ------------------------------------------------------------------
     def plot(self, title, list_param, list_label, list_covar, window, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
@@ -147,7 +160,7 @@ class HistoryTracker:
             list_labels_e += list_labels_e_local
 
             df_subset[list_labels_p_local] = df[p].apply(lambda x: pd.Series(x.flatten()))
-            if e!= None:
+            if e is not None:
                 df_subset_var[list_labels_e_local] = df[e].apply(lambda x: pd.Series(x.diagonal()))
 
         fig, axes = plt.subplots(nb_components, 1, figsize=(7, 2*nb_components), sharex=True, facecolor=facecolor)

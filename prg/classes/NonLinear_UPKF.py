@@ -76,7 +76,7 @@ class NonLinear_UPKF(NonLinear_PKF):
 
         return cls(dim_x=self.dim_x)
 
-    def process_nonlinearfilter(self, N = None, data_generator = None):
+    def process_nonlinearfilter(self, N=None, data_generator=None):
         """
         Generator of UPKF filter using optional data generator.
         """
