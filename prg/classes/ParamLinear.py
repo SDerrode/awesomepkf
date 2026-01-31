@@ -12,7 +12,7 @@ from typing import Callable, Any, Union, Optional
 import warnings
 
 import numpy as np
-from scipy.linalg import solve_discrete_lyapunov
+from scipy.linalg import solve_discrete_lyapunov, cho_factor, cho_solve
 
 # Linear models
 from models.linear import BaseModelLinear, ModelFactoryLinear
@@ -167,7 +167,9 @@ class ParamLinear:
         self._Q2    = np.block([[self._a, self._e], [self._d, self._c]])
         self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
 
-        self._A = self._Q2 @ np.linalg.inv(self._Q1)
+        # self._A = self._Q2 @ np.linalg.inv(self._Q1)
+        c, low = cho_factor(self._Q1)
+        self._A = self._Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
         if __debug__:
             eigvals = np.linalg.eigvals(self._A)
             if np.any(np.abs(eigvals) >= 1.0):

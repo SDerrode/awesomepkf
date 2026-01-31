@@ -1,4 +1,7 @@
+
 import numpy as np
+from scipy.linalg import cho_factor, cho_solve
+
 from .base_model_linear import BaseModelLinear
 
 # A few utils functions that are used several times
@@ -28,7 +31,10 @@ class Model_Sigma_x3_y1(BaseModelLinear):
 
         Q1     = np.block([[self.sxx, self.b.T], [self.b, self.syy]])
         Q2     = np.block([[self.a, self.e], [self.d, self.c]])
-        self.A = Q2 @ np.linalg.inv(Q1)
+        # self.A = Q2 @ np.linalg.inv(Q1)
+        #calcul robuste
+        c, low = cho_factor(Q1)
+        self.A = Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
         eigvals = np.linalg.eigvals(self.A)
         if np.any(np.abs(eigvals) >= 1.0):
             raise ValueError(f"⚠️ The modulus of one Eigen value of A is >= 1 : {eigvals}")

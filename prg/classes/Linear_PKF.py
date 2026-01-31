@@ -20,6 +20,9 @@ import math
 import logging
 import warnings
 from typing import Generator, Optional, Tuple
+from rich import print
+
+from scipy.linalg import cho_factor, cho_solve
 
 import numpy as np
 
@@ -156,9 +159,8 @@ class Linear_PKF:
         # input('attente')
         # check_consistency(PXXkp1_update=PXXkp1_update)
         verdict, report = diagnose_covariance(PXXkp1_update)
-        if verdict != None:
-            print(f'PXXkp1_update={PXXkp1_update}')
-            print(f'report for PXXkp1_update - iteration k={k}:')
+        if verdict is not None:
+            print(f'PXXkp1_update={PXXkp1_update}\nRreport for PXXkp1_update - iteration k={k}:')
             print(report)
             input('attente')
 
@@ -202,9 +204,8 @@ class Linear_PKF:
             # print(f'Pkp1_predict={Pkp1_predict}')
             # check_consistency(Pkp1_predict=Pkp1_predict)
             verdict, report = diagnose_covariance(Pkp1_predict)
-            if verdict != None:
-                print(f'Pkp1_predict={Pkp1_predict}')
-                print(f'report for Pkp1_predict - iteration k={k}:')
+            if verdict is not None:
+                print(f'Pkp1_predict={Pkp1_predict}\nRreport for Pkp1_predict - iteration k={k}:')
                 print(report)
                 input('attente')
             
@@ -221,17 +222,28 @@ class Linear_PKF:
 
             # Updating with mathematical formulation
             ###############################################
-            accel         = PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)
+            # accel = PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)
+            # print(f'accel={accel}')
+            # Version robuste du calcul
+            c, low = cho_factor(PYYkp1_predict)
+            accel = PXYkp1_predict @ cho_solve((c, low), np.eye(self.dim_y))
+            # print(f'accel={accel}')
             Xkp1_update   = Xkp1_predict   + accel @ (ykp1 - Ykp1_predict)
             PXXkp1_update = PXXkp1_predict - accel @ PYXkp1_predict
-            
+
             # Updating with physical formulation
             ###############################################
             # innovation (expectation and variance)
             ikp1 = ykp1 - Ykp1_predict
             Skp1 = PYYkp1_predict
             # Kalman gain
-            Kkp1  = PXYkp1_predict @ np.linalg.inv(Skp1)
+            # Kkp1          = PXYkp1_predict @ np.linalg.inv(Skp1)
+            # print(f'Kkp1={Kkp1}')
+            # Version robuste du calcul
+            c, low = cho_factor(Skp1)
+            Kkp1 = PXYkp1_predict @ cho_solve((c, low), np.eye(self.dim_y))
+            # print(f'Kkp1={Kkp1}')
+            
             # Updating expectation and variance, and variance in Joseph form
             Xkp1_update   = Xkp1_predict   + Kkp1 @ ikp1
             PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
@@ -241,16 +253,14 @@ class Linear_PKF:
                 + self.param.mQ_xx.value - Kkp1 @ self.param.mQ_yx.value - self.param.mQ_xy.value @ Kkp1.T + Kkp1 @ self.param.mQ_yy.value @ Kkp1.T
 
             verdict, report = diagnose_covariance(PXXkp1_update)
-            if verdict != None:
-                print(f'PXXkp1_update={PXXkp1_update}')
-                print(f'report for PXXkp1_update - iteration k={k}:')
+            if verdict is not None:
+                print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
                 print(report)
                 input('attente')
                 
             verdict, report = diagnose_covariance(PXXkp1_update_Joseph)
-            if verdict != None:
-                print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}')
-                print(f'report for PXXkp1_update_Joseph - iteration k={k}:')
+            if verdict is not None:
+                print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}\nReport for PXXkp1_update_Joseph - iteration k={k}:')
                 print(report)
                 input('attente')
 

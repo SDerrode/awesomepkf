@@ -13,11 +13,13 @@ from typing import Generator, Optional, Tuple
 import numpy as np
 from rich import print
 
+from scipy.linalg import cho_factor, cho_solve
+
 from classes.NonLinear_PKF import NonLinear_PKF
 # A few utils functions that are used several times
 from others.utils import check_consistency, diagnose_covariance#, check_equality
 
-# XX.py
+# Sigma points
 from classes.SigmaPointsSet import SigmaPointsSet
 
 class FilterConfig:
@@ -74,7 +76,7 @@ class NonLinear_UPKF(NonLinear_PKF):
 
         return cls(dim_x=self.dim_x)
 
-    def process_nonlinearfilter(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
+    def process_nonlinearfilter(self, N = None, data_generator = None):
         """
         Generator of UPKF filter using optional data generator.
         """
@@ -99,9 +101,8 @@ class NonLinear_UPKF(NonLinear_PKF):
         # input('attente')
         # check_consistency(PXXkp1_update=PXXkp1_update)
         verdict, report = diagnose_covariance(PXXkp1_update)
-        if verdict != None:
-            print(f'PXXkp1_update={PXXkp1_update}')
-            print(f'report for PXXkp1_update - iteration k={k}:')
+        if verdict is not None:
+            print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
             print(report)
             input('attente')
 
@@ -125,12 +126,8 @@ class NonLinear_UPKF(NonLinear_PKF):
         accel_zero = np.zeros(shape=(self.dim_xy, 1))
         while N is None or k < N:
             # Sigma points
-            # print(f'Xkp1_update={Xkp1_update}')
-            # print(f'PXXkp1_update={PXXkp1_update}')
-            
             sigma = self.sigma_point_set_obj._sigma_point(Xkp1_update, PXXkp1_update)
-            # print(f'sigma[1]={sigma[1]}')
-            
+
             sigma_propag = [g(np.vstack((e, ykp1)), accel_zero, self.dt) for e in sigma]  # here ykp1 still gives the previous : it is yk indeed!
             # print(f'sigma_propag[1]={sigma_propag[1]}')
 
@@ -144,9 +141,8 @@ class NonLinear_UPKF(NonLinear_PKF):
             # print(f'Pkp1_predict={Pkp1_predict}')
             # check_consistency(Pkp1_predict=Pkp1_predict)
             verdict, report = diagnose_covariance(Pkp1_predict)
-            if verdict != None:
-                print(f'Pkp1_predict={Pkp1_predict}')
-                print(f'report for Pkp1_predict - iteration k={k}:')
+            if verdict is not None:
+                print(f'Pkp1_predict={Pkp1_predict}\nReport for Pkp1_predict - iteration k={k}:')
                 print(report)
                 input('attente')
 
@@ -163,7 +159,12 @@ class NonLinear_UPKF(NonLinear_PKF):
 
             ikp1        = ykp1 - Ykp1_predict
             Skp1        = PYYkp1_predict
-            Kkp1        = PXYkp1_predict @ np.linalg.inv(Skp1)
+            # Kkp1          = PXYkp1_predict @ np.linalg.inv(Skp1)
+            # print(f'Kkp1={Kkp1}')
+            # Version robuste du calcul
+            c, low = cho_factor(Skp1)
+            Kkp1 = PXYkp1_predict @ cho_solve((c, low), np.eye(self.dim_y))
+            # print(f'Kkp1={Kkp1}')
             Xkp1_update = Xkp1_predict   + Kkp1 @ ikp1
             # forme non robuste numériquement
             # PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
@@ -172,7 +173,6 @@ class NonLinear_UPKF(NonLinear_PKF):
             # Forme de joseph, robuste numériquement
             # PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
             # print(f'PXXkp1_update={PXXkp1_update}')
-            
             # PXXkp1_update = PXXkp1_predict - Kkp1 @ Skp1 @ Kkp1.T
             # print(f'PXXkp1_predict={PXXkp1_predict}')
             # print(f'Kkp1 @ Skp1 @ Kkp1.T={Kkp1 @ Skp1 @ Kkp1.T}')
@@ -180,9 +180,8 @@ class NonLinear_UPKF(NonLinear_PKF):
             PXXkp1_update = PXXkp1_predict - Kkp1 @ PXYkp1_predict.T - PXYkp1_predict @ Kkp1.T + Kkp1 @ Skp1 @ Kkp1.T
             # print(f'PXXkp1_update={PXXkp1_update}')
             verdict, report = diagnose_covariance(PXXkp1_update)
-            if verdict != None:
-                print(f'PXXkp1_update={PXXkp1_update}')
-                print(f'report for PXXkp1_update - iteration k={k}:')
+            if verdict is not None:
+                print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
                 print(report)
                 input('attente')
                 
@@ -197,14 +196,5 @@ class NonLinear_UPKF(NonLinear_PKF):
                                      Kkp1           = Kkp1.copy(),
                                      Xkp1_update    = Xkp1_update.copy(),
                                      PXXkp1_update  = PXXkp1_update.copy())
-            # if k>=2382 and k<2390:
-            #     print(self._history.last())
-            #     print(f'sigma_propag[1]={sigma_propag[1]}')
-            #     verdict, report = diagnose_covariance(PXXkp1_update)
-            #     if verdict != None:
-            #       print(f'PXXkp1_update={PXXkp1_update}')
-            #       print(f'report for PXXkp1_update - iteration k={k}:')
-            #       print(report)
-            #       input('attente')
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
