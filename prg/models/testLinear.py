@@ -24,5 +24,3 @@ if __name__ == "__main__":
 
     print(f"--- Model loaded automatically : {model.MODEL_NAME}---") # {model.__class__.__name__}
     print("Result g(z):\n", g(z, noise, dt))
-
-

@@ -1,8 +1,5 @@
 import numpy as np
-from typing import Callable
 from .base_model_nonLinear import BaseModelNonLinear
-
-# A few utils functions that are used several times
 from others.utils import check_consistency
 
 class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
@@ -26,7 +23,7 @@ class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
         # self.mQ   = np.diag([0.01, 0.01]) #[1E-1, 1E-1])
         # self.z00  = np.zeros((self.dim_xy, 1)) + 0.5
         # self.a, self.b, self.c, self.d = 0.4, 0.1, 0.3, 0.1
-        
+
         # (B) Weakly damped / lightly oscillatory:
         # Quand on regarde N=10000 ech, on voit comme des sauts
         # (a,b,c,d) = (0.9,\;0.5,\;0.95,\;0.8)
@@ -35,23 +32,25 @@ class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
         # self.mQ   = np.diag([0.05, 0.05]) #[1E-1, 1E-1])
         # self.z00  = np.array([[0.1],[1.]])
         # self.a, self.b, self.c, self.d = 0.9, 0.5, 0.95, 0.8
-        
+
         # (C) Sustained oscillations / limit-cycle-like: INTERESSANT
         # (a,b,c,d) = (0.99,\;1.2,\;0.9,\;1.5)
         # Expected behaviour: persistent oscillations of moderate amplitude; nonlinear terms drive and sustain the cycles.
         # Numeric tips: choose \(x_0,y_0\) small but nonzero, \(\sigma\) very small (e.g.\ 0.005) to reveal deterministic oscillation, \(N\ge 300\).
-        self.mQ  = np.array([[0.1, 0.0, 0.0], [0.0, 0.5, 0.0], [0.0, 0.0, 0.0]])#np.diag([0.1, 0.5, 0.])
+        self.mQ  = np.array([[0.1, 0.0, 0.0], 
+                             [0.0, 0.5, 0.0], 
+                             [0.0, 0.0, 0.0]])  # np.diag([0.1, 0.5, 0.])
         self.z00 = np.array([[0.], [0.], [0.]])
         self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5
-        
+
         # (D) Complex / quasi-periodic dynamics:
         # (a,b,c,d) = (1.05,\;1.5,\;0.95,\;2.0)
         # Expected behaviour: rich, possibly quasi-periodic or mixed-mode oscillations; sensitive dependence on initial condition; intermittent bursts.
-        # Numeric tips: try several initial conditions, \(\sigma_x=\sigma_y=0.01\), run \(N\ge 2000\) and inspect time series \& phase portrait.
+        # Numeric tips: try several initial conditions, \(\sigma_x=\sigma_y=0.01\), run \(N\ge 2000\) and inspect time series & phase portrait.
         # self.mQ   = np.diag([0.5, 0.5]) 
         # self.z00  = np.array([[-5],[0.5]])
         # self.a, self.b, self.c, self.d = 1.05, 1.5, 0.95, 2.0
-        
+
         # (E) Chaotic-like / high nonlinearity (exploratory):
         # (a,b,c,d) = (1.2,\;2.0,\;0.8,\;2.5)
         # Expected behaviour: very irregular trajectories; can look chaotic or may diverge — use with caution.
@@ -59,7 +58,7 @@ class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
         # self.mQ   = np.diag([0.1, 0.1]) 
         # self.z00  = np.array([[-5],[0.5]])
         # self.a, self.b, self.c, self.d = 1.2, 2.0, 0.8, 2.5
-        
+
         self.Pz00 = np.eye(self.dim_xy)
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
@@ -72,8 +71,8 @@ class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
         x1, x2 = x.flatten()
         t1, t2 = t.flatten()
         return np.array([
-              self.a * x1 + self.b * np.tanh(x2) + t1,
-              self.c * x2 + self.d * np.sin(x1)  + t2
+            self.a * x1 + self.b * np.tanh(x2) + t1,
+            self.c * x2 + self.d * np.sin(x1)  + t2
         ]).reshape(-1, 1)
 
     # ------------------------------------------------------------------
@@ -97,13 +96,12 @@ class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
             assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
             assert isinstance(dt, (float, int)), "dt must be a float"
 
-        fx_val = self._fx(x,      t, dt)
+        fx_val = self._fx(x, t, dt)
         hx_val = self._hx(fx_val, u, dt)
         return np.vstack((fx_val, hx_val))
 
     # ------------------------------------------------------------------
     def _jacobiens_g(self, x, y, t, u, dt):
-        
         if __debug__:
             assert x.shape == (2, 1), f"x must be (2,1), got {x.shape}"
             assert y.shape == (1, 1), f"y must be (1,1), got {y.shape}"
@@ -113,14 +111,18 @@ class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
 
         x1, x2 = x.flatten()
         t1, t2 = t.flatten()
-        # y1     = y.flatten()[0]
-        # u     = u.flatten()[0]
+        # y1 = y.flatten()[0]
+        # u1 = u.flatten()[0]
 
-        An = np.array([[self.a,            self.b*(1.-np.tanh(x2)**2), 0.],
-                       [self.d*np.cos(x1), self.c,                     0.],
-                       [self.d*np.cos(x1), self.c,                     0.]])
-        Bn = np.array([[1., 0., 0.],
-                       [0., 1., 0.],
-                       [0., 1., 0.]])
+        An = np.array([
+            [self.a,            self.b*(1.-np.tanh(x2)**2), 0.],
+            [self.d*np.cos(x1), self.c,                     0.],
+            [self.d*np.cos(x1), self.c,                     0.]
+        ])
+        Bn = np.array([
+            [1., 0., 0.],
+            [0., 1., 0.],
+            [0., 1., 0.]
+        ])
 
         return An, Bn
