@@ -1,8 +1,5 @@
 import numpy as np
-from typing import Callable
 from .base_model_nonLinear import BaseModelNonLinear
-
-# A few utils functions that are used several times
 from others.utils import check_consistency
 
 class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
@@ -23,7 +20,9 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
         # (a,b,c,d) = (0.99,\;1.2,\;0.9,\;1.5)
         # Expected behaviour: persistent oscillations of moderate amplitude; nonlinear terms drive and sustain the cycles.
         # Numeric tips: choose \(x_0,y_0\) small but nonzero, \(\sigma\) very small (e.g.\ 0.005) to reveal deterministic oscillation, \(N\ge 300\).
-        self.mQ  = np.array([[0.1, 0.0, 0.0], [0.0, 0.5, 0.0], [0.0, 0.0, 0.0]])#np.diag([0.1, 0.5, 0.])
+        self.mQ  = np.array([[0.1, 0.0, 0.0], 
+                             [0.0, 0.5, 0.0], 
+                             [0.0, 0.0, 0.0]])  # np.diag([0.1, 0.5, 0.])
         self.z00 = np.array([[0.], [0.], [0.]])
         self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5
 
@@ -39,8 +38,8 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
         x1, x2 = x.flatten()
         t1, t2 = t.flatten()
         return np.array([
-              self.a * x1 + self.b * np.tanh(x2) + t1,
-              self.c * x2 + self.d * np.sin(x1)  + t2
+            self.a * x1 + self.b * np.tanh(x2) + t1,
+            self.c * x2 + self.d * np.sin(x1)  + t2
         ]).reshape(-1, 1)
 
     # ------------------------------------------------------------------
@@ -64,13 +63,12 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
             assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
             assert isinstance(dt, (float, int)), "dt must be a float"
 
-        fx_val = self._fx(x,      t, dt)
+        fx_val = self._fx(x, t, dt)
         hx_val = self._hx(fx_val, u, dt)
         return np.vstack((fx_val, hx_val))
 
     # ------------------------------------------------------------------
     def _jacobiens_g(self, x, y, t, u, dt):
-        
         if __debug__:
             assert x.shape == (2, 1), f"x must be (2,1), got {x.shape}"
             assert y.shape == (1, 1), f"y must be (1,1), got {y.shape}"
@@ -80,8 +78,8 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
 
         x1, x2 = x.flatten()
         t1, t2 = t.flatten()
-        # y1     = y.flatten()[0]
-        # u     = u.flatten()[0]
+        # y1 = y.flatten()[0]
+        # u1 = u.flatten()[0]
 
         An = np.array([[self.a,              self.b * (1.-np.tanh(x2)**2), 0.],
                        [self.d * np.cos(x1), self.c,                       0.],

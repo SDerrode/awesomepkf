@@ -1,8 +1,6 @@
 import numpy as np
-from .base_model_linear import BaseModelLinear
+from .base_model_linear import LinearAmQ  # On utilise directement la sous-classe LinearAmQ
 
-# A few utils functions that are used several times
-from others.utils import check_consistency
 
 class Model_A_mQ_x1_y1_augmented(BaseModelLinear):
     
@@ -10,7 +8,10 @@ class Model_A_mQ_x1_y1_augmented(BaseModelLinear):
     MODEL_NAME = "A_mQ_x1_y1_augmented"
 
     def __init__(self) -> None:
-        super().__init__(dim_x=2, dim_y=1, model_type="linear_AmQ")
+        
+        # Dimensions x=2, y=1
+        dim_x = 2
+        dim_y = 1
 
         a, b, c, d = 0.95, -0.3, 0.2, 0.85
         # a, b, c, d =  0.533, -0.1099, 0.0418, 0.0275
@@ -27,5 +28,5 @@ class Model_A_mQ_x1_y1_augmented(BaseModelLinear):
         # print(f'self.A={self.A}')
         # print(f'self.mQ={self.mQ}')
 
-        if __debug__:
-            check_consistency(mQ=self.mQ, Pz00=self.Pz00)
+        super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
+        

@@ -14,7 +14,8 @@ from classes.Linear_PKF import Linear_PKF
 from classes.ParamLinear import ParamLinear
 # Parser d'options
 from others.parser    import *
-
+# Parser d'options
+from others.plot_settings import WINDOW
 
 if __name__ == "__main__":
     """
@@ -76,10 +77,9 @@ if __name__ == "__main__":
     listePKF = pkf_1.process_N_data(N=N)
 
     if traceplot and pkf_1.history is not None:
-        df = pkf_1.history.as_dataframe()
         if verbose > 0:
             print("\nExtract of the resulting filtering with PKF :")
-            print(df.head())
+            print(pkf_1.history.as_dataframe().head())
 
         # print scoring
         ListeA = ['xkp1']
@@ -92,17 +92,15 @@ if __name__ == "__main__":
         # pickle storing and plots
         pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
         title = f"'{linearModelName}' model data filtered with PKF"
-        #window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }
-            window    = {'xmin':500, 'xmax': 1000 }
         pkf_1.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \
                             list_covar= [None], \
-                            window    = window, \
+                            window    = WINDOW, \
                             basename  = f'pkf_1_{linearModelName}_observations', show=False, base_dir=graph_dir)
         pkf_1.history.plot(title, 
                             list_param = ["xkp1"  , "Xkp1_update"], \
                             list_label = ["x true", "x estimated"], \
                             list_covar = [None, "PXXkp1_update"], \
-                            window    = window, \
+                            window    = WINDOW, \
                             basename  = f'pkf_1_{linearModelName}', show=False, base_dir=graph_dir)

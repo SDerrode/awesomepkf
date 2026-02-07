@@ -13,8 +13,8 @@ from models.nonLinear import ModelFactoryNonLinear
 from models.linear import ModelFactoryLinear
 # A few utils functions that are used several times
 from others.utils import compute_errors, file_data_generator
-# Manage algorithms for non linear EPKF
-from classes.NonLinear_EPKF import NonLinear_EPKF
+# Manage algorithms for non linear PF
+from classes.NonLinear_PF import NonLinear_PF
 # Manage algorithms for the PKF
 from classes.Linear_PKF import Linear_PKF
 # Manage non linear and linear parameters
@@ -28,18 +28,20 @@ from others.plot_settings import WINDOW
 if __name__ == "__main__":
     """
     USAGES:
-        python3 prg/filterEPKFdata_fromfile.py
-        python3 prg/filterEPKFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --dataFileName testNL.csv
+        python3 prg/filterPFdata_fromfile.py
+        python3 prg/filterPFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --dataFileName testNL.csv
     """
     
     # ------------------------------------------------------------------
     # Constants (default value) - Parser
     # ------------------------------------------------------------------
 
-    parser = argparse.ArgumentParser(description='Filter non linear data from file with EPKF')
-    addParseToParser(parser, ['nonLinearModelName', 'dataFileName'])
+    parser = argparse.ArgumentParser(description='Filter non linear data from file with PF')
+    addParseToParser(parser, ['nonLinearModelName', 'dataFileName', 'nbParticles'])
     args   = parser.parse_args()
 
+    resample_threshold = 0.5
+    nbParticles        = args.nbParticles
     traceplot          = args.traceplot
     verbose            = args.verbose
     nonLinearModelName = args.nonLinearModelName
@@ -81,43 +83,44 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     if verbose > 0:
-        print("\nEPKF filtering with data generated from a file with data... ")
+        print(f"\nPF filtering (nbParticles={nbParticles}, resample_threshold={resample_threshold}) with data generated from a file with data... ")
 
-    epkf_2    = NonLinear_EPKF(param, save_pickle=traceplot, verbose=verbose)
-    filename  = os.path.join(datafile_dir, dataFileName)
-    listeEPKF = epkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
-    N = listeEPKF[-1][0] + 1
+    pf_2     = NonLinear_PF(param, nbParticles=nbParticles, resample_threshold=resample_threshold, save_pickle=traceplot, verbose=verbose)
+    filename = os.path.join(datafile_dir, dataFileName)
+    listePF  = pf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
+    N = listePF[-1][0] + 1
+    
+   
 
-    if traceplot and epkf_2.history is not None:
+    if traceplot and pf_2.history is not None:
         if verbose > 0:
-            print("\nExcerpt of the filtering with EPKF :")
-            print(epkf_2.history.as_dataframe().head())
+            print("\nExcerpt of the filtering with PF :")
+            print(pf_2.history.as_dataframe().head())
 
         # print scoring
-        if listeEPKF[0][1] is not None:
+        if listePF[0][1] is not None:
             ListeA = ['xkp1']
             ListeB = ['Xkp1_update']
             ListeC = ['PXXkp1_update']
-            ListeD = ['ikp1']
-            ListeE = ['Skp1']
-            epkf_2.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
+            ListeD = None
+            ListeE = None
+            pf_2.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
 
         # pickle storing and plots
-        epkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_epfk_2.pkl"))
-        if listeEPKF[0][1] is not None:
-            title = f"'{nonLinearModelName}' model data filtered with EPKF"
-            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-            
-            epkf_2.history.plot(title, 
+        pf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pf_2.pkl"))
+        if listePF[0][1] is not None:
+
+            title = f"'{nonLinearModelName}' model data filtered with PF"
+            pf_2.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \
                             list_covar= [None], \
                             window    = WINDOW, \
-                            basename  = f'epkf_2_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
-            epkf_2.history.plot(title, 
+                            basename  = f'pf_2_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
+            pf_2.history.plot(title, 
                             list_param= ["xkp1"  , "Xkp1_update"], \
                             list_label= ["x true", "x estimated"], \
                             list_covar= [None, "PXXkp1_update"], \
                             window    = WINDOW, \
-                            basename  = f'epkf_2_{nonLinearModelName}', show=False, base_dir=graph_dir)
+                            basename  = f'pf_2_{nonLinearModelName}', show=False, base_dir=graph_dir)
 

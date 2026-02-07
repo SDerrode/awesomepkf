@@ -19,6 +19,8 @@ from classes.ParamNonLinear import ParamNonLinear
 from classes.ParamLinear import ParamLinear
 # Parser d'options
 from others.parser    import *
+# Parser d'options
+from others.plot_settings import WINDOW
 
 if __name__ == "__main__":
     """
@@ -43,7 +45,7 @@ if __name__ == "__main__":
     sKey               = args.sKey   # Int>0 or None (so that it is generated automatically)
     nonLinearModelName = args.nonLinearModelName
     dataFileName       = args.dataFileName
-    if dataFileName == None:
+    if dataFileName is None:
         dataFileName = f"dataNonLinear_{nonLinearModelName}.csv"
     if sKey is not None and sKey < 0:
         parser.error("sKey must be >= 0")
@@ -93,10 +95,9 @@ if __name__ == "__main__":
     N = listeUPKF[-1][0]+1
 
     if traceplot and upkf_2.history is not None:
-        df = upkf_2.history.as_dataframe()
         if verbose > 0:
             print("\nExcerpt of the filtering with UPKF :")
-            print(df.head())
+            print(upkf_2.history.as_dataframe().head())
 
         # print scoring
         if listeUPKF[0][1] is not None:
@@ -111,18 +112,16 @@ if __name__ == "__main__":
         upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upkf_2.pkl"))
         if listeUPKF[0][1] is not None:
             title = f"'{nonLinearModelName}' model data filtered with UPKF"
-            #window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }
-            window    = {'xmin':500, 'xmax': 1000 }
             upkf_2.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \
-                            list_covar = [None], \
-                            window    = window, \
+                            list_covar= [None], \
+                            window    = WINDOW, \
                             basename  = f'upkf_2_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
             upkf_2.history.plot(title, 
                             list_param= ["xkp1"  , "Xkp1_update"], \
                             list_label= ["x true", "x estimated"], \
-                            list_covar = [None, "PXXkp1_update"], \
-                            window    = window, \
+                            list_covar= [None, "PXXkp1_update"], \
+                            window    = WINDOW, \
                             basename  = f'upkf_2_{nonLinearModelName}', show=False, base_dir=graph_dir)
 

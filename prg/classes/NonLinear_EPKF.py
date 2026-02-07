@@ -52,6 +52,9 @@ class NonLinear_EPKF(NonLinear_PKF):
         # The first
         ##################################################################################################@
 
+        Xkp1_predict  = np.zeros(shape=(self.dim_x, 1))
+        PXXkp1_predict= np.eye(self.dim_x)
+
         k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
         # temp            = self.param.Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(self.param.Pz00[self.dim_x:, self.dim_x:])
         # Xkp1_update     = temp @ ykp1
@@ -64,16 +67,16 @@ class NonLinear_EPKF(NonLinear_PKF):
             print(report)
             input('attente')
 
-        Xkp1_predict  = np.zeros(shape=(self.dim_x, 1))
+        
         if self.save_pickle and self._history is not None:
             self._history.record(iter          = k,
                                  xkp1          = xkp1.copy() if xkp1 is not None else None,
                                  ykp1          = ykp1.copy(),
+                                 Xkp1_predict  = Xkp1_predict.copy(),
+                                 PXXkp1_predict= PXXkp1_predict.copy(),
                                  ikp1          = np.zeros(shape=(self.dim_y, 1)),
                                  Skp1          = eye_dim_y,
                                  Kkp1          = np.zeros(shape=(self.dim_x, self.dim_y)),
-                                 Xkp1_predict  = Xkp1_predict,
-                                 PXXkp1_predict= eye_dim_x,
                                  Xkp1_update   = Xkp1_update.copy(),
                                  PXXkp1_update = PXXkp1_update.copy())
 

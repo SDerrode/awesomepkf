@@ -32,6 +32,11 @@ def addParseToParser(parser, listOptions):
             'default': 5000,
             'help': 'Set the number of samples to process (default: 5000)'
         },
+        'nbParticles': {
+            'type': int,
+            'default': 1000,
+            'help': 'Set the number of samples to process (default: 1000)'
+        },
         'sKey': {
             'type': int,
             'default': None,

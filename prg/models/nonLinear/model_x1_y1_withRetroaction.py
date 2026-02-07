@@ -1,13 +1,10 @@
 import numpy as np
-from typing import Callable
 from .base_model_nonLinear import BaseModelNonLinear
-
-# A few utils functions that are used several times
 from others.utils import check_consistency
 
 class ModelX1Y1_withRetroactions(BaseModelNonLinear):
     """
-    Nonlinear model with retro-actions of observations and of states.
+    Nonlinear model with retro-actions of observations and states.
     The model includes additive Gaussian process and observation noises.
     """
 
@@ -44,7 +41,7 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         # (D) Complex / quasi-periodic dynamics:
         # (a,b,c,d) = (1.05,\;1.5,\;0.95,\;2.0)
         # Expected behaviour: rich, possibly quasi-periodic or mixed-mode oscillations; sensitive dependence on initial condition; intermittent bursts.
-        # Numeric tips: try several initial conditions, \(\sigma_x=\sigma_y=0.01\), run \(N\ge 2000\) and inspect time series \& phase portrait.
+        # Numeric tips: try several initial conditions, \(\sigma_x=\sigma_y=0.01\), run \(N\ge 2000\) and inspect time series & phase portrait.
         # self.mQ   = np.diag([0.5, 0.5]) 
         # self.z00  = np.array([[-5],[0.5]])
         # self.a, self.b, self.c, self.d = 1.05, 1.5, 0.95, 2.0
@@ -62,63 +59,60 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
 
     # ------------------------------------------------------------------
-    def _gx(self, x, y, t, u, dt):
+    def _gx(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
         """
         Nonlinear state function with retro-action of observations on state.
         """
         x1 = x.flatten()[0]
         y1 = y.flatten()[0]
         t1 = t.flatten()[0]
-        return np.array([
-              self.a * x1 + self.b * np.tanh(y1) + t1
-        ]).reshape(-1, 1)
+        return np.array([[self.a * x1 + self.b * np.tanh(y1) + t1]])
 
     # ------------------------------------------------------------------
-    def _gy(self, x, y, t, u, dt):
+    def _gy(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
         """
         Nonlinear state function with retro-action of states on observation.
         """
         x1 = x.flatten()[0]
         y1 = y.flatten()[0]
         u1 = u.flatten()[0]
-        return np.array([
-            self.c * y1 + self.d * np.sin(x1) + u1
-        ]).reshape(-1, 1)
+        return np.array([[self.c * y1 + self.d * np.sin(x1) + u1]])
 
     # ------------------------------------------------------------------
-    def _g(self, x, y, t, u, dt):
+    def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
         """
-        Combined state and observation using Wojciech’s formulation.
+        Combine state and observation using Wojciech’s formulation.
         """
         if __debug__:
-            assert x.shape == (1, 1), f"x must be (1, 1), got {x.shape}"
-            assert y.shape == (1, 1), f"y must be (1, 1), got {y.shape}"
-            assert t.shape == (1, 1), f"t must be (1, 1), got {t.shape}"
-            assert u.shape == (1, 1), f"u must be (1, 1), got {u.shape}"
-            assert isinstance(dt, (float, int)), "dt must be a float"
+            assert x.shape == (1, 1)
+            assert y.shape == (1, 1)
+            assert t.shape == (1, 1)
+            assert u.shape == (1, 1)
+            assert isinstance(dt, (float, int))
 
         gx_val = self._gx(x, y, t, u, dt)
         gy_val = self._gy(x, y, t, u, dt)
         return np.vstack((gx_val, gy_val))
 
     # ------------------------------------------------------------------
-
-    def _jacobiens_g(self, x, y, t, u, dt):
+    def _jacobiens_g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float):
+        """
+        Compute Jacobians of g w.r.t state and noise.
+        """
         if __debug__:
-            assert x.shape == (1, 1), f"x must be (1, 1), got {x.shape}"
-            assert y.shape == (1, 1), f"y must be (1, 1), got {y.shape}"
-            assert t.shape == (1, 1), f"t must be (1, 1), got {t.shape}"
-            assert u.shape == (1, 1), f"u must be (1, 1), got {u.shape}"
-            assert isinstance(dt, (float, int)), "dt must be a float"
+            assert x.shape == (1, 1)
+            assert y.shape == (1, 1)
+            assert t.shape == (1, 1)
+            assert u.shape == (1, 1)
+            assert isinstance(dt, (float, int))
 
         x1 = x.flatten()[0]
         y1 = y.flatten()[0]
 
         An = np.array([
-                [self.a,              self.b / np.cosh(y1)**2],
-                [self.d * np.cos(x1), self.c                 ]
-            ])
-
+            [self.a,              self.b / np.cosh(y1)**2],
+            [self.d * np.cos(x1), self.c                 ]
+        ])
         Bn = np.eye(self.dim_xy)
 
         return An, Bn

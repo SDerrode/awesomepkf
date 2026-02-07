@@ -15,7 +15,7 @@ if __name__ == "__main__":
     print(f'params={params}')
     
     # short-cuts
-    dim_x, dim_y, g, mQ = params['dim_x'], params['dim_y'], params['g'], params['mQ']
+    dim_x, dim_y, g = params['dim_x'], params['dim_y'], params['g']
 
     # data for test
     z     = np.random.rand(dim_x+dim_y).reshape(-1,1)
@@ -23,7 +23,4 @@ if __name__ == "__main__":
     dt    = 1.0
 
     print(f"--- Model loaded automatically : {model.MODEL_NAME}---") # {model.__class__.__name__}
-    print("mQ =\n", mQ)
     print("Result g(z):\n", g(z, noise, dt))
-
-
