@@ -1,11 +1,7 @@
-
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve
 
 from .base_model_linear import BaseModelLinear
 
-# A few utils functions that are used several times
-from others.utils import check_consistency
 
 class Model_Sigma_x3_y1(BaseModelLinear):
 
@@ -13,32 +9,23 @@ class Model_Sigma_x3_y1(BaseModelLinear):
     MODEL_NAME = "Sigma_x3_y1"
 
     def __init__(self) -> None:
-        super().__init__(dim_x=3, dim_y=1, model_type="linear_Sigma")
+        super().__init__(dim_x=3, dim_y=1, model_type="linear_AmQ")
     
-        self.sxx = np.array([[1.0, 0.4, 0.4],
+        sxx = np.array([[1.0, 0.4, 0.4],
                         [0.4, 1.0, 0.4],
                         [0.4, 0.4, 1.0]])
-        self.b   = np.array([[0.6, 0.2, 0.4]])
-        self.syy = np.array([[1.0]])
-        self.a   = np.array([[0.5, 0.1, 0.2],
+        b   = np.array([[0.6, 0.2, 0.4]])
+        syy = np.array([[1.0]])
+        a   = np.array([[0.5, 0.1, 0.2],
                         [0.4, 0.6, 0.2],
                         [0.4, 0.4, 0.5]])
-        self.d   = np.array([[0.0, 0.0, 0.0]])
-        self.e   = np.array([[0.2],
+        d   = np.array([[0.0, 0.0, 0.0]])
+        e   = np.array([[0.20],
                         [0.15],
                         [0.25]])
-        self.c   = np.array([[0.3]])
+        c   = np.array([[0.30]])
 
-        Q1     = np.block([[self.sxx, self.b.T], [self.b, self.syy]])
-        Q2     = np.block([[self.a, self.e], [self.d, self.c]])
-        # self.A = Q2 @ np.linalg.inv(Q1)
-        #calcul robuste
-        c, low = cho_factor(Q1)
-        self.A = Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
-        eigvals = np.linalg.eigvals(self.A)
-        if np.any(np.abs(eigvals) >= 1.0):
-            raise ValueError(f"⚠️ The modulus of one Eigen value of A is >= 1 : {eigvals}")
+        Q1     = np.block([[sxx, b.T], [b, syy]])
+        Q2     = np.block([[a,   e],   [d, c]])
 
-        if __debug__:
-            check_consistency(sxx=self.sxx, syy=self.syy)
-
+        self._compute_A_mq_z00_Pz00(Q1, Q2)

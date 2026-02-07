@@ -1,12 +1,7 @@
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve
 
 from .base_model_linear import BaseModelLinear
 
-
-
-# A few utils functions that are used several times
-from others.utils import check_consistency
 
 class Model_Sigma_x1_y1(BaseModelLinear):
     
@@ -14,25 +9,17 @@ class Model_Sigma_x1_y1(BaseModelLinear):
     MODEL_NAME = "Sigma_x1_y1"
 
     def __init__(self) -> None:
-        super().__init__(dim_x=1, dim_y=1, model_type="linear_Sigma")
+        super().__init__(dim_x=1, dim_y=1, model_type="linear_AmQ")
 
-        self.sxx = np.array([[1]])
-        self.b   = np.array([[0.3]])
-        self.syy = np.array([[1]])
-        self.a   = np.array([[0.5]])
-        self.d   = np.array([[0.05]])
-        self.e   = np.array([[0.05]])
-        self.c   = np.array([[0.04]])
+        sxx = np.array([[1]])
+        b   = np.array([[0.3]])
+        syy = np.array([[1]])
+        a   = np.array([[0.5]])
+        d   = np.array([[0.05]])
+        e   = np.array([[0.05]])
+        c   = np.array([[0.04]])
         
-        Q1     = np.block([[self.sxx, self.b.T], [self.b, self.syy]])
-        Q2     = np.block([[self.a, self.e], [self.d, self.c]])
-        # self.A = Q2 @ np.linalg.inv(Q1)
-        #calcul robuste
-        c, low = cho_factor(Q1)
-        self.A = Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
-        eigvals = np.linalg.eigvals(self.A)
-        if np.any(np.abs(eigvals) >= 1.0):
-            raise ValueError(f"⚠️ The modulus of one Eigen value of A is >= 1 : {eigvals}")
-
-        if __debug__:
-            check_consistency(sxx=self.sxx, syy=self.syy)
+        Q1  = np.block([[sxx, b.T], [b, syy]])
+        Q2  = np.block([[a,   e],   [d, c]])
+        
+        self._compute_A_mq_z00_Pz00(Q1, Q2)

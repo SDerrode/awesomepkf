@@ -23,8 +23,8 @@ class Model_A_mQ_x3_y1(BaseModelLinear):
             [0.21131687242798355, 0.14120370370370378, 0.6734053497942387, 0.41944444444444445],
             [0.6555555555555556, 0.22500000000000003, 0.4194444444444445, 0.8500000000000001]] )
         
-        self.z00 = np.zeros(shape=(self.dim_x+self.dim_y, 1))
-        self.Pz00 = np.eye(self.dim_x+self.dim_y)
+        self.z00 = np.zeros(shape=(self.dim_xy, 1))
+        self.Pz00 = np.eye(self.dim_xy)
 
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)

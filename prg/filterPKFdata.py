@@ -92,8 +92,8 @@ if __name__ == "__main__":
         # pickle storing and plots
         pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
         title = f"'{linearModelName}' model data filtered with PKF"
-        # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-        window    = {'xmin':0, 'xmax': 300 }
+        #window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }
+            window    = {'xmin':500, 'xmax': 1000 }
         pkf_1.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \

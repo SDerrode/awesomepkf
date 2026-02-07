@@ -16,8 +16,6 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
     def __init__(self) -> None:
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
 
-        self.Pz00 = np.eye(self.dim_xy)
-
         # (A) Strongly damped / stable:
         # (a,b,c,d) = (0.4,\;0.1,\;0.3,\;0.1)
         # Expected behaviour: rapid convergence to a fixed point (strong damping). Use as baseline for filter stability tests.
@@ -59,6 +57,7 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         # self.z00  = np.array([[-5],[0.5]])
         # self.a, self.b, self.c, self.d = 1.2, 2.0, 0.8, 2.5
         
+        self.Pz00 = np.eye(self.dim_xy)
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
 
@@ -79,7 +78,6 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         """
         Nonlinear state function with retro-action of states on observation.
         """
-
         x1 = x.flatten()[0]
         y1 = y.flatten()[0]
         u1 = u.flatten()[0]
@@ -122,8 +120,5 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
             ])
 
         Bn = np.eye(self.dim_xy)
-        
-        # print(f'An={An}')
-        # print(f'Bn={Bn}')
-        # exit(1)
+
         return An, Bn
