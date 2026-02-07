@@ -145,6 +145,10 @@ class Linear_PKF:
 
         # Short-cuts
         g, A, mQ = self.param.g, self.param.A, self.param.mQ
+        
+        # for speed
+        eye_dim_y = np.eye(self.dim_y)
+        eye_dim_x = np.eye(self.dim_x)
 
         # The first
         ###################
@@ -170,17 +174,18 @@ class Linear_PKF:
                                     xkp1                 = xkp1.copy() if xkp1 is not None else None,
                                     ykp1                 = ykp1.copy(),
                                     Xkp1_predict         = Xkp1_predict.copy(),              # No prediction for the first
-                                    PXXkp1_predict       = np.eye(self.dim_x),               # No prediction for the first
+                                    PXXkp1_predict       = eye_dim_x,                       # No prediction for the first
                                     ikp1                 = np.zeros(shape=(self.dim_y, 1)),           # na
-                                    Skp1                 = np.eye(self.dim_y),                        # na
+                                    Skp1                 = eye_dim_y,                                 # na
                                     Kkp1                 = np.zeros(shape=(self.dim_x, self.dim_y)),  # na
                                     Xkp1_update          = Xkp1_update.copy(),
-                                    PXXkp1_update        = PXXkp1_update.copy(),
-                                    Xkp1_update_phys     = Xkp1_update.copy(),
-                                    PXXkp1_update_phys   = PXXkp1_update.copy(),
-                                    PXXkp1_update_Joseph = PXXkp1_update.copy())
+                                    PXXkp1_update        = PXXkp1_update.copy()
+            )
+                                    # Xkp1_update_phys     = Xkp1_update.copy(),
+                                    # PXXkp1_update_phys   = PXXkp1_update.copy(),
+                                    # PXXkp1_update_Joseph = PXXkp1_update.copy())
  
-        yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update, Xkp1_update # the phys. and math. Xkp1_update are the same
+        yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
 
         ###################
         # The next ones
@@ -188,7 +193,7 @@ class Linear_PKF:
         while N is None or k+1 < N:
             
             # Required for Joseph form
-            PXXk_update = PXXkp1_update.copy()
+            # PXXk_update = PXXkp1_update.copy()
 
             #######################################
             # Prediction
@@ -205,7 +210,7 @@ class Linear_PKF:
             # check_consistency(Pkp1_predict=Pkp1_predict)
             verdict, report = diagnose_covariance(Pkp1_predict)
             if verdict is not None:
-                print(f'Pkp1_predict={Pkp1_predict}\nRreport for Pkp1_predict - iteration k={k}:')
+                print(f'Pkp1_predict={Pkp1_predict}\nReport for Pkp1_predict - iteration k={k}:')
                 print(report)
                 input('attente')
             
@@ -226,7 +231,7 @@ class Linear_PKF:
             # print(f'accel={accel}')
             # Version robuste du calcul
             c, low = cho_factor(PYYkp1_predict)
-            accel = PXYkp1_predict @ cho_solve((c, low), np.eye(self.dim_y))
+            accel = PXYkp1_predict @ cho_solve((c, low), eye_dim_y)
             # print(f'accel={accel}')
             Xkp1_update   = Xkp1_predict   + accel @ (ykp1 - Ykp1_predict)
             PXXkp1_update = PXXkp1_predict - accel @ PYXkp1_predict
@@ -241,7 +246,7 @@ class Linear_PKF:
             # print(f'Kkp1={Kkp1}')
             # Version robuste du calcul
             c, low = cho_factor(Skp1)
-            Kkp1 = PXYkp1_predict @ cho_solve((c, low), np.eye(self.dim_y))
+            Kkp1   = PXYkp1_predict @ cho_solve((c, low), eye_dim_y)
             # print(f'Kkp1={Kkp1}')
             
             # Updating expectation and variance, and variance in Joseph form
@@ -249,8 +254,13 @@ class Linear_PKF:
             PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
             # Dans la forme de Joseph, j'utilise les sous-matrices de mQ, qui ne sont pas des matrices mais des ActiveView.
             # pour revenir à un forme np.ndarray, j'utilise l'opérateur value (méthode définie dans la classe ActiveView )
-            PXXkp1_update_Joseph = (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value) @ PXXk_update @ (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value).T \
-                + self.param.mQ_xx.value - Kkp1 @ self.param.mQ_yx.value - self.param.mQ_xy.value @ Kkp1.T + Kkp1 @ self.param.mQ_yy.value @ Kkp1.T
+            # PXXkp1_update_Joseph = (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value) @ PXXk_update @ (self.param.A_xx.value - Kkp1 @ self.param.A_yx.value).T \
+            #     + self.param.mQ_xx.value - Kkp1 @ self.param.mQ_yx.value - self.param.mQ_xy.value @ Kkp1.T + Kkp1 @ self.param.mQ_yy.value @ Kkp1.T
+            # print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}')
+            temp = np.vstack((eye_dim_x, -Kkp1.T))
+            PXXkp1_update_Joseph = temp.T @ Pkp1_predict @ temp
+            # print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}')
+            # input('attente')
 
             verdict, report = diagnose_covariance(PXXkp1_update)
             if verdict is not None:
@@ -293,12 +303,13 @@ class Linear_PKF:
                                      Skp1                 = Skp1.copy(),
                                      Kkp1                 = Kkp1.copy(),
                                      Xkp1_update          = Xkp1_update.copy(),
-                                     PXXkp1_update        = PXXkp1_update.copy(),
-                                     Xkp1_update_phys     = Xkp1_update_phys.copy(),
-                                     PXXkp1_update_phys   = PXXkp1_update_phys.copy(),
-                                     PXXkp1_update_Joseph = PXXkp1_update_Joseph.copy())
+                                     PXXkp1_update        = PXXkp1_update_Joseph.copy(), #PXXkp1_update.copy()
+                )
+                                    #  Xkp1_update_phys     = Xkp1_update_phys.copy(),
+                                    #  PXXkp1_update_phys   = PXXkp1_update_phys.copy(),
+                                    #  PXXkp1_update_Joseph = PXXkp1_update_Joseph.copy())
 
-            yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update, Xkp1_update_phys
+            yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
 
     def process_N_data(self, N, data_generator=None):
         return list(self.process_pkf(N=N, data_generator=data_generator))

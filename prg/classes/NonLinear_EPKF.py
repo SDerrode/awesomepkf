@@ -44,6 +44,10 @@ class NonLinear_EPKF(NonLinear_PKF):
         
         # short-cuts
         g, jg, mQ = self.param.g, self.param.jacobiens_g, self.param.mQ
+        
+        # for speed
+        eye_dim_y = np.eye(self.dim_y)
+        eye_dim_x = np.eye(self.dim_x)
 
         # The first
         ##################################################################################################@
@@ -66,10 +70,10 @@ class NonLinear_EPKF(NonLinear_PKF):
                                  xkp1          = xkp1.copy() if xkp1 is not None else None,
                                  ykp1          = ykp1.copy(),
                                  ikp1          = np.zeros(shape=(self.dim_y, 1)),
-                                 Skp1          = np.eye(self.dim_y),
+                                 Skp1          = eye_dim_y,
                                  Kkp1          = np.zeros(shape=(self.dim_x, self.dim_y)),
                                  Xkp1_predict  = Xkp1_predict,
-                                 PXXkp1_predict= np.eye(self.dim_x),
+                                 PXXkp1_predict= eye_dim_x,
                                  Xkp1_update   = Xkp1_update.copy(),
                                  PXXkp1_update = PXXkp1_update.copy())
 
@@ -85,7 +89,7 @@ class NonLinear_EPKF(NonLinear_PKF):
         while N is None or k < N:
             
             # Required for Joseph form
-            PXXk_update = PXXkp1_update.copy()
+            # PXXk_update = PXXkp1_update.copy()
             
             Xkp1_update_augmented      = np.vstack([Xkp1_update, ykp1])
             Zkp1_predict               = g( Xkp1_update_augmented, accel_zero_xy, self.dt)
@@ -130,7 +134,7 @@ class NonLinear_EPKF(NonLinear_PKF):
             # print(f'Kkp1={Kkp1}')
             # Version robuste du calcul
             c, low = cho_factor(Skp1)
-            Kkp1 = PXYkp1_predict @ cho_solve((c, low), np.eye(self.dim_y))
+            Kkp1 = PXYkp1_predict @ cho_solve((c, low), eye_dim_y)
             # print(f'Kkp1={Kkp1}')
 
             Xkp1_update   = Xkp1_predict   + Kkp1 @ ikp1
@@ -144,10 +148,13 @@ class NonLinear_EPKF(NonLinear_PKF):
             # print(f'PXXkp1_update={PXXkp1_update}')
             # PXXkp1_update = PXXkp1_predict - Kkp1 @ PXYkp1_predict.T - PXYkp1_predict @ Kkp1.T + K @ Skp1 @ Kkp1.T
             # Q = Bn @ Bn.T
-            # PXXkp1_update = (An[0:self.dim_x, 0:self.dim_x] - Kkp1 @ An[self.dim_x:self.dim_xy, 0:self.dim_x]) @ PXXk_update @ (An[0:self.dim_x, 0:self.dim_x] - K @ An[self.dim_x:self.dim_xy, 0:self.dim_x]).T \
+            # PXXkp1_update_Joseph = (An[0:self.dim_x, 0:self.dim_x] - Kkp1 @ An[self.dim_x:self.dim_xy, 0:self.dim_x]) @ PXXk_update @ (An[0:self.dim_x, 0:self.dim_x] - K @ An[self.dim_x:self.dim_xy, 0:self.dim_x]).T \
             #     +Q[0:self.dim_x, 0:self.dim_x] - Kkp1 @ Q[0:self.dim_x, self.dim_x:self.dim_xy].T - Q[0:self.dim_x, self.dim_x:self.dim_xy] @ K.T + K @ Q[self.dim_x:self.dim_xy, self.dim_x:self.dim_xy] @ K.T
-            # print(f'PXXkp1_update={PXXkp1_update}')
-            # input('Attente')
+            #print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}')
+            temp = np.vstack((eye_dim_x, -Kkp1.T))
+            PXXkp1_update_Joseph = temp.T @ Pkp1_predict @ temp
+            # print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}')
+            # input('attente')
 
             # Il ne faut pas dignostiquer la matrice car elle est singulière, 
             # mais cela n'est pas grave pour le reste des calculs
@@ -167,6 +174,7 @@ class NonLinear_EPKF(NonLinear_PKF):
                                      Skp1           = Skp1.copy(),
                                      Kkp1           = Kkp1.copy(),
                                      Xkp1_update    = Xkp1_update.copy(),
-                                     PXXkp1_update  = PXXkp1_update.copy())
+                                     PXXkp1_update  = PXXkp1_update_Joseph.copy(), #PXXkp1_update.copy())
+                )
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
