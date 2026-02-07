@@ -88,6 +88,10 @@ class NonLinear_UPKF(NonLinear_PKF):
         
         # short-cuts
         Pz00, g, mQ = self.param._Pz00, self.param.g, self.param.mQ
+        
+        # for speed
+        eye_dim_y = np.eye(self.dim_y)
+        eye_dim_x = np.eye(self.dim_x)
 
         # The first
         ###################
@@ -112,9 +116,9 @@ class NonLinear_UPKF(NonLinear_PKF):
                                  xkp1          = xkp1.copy() if xkp1 is not None else None,
                                  ykp1          = ykp1.copy(),
                                  Xkp1_predict  = Xkp1_predict.copy(),
-                                 PXXkp1_predict= np.eye(self.dim_x),
+                                 PXXkp1_predict= eye_dim_x,
                                  ikp1          = np.zeros(shape=(self.dim_y)),
-                                 Skp1          = np.eye(self.dim_y),
+                                 Skp1          = eye_dim_y,
                                  Kkp1          = np.zeros(shape=(self.dim_x, self.dim_y)),
                                  Xkp1_update   = Xkp1_update.copy(),
                                  PXXkp1_update = PXXkp1_update.copy())
@@ -163,7 +167,7 @@ class NonLinear_UPKF(NonLinear_PKF):
             # print(f'Kkp1={Kkp1}')
             # Version robuste du calcul
             c, low = cho_factor(Skp1)
-            Kkp1 = PXYkp1_predict @ cho_solve((c, low), np.eye(self.dim_y))
+            Kkp1 = PXYkp1_predict @ cho_solve((c, low), eye_dim_y)
             # print(f'Kkp1={Kkp1}')
             Xkp1_update = Xkp1_predict   + Kkp1 @ ikp1
             # forme non robuste numériquement
@@ -184,6 +188,15 @@ class NonLinear_UPKF(NonLinear_PKF):
                 print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
                 print(report)
                 input('attente')
+            temp = np.vstack((eye_dim_x, -Kkp1.T))
+            PXXkp1_update_Joseph = temp.T @ Pkp1_predict @ temp
+            # print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}')
+            # input('attente')
+            verdict, report = diagnose_covariance(PXXkp1_update)
+            if verdict is not None:
+                print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
+                print(report)
+                input('attente')
                 
             if self.save_pickle and self._history is not None:
                 self._history.record(iter           = k,
@@ -195,6 +208,7 @@ class NonLinear_UPKF(NonLinear_PKF):
                                      Skp1           = Skp1.copy(),
                                      Kkp1           = Kkp1.copy(),
                                      Xkp1_update    = Xkp1_update.copy(),
-                                     PXXkp1_update  = PXXkp1_update.copy())
+                                     PXXkp1_update  = PXXkp1_update_Joseph.copy(), #PXXkp1_update.copy()
+                )
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update

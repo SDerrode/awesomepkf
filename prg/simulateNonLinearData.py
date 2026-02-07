@@ -58,7 +58,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     # Available non linear models:
-    model = ModelFactoryNonLinear.create("x1_y1_withRetroactions")
+    model = ModelFactoryNonLinear.create(nonLinearModelName)
     if verbose>0:
         print(f'model={model}, {model.MODEL_NAME}')
         print(f'model={model}')
