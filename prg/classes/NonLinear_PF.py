@@ -55,70 +55,54 @@ class NonLinear_PF(NonLinear_PKF):
         # short-cuts
         g, mQ = self.param.g, self.param.mQ
 
-        # The first
-        ##################################################################################################@
-
         # ==========================
-        # Prediction
+        # Init
         # ==========================
-
-        Xkp1_predict  = np.zeros((self.dim_x, 1))
-        PXXkp1_predict= np.eye(self.dim_x)
-
-        # ==========================
-        # Observation
-        # ==========================
-        k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
-
+        
         # Initial particles: joint Gaussian prior
         Z_particles = np.random.multivariate_normal(
-            mean=np.zeros(self.dim_xy),
-            cov=self.param.Pz00,
-            size=self.nbParticles
+            mean = np.zeros(self.dim_xy),
+            cov  = self.param.Pz00,
+            size = self.nbParticles
         )
+        weights     = np.ones(self.nbParticles) / self.nbParticles
 
-        # Conditioning on observed y_0
-        Z_particles[:, self.dim_x:] = ykp1.ravel()
-        weights                     = np.ones(self.nbParticles) / self.nbParticles
+        # # ==========================
+        # # Update estimate
+        # # ==========================
+        # Xkp1_update = self.weighted_mean(
+        #     Z_particles[:, :self.dim_x], weights
+        # ).reshape(-1, 1)
+        # PXXkp1_update = self.weighted_cov(
+        #     Z_particles[:, :self.dim_x], weights, Xkp1_update.ravel()
+        # )
+        # verdict, report = diagnose_covariance(PXXkp1_update)
+        # if verdict is not None:
+        #     print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
+        #     print(report)
+        #     input('attente')
 
-        # ==========================
-        # Update estimate
-        # ==========================
-        Xkp1_update = self.weighted_mean(
-            Z_particles[:, :self.dim_x], weights
-        ).reshape(-1, 1)
-        PXXkp1_update = self.weighted_cov(
-            Z_particles[:, :self.dim_x], weights, Xkp1_update.ravel()
-        )
-        verdict, report = diagnose_covariance(PXXkp1_update)
-        if verdict is not None:
-            print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
-            print(report)
-            input('attente')
+        # if self.save_pickle and self._history is not None:
+        #     self._history.record(iter          = k,
+        #                          xkp1          = xkp1.copy() if xkp1 is not None else None,
+        #                          ykp1          = ykp1.copy(),
+        #                          Xkp1_predict  = Xkp1_predict.copy(),
+        #                          PXXkp1_predict= PXXkp1_predict.copy(),
+        #                          Xkp1_update   = Xkp1_update.copy(),
+        #                          PXXkp1_update = PXXkp1_update.copy(),
+        #                          ESS           = self.nbParticles)
 
-        if self.save_pickle and self._history is not None:
-            self._history.record(iter          = k,
-                                 xkp1          = xkp1.copy() if xkp1 is not None else None,
-                                 ykp1          = ykp1.copy(),
-                                 Xkp1_predict  = Xkp1_predict.copy(),
-                                 PXXkp1_predict= PXXkp1_predict.copy(),
-                                 Xkp1_update   = Xkp1_update.copy(),
-                                 PXXkp1_update = PXXkp1_update.copy(),
-                                 ESS           = self.nbParticles)
-
-        yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
+        # yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
 
         ##################################################################################################@
         # The next ones
         
-        accel_zero = np.zeros(shape=(self.dim_xy, 1))
+        # accel_zero = np.zeros(shape=(self.dim_xy, 1))
+        k=0
         while N is None or k < N:
-            
-            # Required for Joseph form
-            PXXk_update = PXXkp1_update.copy()
-            
+
             # ==========================
-            # Prediction
+            # Predict
             # ==========================
 
             noise = np.random.multivariate_normal(
@@ -128,29 +112,21 @@ class NonLinear_PF(NonLinear_PKF):
             )
 
             for i in range(self.nbParticles):
-                zi = Z_particles[i].reshape(-1, 1)
-                Z_particles[i] = (
-                    g(zi, accel_zero, self.dt).ravel()
-                    + noise[i]
-                )
+                Z_particles[i] = g(Z_particles[i].reshape(-1, 1), noise[i].reshape(-1, 1), self.dt).ravel()
 
             Zkp1_predict = self.weighted_mean(Z_particles, weights).reshape(-1, 1)
             Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
             # print(f'Zkp1_predict={Zkp1_predict}')
             # print(f'Xkp1_predict={Xkp1_predict}')
             
-            Pkp1_predict = self.weighted_cov(
-                Z_particles, weights, Zkp1_predict.ravel()
-            )
-            # print(f'Pkp1_predict={Pkp1_predict}')
-            # input('attente')
-            # Il ne faut pas dignostiquer la matrice car elle est singulière, 
-            # mais cela n'est pas grave pour le reste des calculs
-            verdict, report = diagnose_covariance(Pkp1_predict)
-            if verdict is not None:
-                print(f'Pkp1_predict={Pkp1_predict}\nReport for Pkp1_predict - iteration k={k}:')
-                print(report)
-                input('attente')
+            Pkp1_predict = self.weighted_cov(Z_particles, weights, Zkp1_predict.ravel())
+            # print(f'Pkp1_predict={Pkp1_predict}'
+            # Matrice singulière : ne pas tester
+            # verdict, report = diagnose_covariance(Pkp1_predict)
+            # if verdict is not None:
+            #     print(f'Pkp1_predict={Pkp1_predict}\nReport for Pkp1_predict - iteration k={k}:')
+            #     print(report)
+            #     input('attente')
 
             # Cutting Pkp1 into 4 blocks
             M_top, M_bottom                = np.vsplit(Pkp1_predict, [self.dim_x])
@@ -168,7 +144,6 @@ class NonLinear_PF(NonLinear_PKF):
                 input('attente')
             # print(f'PXXkp1_predict={PXXkp1_predict}')
             # print(f'PYYkp1_predict={PYYkp1_predict}')
-            
 
             # ==========================
             # Observation
@@ -177,7 +152,6 @@ class NonLinear_PF(NonLinear_PKF):
                 k, (xkp1, ykp1) = next(generator)
             except StopIteration:
                 return # we stop as the data generator is stopped itself
-
 
             y_obs = ykp1.ravel()
 
@@ -192,48 +166,34 @@ class NonLinear_PF(NonLinear_PKF):
             norm   = 1.0 / np.sqrt((2 * np.pi) ** self.dim_y * det_S)
 
             for i in range(self.nbParticles):
-                yi = Z_particles[i, self.dim_x:]
-                innov = y_obs - yi
-                weights[i] *= norm * np.exp(
-                    -0.5 * innov.T @ S_inv @ innov
-                )
+                innov = y_obs - Z_particles[i, self.dim_x:]
+                weights[i] *= norm * np.exp( -0.5 * innov.T @ S_inv @ innov )
 
             weights += 1e-300            # avoid round-off to zero
             weights /= np.sum(weights)   # normalize
-            
-            
+
             # ==========================
             # ESS + Resampling
             # ==========================
 
             ess = 1.0 / np.sum(weights ** 2)
-
             if ess < self.resample_threshold * self.nbParticles:
-                idx = systematic_resample(weights)
+                idx         = systematic_resample(weights)
                 Z_particles = Z_particles[idx]
                 weights.fill(1.0 / self.nbParticles)
-                
             # print(f'ess={ess}')
-            
 
             # ==========================
             # Update estimate
             # ==========================
 
-            Xkp1_update = self.weighted_mean(
-                Z_particles[:, :self.dim_x], weights
-            ).reshape(-1, 1)
-
-            Pkp1_update = self.weighted_cov(
-                Z_particles[:, :self.dim_x], weights, Xkp1_update.ravel()
-            )
-             # Il ne faut pas dignostiquer la matrice car elle est singulière, 
-            # mais cela n'est pas grave pour le reste des calculs
-            # verdict, report = diagnose_covariance(PXXkp1_update)
-            # if verdict is not None:
-            #     print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
-            #     print(report)
-            #     input('attente')
+            Xkp1_update = self.weighted_mean(Z_particles[:, :self.dim_x], weights).reshape(-1, 1)
+            PXXkp1_update = self.weighted_cov(Z_particles[:, :self.dim_x], weights, Xkp1_update.ravel())
+            verdict, report = diagnose_covariance(PXXkp1_update)
+            if verdict is not None:
+                print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
+                print(report)
+                input('attente')
 
             if self.save_pickle and self._history is not None:
                 self._history.record(iter           = k,
@@ -245,6 +205,5 @@ class NonLinear_PF(NonLinear_PKF):
                                      PXXkp1_update  = PXXkp1_update.copy(),
                                      ESS            = ess)
             
-            # input('attente')
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
