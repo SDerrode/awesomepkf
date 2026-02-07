@@ -8,8 +8,8 @@ import numpy as np
 from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
 from others.utils import compute_errors
-# Manage algorithms for the UPKF
-from classes.NonLinear_UPKF import NonLinear_UPKF
+# Manage algorithms for the EPKF
+from classes.NonLinear_EPKF import NonLinear_EPKF
 # Manage non linear parameters
 from classes.ParamNonLinear import ParamNonLinear
 # Parser d'options
@@ -20,20 +20,21 @@ from others.plot_settings import WINDOW
 if __name__ == "__main__":
     """
     USAGES:
-        python3 prg/filterUPKFdata.py
-        python3 prg/filterUPKFdata.py --N 1000 --nonLinearModelName x1_y1_withRetroactions --sKey 303  --sigmaSet wan2000 --verbose 0 --traceplot
+        python3 prg/filterPFdata.py
+        python3 prg/filterPFdata.py --N 1000 --nonLinearModelName x1_y1_withRetroactions --sKey 303 --verbose 0 --traceplot
     """
-
+    
     # ------------------------------------------------------------------
     # Constants (default value) - Parser
     # ------------------------------------------------------------------
 
-    parser = argparse.ArgumentParser(description='Simulate and filter non linear data with UPKF')
-    addParseToParser(parser, ['nonLinearModelName', 'N', 'sKey', 'sigmaSet'])
+    parser = argparse.ArgumentParser(description='Simulate and filter non linear data with PF')
+    addParseToParser(parser, ['nonLinearModelName', 'N', 'sKey', 'nbParticles'])
     args   = parser.parse_args()
     
+    resample_threshold = 0.5
+    nbParticles        = args.nbParticles
     traceplot          = args.traceplot
-    sigmaSet           = args.sigmaSet
     verbose            = args.verbose
     N                  = args.N
     sKey               = args.sKey 
@@ -63,7 +64,7 @@ if __name__ == "__main__":
     params       = model.get_params()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
-
+    
     if verbose > 0:
         print(f'model={model}')
         param.summary()
@@ -73,14 +74,14 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     if verbose > 0:
-        print("\nUPKF filtering with data generated from a non-linear model...")
-    upkf_1    = NonLinear_UPKF(sigmaSet, param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
-    listeUPKF = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
+        print(f"\nPF filtering (nbParticles={nbParticles}, resample_threshold={resample_threshold}) with data generated from a non-linear model...")
+    pf_1    = NonLinear_PF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
+    listePF = pf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
-    if traceplot and upkf_1.history is not None:
+    if traceplot and pf_1.history is not None:
         if verbose > 0:
-            print("\nExtract of the resulting filtering with UPKF :")
-            print( upkf_1.history.as_dataframe().head())
+            print("\nExtract of the resulting filtering with PF :")
+            print(pf_1.history.as_dataframe().head())
 
         # print scoring
         ListeA = ['xkp1']
@@ -88,22 +89,20 @@ if __name__ == "__main__":
         ListeC = ['PXXkp1_update']
         ListeD = ['ikp1']
         ListeE = ['Skp1']
-        upkf_1.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
+        pf_1.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
 
         # pickle storing and plots
-        upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upkf_1.pkl"))
-        title = f"'{nonLinearModelName}' model data filtered with UPKF"
-        # Les observations
-        upkf_1.history.plot(title, 
-                            list_param= ["ykp1"], \
-                            list_label= ["Observations y"], \
+        pf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pf_1.pkl"))
+        title = f"'{nonLinearModelName}' model data filtered with PF"
+        pf_1.history.plot(title, 
+                            list_param = ["ykp1"], \
+                            list_label = ["Observations y"], \
                             list_covar = [None], \
-                            window    = WINDOW, \
-                            basename  = f'upkf_1_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
-        upkf_1.history.plot(title, 
+                            window     = WINDOW, \
+                            basename   = f'pf_1_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
+        pf_1.history.plot(title, 
                             list_param = ["xkp1"  , "Xkp1_update"], \
                             list_label = ["x true", "x estimated"], \
                             list_covar = [None, "PXXkp1_update"], \
                             window     = WINDOW, \
-                            basename   = f'upkf_1_{nonLinearModelName}', show=False, base_dir=graph_dir)
-
+                            basename   = f'pf_1_{nonLinearModelName}', show=False, base_dir=graph_dir)

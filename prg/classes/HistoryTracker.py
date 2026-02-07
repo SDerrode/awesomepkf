@@ -5,21 +5,21 @@ import os
 import pickle
 import logging
 from typing import Any, Optional
-
-from rich import print
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
-# pour éviter l'info sur le symbol sigma dans le label de la figure
-import logging
-logging.getLogger("matplotlib").setLevel(logging.WARNING)
-
 from others.utils import compute_errors
 from others.plot_settings import *
 
+# Seuils numériques pour le calcul ±2σ
+EPS_ABS = 1e-12  # seuil absolu (bruit machine)
+EPS_REL = 1e-6   # seuil relatif à l'échelle
+
+# Configuration du logging global
+logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # ----------------------------------------------------------------------
 # Configuration globale du logging
@@ -31,11 +31,38 @@ logger = logging.getLogger(__name__)
 class HistoryTracker:
     """
     Enregistre et visualise l'évolution de grandeurs au fil des itérations.
-    Permet la sauvegarde / rechargement via pickle et la visualisation via Matplotlib.
+
+    Cette classe est utile pour suivre des variables dans des simulations, filtres
+    (Kalman, particulaire, etc.) ou tout algorithme itératif. Elle permet de :
+
+    - Enregistrer des grandeurs à chaque itération via `record()`.
+    - Transformer l'historique en pandas DataFrame pour analyse.
+    - Calculer et afficher des erreurs via `compute_errors()`.
+    - Tracer les variables avec covariances et enveloppes ±2σ via `plot()`.
+    - Sauvegarder/recharger l'historique via pickle.
+
+    Attributs
+    ----------
+    _history : list[dict[str, Any]]
+        Liste des enregistrements effectués via `record()`.
+    verbose : int
+        Niveau de verbosité :
+        0 = avertissements uniquement
+        1 = informations principales
+        2 = debug détaillé
     """
 
     def __init__(self, verbose: int = 0):
-        assert verbose in [0, 1, 2], "verbose doit être 0, 1 ou 2"
+        """
+        Initialise un HistoryTracker vide.
+
+        Parameters
+        ----------
+        verbose : int, optional
+            Niveau de verbosité (0, 1, 2). Par défaut 0.
+        """
+        if verbose not in (0, 1, 2):
+            raise ValueError("verbose doit être 0, 1 ou 2")
         self._history: list[dict[str, Any]] = []
         self.verbose = verbose
         self._set_log_level()
@@ -44,7 +71,7 @@ class HistoryTracker:
     def _set_log_level(self):
         """Ajuste le niveau du logger selon la verbosité."""
         if not __debug__:
-            logger.setLevel(logging.ERROR)  # Mode rapide = silence
+            logger.setLevel(logging.ERROR)
             return
         if self.verbose == 0:
             logger.setLevel(logging.WARNING)
@@ -53,18 +80,42 @@ class HistoryTracker:
         else:
             logger.setLevel(logging.DEBUG)
 
-    # ------------------------------------------------------------------
     def record(self, **quantities: Any) -> None:
-        """Sauvegarde l'état courant sous forme de dictionnaire."""
-        assert all(isinstance(k, str) for k in quantities.keys()), "Toutes les clés doivent être des chaînes"
+        """
+        Enregistre l'état courant sous forme de dictionnaire.
+
+        Chaque clé doit être une chaîne et chaque valeur peut être un scalaire,
+        un vecteur numpy ou tout objet sérialisable.
+
+        Parameters
+        ----------
+        **quantities : dict[str, Any]
+            Variables à enregistrer.
+        """
+        if not all(isinstance(k, str) for k in quantities):
+            raise TypeError("Toutes les clés doivent être des chaînes")
         self._history.append(quantities.copy())
 
     def as_dataframe(self) -> pd.DataFrame:
-        """Retourne l'historique sous forme de DataFrame pandas."""
+        """
+        Retourne l'historique complet sous forme de DataFrame pandas.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame avec les enregistrements.
+        """
         return pd.DataFrame(self._history)
 
     def last(self) -> Optional[dict[str, Any]]:
-        """Retourne le dernier enregistrement."""
+        """
+        Retourne le dernier enregistrement.
+
+        Returns
+        -------
+        dict[str, Any] or None
+            Le dernier dictionnaire enregistré, ou None si l'historique est vide.
+        """
         return self._history[-1] if self._history else None
 
     def clear(self) -> None:
@@ -73,21 +124,42 @@ class HistoryTracker:
 
     # ------------------------------------------------------------------
     def save_pickle(self, path: str) -> None:
-        """Sauvegarde l'historique complet dans un fichier .pkl"""
-        assert isinstance(path, str), "Le chemin doit être une chaîne"
+        """
+        Sauvegarde l'historique complet dans un fichier pickle (.pkl).
+
+        Parameters
+        ----------
+        path : str
+            Chemin du fichier de sauvegarde.
+        """
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:
             pickle.dump(self._history, f)
         if self.verbose > 0:
             logger.info(f"[HistoryTracker] Sauvegardé dans '{path}' ({len(self)} enregistrements)")
 
+
     @classmethod
     def load_pickle(cls, path: str) -> "HistoryTracker":
-        """Recharge un HistoryTracker à partir d'un fichier pickle."""
-        assert os.path.exists(path), f"Fichier introuvable : {path}"
+        """
+        Recharge un HistoryTracker à partir d'un fichier pickle.
+
+        Parameters
+        ----------
+        path : str
+            Chemin du fichier pickle.
+
+        Returns
+        -------
+        HistoryTracker
+            Un objet HistoryTracker contenant l'historique rechargé.
+        """
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Fichier introuvable : {path}")
         with open(path, "rb") as f:
             data = pickle.load(f)
-        assert isinstance(data, list), "Le fichier ne contient pas une liste d'enregistrements"
+        if not isinstance(data, list):
+            raise TypeError("Le fichier ne contient pas une liste d'enregistrements")
         tracker = cls()
         tracker._history = data
         if tracker.verbose > 0:
@@ -95,39 +167,134 @@ class HistoryTracker:
         return tracker
 
     # ------------------------------------------------------------------
-    def compute_errors(self, ListeA, ListeB, ListeC, ListeD, ListeE):
+    def compute_errors(self, ListeA, ListeB, ListeC, ListeD=None, ListeE=None):
+        """
+        Calcule et affiche des rapports d'erreurs entre différentes séries de données.
+
+        Utilise la fonction `compute_errors` (externe) pour calculer les erreurs
+        et rich.Console pour un affichage lisible.
+
+        Parameters
+        ----------
+        ListeA, ListeB, ListeC : list[str]
+            Noms des colonnes à comparer.
+        ListeD, ListeE : list[str] or None
+            Colonnes supplémentaires pour certains filtres (ex : particulaire).
+        """
         df = self.as_dataframe()
-        
         from rich.pretty import Pretty
         from rich.console import Console
 
-        for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
-            report = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), df[d].to_numpy(), df[e].to_numpy())
-            print(f"ERROR ({a}, {b})")
-            console = Console()
-            console.print(
-                Pretty(
-                    report,
-                    expand_all=True,
-                    indent_guides=True
-                )
+        console = Console()
+        if ListeD is None or ListeE is None:
+            for a, b, c in zip(ListeA, ListeB, ListeC):
+                report = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), None, None)
+                print(f"ERROR ({a}, {b})")
+                console.print(Pretty(report, expand_all=True, indent_guides=True))
+        else:
+            for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
+                report = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(),
+                                        df[d].to_numpy(), df[e].to_numpy())
+                print(f"ERROR ({a}, {b})")
+                console.print(Pretty(report, expand_all=True, indent_guides=True))
+
+
+    def _compute_sigma_envelope(self, var_series: pd.Series, col_name: str) -> np.ndarray:
+        """
+        Calcule un sigma stable à partir d'une série de variances et détecte les anomalies.
+
+        - Clamp les variances légèrement négatives à 0
+        - Signale les variances fortement négatives
+
+        Parameters
+        ----------
+        var_series : pd.Series
+            Série pandas contenant les covariances diagonales.
+        col_name : str
+            Nom de la variable (pour les messages d'erreur/log).
+
+        Returns
+        -------
+        np.ndarray
+            Tableau numpy contenant σ corrigé.
+        """
+        v = var_series.values
+        scale = np.nanmax(np.abs(v))
+        tol = max(EPS_ABS, EPS_REL * scale)
+
+        slightly_negative = (v < 0) & (v >= -tol)
+        strongly_negative = v < -tol
+
+        if slightly_negative.any() and self.verbose > 0:
+            logger.info(f"[{col_name}] Variances légèrement négatives corrigées : {np.sum(slightly_negative)} points")
+
+        if strongly_negative.any():
+            idx = np.where(strongly_negative)[0][:5]
+            raise ValueError(
+                f"Variance fortement négative détectée dans {col_name} "
+                f"(indices exemples {idx}, valeurs {v[idx]})"
             )
 
+        v_corrected = v.copy()
+        v_corrected[slightly_negative] = 0.0
+        return np.sqrt(v_corrected)
+
+
     # ------------------------------------------------------------------
-    def plot(self, title, list_param, list_label, list_covar, window, basename="plot", iter_key="iter", show=True, base_dir=None, **kwargs):
+    def plot(self, title, list_param, list_label, list_covar, window, basename="plot", show=True, base_dir=None, **kwargs):
         """
-        Trace l'évolution des états 
-        Si show=False, chaque figure est sauvegardée dans base_dir.
+        Trace l'évolution des états avec leurs covariances ±2σ.
+
+        Si `show=False`, la figure est sauvegardée dans `base_dir`.
+
+        Parameters
+        ----------
+        title : str
+            Titre global de la figure.
+        list_param : list[str]
+            Noms des colonnes à tracer.
+        list_label : list[str]
+            Labels pour la légende.
+        list_covar : list[str or None]
+            Colonnes contenant la covariance associée (ou None).
+        window : dict
+            Fenêtre temporelle à tracer, avec clés 'xmin' et 'xmax'.
+        basename : str, optional
+            Nom du fichier si sauvegarde (par défaut "plot").
+        show : bool, optional
+            Affiche la figure si True (défaut True).
+        base_dir : str, optional
+            Dossier de sauvegarde si show=False.
+        **kwargs :
+            Arguments supplémentaires pour personnalisation future.
+
+        Returns
+        -------
+        fig, axes : tuple
+            Figure et axes matplotlib.
         """
+        
+        if not (len(list_param) == len(list_label) == len(list_covar)):
+            raise ValueError("list_param, list_label et list_covar doivent avoir la même longueur")
+        
+        for key in ("xmin", "xmax"):
+            if key not in window:
+                raise KeyError(f"window doit contenir '{key}'")
 
         df = self.as_dataframe().iloc[window['xmin']:window['xmax']]
-        assert not df.empty, "Aucune donnée enregistrée."
+        if df.empty:
+            raise ValueError("Aucune donnée enregistrée.")
         for p in list_param:
-            assert p in df.columns, f"'{p}' n'est pas une colonne connue : {list(df.columns)}"
+            if p not in df.columns:
+                raise KeyError(f"'{p}' n'est pas une colonne connue : {list(df.columns)}")
+
 
         # Vérifie que le premier élément est bien un vecteur
         first = df[list_param[0]].iloc[0]
-        assert hasattr(first, "shape"), f"Le premier élément de '{list_param[0]}' n'est pas un vecteur numpy"
+        if not hasattr(first, "shape"):
+            raise TypeError(
+                f"Le premier élément de '{list_param[0]}' n'est pas un vecteur numpy"
+            )
         # On récupère le nombre de composantes de X
         nb_components = first.shape[0]
         # print('nb_components=', nb_components)
@@ -136,7 +303,10 @@ class HistoryTracker:
         df_subset_var = pd.DataFrame()
         list_labels_p = []
         list_labels_e = []
+        list_has_var  = []
         for p, e in zip(list_param, list_covar):
+            has_var = e is not None
+            list_has_var += [has_var] * nb_components
             
             list_labels_p_local = []
             list_labels_e_local = []
@@ -147,31 +317,48 @@ class HistoryTracker:
             list_labels_e += list_labels_e_local
 
             df_subset[list_labels_p_local] = df[p].apply(lambda x: pd.Series(x.flatten()))
-            if e!= None:
+            if has_var:
                 df_subset_var[list_labels_e_local] = df[e].apply(lambda x: pd.Series(x.diagonal()))
 
-        fig, axes = plt.subplots(nb_components, 1, figsize=(7, 2*nb_components), sharex=True, facecolor=facecolor)
+        fig, axes = plt.subplots(nb_components, 1, figsize=(7, 2*nb_components), sharex=True, facecolor=FACECOLOR)
         if nb_components == 1: axes = [axes]
-        fig.suptitle(title, y=0.85, fontsize=BIGGER_SIZE)
+        fig.suptitle(title, y=0.85, fontsize=BIG_SIZE)
 
-        for i, (col_p, col_e) in enumerate(zip(list_labels_p, list_labels_e)):
+        for i, (col_p, col_e, has_var) in enumerate(zip(list_labels_p, list_labels_e, list_has_var)):
+ 
             j = i%nb_components
             k = i // nb_components
-            # print(f'   toto - i={i}, j={j}, col_p={col_p}, col_e={col_e}, label_p={list_label[k]}')
             df_subset[col_p].plot(ax=axes[j], label=list_label[k], alpha=0.5)
-            if not 'None' in col_e:
+            
+            if has_var and col_e not in df_subset_var:
+                raise KeyError(f"Variance '{col_e}' absente de df_subset_var")
+
+            if has_var:
+                
+                # Detection de variances très légèrement négatives (et celles qui le serainet plus que légèrement)
+                sigma = self._compute_sigma_envelope(df_subset_var[col_e], col_e)
+
                 # On dessine l'enveloppe
-                # print(f'df_subset_var[col_e]={df_subset_var[col_e]}')
-                y_upper   = df_subset[col_p] + 2.*np.sqrt(df_subset_var[col_e])
-                y_lower   = df_subset[col_p] - 2.*np.sqrt(df_subset_var[col_e])
+                y_upper   = df_subset[col_p] + 2.*sigma
+                y_lower   = df_subset[col_p] - 2.*sigma
                 last_line = axes[j].lines[-1]       # dernière courbe tracée
                 color     = last_line.get_color()
-                axes[j].fill_between(df_subset.index, y_lower, y_upper, color=color, alpha=0.2, label=f'{list_label[k]} ± 2*'+r'$𝛔$')
-                axes[j].grid(True, linestyle="--", alpha=0.6)
-        axes[-1].legend()
+                axes[j].fill_between(df_subset.index, y_lower, y_upper, color=color, alpha=0.2, label=f'{list_label[k]} ± 2*' + r'$\sigma$')
+                
+
+        for ax in axes:
+            ax.grid(True, linestyle="--", alpha=0.6)
+        handles, labels = axes[-1].get_legend_handles_labels()
+        unique = dict(zip(labels, handles))
+        axes[-1].legend(
+            unique.values(),
+            unique.keys(),
+            loc="upper center",
+            bbox_to_anchor=(0.5, 1.15),
+            ncol=len(unique)
+        )
         axes[-1].set_xlim(window['xmin'], window['xmax']-1)
         axes[-1].set_xlabel('n')
-        # axes[-1].set_xlabel(iter_key)
 
         # Nettoyage explicite de l’axe partagé
         axes[-1].minorticks_off()
@@ -184,16 +371,20 @@ class HistoryTracker:
         else:
             os.makedirs(base_dir or ".", exist_ok=True)
             save_path = os.path.join(base_dir or ".", f"{basename}.png")
-            fig.savefig(save_path, dpi=dpi, bbox_inches="tight", facecolor=facecolor)
+            fig.savefig(save_path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
             if self.verbose > 0:
                 logger.info(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
             plt.close(fig)
+        
+        return fig, axes
 
     # ------------------------------------------------------------------
     def __len__(self) -> int:
+        """Nombre d'enregistrements dans l'historique."""
         return len(self._history)
 
     def __repr__(self) -> str:
+        """Représentation courte de l'objet."""
         return f"<HistoryTracker n_records={len(self)}>"
 
 

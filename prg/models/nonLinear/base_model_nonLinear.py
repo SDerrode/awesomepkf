@@ -16,69 +16,56 @@ class BaseModelNonLinear:
     En mode optimisé (lancé avec `python3 -O`), les vérifications sont désactivées.
     """
 
-    def __init__(
-        self,
-        dim_x: int,
-        dim_y: int,
-        model_type: str = "nonlinear",
-    ):
-        # Vérifications
+    def __init__(self, dim_x: int, dim_y: int, model_type: str = "nonlinear"):
         assert isinstance(dim_x, int) and dim_x > 0, "dim_x doit être un entier positif"
         assert isinstance(dim_y, int) and dim_y > 0, "dim_y doit être un entier positif"
 
-        # Dimensions et types
-        self.model_type = model_type
-        self.dim_x      = dim_x
-        self.dim_y      = dim_y
-        self.dim_xy     = dim_x + dim_y
+        self.model_type  = model_type
+        self.dim_x       = dim_x
+        self.dim_y       = dim_y
+        self.dim_xy      = dim_x + dim_y
 
         # UKF parameters
-        self.alpha       = 0.25 # si on veut W_O^{(c)} faiblement négatif, on prend alpha entre 0.25 et 0.3
-        self.beta        = 2.
-        self.kappa       = 0.
-        self.kappaJulier = 3. - self.dim_x
+        self.alpha       = 0.25
+        self.beta        = 2.0
+        self.kappa       = 0.0
+        self.kappaJulier = 3.0 - self.dim_x
+
+        # Initialisation des matrices / vecteurs d'état
+        self.mQ   = None
+        self.z00  = None
+        self.Pz00 = None
 
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
-        """Compute z_{n+1} = g(z_n) + noise."""
-
-        if __debug__:  # ⚙️ ces vérifs seront ignorées avec python3 -O
-            assert isinstance(z, np.ndarray), "z doit être un numpy.ndarray"
-            assert isinstance(noise_z, np.ndarray), "noise_z doit être un numpy.ndarray"
-            assert z.ndim == 2 and z.shape[1] == 1, f"z doit avoir une forme (N,1), reçu {z.shape}"
-            assert noise_z.ndim == 2 and noise_z.shape[1] == 1, f"noise_z doit avoir une forme (N,1), reçu {noise_z.shape}"
-            assert z.shape[0] == self.dim_xy, f"z doit avoir une taille {self.dim_xy}, reçu {z.shape[0]}"
-            assert noise_z.shape[0] == self.dim_xy, f"noise_z doit avoir une taille {self.dim_xy}, reçu {noise_z.shape[0]}"
-
-        # Split state and noise vectors
-        x, y   = np.split(z,       [self.dim_x])
+        """Compute z_{n+1} = g(z_n) + noise. z et noise_z sont de shape (dim_xy,1)."""
+        if __debug__:
+            assert z.shape == (self.dim_xy, 1)
+            assert noise_z.shape == (self.dim_xy, 1)
+        x, y   = np.split(z, [self.dim_x])
         nx, ny = np.split(noise_z, [self.dim_x])
-
-        # Appel de la fonction spécifique du modèle
         return self._g(x, y, nx, ny, dt)
 
-    # ------------------------------------------------------------------
-
     def jacobiens_g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
-        
-        if __debug__:  # ⚙️ ces vérifs seront ignorées avec python3 -O
-            assert isinstance(z, np.ndarray), "z doit être un numpy.ndarray"
-            assert isinstance(noise_z, np.ndarray), "noise_z doit être un numpy.ndarray"
-            assert z.ndim == 2 and z.shape[1] == 1, f"z doit avoir une forme (N,1), reçu {z.shape}"
-            assert noise_z.ndim == 2 and noise_z.shape[1] == 1, f"noise_z doit avoir une forme (N,1), reçu {noise_z.shape}"
-            assert z.shape[0] == self.dim_xy, f"z doit avoir une taille {self.dim_xy}, reçu {z.shape[0]}"
-            assert noise_z.shape[0] == self.dim_xy, f"noise_z doit avoir une taille {self.dim_xy}, reçu {noise_z.shape[0]}"
-
-        # Split state and noise vectors
-        x, y   = np.split(z,       [self.dim_x])
+        """Compute Jacobians of g w.r.t z and noise."""
+        if __debug__:
+            assert z.shape == (self.dim_xy, 1)
+            assert noise_z.shape == (self.dim_xy, 1)
+        x, y   = np.split(z, [self.dim_x])
         nx, ny = np.split(noise_z, [self.dim_x])
-
-        # Appel de la fonction spécifique du modèle
         return self._jacobiens_g(x, y, nx, ny, dt)
 
     # ------------------------------------------------------------------
-    def get_params(self):
-        """Retourne les paramètres principaux du modèle."""
+    def _g(self, x, y, nx, ny, dt):
+        """À implémenter dans la sous-classe"""
+        raise NotImplementedError
+
+    def _jacobiens_g(self, x, y, nx, ny, dt):
+        """À implémenter dans la sous-classe"""
+        raise NotImplementedError
+
+    # ------------------------------------------------------------------
+    def get_params(self) -> dict:
         return {'dim_x'      : self.dim_x,
                 'dim_y'      : self.dim_y,
                 'g'          : self.g,
@@ -93,5 +80,5 @@ class BaseModelNonLinear:
                }
 
     # ------------------------------------------------------------------
-    def __repr__(self):
-        return ( f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y})")
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y})"

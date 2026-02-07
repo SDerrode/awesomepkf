@@ -39,7 +39,7 @@ if __name__ == "__main__":
     sKey            = args.sKey   # Int>0 or None (so that it is generated automatically)
     linearModelName = args.linearModelName
     dataFileName    = args.dataFileName
-    if dataFileName == None:
+    if dataFileName is None:
         dataFileName = f"dataLinear_{linearModelName}.csv"
     if sKey is not None and sKey < 0:
         parser.error("sKey must be >= 0")

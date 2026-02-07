@@ -14,6 +14,8 @@ from classes.NonLinear_EPKF import NonLinear_EPKF
 from classes.ParamNonLinear import ParamNonLinear
 # Parser d'options
 from others.parser    import *
+# Parser d'options
+from others.plot_settings import WINDOW
 
 if __name__ == "__main__":
     """
@@ -75,10 +77,9 @@ if __name__ == "__main__":
     listeEPKF = epkf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
     if traceplot and epkf_1.history is not None:
-        df = epkf_1.history.as_dataframe()
         if verbose > 0:
             print("\nExtract of the resulting filtering with EPKF :")
-            print(df.head())
+            print(epkf_1.history.as_dataframe().head())
 
         # print scoring
         ListeA = ['xkp1']
@@ -91,17 +92,15 @@ if __name__ == "__main__":
         # pickle storing and plots
         epkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_epfk_1.pkl"))
         title = f"'{nonLinearModelName}' model data filtered with EPKF"
-        #window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }
-        window    = {'xmin':500, 'xmax': 1000 }
         epkf_1.history.plot(title, 
                             list_param = ["ykp1"], \
                             list_label = ["Observations y"], \
                             list_covar = [None], \
-                            window    = window, \
+                            window     = WINDOW, \
                             basename   = f'epkf_1_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
         epkf_1.history.plot(title, 
                             list_param = ["xkp1"  , "Xkp1_update"], \
                             list_label = ["x true", "x estimated"], \
                             list_covar = [None, "PXXkp1_update"], \
-                            window    = window, \
+                            window     = WINDOW, \
                             basename   = f'epkf_1_{nonLinearModelName}', show=False, base_dir=graph_dir)

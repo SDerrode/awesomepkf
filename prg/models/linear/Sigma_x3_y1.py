@@ -1,11 +1,15 @@
 import numpy as np
+from .base_model_linear import LinearSigma  # On utilise directement la sous-classe LinearSigma
 
-from .base_model_linear import BaseModelLinear
 
+class Model_Sigma_x3_y1(LinearSigma):
+    """
+    Modèle linéaire Sigma avec dim_x=3 et dim_y=1.
 
-class Model_Sigma_x3_y1(BaseModelLinear):
+    Paramétrisation : A, sxx, syy, a, b, c, d, e
+    Calcul robuste de la matrice de transition A à partir de Q1 et Q2.
+    """
 
-    # Nom du modèle
     MODEL_NAME = "Sigma_x3_y1"
 
     def __init__(self) -> None:

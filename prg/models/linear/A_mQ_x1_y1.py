@@ -1,12 +1,9 @@
 import numpy as np
-from .base_model_linear import BaseModelLinear
+from .base_model_linear import LinearAmQ  # On utilise directement la sous-classe LinearAmQ
 
-# A few utils functions that are used several times
-from others.utils import check_consistency
 
-class Model_A_mQ_x1_y1(BaseModelLinear):
+class Model_A_mQ_x1_y1(LinearAmQ):
     
-    # Nom du modèle
     MODEL_NAME = "A_mQ_x1_y1"
 
     def __init__(self) -> None:
