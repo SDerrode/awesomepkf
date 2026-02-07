@@ -4,7 +4,11 @@ import sys
 directory = Path(__file__)
 sys.path.append(str(directory.parent.parent.parent))
 
+from scipy.linalg import cho_factor, cho_solve
 import numpy as np
+
+# A few utils functions that are used several times
+from others.utils import check_consistency
 
 class BaseModelLinear:
     """
@@ -32,24 +36,50 @@ class BaseModelLinear:
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
         """Compute z_{n+1} = A @ z_{n} + noise."""
         return self.A @ z + noise_z
-    
-    # def info(self):
-    #     print(f"Type de modèle : {self.model_type}")
-    #     print(f"Dimensions : dim_x={self.dim_x}, dim_y={self.dim_y}")
-    #     if self.model_type == 'type1':
-    #         print("Paramètres : A, mQ, z00, Pz00")
-    #     else:
-    #         print("Paramètres : sxx, syy, a, b, c, d, e")
 
     def get_params(self):
         if self.model_type == 'linear_AmQ':
-            return {'g': self.g, 'dim_x':self.dim_x, 'dim_y':self.dim_y, 'A':self.A, \
-                        'mQ':self.mQ, 'z00':self.z00, 'Pz00':self.Pz00}
+            return {'g'    : self.g,
+                    'dim_x': self.dim_x,
+                    'dim_y': self.dim_y,
+                    'A'    : self.A,
+                    'mQ'   : self.mQ,
+                    'z00'  : self.z00,
+                    'Pz00' : self.Pz00}
         elif self.model_type == 'linear_Sigma':
-            return {'g': self.g, 'dim_x':self.dim_x, 'dim_y':self.dim_y, 'sxx':self.sxx, \
-                        'syy':self.syy, 'a':self.a, 'b':self.b, 'c':self.c, 'd':self.d, 'e':self.e}
+            return {'g': self.g, 
+                    'dim_x': self.dim_x,
+                    'dim_y': self.dim_y,
+                    'sxx'  : self.sxx,
+                    'syy'  : self.syy,
+                    'a'    : self.a,
+                    'b'    : self.b,
+                    'c'    : self.c,
+                    'd'    : self.d,
+                    'e'    : self.e}
         else:
             raise ValueError(f"⚠️ model_type should be 'linear_AmQ' or 'linear_Sigma' - Actual value: {model_type}")
+
+
+    # Pour les modèle sigma:
+    def _compute_A_mq_z00_Pz00(self, Q1, Q2):
+        
+        # Calcul robuste de A = Q2 @ np.linalg.inv(Q1)
+        c, low = cho_factor(Q1)
+        self.A = Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
+        
+        eigvals = np.linalg.eigvals(self.A)
+        if np.any(np.abs(eigvals) >= 1.0):
+            raise ValueError(f"⚠️ The modulus of one Eigen value of A is >= 1 : {eigvals}")
+
+        self.mQ = Q1 - self.A @ Q2.T
+        check_consistency(mQ=self.mQ)
+        
+        self.z00  = np.zeros((self.dim_xy, 1))
+        self.Pz00 = Q1.copy()
+
+        if __debug__:
+            check_consistency(mQ=self.mQ, Pz00=self.Pz00)
 
     # ------------------------------------------------------------------
     def __repr__(self):

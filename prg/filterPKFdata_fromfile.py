@@ -91,8 +91,8 @@ if __name__ == "__main__":
         pkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_2.pkl"))
         if listePKF[0][1] is not None:
             title = f"'{linearModelName}' model data filtered with PKF"
-            # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-            window    = {'xmin':0, 'xmax': 300 }
+            #window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }
+            window    = {'xmin':500, 'xmax': 1000 }
             pkf_2.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \

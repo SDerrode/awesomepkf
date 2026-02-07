@@ -93,8 +93,8 @@ if __name__ == "__main__":
         upkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_upkf_1.pkl"))
         title = f"'{nonLinearModelName}' model data filtered with UPKF"
         # Les observations
-        # window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }, \
-        window    = {'xmin':2300, 'xmax': 2500 }
+        #window    = {'xmin': min(20, N), 'xmax': min(min(20, N)+100, N) }
+        window    = {'xmin':500, 'xmax': 1000 }
         upkf_1.history.plot(title, 
                             list_param= ["ykp1"], \
                             list_label= ["Observations y"], \

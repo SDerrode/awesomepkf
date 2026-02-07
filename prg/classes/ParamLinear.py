@@ -18,7 +18,7 @@ from scipy.linalg import solve_discrete_lyapunov, cho_factor, cho_solve
 from models.linear import BaseModelLinear, ModelFactoryLinear
 from classes.ActiveView import ActiveView
 # A few utils functions that are used several times
-from others.utils import is_covariance
+from others.utils import is_covariance, check_consistency
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -68,13 +68,6 @@ class ParamLinear:
         else:
             logger.warning(f"⚠️ Le modèle n'est pas bien paramétré : {kwargs.keys()}")
 
-        # In case where we use this class in an UPKF model (classical values)
-        # self.alpha    = 1e-3
-        # self.beta     = 2.0
-        # self.kappa    = 0.0
-        # self.lambda_  = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
-        # self.gamma    = np.sqrt(self.dim_x + self.lambda_)
-
         # Check dimensions of all matrices
         if __debug__:
             self._check_dimensions()
@@ -85,7 +78,7 @@ class ParamLinear:
     # ------------------------------------------------------------------
     def constructorFrom_A_mQ(self, g, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray) -> None:
         
-        # The linear equation to update the système
+        # The linear equation to update the system
         self.g = g
         
         self._A = np.array(A, dtype=float)
@@ -166,10 +159,13 @@ class ParamLinear:
         self._Q1    = np.block([[self._sxx, self._b.T], [self._b, self._syy]])
         self._Q2    = np.block([[self._a, self._e], [self._d, self._c]])
         self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
+        
+        check_consistency(_Q1=self._Q1, _Sigma=self._Sigma)
 
         # self._A = self._Q2 @ np.linalg.inv(self._Q1)
         c, low = cho_factor(self._Q1)
         self._A = self._Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
+
         if __debug__:
             eigvals = np.linalg.eigvals(self._A)
             if np.any(np.abs(eigvals) >= 1.0):
@@ -177,6 +173,7 @@ class ParamLinear:
         self._update_A_views()
         
         self._mQ = self._Q1 - self._A @ self._Q2.T
+        check_consistency(_mQ=self._mQ)
         self._update_mQ_views()
 
         self._z00  = np.zeros((self.dim_xy, 1))

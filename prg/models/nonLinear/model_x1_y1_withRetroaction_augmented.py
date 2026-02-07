@@ -5,7 +5,7 @@ from .base_model_nonLinear import BaseModelNonLinear
 # A few utils functions that are used several times
 from others.utils import check_consistency
 
-class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
+class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
     """
     Nonlinear model with retro-actions of observations and of states.
     The model includes additive Gaussian process and observation noises.
@@ -14,28 +14,11 @@ class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
                 pour un filtre UPKF, cf rapport.
     """
 
-    MODEL_NAME: str = "x2_y1_withRetroactions_augmented"
+    MODEL_NAME: str = "x1_y1_withRetroactions_augmented"
 
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
-        # (A) Strongly damped / stable:
-        # (a,b,c,d) = (0.4,\;0.1,\;0.3,\;0.1)
-        # Expected behaviour: rapid convergence to a fixed point (strong damping). Use as baseline for filter stability tests.
-        # Numeric tips: \(x_0=y_0=(0.5,0.5)\), \(t_1=u_1=0\), \(\sigma_x=\sigma_y=0.01\), \(N\approx 20\).
-        # self.mQ   = np.diag([0.01, 0.01]) #[1E-1, 1E-1])
-        # self.z00  = np.zeros((self.dim_xy, 1)) + 0.5
-        # self.a, self.b, self.c, self.d = 0.4, 0.1, 0.3, 0.1
-        
-        # (B) Weakly damped / lightly oscillatory:
-        # Quand on regarde N=10000 ech, on voit comme des sauts
-        # (a,b,c,d) = (0.9,\;0.5,\;0.95,\;0.8)
-        # Expected behaviour: slow decay with oscillatory transients; sustained small-amplitude oscillations possible due to nonlinear coupling.
-        # Numeric tips: \(x_0=0.1,\;y_0=1.0\), \(\sigma_x=\sigma_y=0.02\), \(N\approx 100\).
-        # self.mQ   = np.diag([0.05, 0.05]) #[1E-1, 1E-1])
-        # self.z00  = np.array([[0.1],[1.]])
-        # self.a, self.b, self.c, self.d = 0.9, 0.5, 0.95, 0.8
-        
         # (C) Sustained oscillations / limit-cycle-like: INTERESSANT
         # (a,b,c,d) = (0.99,\;1.2,\;0.9,\;1.5)
         # Expected behaviour: persistent oscillations of moderate amplitude; nonlinear terms drive and sustain the cycles.
@@ -43,23 +26,7 @@ class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
         self.mQ  = np.array([[0.1, 0.0, 0.0], [0.0, 0.5, 0.0], [0.0, 0.0, 0.0]])#np.diag([0.1, 0.5, 0.])
         self.z00 = np.array([[0.], [0.], [0.]])
         self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5
-        
-        # (D) Complex / quasi-periodic dynamics:
-        # (a,b,c,d) = (1.05,\;1.5,\;0.95,\;2.0)
-        # Expected behaviour: rich, possibly quasi-periodic or mixed-mode oscillations; sensitive dependence on initial condition; intermittent bursts.
-        # Numeric tips: try several initial conditions, \(\sigma_x=\sigma_y=0.01\), run \(N\ge 2000\) and inspect time series \& phase portrait.
-        # self.mQ   = np.diag([0.5, 0.5]) 
-        # self.z00  = np.array([[-5],[0.5]])
-        # self.a, self.b, self.c, self.d = 1.05, 1.5, 0.95, 2.0
-        
-        # (E) Chaotic-like / high nonlinearity (exploratory):
-        # (a,b,c,d) = (1.2,\;2.0,\;0.8,\;2.5)
-        # Expected behaviour: very irregular trajectories; can look chaotic or may diverge — use with caution.
-        # Numeric tips: set \(\sigma_x=\sigma_y\) small (e.g.\ 0.001) to see deterministic structure; monitor for divergence; compute Lyapunov exponent if needed.
-        # self.mQ   = np.diag([0.1, 0.1]) 
-        # self.z00  = np.array([[-5],[0.5]])
-        # self.a, self.b, self.c, self.d = 1.2, 2.0, 0.8, 2.5
-        
+
         self.Pz00 = np.eye(self.dim_xy)
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
@@ -116,9 +83,9 @@ class ModelX2Y1_withRetroactions_augmented(BaseModelNonLinear):
         # y1     = y.flatten()[0]
         # u     = u.flatten()[0]
 
-        An = np.array([[self.a,            self.b*(1.-np.tanh(x2)**2), 0.],
-                       [self.d*np.cos(x1), self.c,                     0.],
-                       [self.d*np.cos(x1), self.c,                     0.]])
+        An = np.array([[self.a,              self.b * (1.-np.tanh(x2)**2), 0.],
+                       [self.d * np.cos(x1), self.c,                       0.],
+                       [self.d * np.cos(x1), self.c,                       0.]])
         Bn = np.array([[1., 0., 0.],
                        [0., 1., 0.],
                        [0., 1., 0.]])

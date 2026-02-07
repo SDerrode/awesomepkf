@@ -161,6 +161,7 @@ class HistoryTracker:
             df_subset[col_p].plot(ax=axes[j], label=list_label[k], alpha=0.5)
             if not 'None' in col_e:
                 # On dessine l'enveloppe
+                # print(f'df_subset_var[col_e]={df_subset_var[col_e]}')
                 y_upper   = df_subset[col_p] + 2.*np.sqrt(df_subset_var[col_e])
                 y_lower   = df_subset[col_p] - 2.*np.sqrt(df_subset_var[col_e])
                 last_line = axes[j].lines[-1]       # dernière courbe tracée

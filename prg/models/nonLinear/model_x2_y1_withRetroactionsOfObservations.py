@@ -90,8 +90,5 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
                        [2.*x1, 0.,   self.f]                   ])
 
         Bn = np.eye(self.dim_xy)
-        
-        # print(f'An={An}')
-        # print(f'Bn={Bn}')
-        # exit(1)
+
         return An, Bn
