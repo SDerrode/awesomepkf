@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
 from others.utils import check_consistency

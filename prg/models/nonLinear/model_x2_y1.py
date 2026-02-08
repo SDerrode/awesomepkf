@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import numpy as np
 from typing import Callable
 from .base_model_nonLinear import BaseModelNonLinear
