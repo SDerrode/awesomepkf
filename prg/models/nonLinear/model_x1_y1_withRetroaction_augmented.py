@@ -23,12 +23,11 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
         self.mQ  = np.array([[0.1, 0.0, 0.0], 
                              [0.0, 0.5, 0.0], 
                              [0.0, 0.0, 0.0]])  # np.diag([0.1, 0.5, 0.])
-        self.z00 = np.array([[0.], [0.], [0.]])
-        self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5
-
+        self.z00  = np.zeros((self.dim_xy, 1))
         self.Pz00 = np.eye(self.dim_xy)
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
+        self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5
 
     # ------------------------------------------------------------------
     def _fx(self, x, t, dt):
@@ -46,9 +45,9 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
     def _hx(self, x, u, dt):
         """
         Nonlinear state function with retro-action of states on observation.
+        Le bruit $u$ est nul dans cette formulation.
         """
         x1, x2 = x.flatten()
-        # u1 = u.flatten()[0]
         return np.array([
             x2
         ]).reshape(-1, 1)

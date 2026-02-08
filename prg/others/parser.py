@@ -54,8 +54,9 @@ def addParseToParser(parser, listOptions):
             'help': 'Sigma set points to use with UPKF (default: wan2000)'
         },
         'nonLinearModelName': {
-            'choices': ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 
-                        'x1_y1_withRetroactions', 'x1_y1_withRetroactions_augmented', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations'],
+            'choices': ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', \
+                        'x1_y1_withRetroactions', 'x1_y1_withRetroactions_augmented', 'x2_y1', 'x2_y1_rapport', \
+                        'x2_y1_withRetroactionsOfObservations', 'x2_y1_withRetroactionsOfObservations_augmented'],
             'default': 'x2_y1_rapport',
             'help': 'Non linear model to process data (default: x2_y1_rapport)'
         },
