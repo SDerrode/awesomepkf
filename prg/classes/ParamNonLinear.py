@@ -57,6 +57,9 @@ class ParamNonLinear:
         
         # Logger config according to verbose
         self._set_log_level()
+        
+        # Le modèle est il un modèlle augmenté ?
+        self.augmented = kwargs['augmented']
 
         # Attribute initialization
         self.g   = kwargs['g']

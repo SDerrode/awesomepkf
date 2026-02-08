@@ -14,7 +14,7 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
     MODEL_NAME: str = "x1_y1_withRetroactions_augmented"
 
     def __init__(self) -> None:
-        super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
+        super().__init__(dim_x=2, dim_y=1, model_type="nonlinear", augmented=True)
 
         # (C) Sustained oscillations / limit-cycle-like: INTERESSANT
         # (a,b,c,d) = (0.99,\;1.2,\;0.9,\;1.5)

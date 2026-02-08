@@ -16,11 +16,12 @@ class BaseModelNonLinear:
     En mode optimisé (lancé avec `python3 -O`), les vérifications sont désactivées.
     """
 
-    def __init__(self, dim_x: int, dim_y: int, model_type: str = "nonlinear"):
+    def __init__(self, dim_x: int, dim_y: int, model_type: str = "nonlinear", augmented = False):
         assert isinstance(dim_x, int) and dim_x > 0, "dim_x doit être un entier positif"
         assert isinstance(dim_y, int) and dim_y > 0, "dim_y doit être un entier positif"
 
         self.model_type  = model_type
+        self.augmented   = augmented
         self.dim_x       = dim_x
         self.dim_y       = dim_y
         self.dim_xy      = dim_x + dim_y
@@ -68,6 +69,7 @@ class BaseModelNonLinear:
     def get_params(self) -> dict:
         return {'dim_x'      : self.dim_x,
                 'dim_y'      : self.dim_y,
+                'augmented'  : self.augmented,
                 'g'          : self.g,
                 'jacobiens_g': self.jacobiens_g,  # pour EPKF
                 'alpha'      : self.alpha,        # pour UPKF merwe

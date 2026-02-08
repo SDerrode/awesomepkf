@@ -34,7 +34,7 @@ class BaseModelLinear:
         Type de modèle : 'linear_AmQ' ou 'linear_Sigma'.
     """
 
-    def __init__(self, dim_x: int, dim_y: int, model_type: str):
+    def __init__(self, dim_x: int, dim_y: int, model_type: str, augmented = False):
         if not isinstance(dim_x, int) or dim_x <= 0:
             raise ValueError("dim_x doit être un entier positif")
         if not isinstance(dim_y, int) or dim_y <= 0:
@@ -42,10 +42,11 @@ class BaseModelLinear:
         if model_type not in ("linear_AmQ", "linear_Sigma"):
             raise ValueError("model_type doit être 'linear_AmQ' ou 'linear_Sigma'")
 
-        self.dim_x = dim_x
-        self.dim_y = dim_y
-        self.dim_xy = dim_x + dim_y
+        self.dim_x      = dim_x
+        self.dim_y      = dim_y
+        self.dim_xy     = dim_x + dim_y
         self.model_type = model_type
+        self.augmented  = augmented
 
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float = 1.0) -> np.ndarray:
         """
@@ -69,24 +70,26 @@ class BaseModelLinear:
 
     def get_params(self):
         if self.model_type == 'linear_AmQ':
-            return {'g'    : self.g,
-                    'dim_x': self.dim_x,
-                    'dim_y': self.dim_y,
-                    'A'    : self.A,
-                    'mQ'   : self.mQ,
-                    'z00'  : self.z00,
-                    'Pz00' : self.Pz00}
+            return {'dim_x'      : self.dim_x,
+                    'dim_y'      : self.dim_y,
+                    'augmented'  : self.augmented,
+                    'g'          : self.g,
+                    'A'          : self.A,
+                    'mQ'         : self.mQ,
+                    'z00'        : self.z00,
+                    'Pz00'       : self.Pz00}
         elif self.model_type == 'linear_Sigma':
-            return {'g': self.g, 
-                    'dim_x': self.dim_x,
-                    'dim_y': self.dim_y,
-                    'sxx'  : self.sxx,
-                    'syy'  : self.syy,
-                    'a'    : self.a,
-                    'b'    : self.b,
-                    'c'    : self.c,
-                    'd'    : self.d,
-                    'e'    : self.e}
+            return {'dim_x'      : self.dim_x,
+                    'dim_y'      : self.dim_y,
+                    'augmented'  : self.augmented,
+                    'g'          : self.g,
+                    'sxx'        : self.sxx,
+                    'syy'        : self.syy,
+                    'a'          : self.a,
+                    'b'          : self.b,
+                    'c'          : self.c,
+                    'd'          : self.d,
+                    'e'          : self.e}
         else:
             raise ValueError(f"⚠️ model_type should be 'linear_AmQ' or 'linear_Sigma' - Actual value: {model_type}")
 
@@ -123,8 +126,8 @@ class LinearAmQ(BaseModelLinear):
     """
     Modèle linéaire avec matrice de transition A et covariance Q.
     """
-    def __init__(self, dim_x: int, dim_y: int, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray):
-        super().__init__(dim_x, dim_y, model_type="linear_AmQ")
+    def __init__(self, dim_x: int, dim_y: int, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray, augmented = False):
+        super().__init__(dim_x, dim_y, model_type="linear_AmQ", augmented=augmented)
         self.A = A
         self.mQ = mQ
         self.z00 = z00
@@ -152,8 +155,8 @@ class LinearSigma(BaseModelLinear):
     """
     Modèle linéaire avec variances sxx, syy et coefficients a, b, c, d, e.
     """
-    def __init__(self, dim_x: int, dim_y: int, sxx: float, syy: float, a: float, b: float, c: float, d: float, e: float):
-        super().__init__(dim_x, dim_y, model_type="linear_Sigma")
+    def __init__(self, dim_x: int, dim_y: int, sxx: float, syy: float, a: float, b: float, c: float, d: float, e: float, augmented = False):
+        super().__init__(dim_x, dim_y, model_type="linear_Sigma", augmented=augmented)
         self.sxx = sxx
         self.syy = syy
         self.a = a

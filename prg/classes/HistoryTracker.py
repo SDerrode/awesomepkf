@@ -167,7 +167,7 @@ class HistoryTracker:
         return tracker
 
     # ------------------------------------------------------------------
-    def compute_errors(self, ListeA, ListeB, ListeC, ListeD=None, ListeE=None):
+    def compute_errors(self, model, ListeA, ListeB, ListeC, ListeD=None, ListeE=None):
         """
         Calcule et affiche des rapports d'erreurs entre différentes séries de données.
 
@@ -188,12 +188,15 @@ class HistoryTracker:
         console = Console()
         if ListeD is None or ListeE is None:
             for a, b, c in zip(ListeA, ListeB, ListeC):
-                report = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), None, None)
+                report = compute_errors(model, \
+                                        df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
+                                        None, None)
                 print(f"ERROR ({a}, {b})")
                 console.print(Pretty(report, expand_all=True, indent_guides=True))
         else:
             for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
-                report = compute_errors(df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(),
+                report = compute_errors(model, \
+                                        df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
                                         df[d].to_numpy(), df[e].to_numpy())
                 print(f"ERROR ({a}, {b})")
                 console.print(Pretty(report, expand_all=True, indent_guides=True))

@@ -87,7 +87,7 @@ if __name__ == "__main__":
     filename  = os.path.join(datafile_dir, dataFileName)
     listeEPKF = epkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
     N = listeEPKF[-1][0] + 1
-
+    
     if traceplot and epkf_2.history is not None:
         if verbose > 0:
             print("\nExcerpt of the filtering with EPKF :")
@@ -100,7 +100,7 @@ if __name__ == "__main__":
             ListeC = ['PXXkp1_update']
             ListeD = ['ikp1']
             ListeE = ['Skp1']
-            epkf_2.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
+            epkf_2.history.compute_errors(epkf_2, ListeA, ListeB, ListeC, ListeD, ListeE)
 
         # pickle storing and plots
         epkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_epfk_2.pkl"))
