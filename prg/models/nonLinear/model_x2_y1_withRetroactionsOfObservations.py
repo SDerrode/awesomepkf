@@ -13,11 +13,11 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
-        self.mQ   = np.diag([1E-1, 1E-1, 1E-1])
+        self.mQ   = np.diag([1E-1, 1E-1, 5E-1])
         self.z00  = np.zeros((self.dim_xy, 1))
         self.Pz00 = np.eye(self.dim_xy)
 
-        self.a, self.b, self.c, self.d, self.e, self.f = 0.5, 0.1, 0.3, 0.8, -0.2, 0.5
+        self.a, self.b, self.c, self.d, self.e, self.f = 1.0, 0.8, 0.05, 0.9, 0.30, 0.6
 
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)

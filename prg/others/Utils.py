@@ -63,7 +63,7 @@ def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
 # ----------------------------------------------------------------------
 # MSE
 # ----------------------------------------------------------------------
-def compute_errors(x_true, x_hat, P_list, i_list=None, S_list=None):
+def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
     """
     Calcul MSE, MAE, RMSE et NEES moyen entre deux séquences d'états.
     
@@ -77,11 +77,9 @@ def compute_errors(x_true, x_hat, P_list, i_list=None, S_list=None):
     # print(f'type(S_list)={type(S_list)}')
     # print(S_list[0:3])
 
-    # Conversion en tableaux 
+    # Conversion en tableaux
     x_true  = np.hstack(x_true).T      # on empile horizontalement puis on transpose
     x_hat   = np.hstack(x_hat).T       # on empile horizontalement puis on transpose
-    
-    
 
     # concaténer pour calcul global
     x_true_flat = np.concatenate(x_true)
@@ -91,13 +89,15 @@ def compute_errors(x_true, x_hat, P_list, i_list=None, S_list=None):
     mae_total   = float(np.mean(np.abs(errors_flat)))
     rmse        = float(np.sqrt(mse_total))
 
-    # Calcul de la MSE et MAE par colonne si nb colone > 1
     errors  = x_true - x_hat  # forme (1000, 2)
-    # nb de colonnes
-    dim_x = errors.shape[1]
-    if dim_x>1:
-        list_mses_per_dim = np.mean(errors**2,      axis=0)
-        list_maes_per_dim = np.mean(np.abs(errors), axis=0)
+
+    # Calcul de la MSE et MAE pour X et pour Y séparemment si c'est une modele a état augmenté
+    if model.param.augmented==True:
+        dim_x = model.dim_x
+        dim_y = model.dim_y
+        list_mses_X_and_Y = [np.mean(errors[:, 0:dim_x-dim_y]**2),      np.mean(errors[:, dim_x-dim_y:]**2)]
+        list_maes_X_and_Y = [np.mean(np.abs(errors[:, 0:dim_x-dim_y])), np.mean(np.abs(errors[:, dim_x-dim_y:]))]
+        np.mean(np.abs(errors), axis=0)
 
     # NEES moyen
     nees_all = np.zeros(errors.shape[0])
@@ -158,9 +158,9 @@ def compute_errors(x_true, x_hat, P_list, i_list=None, S_list=None):
         "nis_mean"  : nis_mean,
     }
     
-    if dim_x>1:
-        report["list_mses_per_dim"] = list_mses_per_dim,
-        report["list_maes_per_dim"] = list_maes_per_dim,
+    if model.param.augmented==True:
+        report["list_mses_X_and_Y"] = list_mses_X_and_Y,
+        report["list_maes_X_and_Y"] = list_maes_X_and_Y,
 
     return report
 
@@ -347,8 +347,8 @@ def diagnose_covariance(
     P,
     cond_warn    = 1e8,
     cond_fail    = 1e12,
-    eig_tol      = 1e-15,
-    symmetry_tol = 1e-15,
+    eig_tol      = 1e-10,
+    symmetry_tol = 1e-10,
 ):
     """
     Diagnostic numérique d'une matrice de covariance.

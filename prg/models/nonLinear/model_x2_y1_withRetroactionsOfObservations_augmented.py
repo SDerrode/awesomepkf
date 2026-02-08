@@ -14,18 +14,19 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
     MODEL_NAME: str = "x2_y1_withRetroactionsOfObservations_augmented"
 
     def __init__(self) -> None:
-        super().__init__(dim_x=3, dim_y=1, model_type="nonlinear")
+        super().__init__(dim_x=3, dim_y=1, model_type="nonlinear", augmented=True)
 
         self.mQ  = np.array([[0.1, 0.0, 0.0, 0.0], 
                              [0.0, 0.1, 0.0, 0.0], 
-                             [0.0, 0.0, 0.1, 0.0],
+                             [0.0, 0.0, 0.5, 0.0],
                              [0.0, 0.0, 0.0, 0.0]]) 
         self.z00  = np.zeros((self.dim_xy, 1))
         self.Pz00 = np.eye(self.dim_xy)
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
 
-        self.a, self.b, self.c, self.d, self.e, self.f = 0.5, 0.1, 0.3, 0.8, -0.2, 0.5
+        self.a, self.b, self.c, self.d, self.e, self.f = 1.0, 0.8, 0.05, 0.9, 0.30, 0.6
+
 
     # ------------------------------------------------------------------
     def _fx(self, x, t, dt):

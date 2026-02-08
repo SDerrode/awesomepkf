@@ -89,7 +89,7 @@ if __name__ == "__main__":
         ListeC = ['PXXkp1_update']
         ListeD = ['ikp1']
         ListeE = ['Skp1']
-        pf_1.history.compute_errors(ListeA, ListeB, ListeC, ListeD, ListeE)
+        pf_1.history.compute_errors(pf_1, ListeA, ListeB, ListeC, ListeD, ListeE)
 
         # pickle storing and plots
         pf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pf_1.pkl"))
