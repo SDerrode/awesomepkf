@@ -74,7 +74,7 @@ class HistoryTracker:
             logger.setLevel(logging.ERROR)
             return
         if self.verbose == 0:
-            logger.setLevel(logging.WARNING)
+            logger.setLevel(logging.CRITICAL + 1)
         elif self.verbose == 1:
             logger.setLevel(logging.INFO)
         else:
@@ -191,15 +191,17 @@ class HistoryTracker:
                 report = compute_errors(model, \
                                         df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
                                         None, None)
-                print(f"ERROR ({a}, {b})")
-                console.print(Pretty(report, expand_all=True, indent_guides=True))
+                if self.verbose>0:
+                    print(f"ERROR ({a}, {b})")
+                    console.print(Pretty(report, expand_all=True, indent_guides=True))
         else:
             for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
                 report = compute_errors(model, \
                                         df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
                                         df[d].to_numpy(), df[e].to_numpy())
-                print(f"ERROR ({a}, {b})")
-                console.print(Pretty(report, expand_all=True, indent_guides=True))
+                if self.verbose>0:
+                    print(f"ERROR ({a}, {b})")
+                    console.print(Pretty(report, expand_all=True, indent_guides=True))
 
 
     def _compute_sigma_envelope(self, var_series: pd.Series, col_name: str) -> np.ndarray:

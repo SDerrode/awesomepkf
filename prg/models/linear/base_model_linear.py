@@ -68,30 +68,30 @@ class BaseModelLinear:
         """
         return self.A @ z + noise_z
 
-    def get_params(self):
-        if self.model_type == 'linear_AmQ':
-            return {'dim_x'      : self.dim_x,
-                    'dim_y'      : self.dim_y,
-                    'augmented'  : self.augmented,
-                    'g'          : self.g,
-                    'A'          : self.A,
-                    'mQ'         : self.mQ,
-                    'z00'        : self.z00,
-                    'Pz00'       : self.Pz00}
-        elif self.model_type == 'linear_Sigma':
-            return {'dim_x'      : self.dim_x,
-                    'dim_y'      : self.dim_y,
-                    'augmented'  : self.augmented,
-                    'g'          : self.g,
-                    'sxx'        : self.sxx,
-                    'syy'        : self.syy,
-                    'a'          : self.a,
-                    'b'          : self.b,
-                    'c'          : self.c,
-                    'd'          : self.d,
-                    'e'          : self.e}
-        else:
-            raise ValueError(f"⚠️ model_type should be 'linear_AmQ' or 'linear_Sigma' - Actual value: {model_type}")
+    # def get_params(self):
+    #     if self.model_type == 'linear_AmQ':
+    #         return {'dim_x'      : self.dim_x,
+    #                 'dim_y'      : self.dim_y,
+    #                 'augmented'  : self.augmented,
+    #                 'g'          : self.g,
+    #                 'A'          : self.A,
+    #                 'mQ'         : self.mQ,
+    #                 'z00'        : self.z00,
+    #                 'Pz00'       : self.Pz00}
+    #     elif self.model_type == 'linear_Sigma':
+    #         return {'dim_x'      : self.dim_x,
+    #                 'dim_y'      : self.dim_y,
+    #                 'augmented'  : self.augmented,
+    #                 'g'          : self.g,
+    #                 'sxx'        : self.sxx,
+    #                 'syy'        : self.syy,
+    #                 'a'          : self.a,
+    #                 'b'          : self.b,
+    #                 'c'          : self.c,
+    #                 'd'          : self.d,
+    #                 'e'          : self.e}
+    #     else:
+    #         raise ValueError(f"⚠️ model_type should be 'linear_AmQ' or 'linear_Sigma' - Actual value: {model_type}")
 
 
     # Pour les modèle sigma:
@@ -137,14 +137,14 @@ class LinearAmQ(BaseModelLinear):
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
 
     def get_params(self) -> dict[str, Any]:
-        return {
-            'g': self.g,
-            'dim_x': self.dim_x,
-            'dim_y': self.dim_y,
-            'A': self.A,
-            'mQ': self.mQ,
-            'z00': self.z00,
-            'Pz00': self.Pz00
+        return { 'dim_x'      : self.dim_x,
+                 'dim_y'      : self.dim_y,
+                 'augmented'  : self.augmented,
+                 'g'          : self.g,
+                 'A'          : self.A,
+                 'mQ'         : self.mQ,
+                 'z00'        : self.z00,
+                 'Pz00'       : self.Pz00
         }
 
 
@@ -187,15 +187,15 @@ class LinearSigma(BaseModelLinear):
             check_consistency(sxx=self.sxx, syy=self.syy)
 
     def get_params(self) -> dict[str, Any]:
-        return {
-            'g': self.g,
-            'dim_x': self.dim_x,
-            'dim_y': self.dim_y,
-            'sxx': self.sxx,
-            'syy': self.syy,
-            'a': self.a,
-            'b': self.b,
-            'c': self.c,
-            'd': self.d,
-            'e': self.e
+        return { 'dim_x'      : self.dim_x,
+                 'dim_y'      : self.dim_y,
+                 'augmented'  : self.augmented,
+                 'g'          : self.g,
+                 'sxx': self.sxx,
+                 'syy': self.syy,
+                 'a': self.a,
+                 'b': self.b,
+                 'c': self.c,
+                 'd': self.d,
+                 'e': self.e
         }
