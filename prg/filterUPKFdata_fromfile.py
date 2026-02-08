@@ -26,7 +26,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python3 prg/filterUPKFdata_fromfile.py
-        python3 prg/filterUPKFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --sigmaSet wan2000 --dataFileName testNL.csv
+        python3 prg/filterUPKFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName "x1_y1_withRetroactions" --sigmaSet "wan2000" --dataFileName "testNL.csv"
     """
 
     # ------------------------------------------------------------------

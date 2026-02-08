@@ -29,7 +29,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python3 prg/filterPFdata_fromfile.py
-        python3 prg/filterPFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName x1_y1_withRetroactions --dataFileName testNL.csv
+        python3 prg/filterPFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv"
     """
     
     # ------------------------------------------------------------------

@@ -21,7 +21,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python3 prg/filterUPKFdata.py
-        python3 prg/filterUPKFdata.py --N 1000 --nonLinearModelName x1_y1_withRetroactions --sKey 303  --sigmaSet wan2000 --verbose 0 --traceplot
+        python3 prg/filterUPKFdata.py --N 1000 --nonLinearModelName "x1_y1_withRetroactions" --sKey 303  --sigmaSet "wan2000" --verbose 0 --traceplot
     """
 
     # ------------------------------------------------------------------

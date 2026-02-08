@@ -1,6 +1,5 @@
-import numpy as np
-from .base_model_linear import LinearSigma  # On utilise directement la sous-classe LinearSigma
-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 class Model_Sigma_x2_y2(LinearSigma):
     """

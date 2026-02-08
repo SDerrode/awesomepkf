@@ -21,7 +21,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python3 prg/filterPKFdata_fromfile.py
-        python3 prg/filterPKFdata_fromfile.py --verbose 0 --traceplot --linearModelName A_mQ_x1_y1 --dataFileName test.csv
+        python3 prg/filterPKFdata_fromfile.py --verbose 0 --traceplot --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv"
     """
     
     # ------------------------------------------------------------------

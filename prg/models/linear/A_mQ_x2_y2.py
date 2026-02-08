@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import numpy as np
 from .base_model_linear import LinearAmQ  # On utilise directement la sous-classe LinearAmQ
 

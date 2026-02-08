@@ -21,7 +21,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python3 prg/filterPFdata.py
-        python3 prg/filterPFdata.py --N 1000 --nonLinearModelName x1_y1_withRetroactions --sKey 303 --verbose 0 --traceplot
+        python3 prg/filterPFdata.py --N 1000 --nonLinearModelName "x1_y1_withRetroactions" --sKey 303 --verbose 0 --traceplot
     """
     
     # ------------------------------------------------------------------
