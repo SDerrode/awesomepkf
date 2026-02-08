@@ -104,7 +104,7 @@ class ParamNonLinear:
     # ------------------------------------------------------------------
     def _set_log_level(self) -> None:
         if self.verbose == 0:
-            logger.setLevel(logging.WARNING)
+            logger.setLevel(logging.CRITICAL + 1)
         elif self.verbose == 1:
             logger.setLevel(logging.INFO)
         else:

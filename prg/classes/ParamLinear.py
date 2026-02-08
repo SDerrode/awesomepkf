@@ -61,10 +61,10 @@ class ParamLinear:
         self._set_log_level()
 
         # Deux façons de construire un objet de cette classe
-        if len(kwargs.keys()) == 5:  # parametrization (A, mQ, z00, Pz00)
-            self.constructorFrom_A_mQ(kwargs['g'], kwargs['A'], kwargs['mQ'], kwargs['z00'], kwargs['Pz00'])
-        elif len(kwargs.keys()) == 8:  # parametrization (sxx, syy, a, b, c, d, e) --> Sigma
-            self.constructorFrom_Sigma(kwargs['g'], kwargs['sxx'], kwargs['syy'], kwargs['a'], kwargs['b'], kwargs['c'], kwargs['d'], kwargs['e'])
+        if len(kwargs.keys()) == 6:  # parametrization (A, mQ, z00, Pz00)
+            self.constructorFrom_A_mQ(kwargs['g'], kwargs['A'], kwargs['mQ'], kwargs['z00'], kwargs['Pz00'], kwargs['augmented'])
+        elif len(kwargs.keys()) == 9:  # parametrization (sxx, syy, a, b, c, d, e) --> Sigma
+            self.constructorFrom_Sigma(kwargs['g'], kwargs['sxx'], kwargs['syy'], kwargs['a'], kwargs['b'], kwargs['c'], kwargs['d'], kwargs['e'], kwargs['augmented'])
         else:
             logger.warning(f"⚠️ Le modèle n'est pas bien paramétré : {kwargs.keys()}")
 
@@ -76,7 +76,10 @@ class ParamLinear:
     # ------------------------------------------------------------------
     # Constructeurs
     # ------------------------------------------------------------------
-    def constructorFrom_A_mQ(self, g, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray) -> None:
+    def constructorFrom_A_mQ(self, g, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray, augmented: bool) -> None:
+        
+        # Est-ce un modèle augmenté ?
+        self.augmented = augmented
         
         # The linear equation to update the system
         self.g = g
@@ -98,7 +101,10 @@ class ParamLinear:
         self._check_consistency()
 
     def constructorFrom_Sigma(self, g, sxx: np.ndarray, syy: np.ndarray, a: np.ndarray, b: np.ndarray,
-                              c: np.ndarray, d: np.ndarray, e: np.ndarray) -> None:
+                              c: np.ndarray, d: np.ndarray, e: np.ndarray, augmented: bool) -> None:
+        
+        # Est-ce un modèle augmenté ?
+        self.augmented = augmented
         
         # The linear function to update the system equations
         self.g = g
@@ -119,7 +125,7 @@ class ParamLinear:
     # ------------------------------------------------------------------
     def _set_log_level(self) -> None:
         if self.verbose == 0:
-            logger.setLevel(logging.WARNING)
+            logger.setLevel(logging.CRITICAL + 1)
         elif self.verbose == 1:
             logger.setLevel(logging.INFO)
         else:
