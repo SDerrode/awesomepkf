@@ -59,20 +59,20 @@ if __name__ == "__main__":
     
     # Available linear models: 
     model = ModelFactoryLinear.create(linearModelName)
-    if verbose>0:
+    if verbose > 1:
         print(f'model={model}, {model.MODEL_NAME}')
         print(f'model={model}')
 
     params       = model.get_params().copy()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamLinear(verbose, dim_x, dim_y, **params)
-    if verbose > 0:
+    if verbose > 1:
         param.summary()
 
     # ------------------------------------------------------------------
     # Let's go
     # ------------------------------------------------------------------
-    if verbose>0:
+    if verbose > 1:
         print("\nPKF simulation")
     pkf = Linear_PKF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
     

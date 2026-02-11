@@ -37,7 +37,7 @@ class BaseModelLinear:
         Type de modèle : 'linear_AmQ' ou 'linear_Sigma'.
     """
 
-    def __init__(self, dim_x: int, dim_y: int, model_type: str, augmented = False):
+    def __init__(self, dim_x: int, dim_y: int, model_type: str, augmented=False):
         if not isinstance(dim_x, int) or dim_x <= 0:
             raise ValueError("dim_x doit être un entier positif")
         if not isinstance(dim_y, int) or dim_y <= 0:
@@ -131,9 +131,9 @@ class LinearAmQ(BaseModelLinear):
     """
     def __init__(self, dim_x: int, dim_y: int, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray, augmented = False):
         super().__init__(dim_x, dim_y, model_type="linear_AmQ", augmented=augmented)
-        self.A = A
-        self.mQ = mQ
-        self.z00 = z00
+        self.A    = A
+        self.mQ   = mQ
+        self.z00  = z00
         self.Pz00 = Pz00
         
         if __debug__:
@@ -162,11 +162,11 @@ class LinearSigma(BaseModelLinear):
         super().__init__(dim_x, dim_y, model_type="linear_Sigma", augmented=augmented)
         self.sxx = sxx
         self.syy = syy
-        self.a = a
-        self.b = b
-        self.c = c
-        self.d = d
-        self.e = e
+        self.a   = a
+        self.b   = b
+        self.c   = c
+        self.d   = d
+        self.e   = e
 
     def _initSigma(self):
         
@@ -194,11 +194,11 @@ class LinearSigma(BaseModelLinear):
                  'dim_y'      : self.dim_y,
                  'augmented'  : self.augmented,
                  'g'          : self.g,
-                 'sxx': self.sxx,
-                 'syy': self.syy,
-                 'a': self.a,
-                 'b': self.b,
-                 'c': self.c,
-                 'd': self.d,
-                 'e': self.e
+                 'sxx'        : self.sxx,
+                 'syy'        : self.syy,
+                 'a'          : self.a,
+                 'b'          : self.b,
+                 'c'          : self.c,
+                 'd'          : self.d,
+                 'e'          : self.e
         }

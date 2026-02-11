@@ -59,20 +59,20 @@ if __name__ == "__main__":
 
     # Available non linear models:
     model = ModelFactoryNonLinear.create(nonLinearModelName)
-    if verbose>0:
+    if verbose > 1:
         print(f'model={model}, {model.MODEL_NAME}')
         print(f'model={model}')
 
     params       = model.get_params().copy()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
-    if verbose > 0:
+    if verbose > 1:
         param.summary()
  
     # ------------------------------------------------------------------
     # Let's go
     # ------------------------------------------------------------------
-    if verbose>0:
+    if verbose > 1:
         print("Non Linear data simulation")
     upkf = NonLinear_PKF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
     

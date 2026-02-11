@@ -26,7 +26,7 @@ class Model_A_mQ_x1_y1_augmented(LinearAmQ):
         #                        [0.2777, 0.9968, 0.0],
         #                        [.0    , 0.0   , 0.0 ]])
         
-        z00 = np.zeros(shape=(dim_x+dim_y, 1))
+        z00  = np.zeros(shape=(dim_x+dim_y, 1))
         Pz00 = np.eye(dim_x+dim_y)
 
         super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, mQ=mQ, z00=z00, Pz00=Pz00, augmented=True)
