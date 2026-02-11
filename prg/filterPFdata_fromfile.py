@@ -29,7 +29,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python3 prg/filterPFdata_fromfile.py
-        python3 prg/filterPFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv"
+        python3 prg/filterPFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --nbParticles 300
     """
     
     # ------------------------------------------------------------------
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     # dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     # param        = ParamLinear(verbose, dim_x, dim_y, **params)
     
-    if verbose > 0:
+    if verbose > 1:
         print(f'model={model}')
         param.summary()
 
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     # Let's go
     # ------------------------------------------------------------------
 
-    if verbose > 0:
+    if verbose > 1:
         print(f"\nPF filtering (nbParticles={nbParticles}, resample_threshold={resample_threshold}) with data generated from a file with data... ")
 
     pf_2     = NonLinear_PF(param, nbParticles=nbParticles, resample_threshold=resample_threshold, save_pickle=traceplot, verbose=verbose)
@@ -93,7 +93,7 @@ if __name__ == "__main__":
    
 
     if traceplot and pf_2.history is not None:
-        if verbose > 0:
+        if verbose > 1:
             print("\nExcerpt of the filtering with PF :")
             print(pf_2.history.as_dataframe().head())
 

@@ -61,7 +61,7 @@ class NonLinear_PKF:
 
        # Create HistoryTracker only if save_pickle is True
         self.save_pickle = save_pickle
-        self._history    = HistoryTracker() if save_pickle else None
+        self._history    = HistoryTracker(self.verbose) if save_pickle else None
         
         # Configuration du logger selon verbose
         self._set_log_level()
@@ -73,9 +73,9 @@ class NonLinear_PKF:
     # Loger configuration according to verbose
     # ------------------------------------------------------------------
     def _set_log_level(self) -> None:
-        if self.verbose == 0:
+        if self.verbose==0 or self.verbose==1:
             logger.setLevel(logging.CRITICAL + 1)
-        elif self.verbose == 1:
+        elif self.verbose == 2:
             logger.setLevel(logging.INFO)
         else:
             logger.setLevel(logging.DEBUG)

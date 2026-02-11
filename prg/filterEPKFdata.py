@@ -63,7 +63,7 @@ if __name__ == "__main__":
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
     
-    if verbose > 0:
+    if verbose > 1:
         print(f'model={model}')
         param.summary()
 
@@ -71,13 +71,13 @@ if __name__ == "__main__":
     # Let's go
     # ------------------------------------------------------------------
 
-    if verbose > 0:
+    if verbose > 1:
         print("\nEPKF filtering with data generated from a non-linear model...")
     epkf_1    = NonLinear_EPKF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
     listeEPKF = epkf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
     if traceplot and epkf_1.history is not None:
-        if verbose > 0:
+        if verbose > 1:
             print("\nExtract of the resulting filtering with EPKF :")
             print(epkf_1.history.as_dataframe().head())
 

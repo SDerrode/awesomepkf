@@ -181,7 +181,7 @@ def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose: int = 0) 
             enc_info = chardet.detect(raw_data)
             encoding = enc_info['encoding'] or 'utf-8'
             confidence = enc_info.get('confidence', 0)
-        if verbose > 0:
+        if verbose > 1:
             logger.info(f"🧬 Detected encoding : {encoding} (confidence={confidence:.2f})")
 
         # --- Lecture selon le type ---
@@ -192,7 +192,7 @@ def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose: int = 0) 
         elif ext in [".xlsx", ".xls"]:
             return pd.read_excel(filepath)
         elif ext in [".csv", ".txt", ".dat", ".tsv", ""]:
-            if verbose > 0:
+            if verbose > 1:
                 logger.info(f"📑 Lecture texte délimité : {filepath}")
             
             # Lecture d’un échantillon
@@ -209,10 +209,10 @@ def read_unknown_file(filepath: str, nrows_detect: int = 500, verbose: int = 0) 
                 # Cas typique : une seule colonne sans délimiteur
                 sep = None
                 has_header = True
-                if verbose > 0:
+                if verbose > 1:
                     logger.warning("⚠️ Impossible de détecter le séparateur — lecture comme fichier à colonne unique.")
             
-            if verbose > 0:
+            if verbose > 1:
                 logger.info(f"➡️ Separator : {repr(sep)} | Header : {has_header}")
             
             # Lecture du fichier

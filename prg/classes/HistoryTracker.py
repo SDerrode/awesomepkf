@@ -73,9 +73,9 @@ class HistoryTracker:
         if not __debug__:
             logger.setLevel(logging.ERROR)
             return
-        if self.verbose == 0:
+        if self.verbose==0 or self.verbose==1:
             logger.setLevel(logging.CRITICAL + 1)
-        elif self.verbose == 1:
+        elif self.verbose == 2:
             logger.setLevel(logging.INFO)
         else:
             logger.setLevel(logging.DEBUG)

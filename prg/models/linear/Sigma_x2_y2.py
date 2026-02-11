@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import numpy as np
+from .base_model_linear import LinearSigma  # On utilise directement la sous-classe LinearSigma
+
+
 class Model_Sigma_x2_y2(LinearSigma):
     """
     Modèle linéaire Sigma avec dim_x=2 et dim_y=1.
@@ -12,7 +16,10 @@ class Model_Sigma_x2_y2(LinearSigma):
     MODEL_NAME = "Sigma_x2_y2"
     
     def __init__(self) -> None:
-        super().__init__(dim_x=2, dim_y=2, model_type="linear_AmQ")
+        
+        # Dimensions x=2, y=2
+        dim_x = 2
+        dim_y = 2
 
         sxx = np.array([[1.0, 0.4],
                         [0.4, 1.0]])
@@ -32,4 +39,5 @@ class Model_Sigma_x2_y2(LinearSigma):
         Q1  = np.block([[sxx, b.T], [b, syy]])
         Q2  = np.block([[a,   e],   [d, c]])
         
-        self._compute_A_mq_z00_Pz00(Q1, Q2)
+        super().__init__(dim_x=dim_x, dim_y=dim_y, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
+        # self._compute_A_mq_z00_Pz00(Q1, Q2)

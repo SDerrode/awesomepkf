@@ -65,7 +65,7 @@ if __name__ == "__main__":
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
     
-    if verbose > 0:
+    if verbose > 1:
         print(f'model={model}')
         param.summary()
 
@@ -73,13 +73,13 @@ if __name__ == "__main__":
     # Let's go
     # ------------------------------------------------------------------
 
-    if verbose > 0:
+    if verbose > 1:
         print(f"\nPF filtering (nbParticles={nbParticles}, resample_threshold={resample_threshold}) with data generated from a non-linear model...")
     pf_1    = NonLinear_PF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
     listePF = pf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
     if traceplot and pf_1.history is not None:
-        if verbose > 0:
+        if verbose > 1:
             print("\nExtract of the resulting filtering with PF :")
             print(pf_1.history.as_dataframe().head())
 

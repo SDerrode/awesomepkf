@@ -58,7 +58,7 @@ if __name__ == "__main__":
     params       = model.get_params().copy()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamLinear(verbose, dim_x, dim_y, **params)
-    if verbose > 0:
+    if verbose > 1:
         print(f'model={model}')
         param.summary()
 
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     # Let's go
     # ------------------------------------------------------------------
 
-    if verbose>0:
+    if verbose > 1:
         print("\nPKF filtering with data generated from a file with data...")
     
     pkf_2    = Linear_PKF(param, save_pickle=traceplot, verbose=verbose)
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     N        = listePKF[-1][0]+1
 
     if traceplot and pkf_2.history is not None:
-        if verbose > 0:
+        if verbose > 1:
             print("\nExcerpt of the filtering with PKF :")
             print(pkf_2.history.as_dataframe().head())
             

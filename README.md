@@ -99,17 +99,17 @@ Each filter has two types of programs:
 ### Simulate Linear Data and Filter with PKF
 
 ```bash
-python3 prg/simulateLinearData.py     --verbose 0 --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --N 1000 --sKey 303
-python3 prg/filterPKFdata_fromfile.py --verbose 0 --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --traceplot 
+python3 prg/simulateLinearData.py     --verbose 1 --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --N 1000 --sKey 303
+python3 prg/filterPKFdata_fromfile.py --verbose 1 --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --traceplot 
 ```
 
 ### Simulate Non-Linear Data and Filter with EPKF, UPKF and PF
 
 ```bash
-python3 prg/simulateNonLinearData.py   --verbose 0 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --sKey 303 --N 1000
-python3 prg/filterEPKFdata_fromfile.py --verbose 0 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --traceplot
-python3 prg/filterUPKFdata_fromfile.py --verbose 0 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --traceplot --sigmaSet "wan2000"
-python3 prg/filterPFdata_fromfile.py   --verbose 0 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --traceplot
+python3 prg/simulateNonLinearData.py   --verbose 1 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --sKey 303 --N 1000
+python3 prg/filterEPKFdata_fromfile.py --verbose 1 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --traceplot
+python3 prg/filterUPKFdata_fromfile.py --verbose 1 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --traceplot --sigmaSet "wan2000"
+python3 prg/filterPFdata_fromfile.py   --verbose 1 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --traceplot --nbParticles 300
 ```
 
 ---
