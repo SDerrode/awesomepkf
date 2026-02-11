@@ -43,16 +43,8 @@ class FilterConfig:
 class NonLinear_UPKF(NonLinear_PKF):
     """Implementation of UPKF."""
 
-    def __init__(
-        self,
-        sigma_point_set: str,
-        param,
-        sKey: Optional[int] = None,
-        save_pickle: bool = False,
-        verbose: int = 0
-    ) -> None:
-
-        super().__init__(param, sKey, save_pickle, verbose)
+    def __init__(self, sigma_point_set: str, param, sKey: Optional[int] = None, verbose: int = 0) -> None:
+        super().__init__(param, sKey, verbose)
 
         self.sigma_point_set = sigma_point_set
 
@@ -110,18 +102,19 @@ class NonLinear_UPKF(NonLinear_PKF):
             print(report)
             input('attente')
 
+        # Record data in the tracker
         Xkp1_predict = np.zeros((self.dim_x, 1))
-        if self.save_pickle and self._history is not None:
-            self._history.record(iter          = k,
-                                 xkp1          = xkp1.copy() if xkp1 is not None else None,
-                                 ykp1          = ykp1.copy(),
-                                 Xkp1_predict  = Xkp1_predict.copy(),
-                                 PXXkp1_predict= eye_dim_x,
-                                 ikp1          = np.zeros(shape=(self.dim_y)),
-                                 Skp1          = eye_dim_y,
-                                 Kkp1          = np.zeros(shape=(self.dim_x, self.dim_y)),
-                                 Xkp1_update   = Xkp1_update.copy(),
-                                 PXXkp1_update = PXXkp1_update.copy())
+        self._history.record(iter          = k,
+                             xkp1          = xkp1.copy() if xkp1 is not None else None,
+                             ykp1          = ykp1.copy(),
+                             Xkp1_predict  = Xkp1_predict.copy(),
+                             PXXkp1_predict= eye_dim_x,
+                             ikp1          = np.zeros(shape=(self.dim_y)),
+                             Skp1          = eye_dim_y,
+                             Kkp1          = np.zeros(shape=(self.dim_x, self.dim_y)),
+                             Xkp1_update   = Xkp1_update.copy(),
+                             PXXkp1_update = PXXkp1_update.copy()
+        )
 
         yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
 
@@ -198,17 +191,17 @@ class NonLinear_UPKF(NonLinear_PKF):
                 print(report)
                 input('attente')
                 
-            if self.save_pickle and self._history is not None:
-                self._history.record(iter           = k,
-                                     xkp1           = xkp1.copy() if xkp1 is not None else None,
-                                     ykp1           = ykp1.copy(),
-                                     Xkp1_predict   = Xkp1_predict.copy(),
-                                     PXXkp1_predict = PXXkp1_predict.copy(),
-                                     ikp1           = ikp1.copy(),
-                                     Skp1           = Skp1.copy(),
-                                     Kkp1           = Kkp1.copy(),
-                                     Xkp1_update    = Xkp1_update.copy(),
-                                     PXXkp1_update  = PXXkp1_update_Joseph.copy(), #PXXkp1_update.copy()
-                )
+            # Record data in the tracker
+            self._history.record(iter           = k,
+                                 xkp1           = xkp1.copy() if xkp1 is not None else None,
+                                 ykp1           = ykp1.copy(),
+                                 Xkp1_predict   = Xkp1_predict.copy(),
+                                 PXXkp1_predict = PXXkp1_predict.copy(),
+                                 ikp1           = ikp1.copy(),
+                                 Skp1           = Skp1.copy(),
+                                 Kkp1           = Kkp1.copy(),
+                                 Xkp1_update    = Xkp1_update.copy(),
+                                 PXXkp1_update  = PXXkp1_update_Joseph.copy(), #PXXkp1_update.copy()
+            )
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update

@@ -21,7 +21,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python3 prg/filterPKFdata.py
-        python3 prg/filterPKFdata.py --N 1000 --linearModelName "A_mQ_x1_y1" --sKey 303 --verbose 0 --traceplot
+        python3 prg/filterPKFdata.py --N 1000 --linearModelName "A_mQ_x1_y1" --sKey 303 --verbose 0 --plot --saveHistory
     """
     
     # ------------------------------------------------------------------
@@ -32,7 +32,8 @@ if __name__ == "__main__":
     addParseToParser(parser, ['linearModelName', 'N', 'sKey'])
     args   = parser.parse_args()
     
-    traceplot       = args.traceplot
+    plot               = args.plot
+    saveHistory        = args.saveHistory
     verbose         = args.verbose
     N               = args.N
     sKey            = args.sKey 
@@ -62,7 +63,6 @@ if __name__ == "__main__":
     params       = model.get_params().copy()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamLinear(verbose, dim_x, dim_y, **params)
-    
     if verbose > 1:
         print(f'model={model}')
         param.summary()
@@ -73,34 +73,36 @@ if __name__ == "__main__":
 
     if verbose > 1:
         print("\nPKF filtering with data generated from a linear model...")
-    pkf_1   = Linear_PKF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
+
+    pkf_1   = Linear_PKF(param, sKey=sKey, verbose=verbose)
     listePKF = pkf_1.process_N_data(N=N)
 
-    if traceplot and pkf_1.history is not None:
-        if verbose > 1:
-            print("\nExtract of the resulting filtering with PKF :")
-            print(pkf_1.history.as_dataframe().head())
+    if verbose > 1:
+        print("\nExtract of the resulting filtering with PKF :")
+        print(pkf_1.history.as_dataframe().head())
 
-        # print scoring
-        ListeA = ['xkp1']
-        ListeB = ['Xkp1_update']
-        ListeC = ['PXXkp1_update']
-        ListeD = ['ikp1']
-        ListeE = ['Skp1']
-        pkf_1.history.compute_errors(pkf_1, ListeA, ListeB, ListeC, ListeD, ListeE)
+    # print scoring
+    ListeA = ['xkp1']
+    ListeB = ['Xkp1_update']
+    ListeC = ['PXXkp1_update']
+    ListeD = ['ikp1']
+    ListeE = ['Skp1']
+    pkf_1.history.compute_errors(pkf_1, ListeA, ListeB, ListeC, ListeD, ListeE)
 
-        # pickle storing and plots
+    if saveHistory:
         pkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_pfk_1.pkl"))
+        
+    if plot:
         title = f"'{linearModelName}' model data filtered with PKF"
         pkf_1.history.plot(title, 
-                            list_param= ["ykp1"], \
-                            list_label= ["Observations y"], \
-                            list_covar= [None], \
-                            window    = WINDOW, \
-                            basename  = f'pkf_1_{linearModelName}_observations', show=False, base_dir=graph_dir)
+                           list_param= ["ykp1"], \
+                           list_label= ["Observations y"], \
+                           list_covar= [None], \
+                           window    = WINDOW, \
+                           basename  = f'pkf_1_{linearModelName}_observations', show=False, base_dir=graph_dir)
         pkf_1.history.plot(title, 
-                            list_param = ["xkp1"  , "Xkp1_update"], \
-                            list_label = ["x true", "x estimated"], \
-                            list_covar = [None, "PXXkp1_update"], \
-                            window    = WINDOW, \
-                            basename  = f'pkf_1_{linearModelName}', show=False, base_dir=graph_dir)
+                           list_param = ["xkp1"  , "Xkp1_update"], \
+                           list_label = ["x true", "x estimated"], \
+                           list_covar = [None,     "PXXkp1_update"], \
+                           window    = WINDOW, \
+                           basename  = f'pkf_1_{linearModelName}', show=False, base_dir=graph_dir)

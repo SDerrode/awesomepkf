@@ -37,17 +37,12 @@ class NonLinear_PKF:
         self,
         param,
         sKey: Optional[int] = None,
-        save_pickle: bool = False,
         verbose: int = 0
     ) -> None:
 
         if __debug__:
-            # if not isinstance(param, ParamNonLinear):
-            #     raise TypeError("param must be an object from class ParamNonLinear")
             if not ((isinstance(sKey, int) and sKey > 0) or sKey is None):
                 raise ValueError("sKey must be None or a number>0")
-            if not isinstance(save_pickle, bool):
-                raise TypeError("save_pickle must be a boolean")
             if verbose not in [0, 1, 2]:
                 raise ValueError("verbose must be 0, 1 or 2")
 
@@ -59,15 +54,14 @@ class NonLinear_PKF:
         # Shortcuts
         self.dim_x, self.dim_y, self.dim_xy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
 
-       # Create HistoryTracker only if save_pickle is True
-        self.save_pickle = save_pickle
-        self._history    = HistoryTracker(self.verbose) if save_pickle else None
+       # Create HistoryTracker
+        self._history    = HistoryTracker(self.verbose)
         
         # Configuration du logger selon verbose
         self._set_log_level()
 
         if self.verbose >= 1:
-            logger.info(f"[PKF] Init with sKey={sKey}, verbose={verbose}, save_pickle={save_pickle}")
+            logger.info(f"[PKF] Init with sKey={sKey}, verbose={verbose}")
 
     # ------------------------------------------------------------------
     # Loger configuration according to verbose
@@ -90,7 +84,6 @@ class NonLinear_PKF:
 
     @property
     def history(self) -> Optional[HistoryTracker]:
-        """Return HistoryTracker object if save_pickle==True, else None."""
         return self._history
 
     # ------------------------------------------------------------------

@@ -43,7 +43,7 @@ class SetJULIER1995(SigmaPointsSet, key="julier1995"):
     """
     Original set defined in the paper:
     S. J. Julier, J. K. Uhlmann, and H. F. Durrant-Whyte, 
-    “A new approach for filtering nonlinear systems,” 
+    “A new approach for filtering nonlinear systems” 
     in Proc. IEEE American Control Conf. (ACC’95), 1995, pp. 1628–1632.
     """
     

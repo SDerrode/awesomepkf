@@ -19,8 +19,13 @@ def addParseToParser(parser, listOptions):
         help='Set the verbose level (0=quiet, 2=maximum, default=0)'
     )
     parser.add_argument(
-        '--traceplot', action='store_true', dest='traceplot',
-        help='Save parameters trace on disk and plot figures (default: False if not specified)'
+        '--plot', action='store_true', dest='plot',
+        help='Plot and signals on disk (default: True if not specified)'
+    )
+    
+    parser.add_argument(
+        '--saveHistory', action='store_true', dest='saveHistory',
+        help='Save parameters trace on disk (default: False if not specified)'
     )
 
     # =========================

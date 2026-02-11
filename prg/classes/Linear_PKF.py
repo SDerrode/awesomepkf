@@ -45,19 +45,12 @@ logger = logging.getLogger(__name__)
 class Linear_PKF:
     """Implementation of PKF according to the mathematical and classical formulations."""
 
-    def __init__(
-        self,
-        param: ParamLinear,
-        sKey: Optional[int] = None,
-        save_pickle: bool = False,
-        verbose: int = 0):
+    def __init__(self, param: ParamLinear, sKey: Optional[int] = None, verbose: int = 0):
         
         if not isinstance(param, ParamLinear):
-            raise TypeError("param msut be an object from class ParamLinear")
+            raise TypeError("param must be an object from class ParamLinear")
         if not ((isinstance(sKey, int) and sKey > 0) or sKey is None):
             raise ValueError("sKey must be None or a number>0")
-        if not isinstance(save_pickle, bool):
-            raise TypeError("save_pickle must be a boolean")
         if verbose not in [0, 1, 2]:
             raise ValueError("verbose must be 0, 1 or 2")
 
@@ -69,15 +62,14 @@ class Linear_PKF:
         # Shortcuts
         self.dim_x, self.dim_y, self.dim_xy = param.dim_x, param.dim_y, param.dim_xy
 
-        # Create HistoryTracker only if save_pickle is True
-        self.save_pickle = save_pickle
-        self._history    = HistoryTracker(self.verbose) if save_pickle else None
+        # Store data in the tracker
+        self._history    = HistoryTracker(self.verbose)
         
         # Configuration du logger selon verbose
         self._set_log_level()
 
         if self.verbose >= 1:
-            logger.info(f"[PKF] Init with sKey={sKey}, verbose={verbose}, save_pickle={save_pickle}")
+            logger.info(f"[PKF] Init with sKey={sKey}, verbose={verbose}")
 
     # ------------------------------------------------------------------
     # Loger configuration according to verbose
@@ -100,8 +92,7 @@ class Linear_PKF:
 
     @property
     def history(self) -> Optional[HistoryTracker]:
-        """Return HistoryTracker object if save_pickle==True, else None."""
-        return self._history
+       return self._history
 
     # ------------------------------------------------------------------
     # Generators
@@ -168,22 +159,22 @@ class Linear_PKF:
             print(report)
             input('attente')
 
+        # Record data in the tracker
         Xkp1_predict = np.zeros(shape=(self.dim_x, 1))
-        if self.save_pickle and self._history is not None:
-            self._history.record(   iter                 = k,
-                                    xkp1                 = xkp1.copy() if xkp1 is not None else None,
-                                    ykp1                 = ykp1.copy(),
-                                    Xkp1_predict         = Xkp1_predict.copy(),              # No prediction for the first
-                                    PXXkp1_predict       = eye_dim_x,                       # No prediction for the first
-                                    ikp1                 = np.zeros(shape=(self.dim_y, 1)),           # na
-                                    Skp1                 = eye_dim_y,                                 # na
-                                    Kkp1                 = np.zeros(shape=(self.dim_x, self.dim_y)),  # na
-                                    Xkp1_update          = Xkp1_update.copy(),
-                                    PXXkp1_update        = PXXkp1_update.copy()
-            )
-                                    # Xkp1_update_phys     = Xkp1_update.copy(),
-                                    # PXXkp1_update_phys   = PXXkp1_update.copy(),
-                                    # PXXkp1_update_Joseph = PXXkp1_update.copy())
+        self._history.record(iter                 = k,
+                             xkp1                 = xkp1.copy() if xkp1 is not None else None,
+                             ykp1                 = ykp1.copy(),
+                             Xkp1_predict         = Xkp1_predict.copy(),              # No prediction for the first
+                             PXXkp1_predict       = eye_dim_x,                       # No prediction for the first
+                             ikp1                 = np.zeros(shape=(self.dim_y, 1)),           # na
+                             Skp1                 = eye_dim_y,                                 # na
+                             Kkp1                 = np.zeros(shape=(self.dim_x, self.dim_y)),  # na
+                             Xkp1_update          = Xkp1_update.copy(),
+                             PXXkp1_update        = PXXkp1_update.copy()
+        )
+                             # Xkp1_update_phys     = Xkp1_update.copy(),
+                             # PXXkp1_update_phys   = PXXkp1_update.copy(),
+                             # PXXkp1_update_Joseph = PXXkp1_update.copy())
  
         yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
 
@@ -292,22 +283,21 @@ class Linear_PKF:
             check_equality(   Xkp1_update          = Xkp1_update,
                               Xkp1_update_phys     = Xkp1_update_phys)
 
-            # Store if save_pickle==True
-            if self.save_pickle and self._history is not None:
-                self._history.record(iter                 = k,
-                                     xkp1                 = xkp1.copy() if xkp1 is not None else None,
-                                     ykp1                 = ykp1.copy(),
-                                     Xkp1_predict         = Xkp1_predict.copy(),
-                                     PXXkp1_predict       = PXXkp1_predict.copy(),
-                                     ikp1                 = ikp1.copy(),
-                                     Skp1                 = Skp1.copy(),
-                                     Kkp1                 = Kkp1.copy(),
-                                     Xkp1_update          = Xkp1_update.copy(),
-                                     PXXkp1_update        = PXXkp1_update_Joseph.copy(), #PXXkp1_update.copy()
-                )
-                                    #  Xkp1_update_phys     = Xkp1_update_phys.copy(),
-                                    #  PXXkp1_update_phys   = PXXkp1_update_phys.copy(),
-                                    #  PXXkp1_update_Joseph = PXXkp1_update_Joseph.copy())
+            # Record data in the tracker
+            self._history.record(iter                 = k,
+                                 xkp1                 = xkp1.copy() if xkp1 is not None else None,
+                                 ykp1                 = ykp1.copy(),
+                                 Xkp1_predict         = Xkp1_predict.copy(),
+                                 PXXkp1_predict       = PXXkp1_predict.copy(),
+                                 ikp1                 = ikp1.copy(),
+                                 Skp1                 = Skp1.copy(),
+                                 Kkp1                 = Kkp1.copy(),
+                                 Xkp1_update          = Xkp1_update.copy(),
+                                 PXXkp1_update        = PXXkp1_update_Joseph.copy(), #PXXkp1_update.copy()
+            )
+                             #  Xkp1_update_phys     = Xkp1_update_phys.copy(),
+                             #  PXXkp1_update_phys   = PXXkp1_update_phys.copy(),
+                             #  PXXkp1_update_Joseph = PXXkp1_update_Joseph.copy())
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
 

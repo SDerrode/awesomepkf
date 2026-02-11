@@ -27,3 +27,4 @@ class Model_A_mQ_x1_y1(LinearAmQ):
         Pz00 = np.eye(dim_x+dim_y)
 
         super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
+        
