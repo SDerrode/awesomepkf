@@ -29,7 +29,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python3 prg/filterPFdata_fromfile.py
-        python3 prg/filterPFdata_fromfile.py --verbose 0 --traceplot --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --nbParticles 300
+        python3 prg/filterPFdata_fromfile.py --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --nbParticles 300  --verbose 0 --plot --saveHistory
     """
     
     # ------------------------------------------------------------------
@@ -40,14 +40,15 @@ if __name__ == "__main__":
     addParseToParser(parser, ['nonLinearModelName', 'dataFileName', 'nbParticles'])
     args   = parser.parse_args()
 
+    plot               = args.plot
+    saveHistory        = args.saveHistory
+    verbose            = args.verbose
     resample_threshold = 0.5
     nbParticles        = args.nbParticles
-    traceplot          = args.traceplot
-    verbose            = args.verbose
     nonLinearModelName = args.nonLinearModelName
     dataFileName       = args.dataFileName
     if dataFileName is None:
-        dataFileName = f"dataLinear_{nonLinearModelName}.csv"
+        dataFileName = f"dataNonLinear_{nonLinearModelName}.csv"
 
     # ------------------------------------------------------------------
     # Output repo for data, traces and plots
@@ -68,12 +69,11 @@ if __name__ == "__main__":
     params       = model.get_params()
     dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
-    
+    # In test to integrate a linear model as a non linear model
     # model        = ModelFactoryLinear.create("A_mQ_x1_y1")
     # params       = model.get_params().copy()
     # dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
     # param        = ParamLinear(verbose, dim_x, dim_y, **params)
-    
     if verbose > 1:
         print(f'model={model}')
         param.summary()
@@ -83,44 +83,40 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
 
     if verbose > 1:
-        print(f"\nPF filtering (nbParticles={nbParticles}, resample_threshold={resample_threshold}) with data generated from a file with data... ")
+        print(f"\nPF filtering (nbParticles={nbParticles}, resample_threshold={resample_threshold}) with data generated from a file... ")
 
-    pf_2     = NonLinear_PF(param, nbParticles=nbParticles, resample_threshold=resample_threshold, save_pickle=traceplot, verbose=verbose)
+    pf_2     = NonLinear_PF(param, nbParticles=nbParticles, resample_threshold=resample_threshold, verbose=verbose)
     filename = os.path.join(datafile_dir, dataFileName)
     listePF  = pf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
-    N = listePF[-1][0] + 1
-    
-   
 
-    if traceplot and pf_2.history is not None:
-        if verbose > 1:
-            print("\nExcerpt of the filtering with PF :")
-            print(pf_2.history.as_dataframe().head())
+    if verbose > 1:
+        print("\nExcerpt of the filtering with PF :")
+        print(pf_2.history.as_dataframe().head())
 
-        # print scoring
-        if listePF[0][1] is not None:
-            ListeA = ['xkp1']
-            ListeB = ['Xkp1_update']
-            ListeC = ['PXXkp1_update']
-            ListeD = None
-            ListeE = None
-            pf_2.history.compute_errors(pf_2, ListeA, ListeB, ListeC, ListeD, ListeE)
+    # print scoring
+    if listePF[0][1] is not None:
+        ListeA = ['xkp1']
+        ListeB = ['Xkp1_update']
+        ListeC = ['PXXkp1_update']
+        ListeD = None
+        ListeE = None
+        pf_2.history.compute_errors(pf_2, ListeA, ListeB, ListeC, ListeD, ListeE)
 
-        # pickle storing and plots
+    if saveHistory:
         pf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_pf_2.pkl"))
-        if listePF[0][1] is not None:
-
-            title = f"'{nonLinearModelName}' model data filtered with PF"
-            pf_2.history.plot(title, 
-                            list_param= ["ykp1"], \
-                            list_label= ["Observations y"], \
-                            list_covar= [None], \
-                            window    = WINDOW, \
-                            basename  = f'pf_2_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
-            pf_2.history.plot(title, 
-                            list_param= ["xkp1"  , "Xkp1_update"], \
-                            list_label= ["x true", "x estimated"], \
-                            list_covar= [None, "PXXkp1_update"], \
-                            window    = WINDOW, \
-                            basename  = f'pf_2_{nonLinearModelName}', show=False, base_dir=graph_dir)
+    
+    if listePF[0][1] is not None and plot:
+        title = f"'{nonLinearModelName}' model data filtered with PF"
+        pf_2.history.plot(title, 
+                        list_param= ["ykp1"], \
+                        list_label= ["Observations y"], \
+                        list_covar= [None], \
+                        window    = WINDOW, \
+                        basename  = f'pf_2_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
+        pf_2.history.plot(title, 
+                        list_param= ["xkp1"  , "Xkp1_update"], \
+                        list_label= ["x true", "x estimated"], \
+                        list_covar= [None,     "PXXkp1_update"], \
+                        window    = WINDOW, \
+                        basename  = f'pf_2_{nonLinearModelName}', show=False, base_dir=graph_dir)
 

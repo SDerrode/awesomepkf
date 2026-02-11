@@ -1,31 +1,3 @@
-# AwesomePKF
-
-This repository contains a set of programs illustrating the **Pairwise Kalman Filter (PKF)**, a generalization of the classical Kalman Filter, extended here to non-linear models. It includes several variants of non-linear filters:
-
-- **Extended Pairwise Kalman Filter (EPKF)**  
-- **Unscented Pairwise Kalman Filter (UPKF)**, with multiple variants depending on the choice of sigma points  
-- **Particle Filter (PF)**, not new but interesting for comparison purposes.
-
----
-
-## Table of Contents
-
-- [AwesomePKF](#awesomepkf)
-    - [Table of Contents](#table-of-contents)
-- [AwesomePKF](#awesomepkf-1)
-    - [Table of Contents](#table-of-contents-1)
-    - [Models and Simulations](#models-and-simulations)
-    - [Filters](#filters)
-        - [Pairwise Kalman Filter (PKF)](#pairwise-kalman-filter-pkf)
-        - [Extended Pairwise Kalman Filter (EPKF)](#extended-pairwise-kalman-filter-epkf)
-        - [Unscented Pairwise Kalman Filter (UPKF)](#unscented-pairwise-kalman-filter-upkf)
-        - [Particle Filter (PF)](#particle-filter-pf)
-    - [Usage Examples](#usage-examples)
-        - [Simulate Linear Data and Filter with PKF](#simulate-linear-data-and-filter-with-pkf)
-        - [Simulate Non-Linear Data and Filter with EPKF, UPKF and PF](#simulate-non-linear-data-and-filter-with-epkf-upkf-and-pf)
-    - [Folders structure](#folders-structure)
-
----
 
 # AwesomePKF
 
@@ -41,8 +13,6 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
 
 - [AwesomePKF](#awesomepkf)
     - [Table of Contents](#table-of-contents)
-- [AwesomePKF](#awesomepkf-1)
-    - [Table of Contents](#table-of-contents-1)
     - [Models and Simulations](#models-and-simulations)
     - [Filters](#filters)
         - [Pairwise Kalman Filter (PKF)](#pairwise-kalman-filter-pkf)
@@ -99,17 +69,17 @@ Each filter has two types of programs:
 ### Simulate Linear Data and Filter with PKF
 
 ```bash
-python3 prg/simulateLinearData.py     --verbose 1 --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --N 1000 --sKey 303
-python3 prg/filterPKFdata_fromfile.py --verbose 1 --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --traceplot 
+python3 prg/simulateLinearData.py     --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --verbose 1 --N 1000 --sKey 303
+python3 prg/filterPKFdata_fromfile.py --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --verbose 1 --plot --saveHistory
 ```
 
 ### Simulate Non-Linear Data and Filter with EPKF, UPKF and PF
 
 ```bash
-python3 prg/simulateNonLinearData.py   --verbose 1 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --sKey 303 --N 1000
-python3 prg/filterEPKFdata_fromfile.py --verbose 1 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --traceplot
-python3 prg/filterUPKFdata_fromfile.py --verbose 1 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --traceplot --sigmaSet "wan2000"
-python3 prg/filterPFdata_fromfile.py   --verbose 1 --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --traceplot --nbParticles 300
+python3 prg/simulateNonLinearData.py   --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --verbose 1 --sKey 303 --N 1000
+python3 prg/filterEPKFdata_fromfile.py --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --verbose 1 --plot --saveHistory
+python3 prg/filterUPKFdata_fromfile.py --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --verbose 1 --plot --saveHistory --sigmaSet "wan2000"
+python3 prg/filterPFdata_fromfile.py   --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --verbose 1 --plot --saveHistory --nbParticles 300
 ```
 
 ---

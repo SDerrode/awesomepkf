@@ -31,8 +31,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Simulate non linear data')
     addParseToParser(parser, ['nonLinearModelName', 'dataFileName', 'N', 'sKey', 'withoutX'])
     args   = parser.parse_args()
-    
-    traceplot          = args.traceplot
+
     verbose            = args.verbose
     withoutX           = args.withoutX
     N                  = args.N
@@ -74,7 +73,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     if verbose > 1:
         print("Non Linear data simulation")
-    upkf = NonLinear_PKF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
+    upkf = NonLinear_PKF(param, sKey=sKey, verbose=verbose)
     
     # Simulate data with the simulator generator
     listData = upkf.simulate_N_data(N=N)

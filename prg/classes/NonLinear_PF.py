@@ -24,8 +24,8 @@ from others.utils import check_consistency, diagnose_covariance#, check_equality
 class NonLinear_PF(NonLinear_PKF):
     """Implementation of PF."""
 
-    def __init__(self, param,  nbParticles=1000, resample_threshold=0.5, sKey=None, save_pickle=False, verbose=0):
-        super().__init__(param, sKey, save_pickle, verbose)
+    def __init__(self, param,  nbParticles=1000, resample_threshold=0.5, sKey=None, verbose=0):
+        super().__init__(param, sKey, verbose)
         self.nbParticles        = nbParticles
         self.resample_threshold = resample_threshold
 
@@ -82,7 +82,7 @@ class NonLinear_PF(NonLinear_PKF):
         #     print(report)
         #     input('attente')
 
-        # if self.save_pickle and self._history is not None:
+        # Record data in the tracker
         #     self._history.record(iter          = k,
         #                          xkp1          = xkp1.copy() if xkp1 is not None else None,
         #                          ykp1          = ykp1.copy(),
@@ -195,15 +195,15 @@ class NonLinear_PF(NonLinear_PKF):
                 print(report)
                 input('attente')
 
-            if self.save_pickle and self._history is not None:
-                self._history.record(iter           = k,
-                                     xkp1           = xkp1.copy() if xkp1 is not None else None,
-                                     ykp1           = ykp1.copy(),
-                                     Xkp1_predict   = Xkp1_predict,
-                                     PXXkp1_predict = PXXkp1_predict.copy(),
-                                     Xkp1_update    = Xkp1_update.copy(),
-                                     PXXkp1_update  = PXXkp1_update.copy(),
-                                     ESS            = ess)
-            
+            # Record data in the tracker
+            self._history.record(iter           = k,
+                                 xkp1           = xkp1.copy() if xkp1 is not None else None,
+                                 ykp1           = ykp1.copy(),
+                                 Xkp1_predict   = Xkp1_predict,
+                                 PXXkp1_predict = PXXkp1_predict.copy(),
+                                 Xkp1_update    = Xkp1_update.copy(),
+                                 PXXkp1_update  = PXXkp1_update.copy(),
+                                 ESS            = ess
+            )
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update

@@ -31,8 +31,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Simulate linear data')
     addParseToParser(parser, ['linearModelName', 'dataFileName', 'N', 'sKey', 'withoutX'])
     args   = parser.parse_args()
-    
-    traceplot       = args.traceplot
+
     verbose         = args.verbose
     withoutX        = args.withoutX # If True : true X will not be stored in the file
     N               = args.N
@@ -56,7 +55,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # Test parameters
     # ------------------------------------------------------------------
-    
+
     # Available linear models: 
     model = ModelFactoryLinear.create(linearModelName)
     if verbose > 1:
@@ -74,7 +73,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     if verbose > 1:
         print("\nPKF simulation")
-    pkf = Linear_PKF(param, sKey=sKey, save_pickle=traceplot, verbose=verbose)
+    pkf = Linear_PKF(param, sKey=sKey, verbose=verbose)
     
     # Simulate data with the simulator generator
     listData = pkf.simulate_N_data(N=N)
