@@ -22,6 +22,8 @@ if __name__ == "__main__":
     USAGES:
         python3 prg/simulateLinearData.py
         python3 prg/simulateLinearData.py --N 1000 --verbose 0 --linearModelName "A_mQ_x1_y1" --sKey 303 --dataFileName "test.csv"
+        Available linear models: 
+            ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x1_y1_augmented', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
     """
     
     # ------------------------------------------------------------------
@@ -42,8 +44,8 @@ if __name__ == "__main__":
         dataFileName = f"dataLinear_{linearModelName}.csv"
     if sKey is not None and sKey < 0:
         parser.error("sKey must be >= 0")
-    if N < 200:
-        parser.error("N must be >= 200")
+    # if N < 200:
+    #     parser.error("N must be >= 200")
     # exit(1)
     
     # ------------------------------------------------------------------

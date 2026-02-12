@@ -20,7 +20,7 @@ class Model_A_mQ_x1_y1_VPgreaterThan1(LinearAmQ):
 
         # A = np.array( [ [0.5813651,  0.22435528], [0.22435528, 1.1186349 ]] )
         A = np.array( [ [0.94992007, -0.00282614], [-0.00282614,  0.85007993 ]] )
-
+        B = np.eye(A.shape[0])
         # mQ = np.array( [[0.739010989010989,   0.27774725274725276], 
         #                      [0.27774725274725276, 0.9968131868131868]] )
         mQ   = np.diag( [0.4, 0.2])
@@ -28,4 +28,4 @@ class Model_A_mQ_x1_y1_VPgreaterThan1(LinearAmQ):
         z00  = np.zeros(shape=(dim_x+dim_y, 1))
         Pz00 = np.eye(dim_x+dim_y)
 
-        super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, mQ=mQ, z00=z00, Pz00=Pz00)
+        super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, z00=z00, Pz00=Pz00)

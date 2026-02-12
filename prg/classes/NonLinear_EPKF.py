@@ -44,11 +44,8 @@ class NonLinear_EPKF(NonLinear_PKF):
 
         # The first
         ##################################################################################################@
-
-        Xkp1_predict  = np.zeros(shape=(self.dim_x, 1))
-        PXXkp1_predict= np.eye(self.dim_x)
-
         k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
+        
         # temp            = self.param.Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(self.param.Pz00[self.dim_x:, self.dim_x:])
         # Xkp1_update     = temp @ ykp1
         # PXXkp1_update   = self.param.Pz00[0:self.dim_x, 0:self.dim_x] - temp @ self.param.Pz00[self.dim_x:, 0:self.dim_x]
@@ -61,16 +58,17 @@ class NonLinear_EPKF(NonLinear_PKF):
             input('attente')
 
         # Record data in the tracker
-        self._history.record(iter          = k,
-                             xkp1          = xkp1.copy() if xkp1 is not None else None,
-                             ykp1          = ykp1.copy(),
-                             Xkp1_predict  = Xkp1_predict.copy(),
-                             PXXkp1_predict= PXXkp1_predict.copy(),
-                             ikp1          = np.zeros(shape=(self.dim_y, 1)),
-                             Skp1          = eye_dim_y,
-                             Kkp1          = np.zeros(shape=(self.dim_x, self.dim_y)),
-                             Xkp1_update   = Xkp1_update.copy(),
-                             PXXkp1_update = PXXkp1_update.copy()
+        Xkp1_predict  = np.zeros(shape=(self.dim_x, 1))
+        self._history.record(iter           = k,
+                             xkp1           = xkp1.copy() if xkp1 is not None else None,
+                             ykp1           = ykp1.copy(),
+                             Xkp1_predict   = Xkp1_predict.copy(),
+                             PXXkp1_predict = eye_dim_x,
+                             ikp1           = np.zeros(shape=(self.dim_y, 1)),
+                             Skp1           = eye_dim_y,
+                             Kkp1           = np.zeros(shape=(self.dim_x, self.dim_y)),
+                             Xkp1_update    = Xkp1_update.copy(),
+                             PXXkp1_update  = PXXkp1_update.copy()
         )
 
         yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
@@ -78,31 +76,20 @@ class NonLinear_EPKF(NonLinear_PKF):
         ##################################################################################################@
         # The next ones
         
-        accel_zero_xy  = np.zeros(shape=(self.dim_xy, 1))
-        accel_zero_x_y = np.zeros(shape=(self.dim_x,  self.dim_y))
-        accel_zero_y_x = np.zeros(shape=(self.dim_y,  self.dim_x))
-        accel_zero_y_y = np.zeros(shape=(self.dim_y,  self.dim_y))
-        while N is None or k < N:
-            
-            # Required for Joseph form
-            # PXXk_update = PXXkp1_update.copy()
-            
-            Xkp1_update_augmented      = np.vstack([Xkp1_update, ykp1])
-            Zkp1_predict               = g( Xkp1_update_augmented, accel_zero_xy, self.dt)
-            Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
-            An, Bn                     = jg(Xkp1_update_augmented, accel_zero_xy, self.dt)
-            Pkp1_predict               =  An @ np.block(
-                                                [[PXXkp1_update,  accel_zero_x_y],
-                                                 [accel_zero_y_x, accel_zero_y_y]]
-                                               ) @ An.T + Bn @ mQ @ Bn.T
-            # Il ne faut pas dignostiquer la matrice car elle est singulière, 
-            # mais cela n'est pas grave pour le reste des calculs
-            # verdict, report = diagnose_covariance(Pkp1_predict)
-            # if verdict is not None:
-            #     print(f'Pkp1_predict={Pkp1_predict}\nReport for Pkp1_predict - iteration k={k}:')
-            #     print(report)
-            #     input('attente')
+        accel_zero_xy_1 = np.zeros(shape=(self.dim_xy, 1))
+        accel_zero_x_y  = np.zeros(shape=(self.dim_x,  self.dim_y))
+        accel_zero_y_x  = np.zeros(shape=(self.dim_y,  self.dim_x))
+        accel_zero_y_y  = np.zeros(shape=(self.dim_y,  self.dim_y))
+        accel_xy_xy     = np.zeros(shape=(self.dim_xy, self.dim_xy))
+        
+        while N is None or k<N:
 
+            Xkp1_update_augmented      = np.vstack([Xkp1_update, ykp1])
+            Zkp1_predict               = g( Xkp1_update_augmented, accel_zero_xy_1, self.dt)
+            Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
+            An, Bn                     = jg(Xkp1_update_augmented, accel_zero_xy_1, self.dt)
+            accel_xy_xy[0:self.dim_x, 0:self.dim_x] = PXXkp1_update
+            Pkp1_predict               =  An @ accel_xy_xy @ An.T + Bn @ mQ @ Bn.T
             # Cutting Pkp1 into 4 blocks
             M_top, M_bottom                = np.vsplit(Pkp1_predict, [self.dim_x])
             PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,        [self.dim_x])

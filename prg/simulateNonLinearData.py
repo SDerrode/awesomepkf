@@ -42,8 +42,8 @@ if __name__ == "__main__":
         dataFileName = f"dataNonLinear_{nonLinearModelName}.csv"
     if sKey is not None and sKey < 0:
         parser.error("sKey must be >= 0")
-    if N < 200:
-        parser.error("N must be >= 200")
+    # if N < 200:
+    #     parser.error("N must be >= 200")
     # exit(1)
 
     # ------------------------------------------------------------------

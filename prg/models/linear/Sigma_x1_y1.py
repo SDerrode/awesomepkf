@@ -9,8 +9,8 @@ class Model_Sigma_x1_y1(LinearSigma):
     """
     Modèle linéaire Sigma avec dim_x=1 et dim_y=1.
 
-    Paramétrisation : A, sxx, syy, a, b, c, d, e
-    Calcul robuste de la matrice de transition A à partir de Q1 et Q2.
+    Paramétrisation : sxx, syy, a, b, c, d, e
+    
     """
 
     MODEL_NAME = "Sigma_x1_y1"
@@ -33,4 +33,4 @@ class Model_Sigma_x1_y1(LinearSigma):
         Q2  = np.block([[a,   e],   [d, c]])
         
         super().__init__(dim_x=dim_x, dim_y=dim_y, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e)
-        # self._compute_A_mq_z00_Pz00(Q1, Q2)
+

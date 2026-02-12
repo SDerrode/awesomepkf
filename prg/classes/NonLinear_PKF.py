@@ -102,15 +102,14 @@ class NonLinear_PKF:
         Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
         # print(f'Zkp1_simul={Zkp1_simul}')
         # exit(1)
-        
         yield k, np.split(Zkp1_simul, [self.dim_x])
 
         # The next ones...
         zerosvector = np.zeros(self.dim_xy)
-        while N is None or k+1 < N:
-            k += 1
+        while N is None or k<N:
             Zkp1_simul = g(Zkp1_simul, self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), self.dt)
             yield k, np.split(Zkp1_simul, [self.dim_x])
+            k += 1
 
     def process_N_data(self, N: Optional[int], data_generator: Optional[Generator] = None) -> list:
         return list(self.process_nonlinearfilter(N=N, data_generator=data_generator))

@@ -410,7 +410,7 @@ class A:
         assert n is None or (isinstance(n, int) and n >= 0), "n doit être un entier positif ou None"
 
         k = 0
-        while n is None or k < n:
+        while n is None or k<n:
             new_x = np.cos(self.x)
             diff = abs(new_x - self.x)
             record = {"iter": k, "x": self.x, "new_x": new_x, "diff": diff}

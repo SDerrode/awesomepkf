@@ -99,7 +99,7 @@ class NonLinear_PF(NonLinear_PKF):
         
         # accel_zero = np.zeros(shape=(self.dim_xy, 1))
         k=0
-        while N is None or k < N:
+        while N is None or k<N:
 
             # ==========================
             # Predict

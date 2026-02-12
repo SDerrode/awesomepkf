@@ -21,7 +21,9 @@ if __name__ == "__main__":
     """
     USAGES:
         python3 prg/filterPKFdata_fromfile.py
-        python3 prg/filterPKFdata_fromfile.py --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --verbose 0 --plot --saveHistory
+        python3 prg/filterPKFdata_fromfile.py --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --verbose 1 --plot --saveHistory
+        Available linear models: 
+            ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x1_y1_augmented', 'A_mQ_x2_y2', 'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1']
     """
     
     # ------------------------------------------------------------------
