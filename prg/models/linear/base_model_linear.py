@@ -51,71 +51,16 @@ class BaseModelLinear:
         self.model_type = model_type
         self.augmented  = augmented
 
-    def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float = 1.0) -> np.ndarray:
-        """
-        Fonction de transition linéaire : z_{n+1} = A z_n + noise_z
-
-        Parameters
-        ----------
-        z : np.ndarray
-            État courant.
-        noise_z : np.ndarray
-            Bruit appliqué à la transition.
-        dt : float, optional
-            Pas de temps (non utilisé ici, mais utile pour les extensions), par défaut 1.0.
-
-        Returns
-        -------
-        np.ndarray
-            État prédit.
-        """
-        return self.A @ z + noise_z
-
-    # def get_params(self):
-    #     if self.model_type == 'linear_AmQ':
-    #         return {'dim_x'      : self.dim_x,
-    #                 'dim_y'      : self.dim_y,
-    #                 'augmented'  : self.augmented,
-    #                 'g'          : self.g,
-    #                 'A'          : self.A,
-    #                 'mQ'         : self.mQ,
-    #                 'z00'        : self.z00,
-    #                 'Pz00'       : self.Pz00}
-    #     elif self.model_type == 'linear_Sigma':
-    #         return {'dim_x'      : self.dim_x,
-    #                 'dim_y'      : self.dim_y,
-    #                 'augmented'  : self.augmented,
-    #                 'g'          : self.g,
-    #                 'sxx'        : self.sxx,
-    #                 'syy'        : self.syy,
-    #                 'a'          : self.a,
-    #                 'b'          : self.b,
-    #                 'c'          : self.c,
-    #                 'd'          : self.d,
-    #                 'e'          : self.e}
-    #     else:
-    #         raise ValueError(f"⚠️ model_type should be 'linear_AmQ' or 'linear_Sigma' - Actual value: {model_type}")
-
-
-    # Pour les modèle sigma:
-    def _compute_A_mq_z00_Pz00(self, Q1, Q2):
-        
-        # Calcul robuste de A = Q2 @ np.linalg.inv(Q1)
-        c, low = cho_factor(Q1)
-        self.A = Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
-        
-        eigvals = np.linalg.eigvals(self.A)
-        if np.any(np.abs(eigvals) >= 1.0):
-            raise ValueError(f"⚠️ The modulus of one Eigen value of A is >= 1 : {eigvals}")
-
-        self.mQ = Q1 - self.A @ Q2.T
-        check_consistency(mQ=self.mQ)
-        
-        self.z00  = np.zeros((self.dim_xy, 1))
-        self.Pz00 = Q1.copy()
-
+    # ------------------------------------------------------------------
+    def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
+        """Compute z_{n+1} = A @ z + B @ noise. z et noise_z sont de shape (dim_xy, 1)."""
         if __debug__:
-            check_consistency(mQ=self.mQ, Pz00=self.Pz00)
+            assert z.shape       == (self.dim_xy, 1)
+            assert noise_z.shape == (self.dim_xy, 1)
+        # x, y   = np.split(z, [self.dim_x])
+        # nx, ny = np.split(noise_z, [self.dim_x])
+        # return self._g(x, y, nx, ny, dt)
+        return self.A @ z + self.B @ noise_z
 
     # ------------------------------------------------------------------
     def __repr__(self):
@@ -129,9 +74,10 @@ class LinearAmQ(BaseModelLinear):
     """
     Modèle linéaire avec matrice de transition A et covariance Q.
     """
-    def __init__(self, dim_x: int, dim_y: int, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray, augmented = False):
+    def __init__(self, dim_x: int, dim_y: int, A: np.ndarray, B: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray, augmented=False):
         super().__init__(dim_x, dim_y, model_type="linear_AmQ", augmented=augmented)
         self.A    = A
+        self.B    = B
         self.mQ   = mQ
         self.z00  = z00
         self.Pz00 = Pz00
@@ -145,6 +91,7 @@ class LinearAmQ(BaseModelLinear):
                  'augmented'  : self.augmented,
                  'g'          : self.g,
                  'A'          : self.A,
+                 'B'          : self.B,
                  'mQ'         : self.mQ,
                  'z00'        : self.z00,
                  'Pz00'       : self.Pz00
@@ -158,7 +105,7 @@ class LinearSigma(BaseModelLinear):
     """
     Modèle linéaire avec variances sxx, syy et coefficients a, b, c, d, e.
     """
-    def __init__(self, dim_x: int, dim_y: int, sxx: float, syy: float, a: float, b: float, c: float, d: float, e: float, augmented = False):
+    def __init__(self, dim_x: int, dim_y: int, sxx: float, syy: float, a: float, b: float, c: float, d: float, e: float, augmented=False):
         super().__init__(dim_x, dim_y, model_type="linear_Sigma", augmented=augmented)
         self.sxx = sxx
         self.syy = syy
@@ -167,6 +114,8 @@ class LinearSigma(BaseModelLinear):
         self.c   = c
         self.d   = d
         self.e   = e
+        
+        self._initSigma()
 
     def _initSigma(self):
         
@@ -179,11 +128,13 @@ class LinearSigma(BaseModelLinear):
         # Calcul robuste de la matrice A via Cholesky
         c_factor, lower = cho_factor(Q1)
         self.A = Q2 @ cho_solve((c_factor, lower), np.eye(self.dim_xy))
-
         # Vérification de la stabilité (valeurs propres < 1)
         eigvals = np.linalg.eigvals(self.A)
         if np.any(np.abs(eigvals) >= 1.0):
             raise ValueError(f"⚠️ Une valeur propre de A a un module >= 1 : {eigvals}")
+
+        # B est l'identité
+        self.B = np.eye(self.A.shape[0])
 
         # Vérification optionnelle
         if __debug__:

@@ -3,6 +3,7 @@
 
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
+from .model_x1_y1_withRetroaction import ModelX1Y1_withRetroactions
 from others.utils import check_consistency
 
 class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
@@ -18,31 +19,37 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
 
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear", augmented=True)
+        
+        # Le fait d'utiliser le modèle non augmenté garanti que l'on fait les mêmes choses
+        self.mod = ModelX1Y1_withRetroactions()
 
         # (C) Sustained oscillations / limit-cycle-like: INTERESSANT
         # (a,b,c,d) = (0.99,\;1.2,\;0.9,\;1.5)
-        # Expected behaviour: persistent oscillations of moderate amplitude; nonlinear terms drive and sustain the cycles.
+        # Expected behaviour: persistent oscillations of self.moderate amplitude; nonlinear terms drive and sustain the cycles.
         # Numeric tips: choose \(x_0,y_0\) small but nonzero, \(\sigma\) very small (e.g.\ 0.005) to reveal deterministic oscillation, \(N\ge 300\).
-        self.mQ  = np.array([[0.1, 0.0, 0.0], 
-                             [0.0, 0.5, 0.0], 
-                             [0.0, 0.0, 0.0]])  # np.diag([0.1, 0.5, 0.])
+        self.mQ   = np.zeros(shape=(self.dim_xy, self.dim_xy))
+        self.mQ[0:self.dim_x, 0:self.dim_x] = self.mod.mQ
         self.z00  = np.zeros((self.dim_xy, 1))
+        self.z00[0:self.dim_x] = self.mod.z00
         self.Pz00 = np.eye(self.dim_xy)
+        self.Pz00[0:self.dim_x, 0:self.dim_x] = self.mod.Pz00
+        
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
-        self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5
+            
+        self.a, self.b, self.c, self.d = self.mod.a, self.mod.b, self.mod.c, self.mod.d
 
     # ------------------------------------------------------------------
     def _fx(self, x, t, dt):
         """
         Nonlinear state function with retro-action of observations on state.
         """
-        x1, x2 = x.flatten()
-        t1, t2 = t.flatten()
-        return np.array([
-            self.a * x1 + self.b * np.tanh(x2) + t1,
-            self.c * x2 + self.d * np.sin(x1)  + t2
-        ]).reshape(-1, 1)
+
+        # Le fait d'utiliser le modèle non augmenté garanti que l'on fait les mêmes choses
+        ax = self.mod._gx(x[0:self.dim_x-self.dim_y], x[self.dim_x-self.dim_y:], t[0:self.dim_x-self.dim_y], t[self.dim_x-self.dim_y:], dt)
+        ay = self.mod._gy(x[0:self.dim_x-self.dim_y], x[self.dim_x-self.dim_y:], t[0:self.dim_x-self.dim_y], t[self.dim_x-self.dim_y:], dt)
+        
+        return np.block([[ax],[ay]])
 
     # ------------------------------------------------------------------
     def _hx(self, x, u, dt):

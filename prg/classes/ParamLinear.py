@@ -40,12 +40,7 @@ class ParamLinear:
         
     """
 
-    def __init__(
-        self,
-        verbose: int,
-        dim_x:   int,
-        dim_y:   int,
-        **kwargs ) -> None:
+    def __init__(self, verbose: int, dim_x: int, dim_y: int, **kwargs ) -> None:
         
         if __debug__:
             assert isinstance(dim_x, int) and dim_x > 0, "dim_x must be int > 0"
@@ -61,8 +56,8 @@ class ParamLinear:
         self._set_log_level()
 
         # Deux façons de construire un objet de cette classe
-        if len(kwargs.keys()) == 6:  # parametrization (A, mQ, z00, Pz00)
-            self.constructorFrom_A_mQ(kwargs['g'], kwargs['A'], kwargs['mQ'], kwargs['z00'], kwargs['Pz00'], kwargs['augmented'])
+        if len(kwargs.keys()) == 7:  # parametrization (A, mQ, z00, Pz00)
+            self.constructorFrom_AB_mQ(kwargs['g'], kwargs['A'], kwargs['B'], kwargs['mQ'], kwargs['z00'], kwargs['Pz00'], kwargs['augmented'])
         elif len(kwargs.keys()) == 9:  # parametrization (sxx, syy, a, b, c, d, e) --> Sigma
             self.constructorFrom_Sigma(kwargs['g'], kwargs['sxx'], kwargs['syy'], kwargs['a'], kwargs['b'], kwargs['c'], kwargs['d'], kwargs['e'], kwargs['augmented'])
         else:
@@ -76,13 +71,16 @@ class ParamLinear:
     # ------------------------------------------------------------------
     # Constructeurs
     # ------------------------------------------------------------------
-    def constructorFrom_A_mQ(self, g, A: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray, augmented: bool) -> None:
+    def constructorFrom_AB_mQ(self, g, A: np.ndarray, B: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray, augmented: bool) -> None:
         
         # Est-ce un modèle augmenté ?
         self.augmented = augmented
         
         # The linear equation to update the system
         self.g = g
+        
+        self._B = np.array(B, dtype=float)
+        self._update_B_views()
         
         self._A = np.array(A, dtype=float)
         if __debug__:
@@ -97,12 +95,12 @@ class ParamLinear:
         self._z00  = np.array(z00,  dtype=float)
         self._Pz00 = np.array(Pz00, dtype=float)
 
-        self._update_Sigma_from_A_mQ()
+        self._update_Sigma_from_A_B_mQ()
         self._check_consistency()
 
     def constructorFrom_Sigma(self, g, sxx: np.ndarray, syy: np.ndarray, a: np.ndarray, b: np.ndarray,
-                              c: np.ndarray, d: np.ndarray, e: np.ndarray, augmented: bool) -> None:
-        
+                                         c: np.ndarray, d:   np.ndarray, e: np.ndarray, augmented: bool) -> None:
+
         # Est-ce un modèle augmenté ?
         self.augmented = augmented
         
@@ -117,7 +115,7 @@ class ParamLinear:
         self._d   = np.array(d,   dtype=float)
         self._e   = np.array(e,   dtype=float)
 
-        self._update_A_mQ_from_Sigma()
+        self._update_A_B_mQ_from_Sigma()
         self._check_consistency()
 
     # ------------------------------------------------------------------
@@ -137,6 +135,7 @@ class ParamLinear:
     def _check_dimensions(self) -> None:
         expected_shapes = {
             'A':     (  self.dim_xy,   self.dim_xy),
+            'B':     (  self.dim_xy,   self.dim_xy),
             'mQ':    (  self.dim_xy,   self.dim_xy),
             'z00':   (  self.dim_xy,             1),
             'Pz00':  (  self.dim_xy,   self.dim_xy),
@@ -160,7 +159,7 @@ class ParamLinear:
     # ------------------------------------------------------------------
     # Update derived matrices
     # ------------------------------------------------------------------
-    def _update_A_mQ_from_Sigma(self) -> None:
+    def _update_A_B_mQ_from_Sigma(self) -> None:
         
         self._Q1    = np.block([[self._sxx, self._b.T], [self._b, self._syy]])
         self._Q2    = np.block([[self._a, self._e], [self._d, self._c]])
@@ -178,6 +177,9 @@ class ParamLinear:
                 logger.warning(f"⚠️ Certaines valeurs propres de A ont un module >= 1 : {eigvals}")
         self._update_A_views()
         
+        
+        self._B = np.eye(self._A.shape[0])
+        
         self._mQ = self._Q1 - self._A @ self._Q2.T
         check_consistency(_mQ=self._mQ)
         self._update_mQ_views()
@@ -188,31 +190,32 @@ class ParamLinear:
         if __debug__:
             self._check_dimensions()
 
-    def _update_Sigma_from_A_mQ(self) -> None:
-        self._Q1    = solve_discrete_lyapunov(self._A, self._mQ)
-        self._Q2    = self._A @ self._Q1
-        self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
+    def _update_Sigma_from_A_B_mQ(self) -> None:
+        pass
+        # self._Q1    = solve_discrete_lyapunov(self._A, self._mQ)
+        # self._Q2    = self._A @ self._Q1
+        # self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
 
-        # Vérification cohérence
-        if __debug__:
-            Q_est = self._Q1 - self._A @ self._Q2.T
-            diff = self._mQ - Q_est
-            rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + 1e-12)
-            if rel_error > 1e-8:
-                logger.warning(f"⚠️ Incohérence : Q ≉ Q1 - A Q2^T (erreur relative = {rel_error:.2e})")
-                if self.verbose >= 2:
-                    logger.debug(f"Différence :\n{diff}")
-            else:
-                logger.debug(f"♻️ Vérification OK : ||Q - (Q1 - A Q2^T)||_rel = {rel_error:.2e}")
+        # # Vérification cohérence
+        # if __debug__:
+        #     Q_est = self._Q1 - self._A @ self._Q2.T
+        #     diff = self._mQ - Q_est
+        #     rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + 1e-12)
+        #     if rel_error > 1e-8:
+        #         logger.warning(f"⚠️ Incohérence : Q ≉ Q1 - A Q2^T (erreur relative = {rel_error:.2e})")
+        #         if self.verbose >= 2:
+        #             logger.debug(f"Différence :\n{diff}")
+        #     else:
+        #         logger.debug(f"♻️ Vérification OK : ||Q - (Q1 - A Q2^T)||_rel = {rel_error:.2e}")
 
-        # Sous-blocs
-        self._a   = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x, 0:self.dim_x]
-        self._b   = self._Sigma[self.dim_x:self.dim_xy, 0:self.dim_x]
-        self._c   = self._Sigma[self.dim_xy+self.dim_x:2*self.dim_xy, self.dim_x:self.dim_xy]
-        self._d   = self._Sigma[self.dim_xy+self.dim_x:2*self.dim_xy, 0:self.dim_x]
-        self._e   = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x, self.dim_x:self.dim_xy]
-        self._sxx = self._Sigma[0:self.dim_x, 0:self.dim_x]
-        self._syy = self._Sigma[self.dim_x:self.dim_xy, self.dim_x:self.dim_xy]
+        # # Sous-blocs
+        # self._a   = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x, 0:self.dim_x]
+        # self._b   = self._Sigma[self.dim_x:self.dim_xy, 0:self.dim_x]
+        # self._c   = self._Sigma[self.dim_xy+self.dim_x:2*self.dim_xy, self.dim_x:self.dim_xy]
+        # self._d   = self._Sigma[self.dim_xy+self.dim_x:2*self.dim_xy, 0:self.dim_x]
+        # self._e   = self._Sigma[self.dim_xy:self.dim_xy+self.dim_x, self.dim_x:self.dim_xy]
+        # self._sxx = self._Sigma[0:self.dim_x, 0:self.dim_x]
+        # self._syy = self._Sigma[self.dim_x:self.dim_xy, self.dim_x:self.dim_xy]
 
         if __debug__:
             self._check_dimensions()
@@ -222,19 +225,31 @@ class ParamLinear:
     # ------------------------------------------------------------------
     def _update_A_views(self) -> None:
         def _callback() -> None:
-            self._update_Sigma_from_A_mQ()
+            self._update_Sigma_from_A_B_mQ()
             if __debug__:
                 self._check_consistency()
-                logger.info("[ActiveView] ✅ A, Sigma matrice updated")
+                logger.info("[ActiveView] ✅ A, B, Sigma matrice updated")
 
         self._A_xx = ActiveView(self._A, slice(0, self.dim_x), slice(0, self.dim_x), _callback)
         self._A_xy = ActiveView(self._A, slice(0, self.dim_x), slice(self.dim_x, self.dim_xy), _callback)
         self._A_yx = ActiveView(self._A, slice(self.dim_x, self.dim_xy), slice(0, self.dim_x), _callback)
         self._A_yy = ActiveView(self._A, slice(self.dim_x, self.dim_xy), slice(self.dim_x, self.dim_xy), _callback)
 
+    def _update_B_views(self) -> None:
+        def _callback() -> None:
+            self._update_Sigma_from_A_B_mQ()
+            if __debug__:
+                self._check_consistency()
+                logger.info("[ActiveView] ✅ A, B, Sigma matrice updated")
+
+        self._B_xx = ActiveView(self._B, slice(0, self.dim_x), slice(0, self.dim_x), _callback)
+        self._B_xy = ActiveView(self._B, slice(0, self.dim_x), slice(self.dim_x, self.dim_xy), _callback)
+        self._B_yx = ActiveView(self._B, slice(self.dim_x, self.dim_xy), slice(0, self.dim_x), _callback)
+        self._B_yy = ActiveView(self._B, slice(self.dim_x, self.dim_xy), slice(self.dim_x, self.dim_xy), _callback)
+
     def _update_mQ_views(self) -> None:
         def _callback() -> None:
-            self._update_Sigma_from_A_mQ()
+            self._update_Sigma_from_A_B_mQ()
             if __debug__:
                 self._check_consistency()
                 logger.debug("[ActiveView] ✅ mQ, Sigma matrices updated")
@@ -295,10 +310,23 @@ class ParamLinear:
             raise ValueError(f"⚠️ A doit être ({self.dim_xy},{self.dim_xy})")
         self._A = new_A
         self._update_A_views()
-        self._update_Sigma_from_A_mQ()
+        self._update_Sigma_from_A_B_mQ()
         self._check_consistency()
         if __debug__:
             logger.info("[ParamLinear] ✅ A matrix updates")
+    @property
+    def B(self) -> np.ndarray: return self._B
+    @B.setter
+    def B(self, new_B: np.ndarray) -> None:
+        new_B = np.array(new_B, dtype=float)
+        if new_B.shape != (self.dim_xy, self.dim_xy):
+            raise ValueError(f"⚠️ B doit être ({self.dim_xy},{self.dim_xy})")
+        self._B = new_B
+        self._update_B_views()
+        self._update_Sigma_from_A_B_mQ()
+        self._check_consistency()
+        if __debug__:
+            logger.info("[ParamLinear] ✅ B matrix updates")
 
     @property
     def A_xx(self) -> ActiveView: return self._A_xx
@@ -308,6 +336,15 @@ class ParamLinear:
     def A_yx(self) -> ActiveView: return self._A_yx
     @property
     def A_yy(self) -> ActiveView: return self._A_yy
+    
+    @property
+    def B_xx(self) -> ActiveView: return self._B_xx
+    @property
+    def B_xy(self) -> ActiveView: return self._B_xy
+    @property
+    def B_yx(self) -> ActiveView: return self._B_yx
+    @property
+    def B_yy(self) -> ActiveView: return self._B_yy
 
     @property
     def mQ(self) -> np.ndarray: return self._mQ
@@ -318,7 +355,7 @@ class ParamLinear:
             raise ValueError(f"⚠️ mQ doit être ({self.dim_xy},{self.dim_xy})")
         self._mQ = new_Q
         self._update_mQ_views()
-        self._update_Sigma_from_A_mQ()
+        self._update_Sigma_from_A_B_mQ()
         self._check_consistency()
         if __debug__:
             logger.info("[ParamLinear] ✅ mQ matrix updated")
@@ -344,6 +381,7 @@ class ParamLinear:
         print("=== ParamLinear Summary ===")
         print(f"dim_x={self.dim_x}, dim_y={self.dim_y}, verbose={self.verbose}\n")
         print("A:\n", fmt(self.A))
+        print("B:\n", fmt(self.B))
         print("mQ:\n", fmt(self.mQ))
         print("z00:\n", fmt(self.z00))
         print("Pz00:\n", fmt(self.Pz00))
@@ -363,9 +401,10 @@ class ParamLinear:
             print("  e:\n  ", fmt(self._e))
         print("========================\n")
         if self.verbose>1:  # Ready to copy in python code
-            print("A  = np.array(", repr(self.A.tolist()), ')')
-            print("mQ = np.array(", repr(self.mQ.tolist()), ')')
-            print("z00 = np.array(", repr(self.z00.tolist()), ')')
+            print("A    = np.array(", repr(self.A.tolist()), ')')
+            print("B    = np.array(", repr(self.B.tolist()), ')')
+            print("mQ   = np.array(", repr(self.mQ.tolist()), ')')
+            print("z00  = np.array(", repr(self.z00.tolist()), ')')
             print("Pz00 = np.array(", repr(self.Pz00.tolist()), ')')
         
         if __debug__:

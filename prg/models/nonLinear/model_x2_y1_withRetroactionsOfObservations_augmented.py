@@ -4,6 +4,8 @@
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
 from others.utils import check_consistency
+from .model_x2_y1_withRetroactionsOfObservations import ModelX2Y1_withRetroactionsOfObservations
+
 
 class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
     """
@@ -16,19 +18,23 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
 
     MODEL_NAME: str = "x2_y1_withRetroactionsOfObservations_augmented"
 
-    def __init__(self) -> None:
+    def __init__(self) -> None: 
         super().__init__(dim_x=3, dim_y=1, model_type="nonlinear", augmented=True)
-
-        self.mQ  = np.array([[0.1, 0.0, 0.0, 0.0], 
-                             [0.0, 0.1, 0.0, 0.0], 
-                             [0.0, 0.0, 0.5, 0.0],
-                             [0.0, 0.0, 0.0, 0.0]]) 
+        
+        # pour récupérer les paramètre du modèle non augmenté
+        self.mod = ModelX2Y1_withRetroactionsOfObservations()
+        
+        self.mQ   = np.zeros(shape=(self.dim_xy, self.dim_xy))
+        self.mQ[0:self.dim_x, 0:self.dim_x] = self.mod.mQ
         self.z00  = np.zeros((self.dim_xy, 1))
+        self.z00[0:self.dim_x] = self.mod.z00
         self.Pz00 = np.eye(self.dim_xy)
+        self.Pz00[0:self.dim_x, 0:self.dim_x] = self.mod.Pz00
+        
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
 
-        self.a, self.b, self.c, self.d, self.e, self.f = 1.0, 0.8, 0.05, 0.9, 0.30, 0.6
+        self.a, self.b, self.c, self.d, self.e, self.f = self.mod.a, self.mod.b, self.mod.c, self.mod.d, self.mod.e, self.mod.f
 
 
     # ------------------------------------------------------------------
@@ -36,14 +42,16 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
         """
         Nonlinear state function with retro-action on observation.
         """
-        x1, x2, x3 = x.flatten()
-        t1, t2, t3 = t.flatten()
 
-        return np.array([
-            self.a * x1 + self.b * x2 + self.c * np.tanh(x3) + t1,
-            self.d * x2               + self.e * np.sin(x3)  + t2,
-            x1**2       + self.f*x3                          + t3
-        ]).reshape(-1, 1)
+        # Le fait d'utiliser le modèle non augmenté garanti que l'on fait les mêmes choses
+        ax = self.mod._gx(x[0:self.dim_x-self.dim_y], x[self.dim_x-self.dim_y:], t[0:self.dim_x-self.dim_y], t[self.dim_x-self.dim_y:], dt)
+        ay = self.mod._gy(x[0:self.dim_x-self.dim_y], x[self.dim_x-self.dim_y:], t[0:self.dim_x-self.dim_y], t[self.dim_x-self.dim_y:], dt)
+        
+        result = np.block([[ax],[ay]])
+        # print(f'result={result}')
+        # input('attente')
+        
+        return result
 
     # ------------------------------------------------------------------
     def _hx(self, x, u, dt):
