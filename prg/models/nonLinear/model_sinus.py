@@ -44,9 +44,7 @@ class ModelSinus(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (1,1) - next state
         """
-        x1 = x.flatten()[0]
-        t1 = t.flatten()[0]
-        return np.array([[0.8 * x1 + 0.3 * np.sin(x1) + t1]])
+        return 0.8 * x + 0.3 * np.sin(x) + t
 
     # ------------------------------------------------------------------
     def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -61,9 +59,7 @@ class ModelSinus(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (1,1) - measurement
         """
-        x1 = x.flatten()[0]
-        u1 = u.flatten()[0]
-        return np.array([[x1**2 + u1]])
+        return x**2 + u
 
     # ------------------------------------------------------------------
     def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -99,15 +95,14 @@ class ModelSinus(BaseModelNonLinear):
 
         x1 = x.flatten()[0]
         t1 = t.flatten()[0]
-        y1 = y.flatten()[0]
 
         # State plus noise
         A = 0.8 * x1 + 0.3 * np.sin(x1) + t1
 
         # Jacobians exactly as in original code
-        An = np.array([[0.8 + 0.3 * np.cos(x1),        0.],
+        An = np.array([[0.8 + 0.3 * np.cos(x1),            0.],
                        [2. * A * (0.8 + 0.3 * np.cos(x1)), 0.]])
-        Bn = np.array([[1.,       0.],
-                       [2. * A,   1.]])
+        Bn = np.array([[1.,     0.],
+                       [2. * A, 1.]])
 
         return An, Bn

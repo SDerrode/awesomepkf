@@ -26,7 +26,7 @@ class ModelExtSaturant(BaseModelNonLinear):
         # Covariance and initial state
         self.mQ   = np.diag([1e-4, 1e-4])
         self.z00  = np.zeros((self.dim_xy, 1))
-        self.Pz00 = np.eye(self.dim_xy) * 2
+        self.Pz00 = np.eye(self.dim_xy)
 
         if __debug__:
             check_consistency(mQ=self.mQ, Pz00=self.Pz00)
@@ -44,9 +44,8 @@ class ModelExtSaturant(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (1,1) - next state
         """
-        x1 = x.flatten()[0]
-        t1 = t.flatten()[0]
-        return np.array([[0.5 * x1 + 2. * (1. - np.exp(-0.1 * x1)) + t1]])
+
+        return 0.5 * x + 2. * (1. - np.exp(-0.1 * x)) + t
 
     # ------------------------------------------------------------------
     def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -61,10 +60,8 @@ class ModelExtSaturant(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (1,1) - measurement
         """
-        x1 = x.flatten()[0]
-        u1 = u.flatten()[0]
-        # Utilisation de np.maximum pour éviter log(0)
-        return np.array([[np.log(1. + np.maximum(np.abs(x1), 1e-8)) + u1]])
+
+        return np.log(1. + np.maximum(np.abs(x), 1e-8)) + u
 
     # ------------------------------------------------------------------
     def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -107,15 +104,14 @@ class ModelExtSaturant(BaseModelNonLinear):
 
         x1 = x.flatten()[0]
         t1 = t.flatten()[0]
-        y1 = y.flatten()[0]
 
         # État intermédiaire
         A = 0.5*x1 + 2. * (1. - np.exp(-0.1 * x1)) + t1
 
         # Jacobians exactly as in original code
-        An = np.array([[0.5 + 0.2 * np.exp(-0.1 * x1),                             0.],
+        An = np.array([[0.5 + 0.2 * np.exp(-0.1 * x1),                                   0.],
                        [np.sign(A) * (0.5 + 0.2 * np.exp(-0.1 * x1)) / (1. + np.abs(A)), 0.]])
-        Bn = np.array([[1.,                        0.],
+        Bn = np.array([[1.,                            0.],
                        [np.sign(A) / (1. + np.abs(A)), 1.]])
 
         return An, Bn

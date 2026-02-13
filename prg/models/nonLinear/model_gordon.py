@@ -44,9 +44,8 @@ class ModelGordon(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (1,1) - next state
         """
-        x1 = x.flatten()[0]
-        t1 = t.flatten()[0]
-        return np.array([[0.5 * x1 + 25 * x1 / (1. + x1**2) + 8 * np.cos(1.2 * dt) + t1]])
+
+        return 0.5 * x + 25 * x / (1. + x**2) + 8 * np.cos(1.2 * dt) + t
 
     # ------------------------------------------------------------------
     def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -61,9 +60,7 @@ class ModelGordon(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (1,1) - measurement
         """
-        x1 = x.flatten()[0]
-        u1 = u.flatten()[0]
-        return np.array([[0.05 * x1**2 + u1]])
+        return 0.05 * x**2 + u
 
     # ------------------------------------------------------------------
     def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -99,15 +96,14 @@ class ModelGordon(BaseModelNonLinear):
 
         x1 = x.flatten()[0]
         t1 = t.flatten()[0]
-        y1 = y.flatten()[0]
-
+    
         # State plus noise
         A = 0.5 * x1 + 25 * x1 / (1. + x1**2) + 8 * np.cos(1.2 * dt) + t1
 
         # Jacobians exactly as in original code
-        An = np.array([[0.5 + 25.*(1.-x1**2)/(1.+x1**2)**2, 0.],
+        An = np.array([[0.5 + 25.*(1.-x1**2)/(1.+x1**2)**2,             0.],
                        [0.1 * A * (0.5 + 25.*(1.-x1**2)/(1.+x1**2)**2), 0.]])
-        Bn = np.array([[1.,    0.],
+        Bn = np.array([[1.,      0.],
                        [0.1 * A, 1.]])
 
         return An, Bn

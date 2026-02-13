@@ -96,18 +96,37 @@ class NonLinear_PKF:
         """
         # Short-cuts
         z00, Pz00, g, mQ = self.param._z00, self.param._Pz00, self.param.g, self.param.mQ
+        
+        Zkp1_simul = np.zeros(shape=(self.dim_xy, 1))
 
         # The first
         k = 0
-        Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
+
+        if self.param.augmented==True:
+            Zkp1_simul[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(mean=z00[0:self.dim_x,0], cov=Pz00[0:self.dim_x, 0:self.dim_x])
+            Zkp1_simul[self.dim_x:,  0] = Zkp1_simul[self.dim_x-self.dim_y:self.dim_x, 0]
+        else:
+            Zkp1_simul[:,0] = self._seed_gen.rng.multivariate_normal(mean=z00[:, 0], cov=Pz00)
         # print(f'Zkp1_simul={Zkp1_simul}')
-        # exit(1)
+
         yield k, np.split(Zkp1_simul, [self.dim_x])
 
         # The next ones...
-        zerosvector = np.zeros(self.dim_xy)
+        zerosvector_xy = np.zeros(shape=(self.dim_xy))
+        zerosvector_x  = np.zeros(shape=(self.dim_x))
+        noise_z        = np.zeros(shape=(self.dim_xy, 1))
         while N is None or k<N:
-            Zkp1_simul = g(Zkp1_simul, self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1), self.dt)
+            
+            if self.param.augmented==True:
+                noise_z[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(mean=zerosvector_x, cov=mQ[0:self.dim_x, 0:self.dim_x])
+                noise_z[self.dim_x:, 0]  = noise_z[self.dim_x-self.dim_y:self.dim_x, 0]
+            else:
+                noise_z[:, 0] = self._seed_gen.rng.multivariate_normal(mean=zerosvector_xy, cov=mQ)
+           
+            Zkp1_simul = g(Zkp1_simul, noise_z, self.dt)
+            # print(f'Zkp1_simul={Zkp1_simul}')
+            # input('attente')
+            
             yield k, np.split(Zkp1_simul, [self.dim_x])
             k += 1
 
