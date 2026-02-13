@@ -107,15 +107,15 @@ class Linear_PKF:
         # Short-cuts
         z00, Pz00, g, A, B, mQ = self.param.z00, self.param.Pz00, self.param.g, self.param.A, self.param.B, self.param.mQ
         
-        Zkp1_simul = np.zeros(shape=(self.dim_xy,1))
+        Zkp1_simul = np.zeros(shape=(self.dim_xy, 1))
 
         # The first
         k = 0
         if self.param.augmented==True:
-            Zkp1_simul[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten()[0:self.dim_x], cov=Pz00[0:self.dim_x, 0:self.dim_x])
-            Zkp1_simul[self.dim_x:, 0]  = Zkp1_simul[self.dim_x-self.dim_y:self.dim_x, 0]
+            Zkp1_simul[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(mean=z00[0:self.dim_x,0], cov=Pz00[0:self.dim_x, 0:self.dim_x])
+            Zkp1_simul[self.dim_x:,  0] = Zkp1_simul[self.dim_x-self.dim_y:self.dim_x, 0]
         else:
-            Zkp1_simul = self._seed_gen.rng.multivariate_normal(mean=z00.T.flatten(), cov=Pz00).reshape(-1,1)
+            Zkp1_simul[:,0] = self._seed_gen.rng.multivariate_normal(mean=z00[:, 0], cov=Pz00)
         Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
 
         yield k, (Xkp1_simul, Ykp1_simul)
@@ -123,20 +123,17 @@ class Linear_PKF:
         # The next ones...
         zerosvector_xy = np.zeros(shape=(self.dim_xy))
         zerosvector_x  = np.zeros(shape=(self.dim_x))
-        noise_z        = np.zeros(shape=(self.dim_xy,1))
+        noise_z        = np.zeros(shape=(self.dim_xy, 1))
         while N is None or k<N:
             k += 1
-            # temp       = A @ Zkp1_simul
-            # Zkp1_simul = temp + self._seed_gen.rng.multivariate_normal(mean=zerosvector, cov=mQ).reshape(-1,1)
             if self.param.augmented==True:
                 noise_z[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(mean=zerosvector_x, cov=mQ[0:self.dim_x, 0:self.dim_x])
                 noise_z[self.dim_x:, 0]  = noise_z[self.dim_x-self.dim_y:self.dim_x, 0]
             else:
-                noise_z = self._seed_gen.rng.multivariate_normal(mean=zerosvector_xy, cov=mQ).reshape(-1,1)
+                noise_z[:, 0] = self._seed_gen.rng.multivariate_normal(mean=zerosvector_xy, cov=mQ)
             Zkp1_simul = g(Zkp1_simul, noise_z, self.dt)
             Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
-            # print(f'k={k}, Zkp1_simul={Zkp1_simul}')
-            # input('stop k>0')
+            
             yield k, (Xkp1_simul, Ykp1_simul)
 
 

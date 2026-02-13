@@ -46,7 +46,8 @@ class BaseModelNonLinear:
         if __debug__:
             assert z.shape == (self.dim_xy, 1)
             assert noise_z.shape == (self.dim_xy, 1)
-        x, y   = np.split(z, [self.dim_x])
+
+        x, y   = np.split(z,       [self.dim_x])
         nx, ny = np.split(noise_z, [self.dim_x])
         return self._g(x, y, nx, ny, dt)
 

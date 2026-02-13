@@ -41,21 +41,19 @@ class ModelX2Y1(BaseModelNonLinear):
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:
         """State transition function f(x) with process noise."""
-        x1, x2 = x.flatten()
-        t1, t2 = t.flatten()
+
         return np.array([
-            x1 + dt*x2                                           + t1,
-            x2 - dt*(self.alpham * np.sin(x1) + self.betam * x2) + t2
-        ]).reshape(-1, 1)
+            [x[0,0] + dt*x[1,0]                                               + t[0,0]],
+            [x[1,0] - dt*(self.alpham * np.sin(x[0,0]) + self.betam * x[1,0]) + t[1,0]]
+        ])
 
     # ------------------------------------------------------------------
     def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
         """Measurement function h(x) with observation noise."""
-        x1, x2 = x.flatten()
-        u      = u.flatten()[0]
+
         return np.array([
-            x1**2 / (1. + x1**2) + self.gammam * np.sin(x2) + u
-        ]).reshape(-1, 1)
+            [x[0,0]**2 / (1. + x[0,0]**2) + self.gammam * np.sin(x[1,0]) + u[0,0]]
+        ])
 
     # ------------------------------------------------------------------
     def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -82,16 +80,14 @@ class ModelX2Y1(BaseModelNonLinear):
 
         x1, x2 = x.flatten()
         t1, t2 = t.flatten()
-        y1     = y.flatten()[0]
-        # u      = u.flatten()[0]
-        
+
         A = x1 + dt*x2 + t1
         B = x2 - dt*(self.alpham*np.sin(x1) + self.betam*x2) + t2
         Z = 2*A/(1.+A**2)**2
         W = self.gammam*np.cos(B)
-        An = np.array([[1.,                              dt,                              0.],
-                       [-self.alpham*dt*np.cos(x1),      1. - self.betam * dt,            0.],
-                       [Z - self.alpham*dt*np.cos(x1)*W, Z*dt + (1. - self.betam * dt)*W, 0.]])
+        An = np.array([[1.,                            dt,                        0.],
+                       [-self.alpham*dt*np.cos(x1),    1.-self.betam*dt,          0.],
+                       [Z-self.alpham*dt*np.cos(x1)*W, Z*dt+(1.-self.betam*dt)*W, 0.]])
         Bn = np.array([[1., 0., 0.],
                        [0., 1., 0.],
                        [Z,  W,  1.]])

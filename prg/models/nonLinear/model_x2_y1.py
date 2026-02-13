@@ -56,9 +56,9 @@ class ModelX2Y1(BaseModelNonLinear):
         t1, t2 = t.flatten()
 
         return np.array([
-            x1 + 0.05 * x2 + 0.5 * np.sin(0.1 * x2) + t1,
-            0.9 * x2 + 0.2 * np.cos(0.3 * x1) + t2
-        ]).reshape(-1, 1)
+            [x1 + 0.05 * x2 + 0.5 * np.sin(0.1 * x2) + t1],
+            [     0.9  * x2 + 0.2 * np.cos(0.3 * x1) + t2]
+        ])
 
     # ------------------------------------------------------------------
     def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -73,12 +73,10 @@ class ModelX2Y1(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (1,1) - measurement
         """
-        x1, x2 = x.flatten()
-        u_val  = u.flatten()[0]
 
         return np.array([
-            np.sqrt(x1**2 + x2**2) + u_val
-        ]).reshape(-1, 1)
+            [np.sqrt(x[0,0]**2 + x[1,0]**2) + u[0,0]]
+        ])
 
     # ------------------------------------------------------------------
     def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -131,16 +129,16 @@ class ModelX2Y1(BaseModelNonLinear):
 
         # Jacobian w.r.t state (2x2)
         An = np.array([
-            [1, 0.05 * (1 + np.cos(0.1 * x2)), 0],
-            [-0.06 * np.sin(0.3 * x1), 0.9, 0],
-            [(A_val - 0.06*np.sin(0.3*x1))/r_val, (0.05*A_val*(1+np.cos(0.1*x2)) + 0.9*B_val)/r_val, 0]
+            [1.,                                  0.05 * (1 + np.cos(0.1 * x2)),                     0.],
+            [-0.06 * np.sin(0.3 * x1),            0.9,                                               0.],
+            [(A_val - 0.06*np.sin(0.3*x1))/r_val, (0.05*A_val*(1+np.cos(0.1*x2)) + 0.9*B_val)/r_val, 0.]
         ])
 
         # Jacobian w.r.t noise (2x3)
         Bn = np.array([
-            [1, 0, 0],
-            [0, 1, 0],
-            [A_val/r_val, B_val/r_val, 1]
+            [1.,          0.,          0.],
+            [0.,          1.,          0.],
+            [A_val/r_val, B_val/r_val, 1.]
         ])
 
         return An, Bn

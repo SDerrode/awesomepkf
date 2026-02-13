@@ -57,10 +57,7 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
         Nonlinear state function with retro-action of states on observation.
         Le bruit $u$ est nul dans cette formulation.
         """
-        x1, x2 = x.flatten()
-        return np.array([
-            x2
-        ]).reshape(-1, 1)
+        return x[-1].reshape(-1, 1)
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
@@ -86,9 +83,6 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
             assert isinstance(dt, (float, int)), "dt must be a float"
 
         x1, x2 = x.flatten()
-        t1, t2 = t.flatten()
-        # y1 = y.flatten()[0]
-        # u1 = u.flatten()[0]
 
         An = np.array([[self.a,              self.b * (1.-np.tanh(x2)**2), 0.],
                        [self.d * np.cos(x1), self.c,                       0.],

@@ -35,22 +35,19 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         t1, t2 = t.flatten()
 
         return np.array([
-            self.a * x1 + self.b * x2 + self.c * np.tanh(y1) + t1,
-            self.d * x2               + self.e * np.sin(y1)  + t2
-        ]).reshape(-1, 1)
+            [self.a * x1 + self.b * x2 + self.c * np.tanh(y1) + t1],
+            [self.d * x2               + self.e * np.sin(y1)  + t2]
+        ])
 
     # ------------------------------------------------------------------
     def _gy(self, x, y, t, u, dt):
         """
         Nonlinear observation function with retro-action on previous observation.
         """
-        x1, x2 = x.flatten()
-        y1     = y.flatten()[0]
-        u      = u.flatten()[0]
 
         return np.array([
-            x1**2 + self.f*y1 + u
-        ]).reshape(-1, 1)
+            [x[0,0]**2 + self.f*y[0,0] + u[0,0]]
+        ])
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
@@ -80,8 +77,8 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
             assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
             assert isinstance(dt, (float, int)), "dt must be a float"
 
-        x1, x2 = x.flatten()
-        y1     = y.flatten()[0]
+        x1 = x.flatten()[0]
+        y1 = y.flatten()[0]
 
         An = np.array([
             [self.a, self.b,  self.c*(1.-np.tanh(y1)**2)],

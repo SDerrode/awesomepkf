@@ -5,7 +5,6 @@ import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
 from others.utils import check_consistency
 
-
 class ModelCubique(BaseModelNonLinear):
     """
     Cubic nonlinear model with 1D state and 1D observation.
@@ -45,9 +44,8 @@ class ModelCubique(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (1,1) - next state
         """
-        x1 = x.flatten()[0]
-        t1 = t.flatten()[0]
-        return np.array([[0.9*x1 - 0.2*x1**3 + t1]])
+
+        return 0.9*x - 0.2*x**3 + t
 
     # ------------------------------------------------------------------
     def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -62,9 +60,8 @@ class ModelCubique(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (1,1) - measurement
         """
-        x1 = x.flatten()[0]
-        u1 = u.flatten()[0]
-        return np.array([[x1 + u1]])
+
+        return x+u
 
     # ------------------------------------------------------------------
     def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -105,12 +102,8 @@ class ModelCubique(BaseModelNonLinear):
             assert t.shape == (1,1)
             assert u.shape == (1,1)
 
-        x1 = x.flatten()[0]
-        t1 = t.flatten()[0]
-        y1 = y.flatten()[0]
-
-        An = np.array([[0.9 - 0.6*x1**2, 0.],
-                       [0.9 - 0.6*x1**2, 0.]])
+        An = np.array([[0.9 - 0.6*x[0,0]**2, 0.],
+                       [0.9 - 0.6*x[0,0]**2, 0.]])
         Bn = np.array([[1., 0.],
                        [1., 1.]])
 

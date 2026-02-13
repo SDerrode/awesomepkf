@@ -66,28 +66,16 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         """
         Nonlinear state function with retro-action of observations on state.
         """
-        # print(f'x={x}')
-        # print(f'y={y}')
-        # print(f't={t}')
-        # print(f'u={u}')
-        
-        x1 = x.flatten()[0]
-        y1 = y.flatten()[0]
-        t1 = t.flatten()[0]
-        # print('mlmlmlml', np.array([[self.a * x1 + self.b * np.tanh(y1) + t1]]))
-        return np.array([[self.a * x1 + self.b * np.tanh(y1) + t1]])
+
+        return self.a * x + self.b * np.tanh(y) + t
 
     # ------------------------------------------------------------------
     def _gy(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
         """
         Nonlinear state function with retro-action of states on observation.
         """
-        x1 = x.flatten()[0]
-        y1 = y.flatten()[0]
-        u1 = u.flatten()[0]
-        # print('mlmlmlml', np.array([[self.c * y1 + self.d * np.sin(x1) + u1]]))
-        # input('wwwwwwwww')
-        return np.array([[self.c * y1 + self.d * np.sin(x1) + u1]])
+
+        return self.c * y + self.d * np.sin(x) + u
 
     # ------------------------------------------------------------------
     def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -117,12 +105,9 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
             assert u.shape == (1, 1)
             assert isinstance(dt, (float, int))
 
-        x1 = x.flatten()[0]
-        y1 = y.flatten()[0]
-
         An = np.array([
-            [self.a,              self.b / np.cosh(y1)**2],
-            [self.d * np.cos(x1), self.c                 ]
+            [self.a,                  self.b / np.cosh(y[0,0])**2],
+            [self.d * np.cos(x[0,0]), self.c                     ]
         ])
         Bn = np.eye(self.dim_xy)
 
