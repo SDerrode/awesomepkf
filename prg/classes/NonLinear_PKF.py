@@ -33,12 +33,7 @@ logger = logging.getLogger(__name__)
 class NonLinear_PKF:
     """Base class for non linear filters (UPKF et EPKF)."""
 
-    def __init__(
-        self,
-        param,
-        sKey: Optional[int] = None,
-        verbose: int = 0
-    ) -> None:
+    def __init__(self, param, sKey: Optional[int] = None, verbose: int = 0) -> None:
 
         if __debug__:
             if not ((isinstance(sKey, int) and sKey > 0) or sKey is None):
@@ -54,7 +49,7 @@ class NonLinear_PKF:
         # Shortcuts
         self.dim_x, self.dim_y, self.dim_xy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
 
-       # Create HistoryTracker
+        # Create HistoryTracker
         self._history    = HistoryTracker(self.verbose)
         
         # Configuration du logger selon verbose
@@ -100,15 +95,14 @@ class NonLinear_PKF:
         Zkp1_simul = np.zeros(shape=(self.dim_xy, 1))
 
         # The first
-        k = 0
-
-        if self.param.augmented==True:
+        if self.param.augmented:
             Zkp1_simul[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(mean=z00[0:self.dim_x,0], cov=Pz00[0:self.dim_x, 0:self.dim_x])
             Zkp1_simul[self.dim_x:,  0] = Zkp1_simul[self.dim_x-self.dim_y:self.dim_x, 0]
         else:
             Zkp1_simul[:,0] = self._seed_gen.rng.multivariate_normal(mean=z00[:, 0], cov=Pz00)
         # print(f'Zkp1_simul={Zkp1_simul}')
 
+        k = 0
         yield k, np.split(Zkp1_simul, [self.dim_x])
 
         # The next ones...
@@ -117,18 +111,18 @@ class NonLinear_PKF:
         noise_z        = np.zeros(shape=(self.dim_xy, 1))
         while N is None or k<N:
             
-            if self.param.augmented==True:
+            if self.param.augmented:
                 noise_z[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(mean=zerosvector_x, cov=mQ[0:self.dim_x, 0:self.dim_x])
                 noise_z[self.dim_x:, 0]  = noise_z[self.dim_x-self.dim_y:self.dim_x, 0]
             else:
                 noise_z[:, 0] = self._seed_gen.rng.multivariate_normal(mean=zerosvector_xy, cov=mQ)
            
             Zkp1_simul = g(Zkp1_simul, noise_z, self.dt)
-            # print(f'Zkp1_simul={Zkp1_simul}')
-            # input('attente')
+            Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
             
-            yield k, np.split(Zkp1_simul, [self.dim_x])
             k += 1
+            yield k, (Xkp1_simul, Ykp1_simul)
+
 
     def process_N_data(self, N: Optional[int], data_generator: Optional[Generator] = None) -> list:
         return list(self.process_nonlinearfilter(N=N, data_generator=data_generator))

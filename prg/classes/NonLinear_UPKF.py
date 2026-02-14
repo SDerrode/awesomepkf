@@ -79,7 +79,7 @@ class NonLinear_UPKF(NonLinear_PKF):
         generator = data_generator if data_generator is not None else self._data_generation()
         
         # short-cuts
-        Pz00, g, mQ = self.param._Pz00, self.param.g, self.param.mQ
+        Pz00, g, mQ, augmented = self.param._Pz00, self.param.g, self.param.mQ, self.param.augmented
         
         # for speed
         eye_dim_y = np.eye(self.dim_y)
@@ -87,20 +87,21 @@ class NonLinear_UPKF(NonLinear_PKF):
 
         # The first
         ###################
+        # parenthesis are used to flatten the list of two items
         k, (xkp1, ykp1) = next(generator) # parenthesis are used to flatten the list of two items
+
         # temp          = Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(Pz00[self.dim_x:, self.dim_x:])
         # Xkp1_update   = temp @ ykp1
         # PXXkp1_update = Pz00[0:self.dim_x, 0:self.dim_x] - temp @ Pz00[self.dim_x:, 0:self.dim_x]
-        Xkp1_update       = xkp1
+        Xkp1_update       = xkp1 #z00[0:self.dim_x]
         PXXkp1_update     = Pz00[0:self.dim_x, 0:self.dim_x] 
-        # print(f'PXXkp1_update={PXXkp1_update}')
-        # input('attente')
-        # check_consistency(PXXkp1_update=PXXkp1_update)
         verdict, report = diagnose_covariance(PXXkp1_update)
-        if verdict is not None:
-            print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
-            print(report)
-            input('attente')
+        if not augmented:
+            verdict, report = diagnose_covariance(PXXkp1_update)
+            if not verdict:
+                print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
+                print(report)
+                input('attente')
 
         # Record data in the tracker
         Xkp1_predict = np.zeros((self.dim_x, 1))
@@ -115,33 +116,38 @@ class NonLinear_UPKF(NonLinear_PKF):
                              Xkp1_update   = Xkp1_update.copy(),
                              PXXkp1_update = PXXkp1_update.copy()
         )
+        
+        # last = self._history.last()
+        # rich_show_fields(last, ["xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
+        # input('ATTENTE')
 
         yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
 
         ###################
         # The next ones
+        
         accel_zero = np.zeros(shape=(self.dim_xy, 1))
-        while N is None or k < N:
+        
+        while N is None or k<N:
             # Sigma points
             sigma = self.sigma_point_set_obj._sigma_point(Xkp1_update, PXXkp1_update)
-
             sigma_propag = [g(np.vstack((e, ykp1)), accel_zero, self.dt) for e in sigma]  # here ykp1 still gives the previous : it is yk indeed!
             # print(f'sigma_propag[1]={sigma_propag[1]}')
 
-            Zkp1_predict = np.sum(self.sigma_point_set_obj.Wm[:, None, None] * sigma_propag, axis=0)
+            # Prediction
+            Zkp1_predict               = np.sum(self.sigma_point_set_obj.Wm[:, None, None] * sigma_propag, axis=0)
             Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
             Pkp1_predict = mQ.copy()
             for i in range(self.sigma_point_set_obj.nbSigmaPoint):
                 diff = sigma_propag[i] - Zkp1_predict
                 Pkp1_predict += self.sigma_point_set_obj.Wc[i] * np.outer(diff, diff)
-            # print(f'Zkp1_predict={Zkp1_predict}')
-            # print(f'Pkp1_predict={Pkp1_predict}')
-            # check_consistency(Pkp1_predict=Pkp1_predict)
-            verdict, report = diagnose_covariance(Pkp1_predict)
-            if verdict is not None:
-                print(f'Pkp1_predict={Pkp1_predict}\nReport for Pkp1_predict - iteration k={k}:')
-                print(report)
-                input('attente')
+            
+            if not augmented:
+                verdict, report = diagnose_covariance(Pkp1_predict)
+                if not verdict:
+                    print(f'ICI - Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:')
+                    print(report)
+                    input('attente')
 
             # Cutting Pkp1 into 4 blocks
             M_top, M_bottom                = np.vsplit(Pkp1_predict, [self.dim_x])
@@ -150,46 +156,38 @@ class NonLinear_UPKF(NonLinear_PKF):
 
             # New data
             try:
+                # parenthesis are used to flatten the list of two items
                 k, (xkp1, ykp1) = next(generator)
             except StopIteration:
                 return # we stop as the data generator is stopped itself
 
+            # Updating
             ikp1        = ykp1 - Ykp1_predict
             Skp1        = PYYkp1_predict
-            # Kkp1          = PXYkp1_predict @ np.linalg.inv(Skp1)
-            # print(f'Kkp1={Kkp1}')
-            # Version robuste du calcul
+            # Kalman gain - Version robuste du calcul
             c, low = cho_factor(Skp1)
             Kkp1 = PXYkp1_predict @ cho_solve((c, low), eye_dim_y)
             # print(f'Kkp1={Kkp1}')
-            Xkp1_update = Xkp1_predict   + Kkp1 @ ikp1
-            # forme non robuste numériquement
-            # PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
-            # print(f'Xkp1_update={Xkp1_update}')
-
-            # Forme de joseph, robuste numériquement
-            # PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
-            # print(f'PXXkp1_update={PXXkp1_update}')
-            # PXXkp1_update = PXXkp1_predict - Kkp1 @ Skp1 @ Kkp1.T
-            # print(f'PXXkp1_predict={PXXkp1_predict}')
-            # print(f'Kkp1 @ Skp1 @ Kkp1.T={Kkp1 @ Skp1 @ Kkp1.T}')
-            # print(f'PXXkp1_update={PXXkp1_update}')
+            Xkp1_update   = Xkp1_predict   + Kkp1 @ ikp1
             PXXkp1_update = PXXkp1_predict - Kkp1 @ PXYkp1_predict.T - PXYkp1_predict @ Kkp1.T + Kkp1 @ Skp1 @ Kkp1.T
-            # print(f'PXXkp1_update={PXXkp1_update}')
-            verdict, report = diagnose_covariance(PXXkp1_update)
-            if verdict is not None:
-                print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
-                print(report)
-                input('attente')
+            
+            if not augmented:
+                verdict, report = diagnose_covariance(PXXkp1_update)
+                if not verdict:
+                    print(f'PXXkp1_update={PXXkp1_update}\nReport - iteration k={k}:')
+                    print(report)
+                    input('attente')
+            
+            # Forme de Joseph
             temp = np.vstack((eye_dim_x, -Kkp1.T))
             PXXkp1_update_Joseph = temp.T @ Pkp1_predict @ temp
-            # print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}')
-            # input('attente')
-            verdict, report = diagnose_covariance(PXXkp1_update)
-            if verdict is not None:
-                print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
-                print(report)
-                input('attente')
+            
+            if not augmented:
+                verdict, report = diagnose_covariance(PXXkp1_update_Joseph)
+                if not verdict:
+                    print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}\nReport - iteration k={k}:')
+                    print(report)
+                    input('attente')
                 
             # Record data in the tracker
             self._history.record(iter           = k,
@@ -203,5 +201,12 @@ class NonLinear_UPKF(NonLinear_PKF):
                                  Xkp1_update    = Xkp1_update.copy(),
                                  PXXkp1_update  = PXXkp1_update_Joseph.copy(), #PXXkp1_update.copy()
             )
+            
+            # Si on veut la forme robuste de la variance, on décommente
+            PXXkp1_update = PXXkp1_update_Joseph
+
+            # last = self._history.last()
+            # rich_show_fields(last, ["xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
+            # input('ATTENTE')
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
