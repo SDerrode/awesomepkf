@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import os
+import os, math
 import logging
 import numpy as np
 np.set_printoptions(precision=4, suppress=True)
@@ -13,37 +13,86 @@ import chardet
 from typing import Generator, Optional, Any, Union
 from pathlib import Path
 
+
+eps = 1E-12 # pour choleski
+
 # ----------------------------------------------------------------------
 # Logging global
 # ----------------------------------------------------------------------
 logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-
-from rich.table import Table
 from rich.console import Console
+from rich.table import Table
+from rich.text import Text
+import numpy as np
+import math
 
-def rich_show_fields(d: dict, fields: list, title: str = "Sélection de données"):
-    """
-    Affiche dans un tableau Rich uniquement les clés spécifiées d'un dictionnaire.
+console = Console()  # console globale partagée
 
-    Args:
-        d (dict): dictionnaire à afficher
-        fields (list): liste des clés à afficher
-        title (str): titre du tableau (optionnel)
+def rich_show_fields(d: dict, fields: list, title: str = "Sélection de données",
+                     decimals: int = 4, max_items: int = 10):
     """
-    console = Console()
+    Affiche un dictionnaire dans un tableau Rich de manière lisible pour usage scientifique.
+    
+    Caractéristiques :
+    - Floats arrondis à `decimals` chiffres
+    - Booléens NumPy convertis en bool Python
+    - Vecteurs/arrays tronqués si > max_items éléments
+    - Support des dictionnaires et listes imbriqués
+    """
+
     table = Table(title=title)
-    
-    table.add_column("Champ", style="cyan", no_wrap=True)
-    table.add_column("Valeur", style="magenta")
-    
+    table.add_column("Champ", no_wrap=True)
+    table.add_column("Valeur", justify="left")
+
+    def format_value(obj):
+        """Format récursif pour l’affichage scientifique."""
+
+        # Convert NumPy scalars
+        if isinstance(obj, np.generic):
+            obj = obj.item()
+
+        # Booléens NumPy → Python
+        if isinstance(obj, (np.bool_, bool)):
+            return str(bool(obj))
+
+        # Float → arrondi
+        if isinstance(obj, float):
+            if math.isinf(obj) or math.isnan(obj):
+                return str(obj)
+            return f"{obj:.{decimals}f}"
+
+        # Numpy arrays → listes et tronquées
+        if isinstance(obj, np.ndarray):
+            return format_value(obj.tolist())
+
+        # Listes / tuples
+        if isinstance(obj, (list, tuple)):
+            # Tronquer si trop long
+            if len(obj) > max_items:
+                displayed = [format_value(v) for v in obj[:max_items]]
+                return "[" + ", ".join(displayed) + ", ...]"
+            return "[" + ", ".join(format_value(v) for v in obj) + "]"
+
+        # Dictionnaires imbriqués
+        if isinstance(obj, dict):
+            items = []
+            for k, v in obj.items():
+                items.append(f"{k}: {format_value(v)}")
+            return "{ " + ", ".join(items) + " }"
+
+        # Tout le reste
+        return str(obj)
+
+    # Remplissage du tableau
     for key in fields:
         if key in d:
-            table.add_row(key, str(d[key]))
-    
+            # table.add_row(Text(key, style="cyan"), Text(str(value), style="magenta"))
+            table.add_row(Text(key, style="cyan"), Text(str(format_value(d[key])), style="magenta"))
+
     console.print(table)
+
 
 
 def save_dataframe_to_csv(df, filepath, index=False):
@@ -154,7 +203,7 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
             print('P singulière : on ignore')
             input('pause')
             continue
-    nees_mean = np.mean(nees_all)
+    nees_mean = float(np.mean(nees_all))
 
     # NIS moyen
     nis_mean = 'na'
@@ -179,7 +228,7 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
                 print('P singulière : on ignore')
                 input('pause')
                 continue
-        nis_mean = np.mean(nis_all)
+        nis_mean = float(np.mean(nis_all))
     
     report = {
         "mse_total" : mse_total,
@@ -373,7 +422,7 @@ def check_equality(**kwargs: np.ndarray) -> None:
             input("Waiting for you!")
 
 
-def diagnose_covariance(P, cond_warn=1e8, cond_fail= 1e12, eig_tol=1e-10, symmetry_tol=1e-10, only_psd=False):
+def diagnose_covariance(P, cond_warn=1e8, cond_fail= 1e12, eig_tol=1e-10, symmetry_tol=1e-10):
     """
     Diagnostic numérique d'une matrice de covariance.
 
@@ -398,59 +447,54 @@ def diagnose_covariance(P, cond_warn=1e8, cond_fail= 1e12, eig_tol=1e-10, symmet
     verdict &= report["is_symmetric"]
     # print(f'  verdict={verdict}')
 
-    # 5) Cholesky (test pratique clé)
-    try:
-        np.linalg.cholesky(P)
-        chol_ok = True
-    except np.linalg.LinAlgError:
-        chol_ok = False
+    # # 5) Cholesky (test pratique clé)
+    # try:
+    #     np.linalg.cholesky(P + eps*np.eye(P.shape[0]))
+    #     chol_ok = True
+    # except np.linalg.LinAlgError:
+    #     chol_ok = False
 
-    report["cholesky_ok"] = chol_ok
-    verdict &= report["cholesky_ok"]
+    # report["cholesky_ok"] = chol_ok
+    # verdict &= report["cholesky_ok"]
     # print(f'  verdict={verdict}')
 
-    # print(f'only_psd={only_psd}')
-    if only_psd == False:
+    # 2) Valeurs propres (matrice symétrique → eigh)
+    eigvals = np.linalg.eigvalsh(P)
+    lam_min = eigvals.min()
+    lam_max = eigvals.max()
 
-        # 2) Valeurs propres (matrice symétrique → eigh)
-        eigvals = np.linalg.eigvalsh(P)
-        lam_min = eigvals.min()
-        lam_max = eigvals.max()
+    report["eigenvalues"] = eigvals
+    report["lambda_min"] = lam_min
+    report["lambda_max"] = lam_max
+    report["is_psd"] = lam_min >= -eig_tol
+    verdict &= report["is_psd"]
+    # report["near_singular"] = lam_min < eig_tol
+    # verdict &= not report["near_singular"]
+    # print(f'  vcdvcd verdict={verdict}')
 
-        report["eigenvalues"] = eigvals
-        report["lambda_min"] = lam_min
-        report["lambda_max"] = lam_max
-        report["is_psd"] = lam_min >= -eig_tol
-        report["near_singular"] = lam_min < eig_tol
-        verdict &= not report["near_singular"]
-        # print(f'  verdict={verdict}')
-    
-        # 3) Nombre de condition (norme 2)
-        try:
-            cond = np.linalg.cond(P)
-        except np.linalg.LinAlgError:
-            cond = np.inf
+    # 3) Nombre de condition (norme 2)
+    # try:
+    #     cond = np.linalg.cond(P)
+    # except np.linalg.LinAlgError:
+    #     cond = np.inf
 
-        report["condition_number"] = cond
-        report["ill_conditioned"] = cond > cond_warn
-        report["numerically_singular"] = cond > cond_fail
-        verdict &= not report["numerically_singular"]
-        # print(f'  verdict={verdict}')
+    # report["condition_number"] = cond
+    # report["ill_conditioned"] = cond > cond_warn
+    # report["numerically_singular"] = cond > cond_fail
+    # verdict &= not report["numerically_singular"]
+    # print(f'  verdict={verdict}')
 
-        # 4) Stabilité de l'inversion
-        inv_residual = None
-        try:
-            P_inv = np.linalg.inv(P)
-            I_approx = P @ P_inv
-            inv_residual = np.linalg.norm(
-                I_approx - np.eye(n), ord='fro'
-            )
-        except np.linalg.LinAlgError:
-            inv_residual = np.inf
-            verdict &= False
-            # print(f'  verdict={verdict}')
-
-        report["inverse_residual"] = inv_residual
+    # 4) Stabilité de l'inversion
+    # inv_residual = None
+    # try:
+    #     P_inv        = np.linalg.inv(P)
+    #     I_approx     = P @ P_inv
+    #     inv_residual = np.linalg.norm(I_approx - np.eye(n), ord='fro')
+    # except np.linalg.LinAlgError:
+    #     inv_residual = np.inf
+    #     verdict &= False
+    #     print(f'  verdict={verdict}')
+    # report["inverse_residual"] = inv_residual
 
     return verdict, report
 

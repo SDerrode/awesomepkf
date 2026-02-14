@@ -19,7 +19,9 @@ from scipy.linalg import cho_factor, cho_solve
 
 from classes.NonLinear_PKF import NonLinear_PKF
 # A few utils functions that are used several times
-from others.utils import check_consistency, diagnose_covariance#, check_equality
+from others.utils import diagnose_covariance, rich_show_fields
+
+
 
 class NonLinear_PF(NonLinear_PKF):
     """Implementation of PF."""
@@ -53,7 +55,11 @@ class NonLinear_PF(NonLinear_PKF):
         generator = data_generator if data_generator is not None else self._data_generation()
         
         # short-cuts
-        g, mQ = self.param.g, self.param.mQ
+        g, mQ, augmented = self.param.g, self.param.mQ, self.param.augmented
+
+        # for speed
+        eye_dim_y = np.eye(self.dim_y)
+        eye_dim_x = np.eye(self.dim_x)
 
         # ==========================
         # Init
@@ -79,7 +85,7 @@ class NonLinear_PF(NonLinear_PKF):
         # verdict, report = diagnose_covariance(PXXkp1_update)
         # if verdict is not None:
         #     print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
-        #     print(report)
+        #     rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
         #     input('attente')
 
         # Record data in the tracker
@@ -120,36 +126,24 @@ class NonLinear_PF(NonLinear_PKF):
             # print(f'Xkp1_predict={Xkp1_predict}')
             
             Pkp1_predict = self.weighted_cov(Z_particles, weights, Zkp1_predict.ravel())
-            # print(f'Pkp1_predict={Pkp1_predict}'
-            # Matrice singulière : ne pas tester
-            # verdict, report = diagnose_covariance(Pkp1_predict)
-            # if verdict is not None:
-            #     print(f'Pkp1_predict={Pkp1_predict}\nReport for Pkp1_predict - iteration k={k}:')
-            #     print(report)
-            #     input('attente')
+            if not augmented:
+                verdict, report = diagnose_covariance(Pkp1_predict)
+                if not verdict:
+                    print(f'Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:')
+                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
+                    input('attente')
 
             # Cutting Pkp1 into 4 blocks
             M_top, M_bottom                = np.vsplit(Pkp1_predict, [self.dim_x])
             PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,        [self.dim_x])
             PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom,     [self.dim_x])
-            verdict, report = diagnose_covariance(PXXkp1_predict)
-            if verdict is not None:
-                print(f'PXXkp1_predict={PXXkp1_predict}\nReport for PXXkp1_predict - iteration k={k}:')
-                print(report)
-                input('attente')
-            verdict, report = diagnose_covariance(PYYkp1_predict)
-            if verdict is not None:
-                print(f'PYYkp1_predict={PYYkp1_predict}\nReport for PYYkp1_predict - iteration k={k}:')
-                print(report)
-                input('attente')
-            # print(f'PXXkp1_predict={PXXkp1_predict}')
-            # print(f'PYYkp1_predict={PYYkp1_predict}')
 
             # ==========================
             # Observation
             # ==========================
+
             try:
-                k, (xkp1, ykp1) = next(generator)
+                k, xkp1, ykp1 = next(generator)
             except StopIteration:
                 return # we stop as the data generator is stopped itself
 
@@ -158,11 +152,24 @@ class NonLinear_PF(NonLinear_PKF):
             # ==========================
             # Update / weighting
             # =========================
+            ikp1   = ykp1 - Ykp1_predict
+            Skp1   = PYYkp1_predict
+            
+            # Kalman gain - Version robuste du calcul
+            try:
+                c, low = cho_factor(Skp1)
+                S_inv  = cho_solve((c, low), eye_dim_y)
+            except np.linalg.LinAlgError as e:
+                print(f'Skp1={Skp1}')
+                input('ATTENTE')
+            except ValueError as e:
+                print("Erreur de valeur :", e)
+                input('ATTENTE')
+                
+            Kkp1   = PXYkp1_predict @ S_inv
             
             # Version robuste du calcul d'inversion de la cov d'innovation
-            c, low = cho_factor(PYYkp1_predict)
-            S_inv  = cho_solve((c, low), np.eye(self.dim_y))
-            det_S  = np.linalg.det(PYYkp1_predict)
+            det_S  = np.linalg.det(Skp1)
             norm   = 1.0 / np.sqrt((2 * np.pi) ** self.dim_y * det_S)
 
             for i in range(self.nbParticles):
@@ -189,21 +196,45 @@ class NonLinear_PF(NonLinear_PKF):
 
             Xkp1_update = self.weighted_mean(Z_particles[:, :self.dim_x], weights).reshape(-1, 1)
             PXXkp1_update = self.weighted_cov(Z_particles[:, :self.dim_x], weights, Xkp1_update.ravel())
-            verdict, report = diagnose_covariance(PXXkp1_update)
-            if verdict is not None:
-                print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
-                print(report)
-                input('attente')
+            if not augmented:
+                # print('TITITIITITIT')
+                verdict, report = diagnose_covariance(PXXkp1_update)
+                # print(f'verdict TITITIITITIT={verdict}')
+                if not verdict:
+                    print(f'PXXkp1_update={PXXkp1_update}\nReport - iteration k={k}:')
+                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
+                    input('attente')
+
+
+            # Forme de Joseph
+            temp = np.vstack((eye_dim_x, -Kkp1.T))
+            PXXkp1_update_Joseph = temp.T @ Pkp1_predict @ temp
+            
+            if not augmented:
+                # print('TOTOTOTOTOO')
+                verdict, report = diagnose_covariance(PXXkp1_update_Joseph)
+                # print(f'verdict TOTOTOTOTOO={verdict}')
+                if not verdict:
+                    print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}\nReport - iteration k={k}:')
+                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
+                    input('attente')
 
             # Record data in the tracker
             self._history.record(iter           = k,
                                  xkp1           = xkp1.copy() if xkp1 is not None else None,
                                  ykp1           = ykp1.copy(),
-                                 Xkp1_predict   = Xkp1_predict,
+                                 Xkp1_predict   = Xkp1_predict.copy(),
                                  PXXkp1_predict = PXXkp1_predict.copy(),
                                  Xkp1_update    = Xkp1_update.copy(),
-                                 PXXkp1_update  = PXXkp1_update.copy(),
+                                 PXXkp1_update  = PXXkp1_update_Joseph.copy(),
                                  ESS            = ess
             )
+            
+            # Si on veut la forme robuste de la variance, on décommente
+            PXXkp1_update = PXXkp1_update_Joseph
+
+            # last = self._history.last()
+            # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="")
+            # input('ATTENTE')
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
