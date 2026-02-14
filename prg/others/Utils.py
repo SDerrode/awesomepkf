@@ -62,7 +62,7 @@ def save_dataframe_to_csv(df, filepath, index=False):
 def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
     """Convert a list of tuples PKF/UKF into pandas DataFrame."""
     data = []
-    for idx, (x, y) in [(i, vals) for i, vals in listData]:
+    for idx, x, y in listData:
 
         # Validation des types
         if __debug__:
