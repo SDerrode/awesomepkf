@@ -100,10 +100,11 @@ class NonLinear_PKF:
             Zkp1_simul[self.dim_x:,  0] = Zkp1_simul[self.dim_x-self.dim_y:self.dim_x, 0]
         else:
             Zkp1_simul[:,0] = self._seed_gen.rng.multivariate_normal(mean=z00[:, 0], cov=Pz00)
+        Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
         # print(f'Zkp1_simul={Zkp1_simul}')
 
         k = 0
-        yield k, np.split(Zkp1_simul, [self.dim_x])
+        yield k, Xkp1_simul, Ykp1_simul
 
         # The next ones...
         zerosvector_xy = np.zeros(shape=(self.dim_xy))
@@ -121,7 +122,7 @@ class NonLinear_PKF:
             Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
             
             k += 1
-            yield k, (Xkp1_simul, Ykp1_simul)
+            yield k, Xkp1_simul, Ykp1_simul
 
 
     def process_N_data(self, N: Optional[int], data_generator: Optional[Generator] = None) -> list:
