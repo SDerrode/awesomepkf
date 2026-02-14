@@ -315,10 +315,10 @@ def file_data_generator(filename: str, dim_x: int, dim_y: int, verbose: int = 0)
         values = row.values.reshape(-1, 1)
         if dico['dim_x'] != 0:
             xkp1, ykp1 = np.split(values, [dico['dim_x']])
-            yield k, (xkp1, ykp1)
+            yield k, xkp1, ykp1
         else:
             ykp1 = values
-            yield k, (None, ykp1)
+            yield k, None, ykp1
 
 # ----------------------------------------------------------------------
 # Vérification cohérence des matrices

@@ -118,7 +118,7 @@ class Linear_PKF:
         Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
 
         k = 0
-        yield k, (Xkp1_simul, Ykp1_simul)
+        yield k, Xkp1_simul, Ykp1_simul
 
         # The next ones...
         zerosvector_xy = np.zeros(shape=(self.dim_xy))
@@ -134,7 +134,7 @@ class Linear_PKF:
             Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
 
             k += 1
-            yield k, (Xkp1_simul, Ykp1_simul)
+            yield k, Xkp1_simul, Ykp1_simul
 
     def process_pkf(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
         """
@@ -164,8 +164,7 @@ class Linear_PKF:
 
         # The first
         ###################
-        # parenthesis are used to flatten the list of two items
-        k, (xkp1, ykp1) = next(generator)
+        k, xkp1, ykp1 = next(generator)
 
         # temp            = Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(Pz00[self.dim_x:, self.dim_x:])
         # Xkp1_update     = temp @ ykp1
@@ -242,8 +241,7 @@ class Linear_PKF:
 
             # New data
             try:
-                # parenthesis are used to flatten the list of two items
-                k, (xkp1, ykp1) = next(generator)
+                k, xkp1, ykp1 = next(generator)
             except StopIteration:
                 return  # we stop as the data generator is stopped itself
 
