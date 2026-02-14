@@ -17,7 +17,7 @@ from scipy.linalg import cho_factor, cho_solve
 
 from classes.NonLinear_PKF import NonLinear_PKF
 # A few utils functions that are used several times
-from others.utils import check_consistency, diagnose_covariance#, check_equality
+from others.utils import diagnose_covariance, rich_show_fields
 
 class NonLinear_EPKF(NonLinear_PKF):
     """Implementation of EPKF."""
@@ -36,7 +36,7 @@ class NonLinear_EPKF(NonLinear_PKF):
         generator = data_generator if data_generator is not None else self._data_generation()
         
         # short-cuts
-        g, jg, mQ, augmented = self.param.g, self.param.jacobiens_g, self.param.mQ, self.param.augmented
+        z00, Pz00, g, jg, mQ, augmented = self.param._z00, self.param._Pz00, self.param.g, self.param.jacobiens_g, self.param.mQ, self.param.augmented
         
         # for speed
         eye_dim_y = np.eye(self.dim_y)
@@ -46,11 +46,11 @@ class NonLinear_EPKF(NonLinear_PKF):
         ##################################################################################################@
         k, xkp1, ykp1 = next(generator)
         
-        # temp            = self.param.Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(self.param.Pz00[self.dim_x:, self.dim_x:])
+        # temp            = Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(Pz00[self.dim_x:, self.dim_x:])
         # Xkp1_update     = temp @ ykp1
-        # PXXkp1_update   = self.param.Pz00[0:self.dim_x, 0:self.dim_x] - temp @ self.param.Pz00[self.dim_x:, 0:self.dim_x]
+        # PXXkp1_update   = Pz00[0:self.dim_x, 0:self.dim_x] - temp @ Pz00[self.dim_x:, 0:self.dim_x]
         Xkp1_update     = xkp1 #z00[0:self.dim_x]
-        PXXkp1_update   = self.param.Pz00[0:self.dim_x, 0:self.dim_x]
+        PXXkp1_update   = Pz00[0:self.dim_x, 0:self.dim_x]
         if not augmented:
             verdict, report = diagnose_covariance(PXXkp1_update)
             if not verdict:
@@ -72,7 +72,7 @@ class NonLinear_EPKF(NonLinear_PKF):
                              PXXkp1_update  = PXXkp1_update.copy()
         )
         # last = self._history.last()
-        # rich_show_fields(last, ["xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
+        # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
         # input('ATTENTE')
 
         yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
@@ -91,7 +91,7 @@ class NonLinear_EPKF(NonLinear_PKF):
             Xkp1_update_augmented      = np.vstack([Xkp1_update, ykp1])
             
             # Prediction
-            Zkp1_predict               = g( Xkp1_update_augmented, accel_zero_xy_1, self.dt)
+            Zkp1_predict               = g(Xkp1_update_augmented, accel_zero_xy_1, self.dt)
             Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
             An, Bn                     = jg(Xkp1_update_augmented, accel_zero_xy_1, self.dt)
             accel_xy_xy[0:self.dim_x, 0:self.dim_x] = PXXkp1_update
@@ -178,8 +178,7 @@ class NonLinear_EPKF(NonLinear_PKF):
             PXXkp1_update = PXXkp1_update_Joseph
 
             # last = self._history.last()
-            # rich_show_fields(last, ["xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
+            # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
             # input('ATTENTE')
-
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update

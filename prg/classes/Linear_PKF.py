@@ -193,7 +193,7 @@ class Linear_PKF:
                              )
 
         # last = self._history.last()
-        # rich_show_fields(last, ["xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
+        # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
         # input('ATTENTE')
 
         yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
@@ -316,7 +316,7 @@ class Linear_PKF:
             PXXkp1_update = PXXkp1_update_Joseph
 
             # last = self._history.last()
-            # rich_show_fields(last, ["xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
+            # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
             # input('ATTENTE')
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
