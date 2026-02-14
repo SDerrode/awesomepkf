@@ -189,27 +189,22 @@ class HistoryTracker:
         from rich.pretty import Pretty
         from rich.console import Console
 
-        console = force_terminal=True, color_system="truecolor")
+        console = Console(force_terminal=True, color_system="truecolor")  # console globale partagée
+        
         if ListeD is None or ListeE is None:
             for a, b, c in zip(ListeA, ListeB, ListeC):
                 report = compute_errors(model, \
                                         df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
                                         None, None)
                 if self.verbose>0:
-                    # print(f"ERROR ({a}, {b})")
-                    # console.print(Pretty(report, expand_all=True, indent_guides=True))
-                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean"], title=f"ERROR {a} vs {b}")
-
-                    
+                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"ERROR {a} vs {b}")
         else:
             for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
                 report = compute_errors(model, \
                                         df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
                                         df[d].to_numpy(), df[e].to_numpy())
                 if self.verbose>0:
-                    # print(f"ERROR ({a}, {b})")
-                    # console.print(Pretty(report, expand_all=True, indent_guides=True))
-                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean"], title=f"ERROR {a} vs {b}")
+                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"ERROR {a} vs {b}")
 
 
     def _compute_sigma_envelope(self, var_series: pd.Series, col_name: str) -> np.ndarray:
