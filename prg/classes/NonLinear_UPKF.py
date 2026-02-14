@@ -99,7 +99,7 @@ class NonLinear_UPKF(NonLinear_PKF):
             verdict, report = diagnose_covariance(PXXkp1_update)
             if not verdict:
                 print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
-                print(report)
+                rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
                 input('attente')
 
         # Record data in the tracker
@@ -117,7 +117,7 @@ class NonLinear_UPKF(NonLinear_PKF):
         )
         
         # last = self._history.last()
-        # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
+        # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="")
         # input('ATTENTE')
 
         yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
@@ -152,10 +152,12 @@ class NonLinear_UPKF(NonLinear_PKF):
                 Pkp1_predict += self.sigma_point_set_obj.Wc[i] * np.outer(diff, diff)
             
             if not augmented:
+                # print('TUTUTUTU')
                 verdict, report = diagnose_covariance(Pkp1_predict)
+                # print(f'TUTUTUTU verdict={verdict}')
                 if not verdict:
-                    print(f'ICI - Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:')
-                    print(report)
+                    print(f'ICICICICI Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:')
+                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
                     input('attente')
 
             # Cutting Pkp1 into 4 blocks
@@ -174,17 +176,26 @@ class NonLinear_UPKF(NonLinear_PKF):
             ikp1   = ykp1 - Ykp1_predict
             Skp1   = PYYkp1_predict
             # Kalman gain - Version robuste du calcul
-            c, low = cho_factor(Skp1)
-            Kkp1   = PXYkp1_predict @ cho_solve((c, low), eye_dim_y)
+            try:
+                c, low = cho_factor(Skp1)
+                Kkp1   = PXYkp1_predict @ cho_solve((c, low), eye_dim_y)
+            except np.linalg.LinAlgError as e:
+                print(f'Skp1={Skp1}')
+                input('ATTENTE')
+            except ValueError as e:
+                print("Erreur de valeur :", e)
+                input('ATTENTE')
             # print(f'Kkp1={Kkp1}')
             Xkp1_update   = Xkp1_predict   + Kkp1 @ ikp1
             PXXkp1_update = PXXkp1_predict - Kkp1 @ PXYkp1_predict.T
             
             if not augmented:
+                # print('TITITIITITIT')
                 verdict, report = diagnose_covariance(PXXkp1_update)
+                # print(f'verdict TITITIITITIT={verdict}')
                 if not verdict:
                     print(f'PXXkp1_update={PXXkp1_update}\nReport - iteration k={k}:')
-                    print(report)
+                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
                     input('attente')
             
             # Forme de Joseph
@@ -192,10 +203,12 @@ class NonLinear_UPKF(NonLinear_PKF):
             PXXkp1_update_Joseph = temp.T @ Pkp1_predict @ temp
             
             if not augmented:
+                # print('TOTOTOTOTOO')
                 verdict, report = diagnose_covariance(PXXkp1_update_Joseph)
+                # print(f'verdict TOTOTOTOTOO={verdict}')
                 if not verdict:
                     print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}\nReport - iteration k={k}:')
-                    print(report)
+                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
                     input('attente')
                 
             # Record data in the tracker
@@ -215,7 +228,7 @@ class NonLinear_UPKF(NonLinear_PKF):
             PXXkp1_update = PXXkp1_update_Joseph
 
             # last = self._history.last()
-            # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
+            # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="")
             # input('ATTENTE')
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update

@@ -33,7 +33,7 @@ class BaseModelNonLinear:
         self.alpha       = 0.25
         self.beta        = 2.0
         self.kappa       = 0.0
-        self.kappaJulier = 0.0 #3.0 - self.dim_x
+        self.kappaJulier = 0. #3.0 - self.dim_x
 
         # Initialisation des matrices / vecteurs d'état
         self.mQ   = None

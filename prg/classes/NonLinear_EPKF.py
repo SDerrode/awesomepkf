@@ -55,7 +55,7 @@ class NonLinear_EPKF(NonLinear_PKF):
             verdict, report = diagnose_covariance(PXXkp1_update)
             if not verdict:
                 print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
-                print(report)
+                rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
                 input('attente')
 
         # Record data in the tracker
@@ -72,7 +72,7 @@ class NonLinear_EPKF(NonLinear_PKF):
                              PXXkp1_update  = PXXkp1_update.copy()
         )
         # last = self._history.last()
-        # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
+        # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="")
         # input('ATTENTE')
 
         yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
@@ -100,8 +100,8 @@ class NonLinear_EPKF(NonLinear_PKF):
             if not augmented:
                 verdict, report = diagnose_covariance(Pkp1_predict)
                 if not verdict:
-                    print(f'ICI - Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:')
-                    print(report)
+                    print(f'Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:')
+                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
                     input('attente')
             
             # Cutting Pkp1 into 4 blocks
@@ -133,7 +133,7 @@ class NonLinear_EPKF(NonLinear_PKF):
                 verdict, report = diagnose_covariance(PXXkp1_update)
                 if not verdict:
                     print(f'PXXkp1_update={PXXkp1_update}\nReport - iteration k={k}:')
-                    print(report)
+                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
                     input('attente')
     
             # print(f'Xkp1_update  ={Xkp1_update}')
@@ -158,7 +158,7 @@ class NonLinear_EPKF(NonLinear_PKF):
                 verdict, report = diagnose_covariance(PXXkp1_update_Joseph)
                 if not verdict:
                     print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}\nReport - iteration k={k}:')
-                    print(report)
+                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
                     input('attente')
 
             # Record data in the tracker
@@ -178,7 +178,7 @@ class NonLinear_EPKF(NonLinear_PKF):
             PXXkp1_update = PXXkp1_update_Joseph
 
             # last = self._history.last()
-            # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="Infos sélectionnées")
+            # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="")
             # input('ATTENTE')
 
             yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update

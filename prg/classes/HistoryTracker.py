@@ -10,16 +10,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
+from rich.table import Table
+from rich.console import Console
+
 from others.utils import compute_errors
 from others.plot_settings import *
+# A few utils functions that are used several times
+from others.utils import rich_show_fields
 
 # Seuils numériques pour le calcul ±2σ
 EPS_ABS = 1e-12  # seuil absolu (bruit machine)
 EPS_REL = 1e-6   # seuil relatif à l'échelle
 
-# Configuration du logging global
-logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Arrondir l'affichage à 4 chiffres après la virgule
+np.set_printoptions(precision=4, suppress=True)
 
 # ----------------------------------------------------------------------
 # Configuration globale du logging
@@ -192,16 +196,20 @@ class HistoryTracker:
                                         df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
                                         None, None)
                 if self.verbose>0:
-                    print(f"ERROR ({a}, {b})")
-                    console.print(Pretty(report, expand_all=True, indent_guides=True))
+                    # print(f"ERROR ({a}, {b})")
+                    # console.print(Pretty(report, expand_all=True, indent_guides=True))
+                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean"], title=f"ERROR {a} vs {b}")
+
+                    
         else:
             for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
                 report = compute_errors(model, \
                                         df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
                                         df[d].to_numpy(), df[e].to_numpy())
                 if self.verbose>0:
-                    print(f"ERROR ({a}, {b})")
-                    console.print(Pretty(report, expand_all=True, indent_guides=True))
+                    # print(f"ERROR ({a}, {b})")
+                    # console.print(Pretty(report, expand_all=True, indent_guides=True))
+                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean"], title=f"ERROR {a} vs {b}")
 
 
     def _compute_sigma_envelope(self, var_series: pd.Series, col_name: str) -> np.ndarray:
