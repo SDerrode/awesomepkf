@@ -28,7 +28,7 @@ from rich.text import Text
 import numpy as np
 import math
 
-console = Console()  # console globale partagée
+console = Console(force_terminal=True, color_system="truecolor")  # console globale partagée
 
 def rich_show_fields(d: dict, fields: list, title: str = "Sélection de données",
                      decimals: int = 4, max_items: int = 10):

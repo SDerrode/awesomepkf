@@ -189,7 +189,7 @@ class HistoryTracker:
         from rich.pretty import Pretty
         from rich.console import Console
 
-        console = Console()
+        console = force_terminal=True, color_system="truecolor")
         if ListeD is None or ListeE is None:
             for a, b, c in zip(ListeA, ListeB, ListeC):
                 report = compute_errors(model, \
