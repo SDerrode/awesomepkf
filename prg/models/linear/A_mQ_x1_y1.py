@@ -25,6 +25,6 @@ class Model_A_mQ_x1_y1(LinearAmQ):
         mQ   = np.diag( [0.4, 0.2])
 
         z00  = np.zeros(shape=(dim_x+dim_y, 1))
-        Pz00 = np.eye(dim_x+dim_y)
+        Pz00 = np.eye(dim_x+dim_y)*5.
 
         super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, z00=z00, Pz00=Pz00)

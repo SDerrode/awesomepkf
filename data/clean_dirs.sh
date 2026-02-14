@@ -10,7 +10,7 @@ for dir in "${DIRS[@]}"; do
     TARGET_DIR="$SCRIPT_DIR/$dir"
 
     if [ -d "$TARGET_DIR" ]; then
-        echo "Nettoyage du répertoire: $TARGET_DIR"
+        echo "Nettoyage du répertoire: $dir"
 
         find "$TARGET_DIR" -mindepth 1 ! -name ".gitkeep" -exec rm -rf {} +
 

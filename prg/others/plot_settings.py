@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # --------------------------------------------------
 # Fenêtre d'affichage par défaut
 # --------------------------------------------------
-WINDOW = {'xmin': 0, 'xmax': 50}
+WINDOW = {'xmin': 0, 'xmax': 10}
 
 # --------------------------------------------------
 # Paramètres généraux

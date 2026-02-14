@@ -19,6 +19,33 @@ from pathlib import Path
 logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+
+from rich.table import Table
+from rich.console import Console
+
+def rich_show_fields(d: dict, fields: list, title: str = "Sélection de données"):
+    """
+    Affiche dans un tableau Rich uniquement les clés spécifiées d'un dictionnaire.
+
+    Args:
+        d (dict): dictionnaire à afficher
+        fields (list): liste des clés à afficher
+        title (str): titre du tableau (optionnel)
+    """
+    console = Console()
+    table = Table(title=title)
+    
+    table.add_column("Champ", style="cyan", no_wrap=True)
+    table.add_column("Valeur", style="magenta")
+    
+    for key in fields:
+        if key in d:
+            table.add_row(key, str(d[key]))
+    
+    console.print(table)
+
+
 def save_dataframe_to_csv(df, filepath, index=False):
     """Save a DataFrame in CSV (UTF-8) without index."""
     path = Path(filepath)
@@ -95,7 +122,7 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
     errors  = x_true - x_hat  # forme (1000, 2)
 
     # Calcul de la MSE et MAE pour X et pour Y séparemment si c'est une modele a état augmenté
-    if model.param.augmented==True:
+    if model.param.augmented:
         dim_x = model.dim_x
         dim_y = model.dim_y
         list_mses_X_and_Y = [np.mean(errors[:, 0:dim_x-dim_y]**2),      np.mean(errors[:, dim_x-dim_y:]**2)]
@@ -161,7 +188,7 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
         "nis_mean"  : nis_mean,
     }
     
-    if model.param.augmented==True:
+    if model.param.augmented:
         report["list_mses_X_and_Y"] = list_mses_X_and_Y,
         report["list_maes_X_and_Y"] = list_maes_X_and_Y,
 
@@ -346,13 +373,7 @@ def check_equality(**kwargs: np.ndarray) -> None:
             input("Waiting for you!")
 
 
-def diagnose_covariance(
-    P,
-    cond_warn    = 1e8,
-    cond_fail    = 1e12,
-    eig_tol      = 1e-10,
-    symmetry_tol = 1e-10,
-):
+def diagnose_covariance(P, cond_warn=1e8, cond_fail= 1e12, eig_tol=1e-10, symmetry_tol=1e-10, only_psd=False):
     """
     Diagnostic numérique d'une matrice de covariance.
 
@@ -366,45 +387,16 @@ def diagnose_covariance(
     n = P.shape[0]
 
     report = {}
+    
+    verdict = True
+    # print(f'  verdict={verdict}')
 
     # 1) Symétrie
     sym_err = np.linalg.norm(P - P.T, ord='fro')
     report["symmetry_error"] = sym_err
     report["is_symmetric"] = sym_err < symmetry_tol
-
-    # 2) Valeurs propres (matrice symétrique → eigh)
-    eigvals = np.linalg.eigvalsh(P)
-    lam_min = eigvals.min()
-    lam_max = eigvals.max()
-
-    report["eigenvalues"] = eigvals
-    report["lambda_min"] = lam_min
-    report["lambda_max"] = lam_max
-    report["is_psd"] = lam_min >= -eig_tol
-    report["near_singular"] = lam_min < eig_tol
-
-    # 3) Nombre de condition (norme 2)
-    try:
-        cond = np.linalg.cond(P)
-    except np.linalg.LinAlgError:
-        cond = np.inf
-
-    report["condition_number"] = cond
-    report["ill_conditioned"] = cond > cond_warn
-    report["numerically_singular"] = cond > cond_fail
-
-    # 4) Stabilité de l'inversion
-    inv_residual = None
-    try:
-        P_inv = np.linalg.inv(P)
-        I_approx = P @ P_inv
-        inv_residual = np.linalg.norm(
-            I_approx - np.eye(n), ord='fro'
-        )
-    except np.linalg.LinAlgError:
-        inv_residual = np.inf
-
-    report["inverse_residual"] = inv_residual
+    verdict &= report["is_symmetric"]
+    # print(f'  verdict={verdict}')
 
     # 5) Cholesky (test pratique clé)
     try:
@@ -414,22 +406,51 @@ def diagnose_covariance(
         chol_ok = False
 
     report["cholesky_ok"] = chol_ok
+    verdict &= report["cholesky_ok"]
+    # print(f'  verdict={verdict}')
 
-    # Verdict global
-    if not report["is_symmetric"]:
-        verdict = "❌ Non symétrique (bug numérique)"
-    elif not report["is_psd"]:
-        verdict = "❌ Pas PSD (covariance invalide)"
-    elif not chol_ok:
-        verdict = "🚨 Cholesky échoue (quasi-singulière)"
-    elif report["numerically_singular"]:
-        verdict = "🚨 Numériquement singulière"
-    elif report["ill_conditioned"]:
-        verdict = "⚠️ Mal conditionnée"
-    else:
-        verdict = None
+    # print(f'only_psd={only_psd}')
+    if only_psd == False:
 
-    report["verdict"] = verdict
+        # 2) Valeurs propres (matrice symétrique → eigh)
+        eigvals = np.linalg.eigvalsh(P)
+        lam_min = eigvals.min()
+        lam_max = eigvals.max()
+
+        report["eigenvalues"] = eigvals
+        report["lambda_min"] = lam_min
+        report["lambda_max"] = lam_max
+        report["is_psd"] = lam_min >= -eig_tol
+        report["near_singular"] = lam_min < eig_tol
+        verdict &= not report["near_singular"]
+        # print(f'  verdict={verdict}')
+    
+        # 3) Nombre de condition (norme 2)
+        try:
+            cond = np.linalg.cond(P)
+        except np.linalg.LinAlgError:
+            cond = np.inf
+
+        report["condition_number"] = cond
+        report["ill_conditioned"] = cond > cond_warn
+        report["numerically_singular"] = cond > cond_fail
+        verdict &= not report["numerically_singular"]
+        # print(f'  verdict={verdict}')
+
+        # 4) Stabilité de l'inversion
+        inv_residual = None
+        try:
+            P_inv = np.linalg.inv(P)
+            I_approx = P @ P_inv
+            inv_residual = np.linalg.norm(
+                I_approx - np.eye(n), ord='fro'
+            )
+        except np.linalg.LinAlgError:
+            inv_residual = np.inf
+            verdict &= False
+            # print(f'  verdict={verdict}')
+
+        report["inverse_residual"] = inv_residual
 
     return verdict, report
 
