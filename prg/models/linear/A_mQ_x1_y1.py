@@ -22,9 +22,9 @@ class Model_A_mQ_x1_y1(LinearAmQ):
         B = np.eye(A.shape[0])
         # mQ   = np.array( [[0.739,  0.2777], 
         #                   [0.2777, 0.9968]])
-        mQ   = np.diag( [0.4, 0.2])
+        mQ   = np.diag( [0.1, 0.2])
 
         z00  = np.zeros(shape=(dim_x+dim_y, 1))
-        Pz00 = np.eye(dim_x+dim_y)*5.
+        Pz00 = np.eye(dim_x+dim_y)
 
         super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, z00=z00, Pz00=Pz00)
