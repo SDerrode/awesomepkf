@@ -14,7 +14,7 @@ from scipy.linalg import cho_factor, cho_solve, LinAlgError
 from .HistoryTracker import HistoryTracker
 from .SeedGenerator import SeedGenerator
 from others.utils import diagnose_covariance, rich_show_fields
-
+from others.numerics import EPS_ABS
 
 @dataclass(slots=True, frozen=True)
 class PKFStep:
@@ -51,11 +51,11 @@ class PKFStep:
                     f"{name} must be a square matrix, got shape {arr.shape}"
                 )
             # Symétrie
-            if not np.allclose(arr, arr.T, atol=1e-12):
+            if not np.allclose(arr, arr.T, atol=EPS_ABS):
                 raise ValueError(f"{name} must be symmetric")
             # Semi-définie positive
             eigvals = np.linalg.eigvalsh(arr)
-            if np.any(eigvals < -1e-12):
+            if np.any(eigvals < -EPS_ABS):
                 raise ValueError(
                     f"{name} must be positive semi-definite, found negative eigenvalues: {eigvals[eigvals<0]}"
                 )
@@ -199,7 +199,7 @@ class PKF:
             # il y a un problème
             # Récupération des valeurs propres négatives
             eigvals = np.linalg.eigvalsh(Mat)
-            neg_eigvals = eigvals[eigvals < -1e-12]
+            neg_eigvals = eigvals[eigvals < -EPS_ABS]
 
             self.logger.warning(
                 f"Step {k}: Covariance matrix invalid. "
@@ -259,7 +259,7 @@ class PKF:
         condS = np.linalg.cond(Skp1)
         if condS > 1e12:
             self.logger.warning(f"Step {k}: Skp1 ill-conditioned (cond={condS:.2e})")
-            Skp1 += 1e-10 * self.eye_dim_y
+            Skp1 += EPS_ABS * self.eye_dim_y
 
         try:
             c, low = cho_factor(Skp1)

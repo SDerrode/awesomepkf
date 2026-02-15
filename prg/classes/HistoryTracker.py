@@ -20,12 +20,10 @@ from others.plot_settings import *
 # A few utils functions that are used several times
 from others.utils import rich_show_fields
 
-# Seuils numériques pour le calcul ±2σ
-EPS_ABS = 1e-12  # seuil absolu (bruit machine)
-EPS_REL = 1e-6   # seuil relatif à l'échelle
+from others.numerics import EPS_ABS, EPS_REL
 
 # Arrondir l'affichage à 4 chiffres après la virgule
-np.set_printoptions(precision=4, suppress=True)
+# np.set_printoptions(precision=4, suppress=True)
 
 # ----------------------------------------------------------------------
 # Configuration globale du logging
