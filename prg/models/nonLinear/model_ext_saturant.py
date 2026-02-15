@@ -5,6 +5,8 @@ import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
 from others.utils import check_consistency
 
+from others.numerics import EPS_REL
+
 class ModelExtSaturant(BaseModelNonLinear):
     """
     Nonlinear model with saturation in state dynamics and logarithmic observation:
@@ -61,7 +63,7 @@ class ModelExtSaturant(BaseModelNonLinear):
             np.ndarray, shape (1,1) - measurement
         """
 
-        return np.log(1. + np.maximum(np.abs(x), 1e-8)) + u
+        return np.log(1. + np.maximum(np.abs(x), EPS_REL)) + u
 
     # ------------------------------------------------------------------
     def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:

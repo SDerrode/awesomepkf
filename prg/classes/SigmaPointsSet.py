@@ -7,7 +7,7 @@ import warnings
 import numpy as np
 from itertools import product
 
-eps = 1E-12
+from others.numerics import EPS_ABS
 
 class SigmaPointsSet(ABC):
     """
@@ -35,11 +35,8 @@ class SigmaPointsSet(ABC):
         try:
             return np.linalg.cholesky(P)
         except np.linalg.LinAlgError:
-            warnings.warn("P is not positive definite, regularization applied")
-            # print(f'P={P.shape}, {self.dim}')
-            # input('ATTENTE')
             try:
-                return np.linalg.cholesky(P + eps*np.eye(self.dim))
+                return np.linalg.cholesky(P + EPS_ABS*np.eye(self.dim))
             except np.linalg.LinAlgError:
                 raise("Méthode _chol : décomposition Choleski impossible")
 
@@ -59,7 +56,7 @@ class SetWAN2000(SigmaPointsSet, key="wan2000"):
         
         self.Wm     = np.full(self.nbSigmaPoint, 1. / (2. * (self.dim + param.lambda_)))
         self.Wm[0]  = param.lambda_ / (self.dim + param.lambda_)
-        if not np.isclose(self.Wm.sum(), 1.0, atol=eps):
+        if not np.isclose(self.Wm.sum(), 1.0, atol=EPS_ABS):
             raise ValueError(f"Wm weights do not sum to 1 (sum={self.Wm.sum()})")
         self.Wm /= self.Wm.sum() # normalisation au cas ou il reste un résidu
         self.Wc     = np.copy(self.Wm)
@@ -98,9 +95,9 @@ class SetCPKF(SigmaPointsSet, key="cpkf"):
         
         self.nbSigmaPoint = 2 * self.dim
         self.Wm = np.full(self.nbSigmaPoint, 1. / (2. * self.dim))
-        if not np.isclose(self.Wm.sum(), 1.0, atol=eps):
+        if not np.isclose(self.Wm.sum(), 1.0, atol=EPS_ABS):
             raise ValueError(f"Wm weights do not sum to 1 (sum={self.Wm.sum()})")
-        
+        self.Wm /= self.Wm.sum() # normalisation au cas ou il reste un résidu
         self.Wc = np.copy(self.Wm)
         
         self.gamma = np.sqrt(self.dim)
@@ -133,12 +130,12 @@ class SetLERNER2002(SigmaPointsSet, key="lerner2002"):
         self.nbSigmaPoint = 2 * self.dim**2 + 1
         
         self.Wm = np.zeros(shape=(self.nbSigmaPoint))
-        self.Wm[0]                                = (self.dim**2 - 7.*self.dim)/18 + 1.
-        self.Wm[1:2*self.dim+1]                 = (4-self.dim) / 18.
+        self.Wm[0]                            = (self.dim**2 - 7.*self.dim)/18 + 1.
+        self.Wm[1:2*self.dim+1]               = (4-self.dim) / 18.
         self.Wm[2*self.dim+1:2*self.dim**2+1] = 1./36.
-        if not np.isclose(self.Wm.sum(), 1.0, atol=eps):
+        if not np.isclose(self.Wm.sum(), 1.0, atol=EPS_ABS):
             raise ValueError(f"Wm weights do not sum to 1 (sum={self.Wm.sum()})")
-
+        self.Wm /= self.Wm.sum() # normalisation au cas ou il reste un résidu
         self.Wc     = np.copy(self.Wm)
         self.Wc[0] += 1. - param.alpha**2 + param.beta  # same corrective term as for WAN2000
         
@@ -207,9 +204,9 @@ class SetIto2000(SigmaPointsSet, key="ito2000"):
 
         # Normalisation (important)
         self.Wm /= np.pi ** (self.dim / 2)
-        # print(f'self.Wm={self.Wm}')
-        if not np.isclose(self.Wm.sum(), 1.0, atol=eps):
+        if not np.isclose(self.Wm.sum(), 1.0, atol=EPS_ABS):
             raise ValueError(f"Wm weights do not sum to 1 (sum={self.Wm.sum()})")
+        self.Wm /= self.Wm.sum() # normalisation au cas ou il reste un résidu
 
         self.Wc     = np.copy(self.Wm)
 

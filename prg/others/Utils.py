@@ -6,7 +6,7 @@ from __future__ import annotations
 import os, math
 import logging
 import numpy as np
-np.set_printoptions(precision=4, suppress=True)
+# np.set_printoptions(precision=4, suppress=True)
 import pandas as pd
 import csv
 import chardet
@@ -14,7 +14,7 @@ from typing import Generator, Optional, Any, Union
 from pathlib import Path
 
 
-eps = 1E-12 # pour choleski
+from others.numerics import EPS_ABS, EPS_REL
 
 # ----------------------------------------------------------------------
 # Logging global
@@ -382,11 +382,10 @@ def file_data_generator(filename: str, dim_x: int, dim_y: int, verbose: int = 0)
 # ----------------------------------------------------------------------
 
 def is_covariance(M: np.ndarray, name: str) -> None:
-    tol = 1e-12
-    if not np.allclose(M, M.T, atol=tol):
+    if not np.allclose(M, M.T, atol=EPS_ABS):
         logger.warning(f"⚠️ {name} matrix is not symmetrical")
     eigvals = np.linalg.eigvals(M)
-    if np.any(eigvals < -tol):
+    if np.any(eigvals < -EPS_ABS):
         logger.warning(f"⚠️ {name} matrix is not positive semi-definite (min eig = {eigvals.min():.3e})")
     logger.debug(f"Eig of {name} matrix: {eigvals}")
 
@@ -414,12 +413,11 @@ def check_equality(**kwargs: np.ndarray) -> None:
     ref       = matrices[0]
     ref       = np.asarray(ref, dtype=float)
     ref_name  = names[0]
-    tol       = 1e-12
     all_equal = True
 
     for name, M in zip(names[1:], matrices[1:]):
         M   = np.asarray(M, dtype=float)
-        if __debug__ and not np.allclose(ref, M, atol=tol, rtol=tol):
+        if __debug__ and not np.allclose(ref, M, atol=EPS_ABS, rtol=EPS_REL):
             diff_norm = np.linalg.norm(ref - M)
             logger.warning(f"⚠️ Matrices '{ref_name}' and '{name}' are different (‖Δ‖={diff_norm:.3e})")
             all_equal = False
@@ -430,7 +428,7 @@ def check_equality(**kwargs: np.ndarray) -> None:
             input("Waiting for you!")
 
 
-def diagnose_covariance(P, cond_warn=1e8, cond_fail= 1e12, eig_tol=1e-10, symmetry_tol=1e-10):
+def diagnose_covariance(P, cond_warn=1e8, cond_fail= 1e12, eig_tol=EPS_ABS, symmetry_tol=EPS_ABS):
     """
     Diagnostic numérique d'une matrice de covariance.
 
@@ -457,7 +455,7 @@ def diagnose_covariance(P, cond_warn=1e8, cond_fail= 1e12, eig_tol=1e-10, symmet
 
     # # 5) Cholesky (test pratique clé)
     # try:
-    #     np.linalg.cholesky(P + eps*np.eye(P.shape[0]))
+    #     np.linalg.cholesky(P + EPS_ABS*np.eye(P.shape[0]))
     #     chol_ok = True
     # except np.linalg.LinAlgError:
     #     chol_ok = False

@@ -18,6 +18,7 @@ from scipy.linalg import cho_factor, cho_solve, solve_discrete_lyapunov
 from models.linear import BaseModelLinear, ModelFactoryLinear
 # A few utils functions that are used several fois
 from others.utils import is_covariance, check_consistency
+from others.numerics import EPS_ABS, EPS_REL
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -133,8 +134,8 @@ class ParamLinear:
         if __debug__:
             Q_est = self._Q1 - self._A @ self._Q2.T
             diff = self._mQ - Q_est
-            rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + 1e-12)
-            if rel_error > 1e-8:
+            rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + EPS_ABS)
+            if rel_error > EPS_REL:
                 logger.warning(f"⚠️ Incohérence : Q ≉ Q1 - A Q2^T (erreur relative = {rel_error:.2e})")
                 if self.verbose >= 2:
                     logger.debug(f"Différence :\n{diff}")
