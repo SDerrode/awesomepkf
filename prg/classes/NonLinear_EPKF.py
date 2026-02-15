@@ -12,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 from rich import print
 
-from classes.NonLinear_PKF import NonLinear_PKF
+from .NonLinear_PKF import NonLinear_PKF, PKF
 # A few utils functions that are used several times
 from others.utils import diagnose_covariance, rich_show_fields
 
@@ -22,7 +22,7 @@ class NonLinear_EPKF(NonLinear_PKF):
     def __init__(self, param, sKey=None, verbose=0) -> None:
         super().__init__(param, sKey, verbose)
 
-    def process_nonlinearfilter(self, N=None, data_generator=None):
+    def process_filter(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
         """
         Generator of EPKF filter using optional data generator.
         """
@@ -37,43 +37,34 @@ class NonLinear_EPKF(NonLinear_PKF):
 
         # The first
         ##################################################################################################
-        k, xkp1, ykp1, Xkp1_predict, Xkp1_update, PXXkp1_update = self._firstEstimate(generator)
-        yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
+        step = self._firstEstimate(generator)
+        yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
         ##################################################################################################@
         # The next ones
+        accel_xy_xy           = self.zeros_dim_xy_xy.copy()
+        Xkp1_update_augmented = self.zeros_dim_xy_1.copy()
         
-        accel_zero_xy_1 = np.zeros(shape=(self.dim_xy, 1))
-        accel_xy_xy     = np.zeros(shape=(self.dim_xy, self.dim_xy))
-        
-        Xkp1_update_augmented = np.zeros((self.dim_xy, 1))
-        while N is None or k<N:
+        while N is None or step.k<N:
             
             # here ykp1 still gives the previous : it is yk indeed!
-            Xkp1_update_augmented[:self.dim_x] = Xkp1_update
-            Xkp1_update_augmented[self.dim_x:] = ykp1
+            Xkp1_update_augmented[:self.dim_x] = step.Xkp1_update
+            Xkp1_update_augmented[self.dim_x:] = step.ykp1
             
             # Prediction
-            Zkp1_predict = self.g(Xkp1_update_augmented, accel_zero_xy_1, self.dt)
-            An, Bn       = self.jg(Xkp1_update_augmented, accel_zero_xy_1, self.dt)
+            Zkp1_predict = self.g( Xkp1_update_augmented, self.zeros_dim_xy_1, self.dt)
+            An, Bn       = self.jg(Xkp1_update_augmented, self.zeros_dim_xy_1, self.dt)
             accel_xy_xy.fill(0.0)
-            accel_xy_xy[0:self.dim_x, 0:self.dim_x] = PXXkp1_update 
-            
+            accel_xy_xy[0:self.dim_x, 0:self.dim_x] = step.PXXkp1_update
             Pkp1_predict =  An @ accel_xy_xy @ An.T + Bn @ self.mQ @ Bn.T
-            if not self.augmented:
-                verdict, report = diagnose_covariance(Pkp1_predict)
-                if not verdict:
-                    print(f'Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:')
-                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
-                    input('attente')
-            
+            self._test_CovMatrix(Pkp1_predict, step.k)
  
             # New data is arriving ##################################
             try:
-                k, xkp1, ykp1 = next(generator)
+                new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
                 return # we stop as the data generator is stopped itself
 
-            # updating ##############################################
-            Xkp1_predict, Xkp1_update, PXXkp1_update = self._nextUpdating(k, xkp1, ykp1, Zkp1_predict, Pkp1_predict)
-            yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
+            # Updating ##############################################
+            step = self._nextUpdating(new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict)
+            yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update

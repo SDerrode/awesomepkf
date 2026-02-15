@@ -10,6 +10,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
+from dataclasses import is_dataclass, asdict
+
 from rich.table import Table
 from rich.console import Console
 
@@ -84,21 +86,19 @@ class HistoryTracker:
         else:
             logger.setLevel(logging.DEBUG)
 
-    def record(self, **quantities: Any) -> None:
+    def record(self, *args, **kwargs) -> None:
         """
-        Enregistre l'état courant sous forme de dictionnaire.
+        Enregistre l'état courant.
 
-        Chaque clé doit être une chaîne et chaque valeur peut être un scalaire,
-        un vecteur numpy ou tout objet sérialisable.
-
-        Parameters
-        ----------
-        **quantities : dict[str, Any]
-            Variables à enregistrer.
+        - Si on passe une dataclass (PKFStep), elle est convertie en dict.
+        - Sinon, on accepte **kwargs comme avant.
         """
-        if not all(isinstance(k, str) for k in quantities):
-            raise TypeError("Toutes les clés doivent être des chaînes")
-        self._history.append(quantities.copy())
+        if len(args) == 1 and is_dataclass(args[0]):
+            self._history.append(asdict(args[0]))
+        else:
+            if not all(isinstance(k, str) for k in kwargs):
+                raise TypeError("Toutes les clés doivent être des chaînes")
+            self._history.append(kwargs.copy())
 
     def as_dataframe(self) -> pd.DataFrame:
         """
@@ -197,14 +197,14 @@ class HistoryTracker:
                                         df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
                                         None, None)
                 if self.verbose>0:
-                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"ERROR {a} vs {b}")
+                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"{a} vs {b}")
         else:
             for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
                 report = compute_errors(model, \
                                         df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
                                         df[d].to_numpy(), df[e].to_numpy())
                 if self.verbose>0:
-                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"ERROR {a} vs {b}")
+                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"{a} vs {b}")
 
 
     def _compute_sigma_envelope(self, var_series: pd.Series, col_name: str) -> np.ndarray:
@@ -397,6 +397,16 @@ class HistoryTracker:
 
 
 # ======================================================================
+
+from dataclasses import dataclass
+
+@dataclass
+class SimpleStep:
+    iter:  int
+    x:     float
+    new_x: float
+    diff:  float
+    
 class A:
     """Classe jouet pour illustrer l'usage de HistoryTracker."""
 
@@ -409,18 +419,15 @@ class A:
         self.history = HistoryTracker(verbose=verbose)
 
     def iterate_gen(self, n: Optional[int] = None):
-        """Générateur qui calcule x_{k+1} = cos(x_k)."""
-        assert n is None or (isinstance(n, int) and n >= 0), "n doit être un entier positif ou None"
-
         k = 0
-        while n is None or k<n:
+        while n is None or k < n:
             new_x = np.cos(self.x)
             diff = abs(new_x - self.x)
-            record = {"iter": k, "x": self.x, "new_x": new_x, "diff": diff}
-            self.history.record(**record)
+            step = SimpleStep(iter=k, x=self.x, new_x=new_x, diff=diff)
+            self.history.record(step)
             if self.verbose > 1:
                 logger.debug(f"[A] it={k} x={self.x:.4f} diff={diff:.4e}")
-            yield record
+            yield step
             self.x = new_x
             k += 1
 

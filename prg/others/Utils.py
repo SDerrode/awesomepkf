@@ -22,25 +22,33 @@ eps = 1E-12 # pour choleski
 logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from rich.console import Console
+from dataclasses import is_dataclass, asdict
 from rich.table import Table
+from rich.console import Console
 from rich.text import Text
 import numpy as np
 import math
 
-console = Console(force_terminal=True, color_system="truecolor")  # console globale partagée
+console = Console(force_terminal=True, color_system="truecolor")
 
-def rich_show_fields(d: dict, fields: list, title: str = "Sélection de données",
+def rich_show_fields(d, fields: list = None, title: str = "Sélection de données",
                      decimals: int = 4, max_items: int = 10):
     """
-    Affiche un dictionnaire dans un tableau Rich de manière lisible pour usage scientifique.
+    Affiche un dictionnaire ou une dataclass dans un tableau Rich de manière lisible.
     
-    Caractéristiques :
     - Floats arrondis à `decimals` chiffres
     - Booléens NumPy convertis en bool Python
     - Vecteurs/arrays tronqués si > max_items éléments
     - Support des dictionnaires et listes imbriqués
     """
+
+    # Convert dataclass en dict
+    if is_dataclass(d):
+        d = asdict(d)
+    
+    # Si fields non précisé, on affiche tous les champs
+    if fields is None:
+        fields = list(d.keys())
 
     table = Table(title=title)
     table.add_column("Champ", no_wrap=True)
@@ -88,10 +96,10 @@ def rich_show_fields(d: dict, fields: list, title: str = "Sélection de données
     # Remplissage du tableau
     for key in fields:
         if key in d:
-            # table.add_row(Text(key, style="cyan"), Text(str(value), style="magenta"))
-            table.add_row(Text(key, style="cyan"), Text(str(format_value(d[key])), style="magenta"))
+            table.add_row(Text(key, style="cyan"), Text(format_value(d[key]), style="magenta"))
 
     console.print(table)
+
 
 
 
