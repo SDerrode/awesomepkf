@@ -8,21 +8,20 @@ Extended Pairwise Kalman filter (EPKF) implementation
 """
 
 from __future__ import annotations
-
+from typing import Generator, Optional
+from scipy.linalg import LinAlgError
 import numpy as np
-from rich import print
 
-from .NonLinear_PKF import NonLinear_PKF, PKF
-# A few utils functions that are used several times
-from others.utils import diagnose_covariance, rich_show_fields
+from .NonLinear_PKF import NonLinear_PKF
 
 class NonLinear_EPKF(NonLinear_PKF):
     """Implementation of EPKF."""
 
-    def __init__(self, param, sKey=None, verbose=0) -> None:
+    def __init__(self, param: ParamNonLinear, sKey: Optional[int] = None, verbose: int = 0) -> None:
         super().__init__(param, sKey, verbose)
 
-    def process_filter(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
+    def process_filter(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) \
+                    -> Generator[tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray], None, None]:
         """
         Generator of EPKF filter using optional data generator.
         """
@@ -53,9 +52,12 @@ class NonLinear_EPKF(NonLinear_PKF):
             
             # Prediction
             Zkp1_predict = self.g( Xkp1_update_augmented, self.zeros_dim_xy_1, self.dt)
-            An, Bn       = self.jg(Xkp1_update_augmented, self.zeros_dim_xy_1, self.dt)
-            accel_xy_xy.fill(0.0)
-            accel_xy_xy[0:self.dim_x, 0:self.dim_x] = step.PXXkp1_update
+            An, Bn = self.jg(Xkp1_update_augmented, self.zeros_dim_xy_1, self.dt)
+            if An.shape != (self.dim_xy, self.dim_xy) or Bn.shape != (self.dim_xy, self.dim_xy):
+                raise ValueError(f"Jacobian returned matrices of wrong shape: An={An.shape}, Bn={Bn.shape}")
+            # accel_xy_xy.fill(0.0)
+            # accel_xy_xy[0:self.dim_x, 0:self.dim_x] = step.PXXkp1_update.copy()
+            accel_xy_xy[:self.dim_x, :self.dim_x] = step.PXXkp1_update
             Pkp1_predict =  An @ accel_xy_xy @ An.T + Bn @ self.mQ @ Bn.T
             self._test_CovMatrix(Pkp1_predict, step.k)
  
@@ -66,5 +68,10 @@ class NonLinear_EPKF(NonLinear_PKF):
                 return # we stop as the data generator is stopped itself
 
             # Updating ##############################################
-            step = self._nextUpdating(new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict)
+            try:
+                step = self._nextUpdating(new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict)
+            except LinAlgError:
+                self.logger.error(f"Step {new_k}: LinAlgError during update.")
+                raise
+            
             yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update

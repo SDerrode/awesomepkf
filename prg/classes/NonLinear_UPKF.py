@@ -8,19 +8,14 @@ Unscented Pairwise Kalman filter (UPKF) implementation
 """
 
 from __future__ import annotations
-
 import numpy as np
 from rich import print
-
 from classes.NonLinear_PKF import NonLinear_PKF
-# A few utils functions that are used several times
 from others.utils import diagnose_covariance, rich_show_fields
-
-# Sigma points
 from classes.SigmaPointsSet import SigmaPointsSet
 
 class FilterConfig:
-    def __init__(self, sigma_point_set_name, dim, param):
+    def __init__(self, sigma_point_set_name: str, dim: int, param) -> None:
         self.sigma_point_set_name = sigma_point_set_name
         self.dim                  = dim
         self.param                = param
@@ -40,7 +35,7 @@ class FilterConfig:
 class NonLinear_UPKF(NonLinear_PKF):
     """Implementation of UPKF."""
 
-    def __init__(self, sigma_point_set_name, param, sKey=None, verbose=0):
+    def __init__(self, sigma_point_set_name: str, param: ParamNonLinear, sKey: Optional[int] = None, verbose: int = 0):
         super().__init__(param, sKey, verbose)
 
         self.sigma_point_set_name = sigma_point_set_name
@@ -53,18 +48,9 @@ class NonLinear_UPKF(NonLinear_PKF):
 
         self.sigma_point_set_obj = cfg.create_sigma_point_set()
 
-    def create_sigma_point_set(self) -> SigmaPointsSet:
-        try:
-            cls = SigmaPointsSet.registry[self.sigma_point_set_name]
-        except KeyError:
-            raise ValueError(
-                f"Jeu de sigma-points inconnu '{self.sigma_point_set_name}'. "
-                f"Disponibles : {list(SigmaPointsSet.registry.keys())}"
-            )
-
-        return cls(dim=self.dim)
-
-    def process_filter(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
+    def process_filter(self, N: Optional[int] = None, 
+                       data_generator: Optional[Generator[tuple[int, np.ndarray, np.ndarray], None, None]] = None)\
+                            -> Generator[tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray], None, None]:
         """
         Generator of UPKF filter using optional data generator.
         """
@@ -81,18 +67,19 @@ class NonLinear_UPKF(NonLinear_PKF):
 
         ###################
         # The next ones
-        z  = np.zeros(shape=(2*self.dim_xy, 1))
-        Pa = np.zeros(shape=(2*self.dim_xy, 2*self.dim_xy))
-        Pa[self.dim_xy:, self.dim_xy:] = self.mQ
-        Pkp1_predict = self.zeros_dim_xy_xy.copy()
+        Xkp1_update_augmented = np.zeros(shape=(2*self.dim_xy, 1))
+        Pa_base               = np.zeros((2*self.dim_xy, 2*self.dim_xy))
+        Pa_base[self.dim_xy:, self.dim_xy:] = self.mQ
+        Pkp1_predict          = self.zeros_dim_xy_xy.copy()
         
         while N is None or step.k<N:
             
             # Sigma points et leur propagation par g
-            z[0:self.dim_x]                = step.Xkp1_update
-            z[self.dim_x:self.dim_xy]      = step.ykp1
+            Xkp1_update_augmented[:self.dim_x] = step.Xkp1_update
+            Xkp1_update_augmented[self.dim_x:self.dim_xy] = step.ykp1
+            Pa = Pa_base.copy()  # seulement copier une fois
             Pa[0:self.dim_x, 0:self.dim_x] = step.PXXkp1_update
-            sigma = self.sigma_point_set_obj._sigma_point(z, Pa)
+            sigma = self.sigma_point_set_obj._sigma_point(Xkp1_update_augmented, Pa)
             # here ykp1 still gives the previous : it is yk indeed!
             sigma_propag = [self.g(*np.split(spoint, [self.dim_xy]), self.dt) for spoint in sigma]
 
@@ -113,5 +100,10 @@ class NonLinear_UPKF(NonLinear_PKF):
                 return # we stop as the data generator is stopped itself
 
             # Updating ##############################################
-            step = self._nextUpdating(new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict)
+            try:
+                step = self._nextUpdating(new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict)
+            except LinAlgError:
+                self.logger.error(f"Step {new_k}: LinAlgError during update")
+                raise
+            
             yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
