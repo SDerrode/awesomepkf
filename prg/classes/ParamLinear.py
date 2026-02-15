@@ -275,12 +275,12 @@ class ParamLinear:
     # @property
     # def g(self): return self._g
 
-    @property
-    def Q1(self) -> np.ndarray: return self._Q1
-    @property
-    def Q2(self) -> np.ndarray: return self._Q2
-    @property
-    def Sigma(self) -> np.ndarray: return self._Sigma
+    # @property
+    # def Q1(self) -> np.ndarray: return self._Q1
+    # @property
+    # def Q2(self) -> np.ndarray: return self._Q2
+    # @property
+    # def Sigma(self) -> np.ndarray: return self.Sigma
     @property
     def z00(self) -> np.ndarray: return self._z00
     @property
@@ -385,20 +385,20 @@ class ParamLinear:
         print("mQ:\n", fmt(self.mQ))
         print("z00:\n", fmt(self.z00))
         print("Pz00:\n", fmt(self.Pz00))
-        print("Sigma:\n", fmt(self._Sigma))
+        # print("Sigma:\n", fmt(self.Sigma))
         
-        if self.verbose > 0:
-            print("========================")
-            print("  Q1:\n  ", fmt(self._Q1))
-            print("  Q2:\n  ", fmt(self._Q2))
-            print("========================")
-            print("  sxx:\n  ", fmt(self._sxx))
-            print("  syy:\n  ", fmt(self._syy))
-            print("  a:\n  ", fmt(self._a))
-            print("  b:\n  ", fmt(self._b))
-            print("  c:\n  ", fmt(self._c))
-            print("  d:\n  ", fmt(self._d))
-            print("  e:\n  ", fmt(self._e))
+        # if self.verbose > 0:
+        #     print("========================")
+        #     print("  Q1:\n  ", fmt(self._Q1))
+        #     print("  Q2:\n  ", fmt(self._Q2))
+        #     print("========================")
+        #     print("  sxx:\n  ", fmt(self._sxx))
+        #     print("  syy:\n  ", fmt(self._syy))
+        #     print("  a:\n  ", fmt(self._a))
+        #     print("  b:\n  ", fmt(self._b))
+        #     print("  c:\n  ", fmt(self._c))
+        #     print("  d:\n  ", fmt(self._d))
+        #     print("  e:\n  ", fmt(self._e))
         print("========================\n")
         if self.verbose>1:  # Ready to copy in python code
             print("A    = np.array(", repr(self.A.tolist()), ')')

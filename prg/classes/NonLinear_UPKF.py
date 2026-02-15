@@ -64,7 +64,7 @@ class NonLinear_UPKF(NonLinear_PKF):
 
         return cls(dim=self.dim)
 
-    def process_nonlinearfilter(self, N=None, data_generator=None):
+    def process_filter(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
         """
         Generator of UPKF filter using optional data generator.
         """
@@ -76,22 +76,22 @@ class NonLinear_UPKF(NonLinear_PKF):
 
         # The first
         ##################################################################################################
-        k, xkp1, ykp1, Xkp1_predict, Xkp1_update, PXXkp1_update = self._firstEstimate(generator)
-        yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
+        step = self._firstEstimate(generator)
+        yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
         ###################
         # The next ones
-
         z  = np.zeros(shape=(2*self.dim_xy, 1))
         Pa = np.zeros(shape=(2*self.dim_xy, 2*self.dim_xy))
         Pa[self.dim_xy:, self.dim_xy:] = self.mQ
-        Pkp1_predict = np.zeros(shape=(self.dim_xy, self.dim_xy))
-        while N is None or k<N:
+        Pkp1_predict = self.zeros_dim_xy_xy.copy()
+        
+        while N is None or step.k<N:
             
             # Sigma points et leur propagation par g
-            z[0:self.dim_x]           = Xkp1_update
-            z[self.dim_x:self.dim_xy] = ykp1
-            Pa[0:self.dim_x, 0:self.dim_x] = PXXkp1_update
+            z[0:self.dim_x]                = step.Xkp1_update
+            z[self.dim_x:self.dim_xy]      = step.ykp1
+            Pa[0:self.dim_x, 0:self.dim_x] = step.PXXkp1_update
             sigma = self.sigma_point_set_obj._sigma_point(z, Pa)
             # here ykp1 still gives the previous : it is yk indeed!
             sigma_propag = [self.g(*np.split(spoint, [self.dim_xy]), self.dt) for spoint in sigma]
@@ -104,21 +104,14 @@ class NonLinear_UPKF(NonLinear_PKF):
             for i in range(self.sigma_point_set_obj.nbSigmaPoint):
                 diff = sigma_propag[i] - Zkp1_predict
                 Pkp1_predict += self.sigma_point_set_obj.Wc[i] * np.outer(diff, diff)
-            if not self.augmented:
-                # print('TUTUTUTU')
-                verdict, report = diagnose_covariance(Pkp1_predict)
-                # print(f'TUTUTUTU verdict={verdict}')
-                if not verdict:
-                    print(f'ICICICICI Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:')
-                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
-                    input('attente')
-
+            self._test_CovMatrix(Pkp1_predict, step.k)
+            
             # New data is arriving ##################################
             try:
-                k, xkp1, ykp1 = next(generator)
+                new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
                 return # we stop as the data generator is stopped itself
 
-            # updating ##############################################
-            Xkp1_predict, Xkp1_update, PXXkp1_update = self._nextUpdating(k, xkp1, ykp1, Zkp1_predict, Pkp1_predict)
-            yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
+            # Updating ##############################################
+            step = self._nextUpdating(new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict)
+            yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update

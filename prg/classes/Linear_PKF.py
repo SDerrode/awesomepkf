@@ -2,14 +2,10 @@
 # -*- coding: utf-8 -*-
 
 """
-Module PKF #########################################################
+Module LINEAR PKF ##################################################
 ####################################################################
 Implémente un filtre de Kalman couple (PKF) 
-  selon la formulation mathématique (Wojciech), ou
-  selon la formulation physique (classique, avec expression du gain),
-  avec enregistrement optionnel.
-Un exemple d'usage est donné dans le programme principal ci-dessous,
-qui compare les 2 implémentations (mêmes résultats attendus).
+Un exemple d'usage est donné dans le programme principal ci-dessous.
 ####################################################################
 """
 
@@ -23,10 +19,10 @@ from typing import Generator, Optional, Tuple
 from rich import print
 from rich.pretty import pprint
 
-from scipy.linalg import cho_factor, cho_solve
-
 import numpy as np
 
+# Base class for all PKF filter
+from .PKF import PKF
 # A few utils functions that are used several times
 from others.utils import diagnose_covariance, rich_show_fields
 # Manage parameters for the PKF
@@ -43,101 +39,19 @@ logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class Linear_PKF:
-    """Implementation of PKF according to the mathematical and classical formulations."""
+class Linear_PKF(PKF):
+    """PKF : base class for all filter classes."""
 
     def __init__(self, param: ParamLinear, sKey: Optional[int] = None, verbose: int = 0):
 
-        if not isinstance(param, ParamLinear):
-            raise TypeError("param must be an object from class ParamLinear")
-        if not ((isinstance(sKey, int) and sKey > 0) or sKey is None):
-            raise ValueError("sKey must be None or a number>0")
-        if verbose not in [0, 1, 2]:
-            raise ValueError("verbose must be 0, 1 or 2")
+        if __debug__:
+            if not isinstance(param, ParamLinear):
+                raise TypeError("param must be an object from class ParamLinear")
+        self.param     = param
+        
+        super().__init__(sKey, verbose)
 
-        self.param = param
-        self.dt = 1
-        self.verbose = verbose
-        self._seed_gen = SeedGenerator(sKey)
-
-        # Shortcuts
-        self.dim_x, self.dim_y, self.dim_xy = param.dim_x, param.dim_y, param.dim_xy
-
-        # Store data in the tracker
-        self._history = HistoryTracker(self.verbose)
-
-        # Configuration du logger selon verbose
-        self._set_log_level()
-
-        if self.verbose >= 1:
-            logger.info(f"[PKF] Init with sKey={sKey}, verbose={verbose}")
-
-    # ------------------------------------------------------------------
-    # Loger configuration according to verbose
-    # ------------------------------------------------------------------
-    def _set_log_level(self) -> None:
-        if self.verbose == 0 or self.verbose == 1:
-            logger.setLevel(logging.CRITICAL + 1)
-        elif self.verbose == 2:
-            logger.setLevel(logging.INFO)
-        else:
-            logger.setLevel(logging.DEBUG)
-
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-    @property
-    def seed_gen(self) -> int:
-        """Return generator seed."""
-        return self._seed_gen.seed
-
-    @property
-    def history(self) -> Optional[HistoryTracker]:
-        return self._history
-
-    # ------------------------------------------------------------------
-    # Generators
-    # ------------------------------------------------------------------
-    def _data_generation(self, N: Optional[int] = None) -> Generator[Tuple[int, np.ndarray], None, None]:
-        """
-        Generator for the simulation of Z_{k+1} = A * Z_k + W_{k+1}, 
-        with W_{k+1} ~ N(0, mQ) and Z_1 ~ N(0, Q1).
-        This generator can be replaced by a some data acquired in real-time.
-        """
-        # Short-cuts
-        z00, Pz00, g, A, B, mQ, augmented = self.param.z00, self.param.Pz00, self.param.g, \
-                            self.param.A, self.param.B, self.param.mQ, self.param.augmented
-
-        Zkp1_simul = np.zeros(shape=(self.dim_xy, 1))
-
-        # The first
-        if augmented:
-            Zkp1_simul[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(mean=z00[0:self.dim_x, 0], cov=Pz00[0:self.dim_x, 0:self.dim_x])
-            Zkp1_simul[self.dim_x:,  0] = Zkp1_simul[self.dim_x - self.dim_y:self.dim_x, 0]
-        else:
-            Zkp1_simul[:, 0] = self._seed_gen.rng.multivariate_normal(mean=z00[:, 0], cov=Pz00)
-        Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
-
-        k = 0
-        yield k, Xkp1_simul, Ykp1_simul
-
-        # The next ones...
-        zerosvector_xy = np.zeros(shape=(self.dim_xy))
-        zerosvector_x = np.zeros(shape=(self.dim_x))
-        noise_z = np.zeros(shape=(self.dim_xy, 1))
-        while N is None or k<N:
-            if augmented:
-                noise_z[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(mean=zerosvector_x, cov=mQ[0:self.dim_x, 0:self.dim_x])
-                noise_z[self.dim_x:,  0] = noise_z[self.dim_x - self.dim_y:self.dim_x, 0]
-            else:
-                noise_z[:, 0] = self._seed_gen.rng.multivariate_normal(mean=zerosvector_xy, cov=mQ)
-            Zkp1_simul = g(Zkp1_simul, noise_z, self.dt)
-            Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
-
-            k += 1
-            yield k, Xkp1_simul, Ykp1_simul
-
-    def process_pkf(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
+    def process_filter(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) -> Generator:
         """
         Generator of PKF filter.
         It makes use of data generator called data_generator().
@@ -149,181 +63,43 @@ class Linear_PKF:
 
         generator = data_generator if data_generator is not None else self._data_generation()
 
-        # Short-cuts
-        z00, Pz00, g, A, B, mQ, augmented = self.param._z00, self.param._Pz00, self.param.g, \
-                                self.param.A, self.param.B, self.param.mQ, self.param.augmented
-        AT = A.T
-        BmQBT = B @ mQ @ B.T
-        # print(f'A={A}')
-        # print(f'B={B}')
-        # print(f'mQ={mQ}')
-        # input('popopooopo')
-
-        # for speed
-        eye_dim_y = np.eye(self.dim_y)
-        eye_dim_x = np.eye(self.dim_x)
+        # short-cuts supplementary
+        A, B  = self.param.A, self.param.B
+        AT    = A.T
+        BmQBT = B @ self.mQ @ B.T
 
         # The first
-        ###################
-        k, xkp1, ykp1 = next(generator)
-
-        # temp            = Pz00[0:self.dim_x, self.dim_x:] @ np.linalg.inv(Pz00[self.dim_x:, self.dim_x:])
-        # Xkp1_update     = temp @ ykp1
-        # PXXkp1_update   = Pz00[0:self.dim_x, 0:self.dim_x] - temp @ Pz00[self.dim_x:, 0:self.dim_x]
-        Xkp1_update     = xkp1 #z00[0:self.dim_x]
-        PXXkp1_update   = Pz00[0:self.dim_x, 0:self.dim_x]
-        if not augmented:
-            verdict, report = diagnose_covariance(PXXkp1_update)
-            if not verdict:
-                print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
-                rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
-                input('attente')
-
-        # Record data in the tracker
-        Xkp1_predict = np.zeros(shape=(self.dim_x, 1))
-        self._history.record(iter =k,
-                             xkp1           = xkp1.copy() if xkp1 is not None else None,
-                             ykp1           = ykp1.copy(),
-                             Xkp1_predict   = Xkp1_predict.copy(),             # No prediction for the first
-                             PXXkp1_predict = eye_dim_x,                       # No prediction for the first
-                             ikp1           = np.zeros(shape=(self.dim_y, 1)),           # na
-                             Skp1           = eye_dim_y,                                 # na
-                             Kkp1           = np.zeros(shape=(self.dim_x, self.dim_y)),  # na
-                             Xkp1_update    = Xkp1_update.copy(),
-                             PXXkp1_update  = PXXkp1_update.copy()
-                             )
-
-        # last = self._history.last()
-        # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="")
-        # input('ATTENTE')
-
-        yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
+        ##################################################################################################
+        step = self._firstEstimate(generator)
+        yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
         ###################
         # The next ones
+        accel_xy_xy = self.zeros_dim_xy_xy.copy()
+        Xkp1_update_augmented = self.zeros_dim_xy_1.copy()
         
-        accel_zero_xy_1 = np.zeros(shape=(self.dim_xy, 1))
-        accel_xy_xy     = np.zeros(shape=(self.dim_xy, self.dim_xy))
-        
-        while N is None or k<N:
+        while N is None or step.k<N:
 
             #######################################
             # Prediction
             #######################################
-            # here ykp1 still gives the previous : it is yk indeed!
-            Xkp1_update_augmented = np.vstack([Xkp1_update, ykp1])
-
-            # Prediction
-            Zkp1_predict               = g(Xkp1_update_augmented, accel_zero_xy_1, self.dt)
-            Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
-            accel_xy_xy[0:self.dim_x, 0:self.dim_x] = PXXkp1_update
-            Pkp1_predict = A @ accel_xy_xy @ AT + BmQBT
-            # print(f'Xkp1_update_augmented=\n{Xkp1_update_augmented}')
-            # print(f'Zkp1_predict=\n{Zkp1_predict}')
-            # print(f'accel_xy_xy=\n{accel_xy_xy}')
-            # print(f'A @ accel_xy_xy={A @ accel_xy_xy}')
-            # print(f'AT={AT}')
-            # print(f'A @ accel_xy_xy @ AT={A @ accel_xy_xy @ AT}')
-            # # print(f'BmQBT={BmQBT}')
-            # print(f'Pkp1_predict=\n{Pkp1_predict}')
-            # input('ATTENTE- po')
-
-            if not augmented:
-                verdict, report = diagnose_covariance(Pkp1_predict)
-                if not verdict:
-                    print(f'Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:')
-                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
-                    input('attente')
-
-            # Cutting Pkp1 into 4 blocks
-            M_top, M_bottom = np.vsplit(Pkp1_predict, [self.dim_x])
-            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,    [self.dim_x])
-            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom, [self.dim_x])
-
-            # New data
-            try:
-                k, xkp1, ykp1 = next(generator)
-            except StopIteration:
-                return  # we stop as the data generator is stopped itself
-
-            # Updating with mathematical formulation
-            ###############################################
-            # accel = PXYkp1_predict @ np.linalg.inv(PYYkp1_predict)
-            # print(f'accel={accel}')
-            # Version robuste du calcul
-            # c, low = cho_factor(PYYkp1_predict)
-            # accel = PXYkp1_predict @ cho_solve((c, low), eye_dim_y)
-            # print(f'accel={accel}')
-            # print(f'ykp1={ykp1}')
-            # print(f'Ykp1_predict={Ykp1_predict}')
-            # print(f'ykp1 - Ykp1_predict={ykp1 - Ykp1_predict}')
-            # print(ykp1, Ykp1_predict, ykp1 - Ykp1_predict)
-
-            # # print(f'accel={accel}')
-            # Xkp1_update   = Xkp1_predict   + accel @ (ykp1 - Ykp1_predict)
-            # PXXkp1_update = PXXkp1_predict - accel @ PYXkp1_predict
-            # print(f'Xkp1_update={Xkp1_update}')
-            # print(f'PXXkp1_update={PXXkp1_update}')
-            # input('attente')
-
-            # Updating with physical formulation
-            ###############################################
-            # innovation (expectation and variance)
-            # print(f'ykp1={ykp1}')
-            # print(f'Ykp1_predict={Ykp1_predict}')
-            # print(f'ikp1 = ykp1 - Ykp1_predict={ykp1 - Ykp1_predict}')
-
-            ikp1   = ykp1 - Ykp1_predict
-            Skp1   = PYYkp1_predict
-            # Kalman gain - Version robuste du calcul
-            c, low = cho_factor(Skp1)
-            Kkp1   = PXYkp1_predict @ cho_solve((c, low), eye_dim_y)
-            # print(f'Kkp1={Kkp1}')
-
-            # Updating expectation and variance, and variance in Joseph form
-            Xkp1_update   = Xkp1_predict + Kkp1 @ ikp1
-            PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
-            if not augmented:
-                verdict, report = diagnose_covariance(PXXkp1_update)
-                if not verdict:
-                    print(f'PXXkp1_update={PXXkp1_update}\nReport - iteration k={k}:')
-                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
-                    input('attente')
-
-            # Forme de Joseph
-            temp = np.vstack((eye_dim_x, -Kkp1.T))
-            PXXkp1_update_Joseph = temp.T @ Pkp1_predict @ temp
-            if not augmented:
-                verdict, report = diagnose_covariance(PXXkp1_update_Joseph)
-                if not verdict:
-                    print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}\nReport - iteration k={k}:')
-                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
-                    input('attente')
-
-            # Record data in the tracker
-            self._history.record(iter           = k,
-                                 xkp1           = xkp1.copy() if xkp1 is not None else None,
-                                 ykp1           = ykp1.copy(),
-                                 Xkp1_predict   = Xkp1_predict.copy(),
-                                 PXXkp1_predict = PXXkp1_predict.copy(),
-                                 ikp1           = ikp1.copy(),
-                                 Skp1           = Skp1.copy(),
-                                 Kkp1           = Kkp1.copy(),
-                                 Xkp1_update    = Xkp1_update.copy(),
-                                 PXXkp1_update  = PXXkp1_update_Joseph.copy(),  # PXXkp1_update.copy()
-                                 )
             
-            # Si on veut la forme robuste de la variance, on décommente
-            PXXkp1_update = PXXkp1_update_Joseph
+            # here ykp1 still gives the previous : it is yk indeed!
+            Xkp1_update_augmented[:self.dim_x] = step.Xkp1_update
+            Xkp1_update_augmented[self.dim_x:] = step.ykp1
 
-            # last = self._history.last()
-            # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update", title=""])
-            # input('ATTENTE')
+            # Prediction
+            Zkp1_predict = self.g(Xkp1_update_augmented, self.zeros_dim_xy_1, self.dt)
+            accel_xy_xy[0:self.dim_x, 0:self.dim_x] = step.PXXkp1_update
+            Pkp1_predict = A @ accel_xy_xy @ AT + BmQBT
+            self._test_CovMatrix(Pkp1_predict, step.k)
 
-            yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
+            # New data is arriving ##################################
+            try:
+                new_k, new_xkp1, new_ykp1 = next(generator)
+            except StopIteration:
+                return # we stop as the data generator is stopped itself
 
-    def process_N_data(self, N, data_generator=None):
-        return list(self.process_pkf(N=N, data_generator=data_generator))
-
-    def simulate_N_data(self, N):
-        return list(self._data_generation(N))
+            # Updating ##############################################
+            step = self._nextUpdating(new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict)
+            yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update

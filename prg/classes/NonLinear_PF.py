@@ -47,7 +47,7 @@ class NonLinear_PF(NonLinear_PKF):
             P += w[i] * (dx @ dx.T)
         return P
 
-    def process_nonlinearfilter(self, N=None, data_generator=None):
+    def process_filter(self, N=None, data_generator=None):
         if __debug__:
             if not ((isinstance(N, int) and N > 0) or N is None):
                 raise ValueError("N must be None or a number >0")
