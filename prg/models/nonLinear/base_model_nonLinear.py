@@ -33,7 +33,6 @@ class BaseModelNonLinear:
         self.alpha       = 0.25
         self.beta        = 2.0
         self.kappa       = 0.0
-        self.kappaJulier = 0. #3.0 - self.dim_x
 
         # Initialisation des matrices / vecteurs d'état
         self.mQ   = None
@@ -79,7 +78,6 @@ class BaseModelNonLinear:
                 'alpha'      : self.alpha,        # pour UPKF merwe
                 'beta'       : self.beta,         # pour UPKF merwe
                 'kappa'      : self.kappa,        # pour UPKF merwe
-                'kappaJulier': self.kappaJulier,  # pour UPKF julier
                 'mQ'         : self.mQ,
                 'z00'        : self.z00,
                 'Pz00'       : self.Pz00,

@@ -66,7 +66,7 @@ class ParamNonLinear:
         self.beta = kwargs['beta']
         self.kappa = kwargs['kappa']
         self.lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
-        self.kappaJulier = kwargs['kappaJulier']
+
 
         # EPKF specific parameters
         self.jacobiens_g = kwargs['jacobiens_g']
@@ -79,7 +79,7 @@ class ParamNonLinear:
     def __repr__(self) -> str:
         return (
             f"<ParamNonLinear(dim_y={self.dim_y}, dim_x={self.dim_x}, verbose={self.verbose}, "
-            f"alpha={self.alpha}, beta={self.beta}, kappa={self.kappa}, kappaJulier={self.kappaJulier})>"
+            f"alpha={self.alpha}, beta={self.beta}, kappa={self.kappa})>"
         )
 
     # ------------------------------------------------------------------
