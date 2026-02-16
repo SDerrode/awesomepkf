@@ -7,7 +7,6 @@ from typing import Optional
 
 from classes.NonLinear_EPKF import NonLinear_EPKF
 from others.utils import file_data_generator
-from others.plot_settings import WINDOW
 
 from base_classes.nonlinear_epkf_runner_base import NonLinearEPKFRunner
 
@@ -34,6 +33,7 @@ class NonLinearEPKFRunnerFromFile(NonLinearEPKFRunner):
         if self.verbose>1:
             logging.info("Starting NonLinear EPKF Runner (file mode)")
 
+
         self.runner_instance.process_N_data(
             N=None,
             data_generator=file_data_generator(
@@ -51,20 +51,3 @@ class NonLinearEPKFRunnerFromFile(NonLinearEPKFRunner):
 
         if self.plot:
             self._plot_results()
-
-    # ----------------------------------------------------------
-
-    def _plot_results(self) -> None:
-
-        title = f"{self.model_name} filtered with EPKF"
-
-        self.runner_instance.history.plot(
-            title,
-            list_param=["ykp1"],
-            list_label=["Observations y"],
-            list_covar=[None],
-            window=WINDOW,
-            basename=f"epkf_observations_{self.model_name}",
-            show=False,
-            base_dir=self.graph_dir
-        )

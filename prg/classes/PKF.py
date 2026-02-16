@@ -83,7 +83,10 @@ class PKF:
         
         # Générateur de nombres aléatoires
         self._seed_gen = SeedGenerator(sKey)
-
+        
+        # Do we have a ground truth? Defult Yes
+        self.ground_truth = True
+        
         # Shortcuts
         self.dim_x, self.dim_y, self.dim_xy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
         self.z00, self.Pz00, self.g, self.mQ, self.augmented = self.param._z00, self.param._Pz00, self.param.g, self.param.mQ, self.param.augmented
@@ -253,7 +256,8 @@ class PKF:
     # ------------------------------------------------------------------
     # Next update
     # ------------------------------------------------------------------
-    def _nextUpdating(self, k, xkp1, ykp1, Zkp1_predict, Pkp1_predict):
+    def _nextUpdating(self, k, xkp1, ykp1, Zkp1_predict, Pkp1_predict, store=True):
+        
         Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
         PXXkp1_predict = Pkp1_predict[:self.dim_x, :self.dim_x]
         PXYkp1_predict = Pkp1_predict[:self.dim_x, self.dim_x:]
@@ -300,7 +304,9 @@ class PKF:
             PXXkp1_update=PXXkp1_update_Joseph.copy(),
         )
 
-        self.history.record(aStep)
+        if store:
+            self.history.record(aStep)
+            
         if self.verbose>1:
             rich_show_fields(aStep, title=f"Step {k} Update")
         # self.logger.info(f"Step {k}: update computed.")

@@ -7,7 +7,6 @@ from typing import Optional
 
 from classes.NonLinear_UPKF import NonLinear_UPKF
 from others.utils import file_data_generator
-from others.plot_settings import WINDOW
 
 from base_classes.nonlinear_upkf_runner_base import NonLinearUPKFRunner
 
@@ -61,19 +60,3 @@ class NonLinearUPKFRunnerFromFile(NonLinearUPKFRunner):
         if self.plot:
             self._plot_results()
 
-    # ----------------------------------------------------------
-
-    def _plot_results(self) -> None:
-
-        title = f"{self.model_name} filtered with UPKF"
-
-        self.runner_instance.history.plot(
-            title,
-            list_param=["ykp1"],
-            list_label=["Observations y"],
-            list_covar=[None],
-            window=WINDOW,
-            basename=f"upkf_observations_{self.model_name}",
-            show=False,
-            base_dir=self.graph_dir
-        )
