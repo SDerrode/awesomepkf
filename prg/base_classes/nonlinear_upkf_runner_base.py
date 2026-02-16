@@ -8,19 +8,19 @@ from typing import Optional, Tuple
 
 from models.nonLinear import ModelFactoryNonLinear
 from classes.ParamNonLinear import ParamNonLinear
-from classes.NonLinear_EPKF import NonLinear_EPKF
+from classes.NonLinear_UPKF import NonLinear_UPKF
 
 
-class NonLinearEPKFRunnerBase(ABC):
+class NonLinearUPKFRunnerBase(ABC):
     """
-    Base runner for NonLinear EPKF workflows.
+    Base runner for NonLinear UPKF workflows.
     Contains all shared infrastructure logic.
     """
 
     def __init__(
         self,
         model_name: str,
-        ell: Optional[int],
+        sigmaSet: Optional[int],
         verbose: int,
         plot: bool,
         save_history: bool,
@@ -28,7 +28,7 @@ class NonLinearEPKFRunnerBase(ABC):
     ) -> None:
 
         self.model_name = model_name
-        self.ell = ell
+        self.sigmaSet = sigmaSet
         self.verbose = verbose
         self.plot = plot
         self.save_history = save_history
@@ -38,7 +38,7 @@ class NonLinearEPKFRunnerBase(ABC):
         self.tracker_dir, self.datafile_dir, self.graph_dir = self._setup_directories()
 
         self.model, self.param = self._build_model()
-        self.epkf: Optional[NonLinear_EPKF] = None
+        self.upkf: Optional[NonLinear_UPKF] = None
 
     # ==========================================================
     # Shared infrastructure
@@ -98,8 +98,8 @@ class NonLinearEPKFRunnerBase(ABC):
         if self.verbose > 1:
             logging.debug("Computing errors")
 
-        self.epkf.history.compute_errors(
-            self.epkf,
+        self.upkf.history.compute_errors(
+            self.upkf,
             ['xkp1'],
             ['Xkp1_update'],
             ['PXXkp1_update'],
@@ -111,7 +111,7 @@ class NonLinearEPKFRunnerBase(ABC):
 
     def _save_history(self, filename: str) -> None:
         filepath = os.path.join(self.tracker_dir, filename)
-        self.epkf.history.save_pickle(filepath)
+        self.upkf.history.save_pickle(filepath)
 
         if self.verbose > 1:
             logging.info(f"History saved to {filepath}")
