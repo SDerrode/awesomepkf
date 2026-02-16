@@ -9,24 +9,15 @@ from classes.NonLinear_EPKF import NonLinear_EPKF
 from others.utils import file_data_generator
 from others.plot_settings import WINDOW
 
-from base_classes.nonlinear_epkf_runner_base import NonLinearEPKFRunnerBase
+from base_classes.nonlinear_epkf_runner_base import NonLinearEPKFRunner
 
 
-class NonLinearEPKFRunnerFromFile(NonLinearEPKFRunnerBase):
+class NonLinearEPKFRunnerFromFile(NonLinearEPKFRunner):
     """
     Runner for filtering nonlinear data loaded from file.
     """
 
-    def __init__(
-        self,
-        model_name: str,
-        ell: int,
-        data_filename: Optional[str],
-        verbose: int = 0,
-        plot: bool = False,
-        save_history: bool = False,
-        base_dir: str = ".",
-    ) -> None:
+    def __init__(self, model_name: str, ell: int, data_filename: Optional[str], verbose: int = 0, plot: bool = False, save_history: bool = False, base_dir: str = ".") -> None:
 
         super().__init__(model_name, ell, verbose, plot, save_history, base_dir)
 
@@ -43,13 +34,7 @@ class NonLinearEPKFRunnerFromFile(NonLinearEPKFRunnerBase):
         if self.verbose>1:
             logging.info("Starting NonLinear EPKF Runner (file mode)")
 
-        self.epkf = NonLinear_EPKF(
-            param=self.param,
-            ell=self.ell,
-            verbose=self.verbose
-        )
-
-        self.epkf.process_N_data(
+        self.runner_instance.process_N_data(
             N=None,
             data_generator=file_data_generator(
                 self.data_filename,
@@ -73,7 +58,7 @@ class NonLinearEPKFRunnerFromFile(NonLinearEPKFRunnerBase):
 
         title = f"{self.model_name} filtered with EPKF"
 
-        self.epkf.history.plot(
+        self.runner_instance.history.plot(
             title,
             list_param=["ykp1"],
             list_label=["Observations y"],

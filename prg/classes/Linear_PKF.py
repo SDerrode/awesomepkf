@@ -27,7 +27,7 @@ class Linear_PKF(PKF):
                 raise TypeError("param must be an object from class ParamLinear")
         self.param = param
         super().__init__(sKey, verbose)
-        # self.logger.info("Linear_PKF instance created.")
+        
 
     def process_filter(self, N: Optional[int] = None,
                        data_generator: Optional[Generator[tuple[int, np.ndarray, np.ndarray], None, None]] = None

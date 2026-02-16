@@ -89,7 +89,7 @@ class NonLinear_PF(NonLinear_PKF):
         #     input('attente')
 
         # Record data in the tracker
-        #     self._history.record(iter          = k,
+        #     self.history.record(iter          = k,
         #                          xkp1          = xkp1.copy() if xkp1 is not None else None,
         #                          ykp1          = ykp1.copy(),
         #                          Xkp1_predict  = Xkp1_predict.copy(),
@@ -220,7 +220,7 @@ class NonLinear_PF(NonLinear_PKF):
                     input('attente')
 
             # Record data in the tracker
-            self._history.record(iter           = k,
+            self.history.record(iter           = k,
                                  xkp1           = xkp1.copy() if xkp1 is not None else None,
                                  ykp1           = ykp1.copy(),
                                  Xkp1_predict   = Xkp1_predict.copy(),
@@ -233,7 +233,7 @@ class NonLinear_PF(NonLinear_PKF):
             # Si on veut la forme robuste de la variance, on décommente
             PXXkp1_update = PXXkp1_update_Joseph
 
-            # last = self._history.last()
+            # last = self.history.last()
             # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="")
             # input('ATTENTE')
 

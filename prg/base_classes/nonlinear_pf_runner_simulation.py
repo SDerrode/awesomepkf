@@ -7,10 +7,10 @@ from typing import Optional
 from classes.NonLinear_PF import NonLinear_PF
 from others.plot_settings import WINDOW
 
-from base_classes.nonlinear_pf_runner_base import NonLinearPFRunnerBase
+from base_classes.nonlinear_pf_runner_base import NonLinearPFRunner
 
 
-class NonLinearPFRunner(NonLinearPFRunnerBase):
+class NonLinearPFRunner(NonLinearPFRunner):
     """
     Runner for nonlinear simulation + PF filtering.
     """
@@ -39,14 +39,7 @@ class NonLinearPFRunner(NonLinearPFRunnerBase):
         if self.verbose>1:
             logging.info("Starting NonLinear PF Runner (simulation mode)")
 
-        self.pf = NonLinear_PF(
-            param=self.param,
-            nbParticles=self.nbParticles,
-            sKey=self.sKey,
-            verbose=self.verbose
-        )
-
-        self.pf.process_N_data(N=self.N)
+        self.runner_instance.process_N_data(N=self.N)
 
         if self.save_history:
             self._save_history("history_run_pf_simulation.pkl")
@@ -62,7 +55,7 @@ class NonLinearPFRunner(NonLinearPFRunnerBase):
 
         title = f"'{self.model_name}' model data filtered with PF"
 
-        self.pf.history.plot(
+        self.runner_instance.history.plot(
             title,
             list_param=["xkp1", "Xkp1_update"],
             list_label=["x true", "x estimated"],

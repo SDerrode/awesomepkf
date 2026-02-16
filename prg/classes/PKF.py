@@ -67,6 +67,7 @@ class PKFStep:
         if arr.ndim != 2:
             raise ValueError(f"Kkp1 must be a 2D matrix, got shape {arr.shape}")
 
+import inspect
 
 class PKF:
     
@@ -96,7 +97,13 @@ class PKF:
         self.zeros_dim_xy_xy = np.zeros(shape=(self.dim_xy, self.dim_xy))
 
         # History tracker
-        self._history = HistoryTracker(self.verbose)
+        self.history = HistoryTracker(self.verbose)
+        # print(f' classe PKF - self.history={self.history}')
+        # stack = inspect.stack()
+        # print("Pile d'appels :")
+        # for frame in stack[:5]:  # limiter pour lisibilité
+        #     print(f"Function: {frame.function}, File: {frame.filename}, Line: {frame.lineno}")
+        # input('ATTENTE STACK APPEL')
 
         # ----------------------------
         # Logger
@@ -130,9 +137,9 @@ class PKF:
         """Return generator seed."""
         return self._seed_gen.seed
 
-    @property
-    def history(self) -> Optional[HistoryTracker]:
-        return self._history
+    # @property
+    # def history(self) -> Optional[HistoryTracker]:
+    #     return self.history
 
     # ------------------------------------------------------------------
     # Data simulation & processing
@@ -237,7 +244,7 @@ class PKF:
             PXXkp1_update=PXXkp1_update.copy(),
         )
 
-        self._history.record(aStep)
+        self.history.record(aStep)
         if self.verbose>1:
             rich_show_fields(aStep, title="First Estimate")
         # self.logger.info(f"Step {k}: first estimate computed.")
@@ -293,7 +300,7 @@ class PKF:
             PXXkp1_update=PXXkp1_update_Joseph.copy(),
         )
 
-        self._history.record(aStep)
+        self.history.record(aStep)
         if self.verbose>1:
             rich_show_fields(aStep, title=f"Step {k} Update")
         # self.logger.info(f"Step {k}: update computed.")

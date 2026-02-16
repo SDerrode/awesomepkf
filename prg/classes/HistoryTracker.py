@@ -183,7 +183,9 @@ class HistoryTracker:
         ListeD, ListeE : list[str] or None
             Colonnes supplémentaires pour certains filtres (ex : particulaire).
         """
+        
         df = self.as_dataframe()
+        # print(f'df.head()={df.head()}')
         from rich.pretty import Pretty
         from rich.console import Console
 
@@ -391,7 +393,7 @@ class HistoryTracker:
 
     def __repr__(self) -> str:
         """Représentation courte de l'objet."""
-        return f"<HistoryTracker n_records={len(self)}>"
+        return f"<HistoryTracker n_records={len(self)} - address: {hex(id(self))}>"
 
 
 # ======================================================================

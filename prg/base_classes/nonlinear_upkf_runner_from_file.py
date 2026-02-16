@@ -9,10 +9,10 @@ from classes.NonLinear_UPKF import NonLinear_UPKF
 from others.utils import file_data_generator
 from others.plot_settings import WINDOW
 
-from base_classes.nonlinear_upkf_runner_base import NonLinearUPKFRunnerBase
+from base_classes.nonlinear_upkf_runner_base import NonLinearUPKFRunner
 
 
-class NonLinearUPKFRunnerFromFile(NonLinearUPKFRunnerBase):
+class NonLinearUPKFRunnerFromFile(NonLinearUPKFRunner):
     """
     Runner for filtering nonlinear data loaded from file.
     """
@@ -43,13 +43,7 @@ class NonLinearUPKFRunnerFromFile(NonLinearUPKFRunnerBase):
         if self.verbose>1:
             logging.info("Starting NonLinear UPKF Runner (file mode)")
 
-        self.upkf = NonLinear_UPKF(
-            param=self.param,
-            sigmaSet=self.sigmaSet,
-            verbose=self.verbose
-        )
-
-        self.upkf.process_N_data(
+        self.runner_instance.process_N_data(
             N=None,
             data_generator=file_data_generator(
                 self.data_filename,
@@ -73,7 +67,7 @@ class NonLinearUPKFRunnerFromFile(NonLinearUPKFRunnerBase):
 
         title = f"{self.model_name} filtered with UPKF"
 
-        self.upkf.history.plot(
+        self.runner_instance.history.plot(
             title,
             list_param=["ykp1"],
             list_label=["Observations y"],

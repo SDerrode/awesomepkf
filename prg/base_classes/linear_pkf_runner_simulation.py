@@ -7,10 +7,10 @@ from typing import Optional
 from classes.Linear_PKF import Linear_PKF
 from others.plot_settings import WINDOW
 
-from base_classes.linear_pkf_runner_base import LinearPKFRunnerBase
+from base_classes.linear_pkf_runner_base import LinearPKFRunner
 
 
-class LinearPKFRunner(LinearPKFRunnerBase):
+class LinearPKFRunner(LinearPKFRunner):
     """
     Runner for linear simulation + PKF filtering.
     """
@@ -38,13 +38,7 @@ class LinearPKFRunner(LinearPKFRunnerBase):
         if self.verbose>1:
             logging.info("Starting Linear PKF Runner (simulation mode)")
 
-        self.pkf = Linear_PKF(
-            param=self.param,
-            sKey=self.sKey,
-            verbose=self.verbose
-        )
-
-        self.pkf.process_N_data(N=self.N)
+        self.runner_instance.process_N_data(N=self.N)
 
         if self.save_history:
             self._save_history("history_run_pkf_simulation.pkl")
@@ -60,7 +54,7 @@ class LinearPKFRunner(LinearPKFRunnerBase):
 
         title = f"'{self.model_name}' model data filtered with PKF"
 
-        self.pkf.history.plot(
+        self.runner_instance.history.plot(
             title,
             list_param=["xkp1", "Xkp1_update"],
             list_label=["x true", "x estimated"],
