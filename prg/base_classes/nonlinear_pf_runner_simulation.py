@@ -4,15 +4,15 @@
 import logging
 from typing import Optional
 
-from classes.NonLinear_EPKF import NonLinear_EPKF
+from classes.NonLinear_PF import NonLinear_PF
 from others.plot_settings import WINDOW
 
-from base_classes.nonlinear_epkf_runner_base import NonLinearEPKFRunnerBase
+from base_classes.nonlinear_pf_runner_base import NonLinearPFRunnerBase
 
 
-class NonLinearEPKFRunner(NonLinearEPKFRunnerBase):
+class NonLinearPFRunner(NonLinearPFRunnerBase):
     """
-    Runner for nonlinear simulation + EPKF filtering.
+    Runner for nonlinear simulation + PF filtering.
     """
 
     def __init__(
@@ -20,14 +20,14 @@ class NonLinearEPKFRunner(NonLinearEPKFRunnerBase):
         model_name: str,
         N: int,
         sKey: Optional[int],
-        ell: Optional[int],
+        nbParticles: Optional[int],
         verbose: int,
         plot: bool,
         save_history: bool,
         base_dir: str = "."
     ) -> None:
 
-        super().__init__(model_name, ell, verbose, plot, save_history, base_dir)
+        super().__init__(model_name, nbParticles, verbose, plot, save_history, base_dir)
 
         self.N = N
         self.sKey = sKey
@@ -37,19 +37,19 @@ class NonLinearEPKFRunner(NonLinearEPKFRunnerBase):
     def run(self) -> None:
 
         if self.verbose>1:
-            logging.info("Starting NonLinear EPKF Runner (simulation mode)")
+            logging.info("Starting NonLinear PF Runner (simulation mode)")
 
-        self.epkf = NonLinear_EPKF(
+        self.pf = NonLinear_PF(
             param=self.param,
-            ell=self.ell,
+            nbParticles=self.nbParticles,
             sKey=self.sKey,
             verbose=self.verbose
         )
 
-        self.epkf.process_N_data(N=self.N)
+        self.pf.process_N_data(N=self.N)
 
         if self.save_history:
-            self._save_history("history_run_epkf_simulation.pkl")
+            self._save_history("history_run_pf_simulation.pkl")
 
         self._compute_errors()
 
@@ -60,15 +60,15 @@ class NonLinearEPKFRunner(NonLinearEPKFRunnerBase):
 
     def _plot_results(self) -> None:
 
-        title = f"'{self.model_name}' model data filtered with EPKF"
+        title = f"'{self.model_name}' model data filtered with PF"
 
-        self.epkf.history.plot(
+        self.pf.history.plot(
             title,
             list_param=["xkp1", "Xkp1_update"],
             list_label=["x true", "x estimated"],
             list_covar=[None, "PXXkp1_update"],
             window=WINDOW,
-            basename=f"epkf_{self.model_name}",
+            basename=f"pf_{self.model_name}",
             show=False,
             base_dir=self.graph_dir
         )
