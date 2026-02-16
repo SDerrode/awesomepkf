@@ -5,7 +5,6 @@ import logging
 from typing import Optional
 
 from classes.Linear_PKF import Linear_PKF
-from others.plot_settings import WINDOW
 
 from base_classes.linear_pkf_runner_base import LinearPKFRunner
 
@@ -47,20 +46,3 @@ class LinearPKFRunner(LinearPKFRunner):
 
         if self.plot:
             self._plot_results()
-
-    # ----------------------------------------------------------
-
-    def _plot_results(self) -> None:
-
-        title = f"'{self.model_name}' model data filtered with PKF"
-
-        self.runner_instance.history.plot(
-            title,
-            list_param=["xkp1", "Xkp1_update"],
-            list_label=["x true", "x estimated"],
-            list_covar=[None, "PXXkp1_update"],
-            window=WINDOW,
-            basename=f"pkf_{self.model_name}",
-            show=False,
-            base_dir=self.graph_dir
-        )

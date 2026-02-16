@@ -63,6 +63,8 @@ class NonLinear_UPKF(NonLinear_PKF):
         # The first
         ##################################################################################################
         step = self._firstEstimate(generator)
+        if step.xkp1 is None: # Il n'y a pas de VT
+            self.ground_truth = False
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
         ###################

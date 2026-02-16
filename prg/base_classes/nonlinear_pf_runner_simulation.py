@@ -5,7 +5,6 @@ import logging
 from typing import Optional
 
 from classes.NonLinear_PF import NonLinear_PF
-from others.plot_settings import WINDOW
 
 from base_classes.nonlinear_pf_runner_base import NonLinearPFRunner
 
@@ -49,19 +48,3 @@ class NonLinearPFRunner(NonLinearPFRunner):
         if self.plot:
             self._plot_results()
 
-    # ----------------------------------------------------------
-
-    def _plot_results(self) -> None:
-
-        title = f"'{self.model_name}' model data filtered with PF"
-
-        self.runner_instance.history.plot(
-            title,
-            list_param=["xkp1", "Xkp1_update"],
-            list_label=["x true", "x estimated"],
-            list_covar=[None, "PXXkp1_update"],
-            window=WINDOW,
-            basename=f"pf_{self.model_name}",
-            show=False,
-            base_dir=self.graph_dir
-        )

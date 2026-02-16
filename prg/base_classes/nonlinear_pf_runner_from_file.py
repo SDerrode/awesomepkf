@@ -7,7 +7,6 @@ from typing import Optional
 
 from classes.NonLinear_PF import NonLinear_PF
 from others.utils import file_data_generator
-from others.plot_settings import WINDOW
 
 from base_classes.nonlinear_pf_runner_base import NonLinearPFRunner
 
@@ -61,20 +60,3 @@ class NonLinearPFRunnerFromFile(NonLinearPFRunner):
 
         if self.plot:
             self._plot_results()
-
-    # ----------------------------------------------------------
-
-    def _plot_results(self) -> None:
-
-        title = f"{self.model_name} filtered with PF"
-
-        self.runner_instance.history.plot(
-            title,
-            list_param=["ykp1"],
-            list_label=["Observations y"],
-            list_covar=[None],
-            window=WINDOW,
-            basename=f"pf_observations_{self.model_name}",
-            show=False,
-            base_dir=self.graph_dir
-        )
