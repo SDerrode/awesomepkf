@@ -54,19 +54,18 @@ class ParamNonLinear:
         self.augmented = kwargs['augmented']
 
         # Non-linear function
-        self.g = kwargs['g']
+        self.g         = kwargs['g']
 
         # Covariance matrices
-        self._mQ = np.array(kwargs['mQ'], dtype=float)
-        self._z00 = np.array(kwargs['z00'], dtype=float)
-        self._Pz00 = np.array(kwargs['Pz00'], dtype=float)
+        self._mQ       = np.array(kwargs['mQ'], dtype=float)
+        self._z00      = np.array(kwargs['z00'], dtype=float)
+        self._Pz00     = np.array(kwargs['Pz00'], dtype=float)
 
         # UPKF specific parameters
-        self.alpha = kwargs['alpha']
-        self.beta = kwargs['beta']
-        self.kappa = kwargs['kappa']
-        self.lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
-
+        self.alpha     = kwargs['alpha']
+        self.beta      = kwargs['beta']
+        self.kappa     = kwargs['kappa']
+        self.lambda_   = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
 
         # EPKF specific parameters
         self.jacobiens_g = kwargs['jacobiens_g']

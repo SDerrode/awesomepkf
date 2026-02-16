@@ -2,108 +2,223 @@
 # -*- coding: utf-8 -*-
 
 import os
-import numpy as np
+import argparse
+import logging
+from typing import Optional
 
-# non linear models 
+# Models / Params / Algo
 from models.nonLinear import ModelFactoryNonLinear
-# A few utils functions that are used several times
-from others.utils import compute_errors
-# Manage algorithms for the EPKF
 from classes.NonLinear_EPKF import NonLinear_EPKF
-# Manage non linear parameters
 from classes.ParamNonLinear import ParamNonLinear
-# Parser d'options
-from others.parser    import *
-# Parser d'options
+
+# Utils
+from others.parser import addParseToParser
 from others.plot_settings import WINDOW
 
-if __name__ == "__main__":
+
+# ==============================================================
+# Runner (logique métier indépendante du CLI)
+# ==============================================================
+
+class NonLinearEPKFRunner:
     """
-    USAGES:
-        python3 prg/filterEPKFdata.py
-        python3 prg/filterEPKFdata.py --N 1000 --nonLinearModelName "x1_y1_withRetroactions" --sKey 303 --verbose 0 --plot --saveHistory
+    Runner for nonlinear simulation + EPKF filtering.
     """
-    
-    # ------------------------------------------------------------------
-    # Constants (default value) - Parser
-    # ------------------------------------------------------------------
 
-    parser = argparse.ArgumentParser(description='Simulate and filter non linear data with EPKF')
-    addParseToParser(parser, ['nonLinearModelName', 'N', 'sKey'])
-    args   = parser.parse_args()
-    
-    plot               = args.plot
-    saveHistory        = args.saveHistory
-    verbose            = args.verbose
-    N                  = args.N
-    sKey               = args.sKey 
-    nonLinearModelName = args.nonLinearModelName
-    if sKey is not None and sKey < 0:
-        parser.error("sKey must be >= 0")
-    # if N < 200:
-    #     parser.error("N must be >= 200")
-    # exit(1)
+    def __init__(
+        self,
+        model_name: str,
+        N: int,
+        sKey: Optional[int],
+        ell: Optional[int],
+        verbose: int,
+        plot: bool,
+        save_history: bool,
+        base_dir: str = "."
+    ) -> None:
 
-    # ------------------------------------------------------------------
-    # Output repo for data, traces and plots
-    # ------------------------------------------------------------------
-    base_dir     = os.path.join(".",      "data")
-    tracker_dir  = os.path.join(base_dir, "historyTracker")
-    datafile_dir = os.path.join(base_dir, "datafile")
-    graph_dir    = os.path.join(base_dir, "plot")
-    os.makedirs(tracker_dir,  exist_ok=True)
-    os.makedirs(datafile_dir, exist_ok=True)
-    os.makedirs(graph_dir,    exist_ok=True)
+        self.model_name = model_name
+        self.N = N
+        self.sKey = sKey
+        self.ell = ell
+        self.verbose = verbose
+        self.plot = plot
+        self.save_history = save_history
+        self.base_dir = base_dir
 
-    # ------------------------------------------------------------------
-    # Test parameters
-    # ------------------------------------------------------------------
+        self._configure_logging()
+        self.tracker_dir, _, self.graph_dir = self._setup_directories()
 
-    model        = ModelFactoryNonLinear.create(nonLinearModelName)
-    params       = model.get_params()
-    dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
-    param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
-    if verbose > 1:
-        print(f'model={model}')
-        param.summary()
+        self.model, self.param = self._build_model()
+        self.epkf: Optional[NonLinear_EPKF] = None
 
-    # ------------------------------------------------------------------
-    # Let's go
-    # ------------------------------------------------------------------
 
-    if verbose > 1:
-        print("\nEPKF filtering with data generated from a non-linear model...")
+    # ----------------------------------------------------------
+    # Private helpers
+    # ----------------------------------------------------------
+
+    def _configure_logging(self) -> None:
+        level = logging.WARNING
+        if self.verbose == 1:
+            level = logging.INFO
+        elif self.verbose >= 2:
+            level = logging.DEBUG
+
+        logging.basicConfig(
+            level=level,
+            format="%(asctime)s | %(levelname)s | %(message)s"
+        )
+
+    def _setup_directories(self) -> tuple[str, str, str]:
+        base_dir = os.path.join(self.base_dir, "data")
+
+        tracker_dir  = os.path.join(base_dir, "historyTracker")
+        datafile_dir = os.path.join(base_dir, "datafile")
+        graph_dir    = os.path.join(base_dir, "plot")
+
+        os.makedirs(tracker_dir, exist_ok=True)
+        os.makedirs(datafile_dir, exist_ok=True)
+        os.makedirs(graph_dir, exist_ok=True)
+
+        return tracker_dir, datafile_dir, graph_dir
+
+    def _build_model(self) -> tuple[object, ParamNonLinear]:
+        model = ModelFactoryNonLinear.create(self.model_name)
+        params = model.get_params().copy()
+
+        dim_x = params.pop("dim_x")
+        dim_y = params.pop("dim_y")
+
+        param = ParamNonLinear(self.verbose, dim_x, dim_y, **params)
+
+        logging.debug(f"Model created: {model}")
+
+        if self.verbose > 1:
+            param.summary()
+
+        return model, param
+
+
+    # ----------------------------------------------------------
+    # Public API
+    # ----------------------------------------------------------
+
+    def run(self) -> None:
+
+        if self.verbose > 1:
+            logging.info("Starting NonLinear EPKF Runner")
+
+        self.epkf = NonLinear_EPKF(
+            self.param,
+            sKey=self.sKey,
+            ell=self.ell,
+            verbose=self.verbose
+        )
+
+        if self.verbose > 1:
+            logging.info(f"Processing N={self.N} samples")
+
+        listeEPKF = self.epkf.process_N_data(
+            N=self.N
+        )
+
+        if self.verbose > 1:
+            logging.debug(self.epkf.history.as_dataframe().head())
+
+        if self.save_history:
+            self._save_history()
         
-    epkf_1    = NonLinear_EPKF(param, sKey=sKey, verbose=verbose)
-    listeEPKF = epkf_1.process_N_data(N=N)  # Call with the default data simulator generator
+        self._compute_errors()
+        if  self.plot:
+            self._plot_results()
+
+    # ----------------------------------------------------------
+    # Post-processing
+    # ----------------------------------------------------------
+
+    def _compute_errors(self) -> None:
+        
+        if self.verbose > 1:
+            logging.debug("Computing errors")
+
+        self.epkf.history.compute_errors(
+            self.epkf,
+            ['xkp1'],
+            ['Xkp1_update'],
+            ['PXXkp1_update'],
+            ['ikp1'],
+            ['Skp1']
+        )
+
+    def _save_history(self) -> None:
+
+        filepath = os.path.join(self.tracker_dir, "history_run_epfk_1.pkl")
+        self.epkf.history.save_pickle(filepath)
+
+        if self.verbose > 1:
+            logging.info(f"History saved to {filepath}")
+
+    def _plot_results(self) -> None:
+
+        title = f"'{self.model_name}' model data filtered with EPKF"
+
+        self.epkf.history.plot(
+            title,
+            list_param=["ykp1"],
+            list_label=["Observations y"],
+            list_covar=[None],
+            window=WINDOW,
+            basename=f"epkf_observations_{self.model_name}",
+            show=False,
+            base_dir=self.graph_dir
+        )
+
+        self.epkf.history.plot(
+            title,
+            list_param=["xkp1", "Xkp1_update"],
+            list_label=["x true", "x estimated"],
+            list_covar=[None, "PXXkp1_update"],
+            window=WINDOW,
+            basename=f"epkf_{self.model_name}",
+            show=False,
+            base_dir=self.graph_dir
+        )
 
 
-    if verbose > 1:
-        print("\nExcerpt of the filtering with EPKF :")
-        print(epkf_1.history.as_dataframe().head())
+# ==============================================================
+# CLI
+# ==============================================================
 
-    # print scoring
-    ListeA = ['xkp1']
-    ListeB = ['Xkp1_update']
-    ListeC = ['PXXkp1_update']
-    ListeD = ['ikp1']
-    ListeE = ['Skp1']
-    epkf_1.history.compute_errors(epkf_1, ListeA, ListeB, ListeC, ListeD, ListeE)
-    
-    if saveHistory:
-        epkf_1.history.save_pickle(os.path.join(tracker_dir, f"history_run_epfk_1.pkl"))
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Simulate and filter non linear data with EPKF"
+    )
 
-    if plot:
-        title = f"'{nonLinearModelName}' model data filtered with EPKF"
-        epkf_1.history.plot(title, 
-                            list_param = ["ykp1"], \
-                            list_label = ["Observations y"], \
-                            list_covar = [None], \
-                            window     = WINDOW, \
-                            basename   = f'epkf_1_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
-        epkf_1.history.plot(title, 
-                            list_param = ["xkp1"  , "Xkp1_update"], \
-                            list_label = ["x true", "x estimated"], \
-                            list_covar = [None,     "PXXkp1_update"], \
-                            window     = WINDOW, \
-                            basename   = f'epkf_1_{nonLinearModelName}', show=False, base_dir=graph_dir)
+    addParseToParser(parser, ['nonLinearModelName', 'N', 'sKey', 'ell'])
+
+    args = parser.parse_args()
+
+    if args.sKey is not None and args.sKey < 0:
+        parser.error("sKey must be >= 0")
+
+    return args
+
+
+def main() -> None:
+    args = parse_arguments()
+
+    runner = NonLinearEPKFRunner(
+        model_name=args.nonLinearModelName,
+        N=args.N,
+        sKey=args.sKey,
+        ell=args.ell,
+        verbose=args.verbose,
+        plot=args.plot,
+        save_history=args.saveHistory,
+    )
+
+    runner.run()
+
+
+if __name__ == "__main__":
+    main()

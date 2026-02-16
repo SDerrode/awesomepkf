@@ -17,8 +17,13 @@ from .NonLinear_PKF import NonLinear_PKF
 class NonLinear_EPKF(NonLinear_PKF):
     """Implementation of EPKF."""
 
-    def __init__(self, param: ParamNonLinear, sKey: Optional[int] = None, verbose: int = 0) -> None:
+    def __init__(self, param: ParamNonLinear, ell: int = 1, sKey: Optional[int] = None, verbose: int = 0) -> None:
+        
         super().__init__(param, sKey, verbose)
+        
+        if __debug__:
+            assert ell>0 , "verbose must be 1 (classical EPKF) or above for  IEPKF"
+        self.ell = ell
 
     def process_filter(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) \
                     -> Generator[tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray], None, None]:

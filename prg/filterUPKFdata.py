@@ -21,7 +21,7 @@ if __name__ == "__main__":
     """
     USAGES:
         python3 prg/filterUPKFdata.py
-        python3 prg/filterUPKFdata.py --N 1000 --nonLinearModelName "x1_y1_withRetroactions" --sKey 303  --sigmaSet "wan2000" --verbose 0 --plot --saveHistory
+        python3 prg/filterUPKFdata.py --N 1000 --nonLinearModelName "x1_y1_withRetroactions" --sKey 303 --sigmaSet "wan2000" --verbose 0 --plot --saveHistory
     """
 
     # ------------------------------------------------------------------
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     if verbose > 1:
         print("\nUPKF filtering with data generated from a non-linear model...")
 
-    upkf_1    = NonLinear_UPKF(sigmaSet, param, sKey=sKey, verbose=verbose)
+    upkf_1    = NonLinear_UPKF(param=param, sigmaSet=sigmaSet, sKey=sKey, verbose=verbose)
     listeUPKF = upkf_1.process_N_data(N=N)  # Call with the default data simulator generator
 
     if verbose > 1:
