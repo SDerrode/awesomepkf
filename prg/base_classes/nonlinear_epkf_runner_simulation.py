@@ -7,10 +7,10 @@ from typing import Optional
 from classes.NonLinear_EPKF import NonLinear_EPKF
 from others.plot_settings import WINDOW
 
-from base_classes.nonlinear_epkf_runner_base import NonLinearEPKFRunnerBase
+from base_classes.nonlinear_epkf_runner_base import NonLinearEPKFRunner
 
 
-class NonLinearEPKFRunner(NonLinearEPKFRunnerBase):
+class NonLinearEPKFRunner(NonLinearEPKFRunner):
     """
     Runner for nonlinear simulation + EPKF filtering.
     """
@@ -39,14 +39,7 @@ class NonLinearEPKFRunner(NonLinearEPKFRunnerBase):
         if self.verbose>1:
             logging.info("Starting NonLinear EPKF Runner (simulation mode)")
 
-        self.epkf = NonLinear_EPKF(
-            param=self.param,
-            ell=self.ell,
-            sKey=self.sKey,
-            verbose=self.verbose
-        )
-
-        self.epkf.process_N_data(N=self.N)
+        self.runner_instance.process_N_data(N=self.N)
 
         if self.save_history:
             self._save_history("history_run_epkf_simulation.pkl")
@@ -62,7 +55,7 @@ class NonLinearEPKFRunner(NonLinearEPKFRunnerBase):
 
         title = f"'{self.model_name}' model data filtered with EPKF"
 
-        self.epkf.history.plot(
+        self.runner_instance.history.plot(
             title,
             list_param=["xkp1", "Xkp1_update"],
             list_label=["x true", "x estimated"],

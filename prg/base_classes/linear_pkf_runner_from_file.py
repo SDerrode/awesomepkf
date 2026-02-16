@@ -9,10 +9,10 @@ from classes.Linear_PKF import Linear_PKF
 from others.utils import file_data_generator
 from others.plot_settings import WINDOW
 
-from base_classes.linear_pkf_runner_base import LinearPKFRunnerBase
+from base_classes.linear_pkf_runner_base import LinearPKFRunner
 
 
-class LinearPKFRunnerFromFile(LinearPKFRunnerBase):
+class LinearPKFRunnerFromFile(LinearPKFRunner):
     """
     Runner for filtering linear data loaded from file.
     """
@@ -42,12 +42,7 @@ class LinearPKFRunnerFromFile(LinearPKFRunnerBase):
         if self.verbose>1:
             logging.info("Starting Linear PKF Runner (file mode)")
 
-        self.pkf = Linear_PKF(
-            param=self.param,
-            verbose=self.verbose
-        )
-
-        self.pkf.process_N_data(
+        self.runner_instance.process_N_data(
             N=None,
             data_generator=file_data_generator(
                 self.data_filename,
@@ -71,7 +66,7 @@ class LinearPKFRunnerFromFile(LinearPKFRunnerBase):
 
         title = f"{self.model_name} filtered with PKF"
 
-        self.pkf.history.plot(
+        self.runner_instance.history.plot(
             title,
             list_param=["ykp1"],
             list_label=["Observations y"],

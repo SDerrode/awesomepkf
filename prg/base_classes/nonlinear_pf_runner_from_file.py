@@ -9,10 +9,10 @@ from classes.NonLinear_PF import NonLinear_PF
 from others.utils import file_data_generator
 from others.plot_settings import WINDOW
 
-from base_classes.nonlinear_pf_runner_base import NonLinearPFRunnerBase
+from base_classes.nonlinear_pf_runner_base import NonLinearPFRunner
 
 
-class NonLinearPFRunnerFromFile(NonLinearPFRunnerBase):
+class NonLinearPFRunnerFromFile(NonLinearPFRunner):
     """
     Runner for filtering nonlinear data loaded from file.
     """
@@ -43,13 +43,8 @@ class NonLinearPFRunnerFromFile(NonLinearPFRunnerBase):
         if self.verbose>1:
             logging.info("Starting NonLinear PF Runner (file mode)")
 
-        self.pf = NonLinear_PF(
-            param=self.param,
-            nbParticles=self.nbParticles,
-            verbose=self.verbose
-        )
 
-        self.pf.process_N_data(
+        self.runner_instance.process_N_data(
             N=None,
             data_generator=file_data_generator(
                 self.data_filename,
@@ -73,7 +68,7 @@ class NonLinearPFRunnerFromFile(NonLinearPFRunnerBase):
 
         title = f"{self.model_name} filtered with PF"
 
-        self.pf.history.plot(
+        self.runner_instance.history.plot(
             title,
             list_param=["ykp1"],
             list_label=["Observations y"],

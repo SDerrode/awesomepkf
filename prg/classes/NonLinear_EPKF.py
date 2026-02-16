@@ -22,7 +22,7 @@ class NonLinear_EPKF(NonLinear_PKF):
         super().__init__(param, sKey, verbose)
         
         if __debug__:
-            assert ell>0 , "verbose must be 1 (classical EPKF) or above for  IEPKF"
+            assert ell>0 , "verbose must be 1 (classical EPKF) or above for IEPKF"
         self.ell = ell
 
     def process_filter(self, N: Optional[int] = None, data_generator: Optional[Generator] = None) \

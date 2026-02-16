@@ -7,10 +7,10 @@ from typing import Optional
 from classes.NonLinear_UPKF import NonLinear_UPKF
 from others.plot_settings import WINDOW
 
-from base_classes.nonlinear_upkf_runner_base import NonLinearUPKFRunnerBase
+from base_classes.nonlinear_upkf_runner_base import NonLinearUPKFRunner
 
 
-class NonLinearUPKFRunner(NonLinearUPKFRunnerBase):
+class NonLinearUPKFRunner(NonLinearUPKFRunner):
     """
     Runner for nonlinear simulation + UPKF filtering.
     """
@@ -39,14 +39,7 @@ class NonLinearUPKFRunner(NonLinearUPKFRunnerBase):
         if self.verbose>1:
             logging.info("Starting NonLinear UPKF Runner (simulation mode)")
 
-        self.upkf = NonLinear_UPKF(
-            self.param,
-            sKey=self.sKey,
-            sigmaSet=self.sigmaSet,
-            verbose=self.verbose
-        )
-
-        self.upkf.process_N_data(N=self.N)
+        self.runner_instance.process_N_data(N=self.N)
 
         if self.save_history:
             self._save_history("history_run_upkf_simulation.pkl")
@@ -62,7 +55,7 @@ class NonLinearUPKFRunner(NonLinearUPKFRunnerBase):
 
         title = f"'{self.model_name}' model data filtered with UPKF"
 
-        self.upkf.history.plot(
+        self.runner_instance.history.plot(
             title,
             list_param=["xkp1", "Xkp1_update"],
             list_label=["x true", "x estimated"],

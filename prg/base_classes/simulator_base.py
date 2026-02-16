@@ -42,15 +42,7 @@ class BaseDataSimulator(ABC):
     Abstract base class for data simulation.
     """
 
-    def __init__(
-        self,
-        model_name: str,
-        N: int,
-        sKey: int | None,
-        data_file_name: str | None,
-        verbose: int,
-        withoutX: bool,
-    ) -> None:
+    def __init__(self, model_name: str, N: int, sKey: int | None, data_file_name: str | None, verbose: int, withoutX: bool) -> None:
 
         self.verbose = verbose
         self.logger = setup_logger(verbose)
