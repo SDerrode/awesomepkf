@@ -3,6 +3,17 @@
 
 import argparse
 
+def int_ge_1(value: str) -> int:
+    try:
+        ivalue = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value} n'est pas un entier valide")
+
+    if ivalue < 1:
+        raise argparse.ArgumentTypeError(f"{value} doit être un entier ≥ 1")
+
+    return ivalue
+
 def addParseToParser(parser, listOptions):
     """
     Ajoute des arguments à un ArgumentParser.
@@ -32,48 +43,53 @@ def addParseToParser(parser, listOptions):
     # Options optionnelles configurables
     # =========================
     option_config = {
+        'ell': {
+            'type':    int_ge_1,
+            'default': 1,
+            'help':    'Set the number of iterations for the iterated EPKF (default: 1, means classical EPKF)'
+        },
         'N': {
-            'type': int,
+            'type':    int,
             'default': 5000,
-            'help': 'Set the number of samples to process (default: 5000)'
+            'help':    'Set the number of samples to process (default: 5000)'
         },
         'nbParticles': {
-            'type': int,
-            'default': 1000,
-            'help': 'Set the number of samples to process (default: 1000)'
+            'type':    int,
+            'default': 300,
+            'help':    'Set the number of samples to process (default: 300)'
         },
         'sKey': {
-            'type': int,
+            'type':    int,
             'default': None,
-            'help': 'Set the random generator seed (default: None)'
+            'help':    'Set the random generator seed (default: None)'
         },
         'linearModelName': {
             'choices': ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x1_y1_augmented', 'A_mQ_x2_y2', \
                         'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1'],
             'default': 'A_mQ_x3_y1',
-            'help': 'Linear model to process data (default: A_mQ_x3_y1)'
+            'help':    'Linear model to process data (default: A_mQ_x3_y1)'
         },
         'sigmaSet': {
             'choices': ['wan2000', 'cpkf', 'lerner2002', 'ito2000'],
             'default': 'wan2000',
-            'help': 'Sigma set points to use with UPKF (default: wan2000)'
+            'help':    'Sigma set points to use with UPKF (default: wan2000)'
         },
         'nonLinearModelName': {
             'choices': ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', \
                         'x1_y1_withRetroactions', 'x1_y1_withRetroactions_augmented', 'x2_y1', 'x2_y1_rapport', \
                         'x2_y1_withRetroactionsOfObservations', 'x2_y1_withRetroactionsOfObservations_augmented'],
             'default': 'x2_y1_rapport',
-            'help': 'Non linear model to process data (default: x2_y1_rapport)'
+            'help':    'Non linear model to process data (default: x2_y1_rapport)'
         },
         'dataFileName': {
-            'type': str,
+            'type':    str,
             'default': None,
-            'help': 'Full path where trajectories are stored (default: None)'
+            'help':    'Full path where trajectories are stored (default: None)'
         },
         'withoutX': {
-            'action': 'store_true',
+            'action':  'store_true',
             'default': False,
-            'help': 'Save true X or not (default: False)'
+            'help':    'Save true X or not (default: False)'
         }
     }
 

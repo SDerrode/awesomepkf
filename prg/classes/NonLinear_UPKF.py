@@ -35,10 +35,10 @@ class FilterConfig:
 class NonLinear_UPKF(NonLinear_PKF):
     """Implementation of UPKF."""
 
-    def __init__(self, sigma_point_set_name: str, param: ParamNonLinear, sKey: Optional[int] = None, verbose: int = 0):
+    def __init__(self, param: ParamNonLinear, sigmaSet: str, sKey: Optional[int] = None, verbose: int = 0):
         super().__init__(param, sKey, verbose)
 
-        self.sigma_point_set_name = sigma_point_set_name
+        self.sigma_point_set_name = sigmaSet
 
         cfg = FilterConfig(
             sigma_point_set_name = self.sigma_point_set_name,

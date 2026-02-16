@@ -2,117 +2,225 @@
 # -*- coding: utf-8 -*-
 
 import os
-import numpy as np
+import logging
+import argparse
+from typing import Optional
 
-# non linear models 
+# Models / Params / Algo
 from models.nonLinear import ModelFactoryNonLinear
-# Linear models
-from models.linear import ModelFactoryLinear
-# A few utils functions that are used several times
-from others.utils import compute_errors, file_data_generator
-# Manage algorithms for non linear UPKF
-from classes.NonLinear_UPKF import NonLinear_UPKF
-# Manage algorithms for the PKF
-from classes.Linear_PKF import Linear_PKF
-# Manage non linear and linear parameters
 from classes.ParamNonLinear import ParamNonLinear
-from classes.ParamLinear import ParamLinear
-# Parser d'options
-from others.parser    import *
-# Parser d'options
+from classes.NonLinear_UPKF import NonLinear_UPKF
+
+# Utils
+from others.utils import file_data_generator
+from others.parser import addParseToParser
 from others.plot_settings import WINDOW
 
+
+# ==============================================================
+# Runner (logique métier indépendante du CLI)
+# ==============================================================
+
+class NonLinearUPKFRunner_fromFile:
+
+    def __init__(
+        self,
+        model_name: str,
+        sigmaSet,
+        verbose: int = 0,
+        plot: bool = False,
+        save_history: bool = False,
+        data_filename: Optional[str] = None,
+        N: Optional[int] = None,
+        base_dir: str = ".",
+    ):
+        self.model_name = model_name
+        self.sigmaSet = sigmaSet
+        self.verbose = verbose
+        self.plot = plot
+        self.save_history = save_history
+        self.N = N
+        self.base_dir = base_dir
+
+        self._configure_logging()
+        self.tracker_dir, self.datafile_dir, self.graph_dir = self._setup_directories()
+
+        self.model, self.param = self._build_model()
+        self.upkf: Optional[NonLinear_UPKF] = None
+        
+        self.data_filename = (
+            os.path.join(self.datafile_dir, data_filename)
+            if data_filename
+            else os.path.join(self.datafile_dir, f"dataNonLinear_{model_name}.csv")
+        )
+
+    # ----------------------------------------------------------
+    # Private helpers
+    # ----------------------------------------------------------
+
+    def _configure_logging(self) -> None:
+        level = logging.WARNING
+        if self.verbose == 1:
+            level = logging.INFO
+        elif self.verbose >= 2:
+            level = logging.DEBUG
+
+        logging.basicConfig(
+            level=level,
+            format="%(asctime)s | %(levelname)s | %(message)s"
+        )
+
+    # ----------------------------------------------------------
+
+    def _setup_directories(self) -> tuple[str, str, str]:
+        base_dir = os.path.join(self.base_dir, "data")
+
+        tracker_dir  = os.path.join(base_dir, "historyTracker")
+        datafile_dir = os.path.join(base_dir, "datafile")
+        graph_dir    = os.path.join(base_dir, "plot")
+
+        os.makedirs(tracker_dir, exist_ok=True)
+        os.makedirs(datafile_dir, exist_ok=True)
+        os.makedirs(graph_dir, exist_ok=True)
+
+        return tracker_dir, datafile_dir, graph_dir
+
+    # ----------------------------------------------------------
+
+    def _build_model(self) -> tuple[object, ParamNonLinear]:
+        model = ModelFactoryNonLinear.create(self.model_name)
+        params = model.get_params().copy()
+
+        dim_x = params.pop("dim_x")
+        dim_y = params.pop("dim_y")
+
+        param = ParamNonLinear(self.verbose, dim_x, dim_y, **params)
+        
+        # In test to integrate a linear model as a non linear model
+        # model        = ModelFactoryLinear.create("A_mQ_x1_y1")
+        # params       = model.get_params().copy()
+        # dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
+        # param        = ParamLinear(verbose, dim_x, dim_y, **params)
+
+        if self.verbose > 0:
+            logging.debug(f"Model created: {model}")
+
+        if self.verbose > 1:
+            param.summary()
+
+        return model, param
+
+    # ----------------------------------------------------------
+
+    def run(self) -> None:
+        
+        if self.verbose > 1:
+            logging.info("Starting NonLinear UPKF Runner")
+
+        self.upkf = NonLinear_UPKF(
+            param    = self.param,
+            sigmaSet = self.sigmaSet,
+            verbose  = self.verbose
+        )
+        
+        if self.verbose > 1:
+            logging.info(f"Processing N={self.N} samples")
+
+        listeUPKF = self.upkf.process_N_data(
+            N=None,
+            data_generator=file_data_generator(
+                self.data_filename,
+                self.param.dim_x,
+                self.param.dim_y,
+                self.verbose
+            )
+        )
+        
+        if self.verbose > 1:
+            logging.debug(self.upkf.history.as_dataframe().head())
+        
+        if self.save_history:
+            self._save_history()
+        
+        if listeUPKF and listeUPKF[0][1] is not None:
+            self._compute_errors()
+            if  self.plot:
+                self._plot_results()
+
+    # ----------------------------------------------------------
+    # Post-processing
+    # ----------------------------------------------------------
+
+    def _compute_errors(self) -> None:
+
+        if self.verbose > 1:
+            logging.debug("Computing errors")
+
+        self.upkf.history.compute_errors(
+            self.upkf,
+            ['xkp1'],
+            ['Xkp1_update'],
+            ['PXXkp1_update'],
+            ['ikp1'],
+            ['Skp1']
+        )
+
+    def _save_history(self) -> None:
+
+        filepath = os.path.join(self.tracker_dir, "history_run_epfk_2.pkl")
+        self.upkf.history.save_pickle(filepath)
+
+        if self.verbose > 1:
+            logging.info(f"History saved to {filepath}")
+
+    def _plot_results(self) -> None:
+
+        title = f"{self.model_name} filtered with UPKF"
+
+        self.upkf.history.plot(
+            title,
+            list_param=["ykp1"],
+            list_label=["Observations y"],
+            list_covar=[None],
+            window=WINDOW,
+            basename=f"upkf_observations_{self.model_name}",
+            show=False,
+            base_dir=self.graph_dir
+        )
+
+        
+# ==============================================================
+# CLI layer
+# ==============================================================
+
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Filter non linear data with UPKF"
+    )
+
+    addParseToParser(
+        parser,
+        ['nonLinearModelName', 'dataFileName', 'sigmaSet']
+    )
+
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_arguments()
+
+    runner = NonLinearUPKFRunner_fromFile(
+        model_name=args.nonLinearModelName,
+        sigmaSet=args.sigmaSet,
+        verbose=args.verbose,
+        plot=args.plot,
+        save_history=args.saveHistory,
+        data_filename=args.dataFileName,
+        N=args.N if hasattr(args, "N") else None,
+    )
+
+    runner.run()
+
+
 if __name__ == "__main__":
-    """
-    USAGES:
-        python3 prg/filterUPKFdata_fromfile.py
-        python3 prg/filterUPKFdata_fromfile.py --nonLinearModelName "x1_y1_withRetroactions" --sigmaSet "wan2000" --dataFileName "testNL.csv" --verbose 0 --plot --saveHistory
-    """
-
-    # ------------------------------------------------------------------
-    # Constants (default value) - Parser
-    # ------------------------------------------------------------------
-
-    parser = argparse.ArgumentParser(description='Filter non linear data from file with UPKF')
-    addParseToParser(parser, ['nonLinearModelName', 'dataFileName', 'sigmaSet'])
-    args   = parser.parse_args()
-
-    plot               = args.plot
-    saveHistory        = args.saveHistory
-    sigmaSet           = args.sigmaSet
-    verbose            = args.verbose
-    nonLinearModelName = args.nonLinearModelName
-    dataFileName       = args.dataFileName
-    if dataFileName is None:
-        dataFileName = f"dataNonLinear_{nonLinearModelName}.csv"
-
-    # ------------------------------------------------------------------
-    # Output repo for data, traces and plots
-    # ------------------------------------------------------------------
-    base_dir     = os.path.join(".",      "data")
-    tracker_dir  = os.path.join(base_dir, "historyTracker")
-    datafile_dir = os.path.join(base_dir, "datafile")
-    graph_dir    = os.path.join(base_dir, "plot")
-    os.makedirs(tracker_dir,  exist_ok=True)
-    os.makedirs(datafile_dir, exist_ok=True)
-    os.makedirs(graph_dir,    exist_ok=True)
-
-    # ------------------------------------------------------------------
-    # Test parameters Chose a linear or a non linear model by commenting
-    # ------------------------------------------------------------------
-
-    model        = ModelFactoryNonLinear.create(nonLinearModelName)
-    params       = model.get_params()
-    dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
-    param        = ParamNonLinear(verbose, dim_x, dim_y, **params)
-    # In test to integrate a linear model as a non linear model
-    # model        = ModelFactoryLinear.create("A_mQ_x1_y1")
-    # params       = model.get_params().copy()
-    # dim_x, dim_y = params.pop('dim_x'), params.pop('dim_y')
-    # param        = ParamLinear(verbose, dim_x, dim_y, **params)
-    if verbose > 1:
-        print(f'model={model}')
-        param.summary()
-
-    # ------------------------------------------------------------------
-    # Let's go
-    # ------------------------------------------------------------------
-
-    if verbose > 1:
-        print("\nUPKF filtering with data generated from a file...")
-
-    upkf_2    = NonLinear_UPKF(sigmaSet, param, verbose=verbose)
-    filename  = os.path.join(datafile_dir, dataFileName)
-    listeUPKF = upkf_2.process_N_data(N=None, data_generator=file_data_generator(filename, dim_x, dim_y, verbose))
-
-    if verbose > 1:
-        print("\nExcerpt of the filtering with UPKF :")
-        print(upkf_2.history.as_dataframe().head())
-
-    # print scoring
-    if listeUPKF[0][1] is not None:
-        ListeA = ['xkp1']
-        ListeB = ['Xkp1_update']
-        ListeC = ['PXXkp1_update']
-        ListeD = ['ikp1']
-        ListeE = ['Skp1']
-        upkf_2.history.compute_errors(upkf_2, ListeA, ListeB, ListeC, ListeD, ListeE)
-
-    if saveHistory:
-        upkf_2.history.save_pickle(os.path.join(tracker_dir, f"history_run_upkf_2.pkl"))
-    
-    if listeUPKF[0][1] is not None and plot:
-        title = f"'{nonLinearModelName}' model data filtered with UPKF"
-        upkf_2.history.plot(title, 
-                        list_param= ["ykp1"], \
-                        list_label= ["Observations y"], \
-                        list_covar= [None], \
-                        window    = WINDOW, \
-                        basename  = f'upkf_2_{nonLinearModelName}_observations', show=False, base_dir=graph_dir)
-        upkf_2.history.plot(title, 
-                        list_param= ["xkp1"  , "Xkp1_update"], \
-                        list_label= ["x true", "x estimated"], \
-                        list_covar= [None,     "PXXkp1_update"], \
-                        window    = WINDOW, \
-                        basename  = f'upkf_2_{nonLinearModelName}', show=False, base_dir=graph_dir)
-
+    main()
