@@ -101,13 +101,23 @@ class BaseRunner(ABC):
     def _compute_errors(self) -> None:
         if self.verbose > 1:
             logging.debug("Computing errors")
+            
+        # print(f'self.runner_instance={self.runner_instance}')
+        # print(f'self.runner_instance={self.runner_instance.history}')
+        # # print(f'self.runner_instance={self.runner_instance.history._history}')
+        # print(f'\nself.runner_instance={self.runner_instance.history.last()}')
+        # print(f'\nself.runner_instance={self.runner_instance.history.last().keys()}')
+        
+        history_keys = self.runner_instance.history.last().keys()
+        # print('ikp1' in history_keys)
+        # input('ATTENTE oppio')
         self.runner_instance.history.compute_errors(
             self.runner_instance,
             ['xkp1'],
             ['Xkp1_update'],
             ['PXXkp1_update'],
-            ['ikp1'] if hasattr(self.runner_instance, 'ikp1') else None,
-            ['Skp1'] if hasattr(self.runner_instance, 'Skp1') else None
+            ['ikp1'] if 'ikp1' in history_keys else None,
+            ['Skp1'] if 'Skp1' in history_keys else None
         )
 
     # ----------------------------------------------------------

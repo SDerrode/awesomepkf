@@ -38,7 +38,7 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         # Expected behaviour: persistent oscillations of moderate amplitude; nonlinear terms drive and sustain the cycles.
         # Numeric tips: choose \(x_0,y_0\) small but nonzero, \(\sigma\) very small (e.g.\ 0.005) to reveal deterministic oscillation, \(N\ge 300\).
         self.mQ  = np.array([[0.1, 0.], [0., 0.5]]) #np.diag([0.1, 0.5])
-        self.z00  = np.array([[0.], [0.]])
+        self.z00 = np.array([[0.], [0.]])
         self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5
         
         # (D) Complex / quasi-periodic dynamics:

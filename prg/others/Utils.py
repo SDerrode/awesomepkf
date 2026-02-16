@@ -215,6 +215,8 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
 
     # NIS moyen
     nis_mean = 'na'
+    print(f'nis_mean={nis_mean}')
+    print(f'i_list={i_list}')
     if i_list is not None:
         nis_all = np.zeros(i_list.shape[0])
         tab_Sk  = np.stack(S_list, axis=0) # empile le long du premier axe
