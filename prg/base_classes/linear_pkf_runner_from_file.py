@@ -17,14 +17,7 @@ class LinearPKFRunnerFromFile(LinearPKFRunner):
     Runner for filtering linear data loaded from file.
     """
 
-    def __init__(
-        self,
-        model_name: str,
-        data_filename: Optional[str],
-        verbose: int = 0,
-        plot: bool = False,
-        save_history: bool = False,
-        base_dir: str = ".",
+    def __init__(self, model_name: str, data_filename: Optional[str], verbose: int = 0, plot: bool = False, save_history: bool = False, base_dir: str = ".",
     ) -> None:
 
         super().__init__(model_name, verbose, plot, save_history, base_dir)
