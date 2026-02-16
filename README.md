@@ -3,7 +3,7 @@
 
 This repository contains a set of programs illustrating the **Pairwise Kalman Filter (PKF)**, a generalization of the classical Kalman Filter, extended to non-linear models. It includes several variants of non-linear filters:
 
-- **Extended Pairwise Kalman Filter (EPKF)**  
+- **Extended Pairwise Kalman Filter (EPKF)**, with a variant called IEPKF  
 - **Unscented Pairwise Kalman Filter (UPKF)**, with multiple variants depending on the choice of sigma points  
 - **Particle Filter (PF)**  
 
@@ -28,10 +28,7 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
 
 ## Models and Simulations
 
-The repository provides several **linear and non-linear models** that can be used with the programs in the `_prg_` folder:
-
-- **simulateLinearData.py** – simulate and save data according to one of the proposed **linear models**  
-- **simulateNonLinearData.py** – simulate and save data according to one of the proposed **non-linear models**  
+The repository provides a program called **run_simulator.py** to simulate data according to **linear and non-linear models**.
 
 ---
 
@@ -44,23 +41,19 @@ Each filter has two types of programs:
 
 ### Pairwise Kalman Filter (PKF)
 
-- **filterPKFdata.py** – simulate linear data and filter it with PKF  
-- **filterPKFdata_fromfile.py** – filter linear data from a previously saved file (e.g., generated with `simulateLinearData.py`)  
+- **run_linear_pkf.py** – filter linear data either from simulated data (_--mode sim_) or from a previously saved file (_--mode file_ ; e.g., generated with `simulateLinearData.py`)  
 
 ### Extended Pairwise Kalman Filter (EPKF)
 
-- **filterEPKFdata.py** – simulate non-linear data and filter it with EPKF  
-- **filterEPKFdata_fromfile.py** – filter non-linear data from a previously saved file (e.g., generated with `simulateNonLinearData.py`)  
+- **run_nonlinear_epkf.py** – filter non-linear data either from simulated data (_--mode sim_) or from a previously saved file (_--mode file_ ; e.g., generated with `simulateNonLinearData.py`)  
 
 ### Unscented Pairwise Kalman Filter (UPKF)
 
-- **filterUPKFdata.py** – simulate non-linear data and filter it with UPKF  
-- **filterUPKFdata_fromfile.py** – filter non-linear data from a previously saved file  
+- **run_nonlinear_upkf.py** – filter non-linear data either from simulated data (_--mode sim_) or from a previously saved file (_--mode file_ ; e.g., generated with `simulateNonLinearData.py`)  
 
 ### Particle Filter (PF)
 
-- **filterPFdata.py** – simulate non-linear data and filter it with PF  
-- **filterPFdata_fromfile.py** – filter non-linear data from a previously saved file  
+- **run_nonlinear_pf.py** – filter non-linear data either from simulated data (_--mode sim_) or from a previously saved file (_--mode file_ ; e.g., generated with `simulateNonLinearData.py`)  
 
 ---
 
@@ -69,17 +62,18 @@ Each filter has two types of programs:
 ### Simulate Linear Data and Filter with PKF
 
 ```bash
-python3 prg/simulateLinearData.py     --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --verbose 1 --N 1000 --sKey 303
-python3 prg/filterPKFdata_fromfile.py --linearModelName "A_mQ_x1_y1" --dataFileName "test.csv" --verbose 1 --plot --saveHistory
+python3 prg/simulateLinearData.py --N 2000 --linearModelName "A_mQ_x1_y1" --dataFileName "testL.csv" --verbose 1 --sKey 303
+python3 prg/run_linear_pkf.py _--mode file_  --linearModelName "A_mQ_x1_y1" --dataFileName "testL.csv" --verbose 1 --saveHistory --plot
 ```
 
 ### Simulate Non-Linear Data and Filter with EPKF, UPKF and PF
 
 ```bash
-python3 prg/simulateNonLinearData.py   --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --verbose 1 --sKey 303 --N 1000
-python3 prg/filterEPKFdata_fromfile.py --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --verbose 1 --plot --saveHistory
-python3 prg/filterUPKFdata_fromfile.py --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --verbose 1 --plot --saveHistory --sigmaSet "wan2000"
-python3 prg/filterPFdata_fromfile.py   --nonLinearModelName "x1_y1_withRetroactions" --dataFileName "testNL.csv" --verbose 1 --plot --saveHistory --nbParticles 300
+python3 prg/simulateNonLinearData.py   --N 1000 --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --verbose 1 --sKey 303 
+
+python3 prg/run_nonlinear_epkf.py _--mode file_ --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --ell 1              --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_upkf.py _--mode file_ --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --sigmaSet "wan2000" --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_pf.py   _--mode file_ --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --nbParticles 300    --verbose 1 --saveHistory --plot
 ```
 
 ---
