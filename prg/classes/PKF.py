@@ -282,7 +282,7 @@ class PKF:
             self.logger.error(f"Step {k}: ValueError in cho_factor/solve: {e}")
             raise
 
-        Xkp1_update = Xkp1_predict + Kkp1 @ ikp1
+        Xkp1_update   = Xkp1_predict   + Kkp1 @ ikp1
         PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
         self._test_CovMatrix(PXXkp1_update, k)
 
@@ -292,22 +292,23 @@ class PKF:
         self._test_CovMatrix(PXXkp1_update_Joseph, k)
 
         aStep = PKFStep(
-            k=k,
-            xkp1=xkp1.copy() if xkp1 is not None else None,
-            ykp1=ykp1.copy(),
-            Xkp1_predict=Xkp1_predict.copy(),
-            PXXkp1_predict=PXXkp1_predict.copy(),
-            ikp1=ikp1.copy(),
-            Skp1=Skp1.copy(),
-            Kkp1=Kkp1.copy(),
-            Xkp1_update=Xkp1_update.copy(),
-            PXXkp1_update=PXXkp1_update_Joseph.copy(),
+            k              = k,
+            xkp1           = xkp1.copy() if xkp1 is not None else None,
+            ykp1           = ykp1.copy(),
+            Xkp1_predict   = Xkp1_predict.copy(),
+            PXXkp1_predict = PXXkp1_predict.copy(),
+            ikp1           = ikp1.copy(),
+            Skp1           = Skp1.copy(),
+            Kkp1           = Kkp1.copy(),
+            Xkp1_update    = Xkp1_update.copy(),
+            # PXXkp1_update  = PXXkp1_update.copy(),
+            PXXkp1_update  = PXXkp1_update_Joseph.copy(),
         )
 
         if store:
             self.history.record(aStep)
-            
+
         if self.verbose>1:
             rich_show_fields(aStep, title=f"Step {k} Update")
-        # self.logger.info(f"Step {k}: update computed.")
+
         return aStep
