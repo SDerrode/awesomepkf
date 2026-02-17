@@ -12,6 +12,8 @@ from typing import Generator, Optional
 from scipy.linalg import LinAlgError
 import numpy as np
 
+from rich import print
+
 from .NonLinear_PKF import NonLinear_PKF
 
 class NonLinear_EPKF(NonLinear_PKF):
@@ -36,42 +38,38 @@ class NonLinear_EPKF(NonLinear_PKF):
 
         generator = data_generator if data_generator is not None else self._data_generation()
         
-        # short-cuts supplementary
+        # Additionnal short-cut
         self.jg = self.param.jacobiens_g
 
         # The first
         ##################################################################################################
         step = self._firstEstimate(generator)
-        if step.xkp1 is None: # Il n'y a pas de VT
+        # print(f'step {step.k} - {hex(id(step))} - final =')
+        # print(step)
+        # input('ATTENTE')
+
+        if step.xkp1 is None: # Il n'y a pas de VT (fro error computing and plotting)
             self.ground_truth = False
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
-        # print(f'self.ell={self.ell}')
-        # print(f'step.PXXkp1_update={step.PXXkp1_update}')
-        # print(f'step.PXXkp1_predict={step.PXXkp1_predict}')
-        # exit(1)
-        
 
         ##################################################################################################@
         # The next ones
-        accel_xy_xy           = self.zeros_dim_xy_xy.copy()
-        Xkp1_update_augmented = self.zeros_dim_xy_1.copy()
-        
-        # z= np.zeros(2*self.dim_xy, 1)
+        accel_xy_xy = self.zeros_dim_xy_xy.copy()
+        z_iterated  = np.zeros(shape=(self.dim_xy, 1))
         while N is None or step.k<N:
-            
-            
+
             # New data is arriving ##################################
             try:
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
                 return # we stop as the data generator is stopped itself
             
-            # initialisation des boucles pour l'iterated
-            z_iterated = np.zeros(shape=(self.dim_xy, 1))
+            # Initialisation des boucles pour l'Iterated EPKF
+            z_iterated.fill(0.)
             z_iterated[:self.dim_x] = step.Xkp1_update
             z_iterated[self.dim_x:] = step.ykp1
-            PXX_iterated = step.PXXkp1_update
+            PXX_iterated            = step.PXXkp1_update
             
             store = False
             for l in range(self.ell):
@@ -83,7 +81,7 @@ class NonLinear_EPKF(NonLinear_PKF):
                 if Anl.shape != (self.dim_xy, self.dim_xy) or Bnl.shape != (self.dim_xy, self.dim_xy):
                     raise ValueError(f"Jacobian returned matrices of wrong shape: Anl={An.shape}, Bnl={Bn.shape}")
                 accel_xy_xy[:self.dim_x, :self.dim_x] = PXX_iterated
-                Pl_predict =  Anl @ accel_xy_xy @ Anl.T + Bnl @ self.mQ @ Bnl.T
+                Pl_predict = Anl @ accel_xy_xy @ Anl.T + Bnl @ self.mQ @ Bnl.T
                 self._test_CovMatrix(Pl_predict, step.k)
                 
                 # Updating ##############################################
@@ -91,16 +89,24 @@ class NonLinear_EPKF(NonLinear_PKF):
                     store = True
                 try:
                     step = self._nextUpdating(new_k, new_xkp1, new_ykp1, Zl_predict, Pl_predict, store)
+                    # print(f"  iteration {l}: {hex(id(step))}")
                 except LinAlgError:
                     self.logger.error(f"Step {new_k}, {l}: LinAlgError during update.")
                     raise
+                # print(f'step {step.k} - {l} = \n')
+                # print(step)
+                # input('ATTENTE step')
             
-                # print(f'step.Xkp1_update={step.Xkp1_update}')
+                # print(f'step.Xkp1_update  ={step.Xkp1_update}')
                 # print(f'step.PXXkp1_update={step.PXXkp1_update}')
             
-                # MAJ pour la prochaine iteration
-                z_iterated[:self.dim_x] = step.Xkp1_update
-                PXX_iterated = step.PXXkp1_update
+                if l<=self.ell-1:
+                    # MAJ pour la prochaine iteration
+                    z_iterated[:self.dim_x] = step.Xkp1_update
+                    PXX_iterated            = step.PXXkp1_update
 
-            # input('ATTENTE')
+            # print(f'step {step.k} - {hex(id(step))} - final =')
+            # print(step)
+            # input('ATTENTE step final')
+
             yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
