@@ -57,9 +57,6 @@ class BaseModelLinear:
         self.kappa     = 0.0
         self.lambda_   = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
 
-        # EPKF specific parameters - in case where we want to filter linear data with EPKF
-        # self.jacobiens_g = kwargs['jacobiens_g']
-
 
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
@@ -67,10 +64,13 @@ class BaseModelLinear:
         if __debug__:
             assert z.shape       == (self.dim_xy, 1)
             assert noise_z.shape == (self.dim_xy, 1)
-        # x, y   = np.split(z, [self.dim_x])
-        # nx, ny = np.split(noise_z, [self.dim_x])
-        # return self._g(x, y, nx, ny, dt)
+
         return self.A @ z + self.B @ noise_z
+    
+    def jacobiens_g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
+        """Cette méthode doit renvoyer An et Bn. Uniquement nécessaire pour que EPKF puisse traiter aussi des données linéaires"""
+
+        return self.A, self.B
 
     # ------------------------------------------------------------------
     def __repr__(self):
@@ -102,6 +102,7 @@ class LinearAmQ(BaseModelLinear):
                  'dim_y'      : self.dim_y,
                  'augmented'  : self.augmented,
                  'g'          : self.g,
+                 'jacobiens_g': self.jacobiens_g, # pour EPKF
                  'A'          : self.A,
                  'B'          : self.B,
                  'mQ'         : self.mQ,
@@ -163,6 +164,7 @@ class LinearSigma(BaseModelLinear):
                  'dim_y'      : self.dim_y,
                  'augmented'  : self.augmented,
                  'g'          : self.g,
+                 'jacobiens_g' : self.jacobiens_g, # pour EPKF
                  'sxx'        : self.sxx,
                  'syy'        : self.syy,
                  'a'          : self.a,

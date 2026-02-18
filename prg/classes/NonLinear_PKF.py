@@ -30,10 +30,8 @@ class NonLinear_PKF(PKF):
     def __init__(self, param: ParamLinear | ParamNonLinear, sKey: Optional[int] = None, verbose: int = 0) -> None:
         self.param = param
         
-        #print(f'NonLinear_PKF Avant - __init__ - param={self.param}') 
         super().__init__(sKey, verbose)
-        #print(f'NonLinear_PKF Pares - __init__ - param={self.param}') 
-
+        
         if __debug__:
             if not isinstance(param, ParamNonLinear) and not isinstance(param, ParamLinear):
                 raise TypeError("param must be an object from class ParamLinear or class ParamNonLinear")

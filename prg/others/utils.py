@@ -14,7 +14,7 @@ from typing import Generator, Optional, Any, Union
 from pathlib import Path
 
 
-from others.numerics import EPS_ABS, EPS_REL
+from others.numerics import EPS_ABS, EPS_REL, COND_FAIL, COND_WARN
 
 # ----------------------------------------------------------------------
 # Logging global
@@ -101,8 +101,6 @@ def rich_show_fields(d, fields: list = None, title: str = "Sélection de donnée
     console.print(table)
 
 
-
-
 def save_dataframe_to_csv(df, filepath, index=False):
     """Save a DataFrame in CSV (UTF-8) without index."""
     path = Path(filepath)
@@ -110,8 +108,6 @@ def save_dataframe_to_csv(df, filepath, index=False):
     
     try:
         df.to_csv(path, encoding="utf-8", index=index, float_format="%.15f")
-        # if __debug__:
-        #     logger.info(f"✅ File save with success at : {path.resolve()}")
     except Exception as e:
         logger.error(f"❌ Something went wrong during saving of CSV : {e}")
         raise
@@ -143,7 +139,6 @@ def data_to_dataframe(listData, dim_x, dim_y, withoutX=False):
     for c in range(dim_y):
         columns.append(f"Y{c}")
     df = pd.DataFrame(data, columns=columns)
-    # df.set_index("index", inplace=True)
 
     return df
 
@@ -188,19 +183,15 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
     for k in range(errors.shape[0]):
         ek = errors[k].reshape(-1, 1)  # Assure un vecteur colonne
         Pk = tab_Pk[k]
-        # print(f'ek={ek}')
-        # print(f'Pk={Pk}')
 
         try:
             # Inverse robuste : pseudo-inverse si nécessaire
             Pk_inv = np.linalg.pinv(Pk)  # gère aussi les matrices singulières
-            # print(f'Pk_inv={Pk_inv}')
-            
+
             # NEES : ek.T @ Pk_inv @ ek
             nees_value = float((ek.T @ Pk_inv @ ek).squeeze())  # squeeze + float pour toute dimension
             nees_all[k] = nees_value
-            # print(f'nees_all[{k}]={nees_value}')
-            
+
         except Exception as e:
             print(f"Erreur lors du calcul de NEES : {e}")
             nees_all[k] = np.nan  # on peut mettre NaN si on ne peut pas calculer
@@ -352,11 +343,7 @@ def name_analysis(listStr):
 # ----------------------------------------------------------------------
 
 def file_data_generator(filename: str, dim_x: int, dim_y: int, verbose: int = 0) -> Generator[tuple[int, tuple[np.ndarray, np.ndarray]], None, None]:
-    df = read_unknown_file(filename, verbose=verbose)
-    # print(df.head())
-    # print(df.dtypes)
-    # print("{:.15f}".format(df["X0"].iloc[0]))
-    # exit(1)
+    df   = read_unknown_file(filename, verbose=verbose)
     dico = name_analysis(list(df.columns))
 
     if dico['dim_x'] != 0 and (dico['Correct'] == False  or dico['dim_x'] != dim_x or dico['dim_y']!= dim_y) : 
@@ -424,7 +411,7 @@ def check_equality(**kwargs: np.ndarray) -> None:
             input("Waiting for you!")
 
 
-def diagnose_covariance(P, cond_warn=1e8, cond_fail= 1e12, eig_tol=EPS_ABS, symmetry_tol=EPS_ABS):
+def diagnose_covariance(P, cond_warn=COND_WARN, cond_fail= COND_FAIL, eig_tol=EPS_ABS, symmetry_tol=EPS_ABS):
     """
     Diagnostic numérique d'une matrice de covariance.
 

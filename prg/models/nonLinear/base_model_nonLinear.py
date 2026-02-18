@@ -29,12 +29,11 @@ class BaseModelNonLinear:
         self.dim_y       = dim_y
         self.dim_xy      = dim_x + dim_y
 
-        # UKF parameters
+        # Specific UPKF parameters
         self.alpha       = 0.25
         self.beta        = 2.0
         self.kappa       = 0.0
         self.lambda_     = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
-        
 
         # Initialisation des matrices / vecteurs d'état
         self.mQ   = None
