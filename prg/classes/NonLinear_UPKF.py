@@ -35,7 +35,8 @@ class FilterConfig:
 class NonLinear_UPKF(NonLinear_PKF):
     """Implementation of UPKF."""
 
-    def __init__(self, param: ParamNonLinear, sigmaSet: str, sKey: Optional[int] = None, verbose: int = 0):
+    def __init__(self, param: ParamLinear | ParamNonLinear, sigmaSet: str, sKey: Optional[int] = None, verbose: int = 0):
+        # print(f'NonLinear_UPKF - __init__ - param={param}')
         super().__init__(param, sKey, verbose)
 
         self.sigma_point_set_name = sigmaSet
@@ -54,6 +55,7 @@ class NonLinear_UPKF(NonLinear_PKF):
         """
         Generator of UPKF filter using optional data generator.
         """
+        
         if __debug__:
             if not ((isinstance(N, int) and N > 0) or N is None):
                 raise ValueError("N must be None or a number >0")

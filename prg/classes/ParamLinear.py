@@ -45,26 +45,48 @@ class ParamLinear:
             assert isinstance(dim_y, int) and dim_y > 0, "dim_y must be int > 0"
             assert verbose in [0, 1, 2], "verbose must be 0, 1 or 2"
 
-        self.dim_x = dim_x
-        self.dim_y = dim_y
-        self.dim_xy = dim_x + dim_y
-        self.verbose = verbose
+        self.dim_x     = dim_x
+        self.dim_y     = dim_y
+        self.dim_xy    = dim_x + dim_y
+        self.verbose   = verbose
+        self.augmented = None
         self._set_log_level()
+        
+        # print(len(kwargs.keys()))
+        # print(kwargs)
+        
 
         # Two ways to construct the object
-        if len(kwargs.keys()) == 7:  # parametrization (A, mQ, z00, Pz00)
+        if len(kwargs.keys()) == 11:  # parametrization (A, mQ, z00, Pz00)
             self.constructorFrom_AB_mQ(kwargs['g'], kwargs['A'], kwargs['B'],
                                        kwargs['mQ'], kwargs['z00'], kwargs['Pz00'], kwargs['augmented'])
-        elif len(kwargs.keys()) == 9:  # parametrization (sxx, syy, a, b, c, d, e) --> Sigma
+        elif len(kwargs.keys()) == 13:  # parametrization (sxx, syy, a, b, c, d, e) --> Sigma
             self.constructorFrom_Sigma(kwargs['g'], kwargs['sxx'], kwargs['syy'],
                                        kwargs['a'], kwargs['b'], kwargs['c'], kwargs['d'], kwargs['e'],
                                        kwargs['augmented'])
         else:
             logger.warning(f"⚠️ Le modèle n'est pas bien paramétré : {kwargs.keys()}")
+        
+        # Paramètres spécifiques UPKF - lorsque souhaite filtrer des données linéaire par upkf
+        self.alpha   = kwargs['alpha']
+        self.beta    = kwargs['beta']
+        self.kappa   = kwargs['kappa']
+        self.lambda_ = kwargs['lambda_']
+        # print(f'alpha={self.alpha}')
+        # print(f'beta={self.beta}')
+        # print(f'kappa={self.kappa}')
+        # print(f'lambda_={self.lambda_}')
+        # exit(1)
 
         if __debug__:
             self._check_dimensions()
             self._check_consistency()
+
+    # ------------------------------------------------------------------
+    def __repr__(self) -> str:
+        return (
+            f"<ParamLinear(dim_y={self.dim_y}, dim_x={self.dim_x}, augmented={self.augmented}, verbose={self.verbose}>"
+        )
 
     # ------------------------------------------------------------------
     # Constructeurs

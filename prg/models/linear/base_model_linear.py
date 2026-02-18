@@ -51,6 +51,16 @@ class BaseModelLinear:
         self.model_type = model_type
         self.augmented  = augmented
 
+        # UPKF specific parameters - in case where we want to filter linear data with UPKF
+        self.alpha     = 0.25
+        self.beta      = 2.0
+        self.kappa     = 0.0
+        self.lambda_   = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
+
+        # EPKF specific parameters - in case where we want to filter linear data with EPKF
+        # self.jacobiens_g = kwargs['jacobiens_g']
+
+
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
         """Compute z_{n+1} = A @ z + B @ noise. z et noise_z sont de shape (dim_xy, 1)."""
@@ -75,7 +85,9 @@ class LinearAmQ(BaseModelLinear):
     Modèle linéaire avec matrice de transition A et covariance Q.
     """
     def __init__(self, dim_x: int, dim_y: int, A: np.ndarray, B: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray, augmented=False):
+        
         super().__init__(dim_x, dim_y, model_type="linear_AmQ", augmented=augmented)
+        
         self.A    = A
         self.B    = B
         self.mQ   = mQ
@@ -94,7 +106,11 @@ class LinearAmQ(BaseModelLinear):
                  'B'          : self.B,
                  'mQ'         : self.mQ,
                  'z00'        : self.z00,
-                 'Pz00'       : self.Pz00
+                 'Pz00'       : self.Pz00,
+                 'alpha'      : self.alpha,        # pour UPKF
+                 'beta'       : self.beta,         # pour UPKF
+                 'kappa'      : self.kappa,        # pour UPKF
+                 'lambda_'    : self.lambda_,      # pour UPKF
         }
 
 
@@ -106,7 +122,9 @@ class LinearSigma(BaseModelLinear):
     Modèle linéaire avec variances sxx, syy et coefficients a, b, c, d, e.
     """
     def __init__(self, dim_x: int, dim_y: int, sxx: float, syy: float, a: float, b: float, c: float, d: float, e: float, augmented=False):
+        
         super().__init__(dim_x, dim_y, model_type="linear_Sigma", augmented=augmented)
+        
         self.sxx = sxx
         self.syy = syy
         self.a   = a
@@ -151,5 +169,9 @@ class LinearSigma(BaseModelLinear):
                  'b'          : self.b,
                  'c'          : self.c,
                  'd'          : self.d,
-                 'e'          : self.e
+                 'e'          : self.e,
+                 'alpha'      : self.alpha,        # pour UPKF
+                 'beta'       : self.beta,         # pour UPKF
+                 'kappa'      : self.kappa,        # pour UPKF
+                 'lambda_'    : self.lambda_,      # pour UPKF
         }

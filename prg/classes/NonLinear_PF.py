@@ -26,8 +26,10 @@ from others.utils import diagnose_covariance, rich_show_fields
 class NonLinear_PF(NonLinear_PKF):
     """Implementation of PF."""
 
-    def __init__(self, param,  nbParticles=300, resample_threshold=0.5, sKey=None, verbose=0):
+    def __init__(self, param: ParamLinear | ParamNonLinear,  nbParticles=300, resample_threshold=0.5, sKey=None, verbose=0):
+        
         super().__init__(param, sKey, verbose)
+        
         self.nbParticles        = nbParticles
         self.resample_threshold = resample_threshold
 

@@ -1,6 +1,8 @@
 from classes.ParamNonLinear import ParamNonLinear
+from classes.ParamLinear import ParamLinear
 from classes.NonLinear_PF import NonLinear_PF
 from models.nonLinear import ModelFactoryNonLinear
+from models.linear import ModelFactoryLinear
 from base_classes.runner_base import BaseRunner
 from others.plot_settings import WINDOW
 
@@ -13,12 +15,10 @@ class BaseNonLinearPFRunner(BaseRunner):
         self.runner_instance = NonLinear_PF(param=self.param, nbParticles=self.nbParticles, sKey=self.sKey, verbose=self.verbose)
 
     def _get_model_factory(self):
-        return ModelFactoryNonLinear
+        return ModelFactoryLinear, ModelFactoryNonLinear
 
     def _get_param_class(self):
-        return ParamNonLinear
-
-    # ----------------------------------------------------------
+        return ParamLinear, ParamNonLinear
 
     def _plot_results(self) -> None:
 

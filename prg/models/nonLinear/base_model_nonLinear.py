@@ -33,6 +33,8 @@ class BaseModelNonLinear:
         self.alpha       = 0.25
         self.beta        = 2.0
         self.kappa       = 0.0
+        self.lambda_     = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
+        
 
         # Initialisation des matrices / vecteurs d'état
         self.mQ   = None
@@ -75,9 +77,10 @@ class BaseModelNonLinear:
                 'augmented'  : self.augmented,
                 'g'          : self.g,
                 'jacobiens_g': self.jacobiens_g,  # pour EPKF
-                'alpha'      : self.alpha,        # pour UPKF merwe
-                'beta'       : self.beta,         # pour UPKF merwe
-                'kappa'      : self.kappa,        # pour UPKF merwe
+                'alpha'      : self.alpha,        # pour UPKF
+                'beta'       : self.beta,         # pour UPKF
+                'kappa'      : self.kappa,        # pour UPKF
+                'lambda_'    : self.lambda_,      # pour UPKF
                 'mQ'         : self.mQ,
                 'z00'        : self.z00,
                 'Pz00'       : self.Pz00,

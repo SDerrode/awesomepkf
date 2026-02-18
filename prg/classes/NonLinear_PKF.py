@@ -17,6 +17,7 @@ from typing import Optional
 # import numpy as np
 
 from .PKF import PKF
+from classes.ParamLinear import ParamLinear
 from classes.ParamNonLinear import ParamNonLinear
 # from others.utils import diagnose_covariance, rich_show_fields
 # from classes.HistoryTracker import HistoryTracker
@@ -26,14 +27,13 @@ from classes.ParamNonLinear import ParamNonLinear
 class NonLinear_PKF(PKF):
     """Base class for non-linear filters (UPKF and EPKF)."""
 
-    def __init__(self, param: ParamNonLinear, sKey: Optional[int] = None, verbose: int = 0) -> None:
+    def __init__(self, param: ParamLinear | ParamNonLinear, sKey: Optional[int] = None, verbose: int = 0) -> None:
         self.param = param
+        
+        #print(f'NonLinear_PKF Avant - __init__ - param={self.param}') 
         super().__init__(sKey, verbose)
+        #print(f'NonLinear_PKF Pares - __init__ - param={self.param}') 
 
         if __debug__:
-            if not isinstance(param, ParamNonLinear):
-                raise TypeError("param must be an object from class ParamNonLinear")
-        
-
-        # Logger info
-        # self.logger.info(f"NonLinear_PKF instance created with verbose={verbose}")
+            if not isinstance(param, ParamNonLinear) and not isinstance(param, ParamLinear):
+                raise TypeError("param must be an object from class ParamLinear or class ParamNonLinear")

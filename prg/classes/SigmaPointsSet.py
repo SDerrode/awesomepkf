@@ -71,8 +71,7 @@ class SetWAN2000(SigmaPointsSet, key="wan2000"):
         
         # Compute Cholesky factor
         sqrt_P = self._chol(P)
-        # print(f'sqrt_P=\n{sqrt_P}, \n{sqrt_P@sqrt_P}, \n{P}')
-        
+
         sigma = [x]
         for i in range(self.dim):
             delta = self.gamma * sqrt_P[:, i].reshape(-1,1)

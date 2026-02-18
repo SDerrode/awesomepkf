@@ -4,7 +4,7 @@
 import argparse
 
 from base_classes.nonlinear_upkf_runner_simulation import BaseNonLinearUPKFRunnerSim
-from base_classes.nonlinear_upkf_runner_from_file import BaseNonLinearUPKFRunnerFromFile
+from base_classes.nonlinear_upkf_runner_from_file  import BaseNonLinearUPKFRunnerFromFile
 from others.parser import addParseToParser
 
 
@@ -15,7 +15,7 @@ def parse_arguments() -> argparse.Namespace:
 
     addParseToParser(
         parser,
-        ['nonLinearModelName', 'N', 'sKey', 'sigmaSet', 'dataFileName']
+        ['nonLinearModelName', 'linearModelName', 'N', 'sKey', 'sigmaSet', 'dataFileName']
     )
 
     args = parser.parse_args()
@@ -26,19 +26,29 @@ def parse_arguments() -> argparse.Namespace:
 
     if args.dataFileName is None and args.N is None:
         parser.error("--N must be used when --dataFileName is not specified")
+        
+    if args.linearModelName is not None and args.nonLinearModelName is not None:
+        parser.error("--nonLinearModelName should not be used with --linearModelName. One or the other!")
+    if args.linearModelName is None and args.nonLinearModelName is None:
+        parser.error("--nonLinearModelName OR --linearModelName must be used.")
+    
+    if args.linearModelName is None:
+        model_name = args.nonLinearModelName
+    else:
+        model_name = args.linearModelName
 
-    return args
+    return args, model_name
 
 
 def main() -> None:
-    args = parse_arguments()
+    args, model_name = parse_arguments()
     
      # 🔎 Distinction automatique selon dataFileName
     if args.dataFileName is not None:
 
         # Mode FILE
         runner = BaseNonLinearUPKFRunnerFromFile(
-            model_name=args.nonLinearModelName,
+            model_name=model_name,
             sigmaSet=args.sigmaSet,
             data_filename=args.dataFileName,
             verbose=args.verbose,
@@ -46,10 +56,10 @@ def main() -> None:
             save_history=args.saveHistory,
         )
     else:
-        
+
         # Mode SIM
         runner = BaseNonLinearUPKFRunnerSim(
-            model_name=args.nonLinearModelName,
+            model_name=model_name,
             N=args.N,
             sKey=args.sKey,
             sigmaSet=args.sigmaSet,
@@ -62,8 +72,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception as e:
-        printf(f'{e}')
-        
+    main()
+    

@@ -19,7 +19,7 @@ from .NonLinear_PKF import NonLinear_PKF
 class NonLinear_EPKF(NonLinear_PKF):
     """Implementation of EPKF."""
 
-    def __init__(self, param: ParamNonLinear, ell: int = 1, sKey: Optional[int] = None, verbose: int = 0) -> None:
+    def __init__(self, param: ParamLinear | ParamNonLinear, ell: int = 1, sKey: Optional[int] = None, verbose: int = 0) -> None:
         
         super().__init__(param, sKey, verbose)
         
