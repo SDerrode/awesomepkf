@@ -210,7 +210,7 @@ class SetIto2000(SigmaPointsSet, key="ito2000"):
         self.Wc     = np.copy(self.Wm)
 
 
-    def _sigma_point(self, x, P): # self.x + S @ xi
+    def _sigma_point(self, x, P):
         
         x = np.atleast_2d(x).reshape(-1,1)  # (dim,1)
 

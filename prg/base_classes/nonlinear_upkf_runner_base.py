@@ -9,14 +9,11 @@ from others.plot_settings import WINDOW
 class BaseNonLinearUPKFRunner(BaseRunner):
 
     def __init__(self, model_name, sigmaSet=None, verbose=1, plot=False, save_history=False, base_dir="."):
-        self.sigmaSet=sigmaSet
-        # print(f'model_name={model_name}')
         
+        self.sigmaSet=sigmaSet
+
         super().__init__(model_name, verbose, plot, save_history, base_dir, sigmaSet=sigmaSet)
-    
-        # print(f'model={self.model}')
-        # print(f'param={self.param}')
-        # input('ATTENTE __init__ - BaseNonLinearUPKFRunner')
+
         self.runner_instance = NonLinear_UPKF(param=self.param, sigmaSet=self.sigmaSet, sKey=self.sKey, verbose=self.verbose)
 
     def _get_model_factory(self):

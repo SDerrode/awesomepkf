@@ -46,12 +46,8 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
         # Le fait d'utiliser le modèle non augmenté garanti que l'on fait les mêmes choses
         ax = self.mod._gx(x[0:self.dim_x-self.dim_y], x[self.dim_x-self.dim_y:], t[0:self.dim_x-self.dim_y], t[self.dim_x-self.dim_y:], dt)
         ay = self.mod._gy(x[0:self.dim_x-self.dim_y], x[self.dim_x-self.dim_y:], t[0:self.dim_x-self.dim_y], t[self.dim_x-self.dim_y:], dt)
-        
-        result = np.block([[ax],[ay]])
-        # print(f'result={result}')
-        # input('attente')
-        
-        return result
+
+        return np.block([[ax],[ay]])
 
     # ------------------------------------------------------------------
     def _hx(self, x, u, dt):

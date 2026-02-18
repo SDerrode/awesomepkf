@@ -4,8 +4,6 @@
 import logging
 from typing import Optional
 
-# from classes.NonLinear_PF import NonLinear_PF
-
 from base_classes.nonlinear_pf_runner_base import BaseNonLinearPFRunner
 
 

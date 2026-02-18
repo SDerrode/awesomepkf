@@ -16,7 +16,7 @@ from rich.table import Table
 from rich.console import Console
 
 from others.utils import compute_errors
-from others.plot_settings import *
+from others.plot_settings import DPI, FACECOLOR, BIG_SIZE
 # A few utils functions that are used several times
 from others.utils import rich_show_fields
 
@@ -99,41 +99,16 @@ class HistoryTracker:
             self._history.append(kwargs.copy())
 
     def as_dataframe(self) -> pd.DataFrame:
-        """
-        Retourne l'historique complet sous forme de DataFrame pandas.
-
-        Returns
-        -------
-        pd.DataFrame
-            DataFrame avec les enregistrements.
-        """
         return pd.DataFrame(self._history)
 
     def last(self) -> Optional[dict[str, Any]]:
-        """
-        Retourne le dernier enregistrement.
-
-        Returns
-        -------
-        dict[str, Any] or None
-            Le dernier dictionnaire enregistré, ou None si l'historique est vide.
-        """
         return self._history[-1] if self._history else None
 
     def clear(self) -> None:
-        """Efface tout l'historique."""
         self._history.clear()
 
     # ------------------------------------------------------------------
     def save_pickle(self, path: str) -> None:
-        """
-        Sauvegarde l'historique complet dans un fichier pickle (.pkl).
-
-        Parameters
-        ----------
-        path : str
-            Chemin du fichier de sauvegarde.
-        """
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:
             pickle.dump(self._history, f)
@@ -388,11 +363,9 @@ class HistoryTracker:
 
     # ------------------------------------------------------------------
     def __len__(self) -> int:
-        """Nombre d'enregistrements dans l'historique."""
         return len(self._history)
 
     def __repr__(self) -> str:
-        """Représentation courte de l'objet."""
         return f"<HistoryTracker n_records={len(self)} - address: {hex(id(self))}>"
 
 

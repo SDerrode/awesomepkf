@@ -9,7 +9,9 @@ from others.plot_settings import WINDOW
 class BaseNonLinearPFRunner(BaseRunner):
 
     def __init__(self, model_name, nbParticles=None, verbose=1, plot=False, save_history=False, base_dir="."):
+        
         self.nbParticles=nbParticles
+        
         super().__init__(model_name, verbose, plot, save_history, base_dir)
         
         self.runner_instance = NonLinear_PF(param=self.param, nbParticles=self.nbParticles, sKey=self.sKey, verbose=self.verbose)

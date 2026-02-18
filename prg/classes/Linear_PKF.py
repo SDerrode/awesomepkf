@@ -43,7 +43,6 @@ class Linear_PKF(PKF):
             if not ((isinstance(N, int) and N > 0) or N is None):
                 raise ValueError("N must be None or a number >0")
 
-        # self.logger.info(f"Starting process_filter with N={N}")
         generator = data_generator if data_generator is not None else self._data_generation()
 
         # Short-cuts
@@ -71,7 +70,6 @@ class Linear_PKF(PKF):
         # ------------------------------------------------------------------
         while N is None or step.k < N:
 
-            # self.logger.debug(f"Step {step.k}: starting prediction")
             # Assemble augmented state
             Xkp1_update_augmented[:self.dim_x] = step.Xkp1_update
             Xkp1_update_augmented[self.dim_x:] = step.ykp1
@@ -91,7 +89,6 @@ class Linear_PKF(PKF):
                 return
 
             # Updating
-            # self.logger.debug(f"Step {new_k}: starting update")
             try:
                 step = self._nextUpdating(new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict)
             except LinAlgError:
@@ -101,4 +98,3 @@ class Linear_PKF(PKF):
             # self.logger.info(f"Step {step.k}: update computed successfully")
             yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
-        # self.logger.info("process_filter completed.")

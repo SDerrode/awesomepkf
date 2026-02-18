@@ -32,6 +32,7 @@ class NonLinear_EPKF(NonLinear_PKF):
         """
         Generator of EPKF filter using optional data generator.
         """
+        
         if __debug__:
             if not ((isinstance(N, int) and N > 0) or N is None):
                 raise ValueError("N must be None or a number >0")

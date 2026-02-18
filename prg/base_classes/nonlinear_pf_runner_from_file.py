@@ -36,7 +36,6 @@ class BaseNonLinearPFRunnerFromFile(BaseNonLinearPFRunner):
         if self.verbose>1:
             logging.info("Starting NonLinear PF Runner (file mode)")
 
-
         self.runner_instance.process_N_data(
             N=None,
             data_generator=file_data_generator(

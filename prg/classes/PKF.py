@@ -14,7 +14,7 @@ from scipy.linalg import cho_factor, cho_solve, LinAlgError
 from .HistoryTracker import HistoryTracker
 from .SeedGenerator import SeedGenerator
 from others.utils import diagnose_covariance, rich_show_fields
-from others.numerics import EPS_ABS
+from others.numerics import EPS_ABS, COND_FAIL
 
 @dataclass(slots=True, frozen=True)
 class PKFStep:
@@ -107,8 +107,6 @@ class PKF:
 
         # History tracker
         self.history = HistoryTracker(self.verbose)
-        # print(f' classe PKF - self.history={self.history}')
-
 
         # ----------------------------
         # Logger
@@ -132,8 +130,6 @@ class PKF:
             ch.setFormatter(formatter)
             self.logger.addHandler(ch)
 
-        # self.logger.debug("PKF instance created.")
-
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
@@ -141,10 +137,6 @@ class PKF:
     def seed_gen(self) -> int:
         """Return generator seed."""
         return self._seed_gen.seed
-
-    # @property
-    # def history(self) -> Optional[HistoryTracker]:
-    #     return self.history
 
     # ------------------------------------------------------------------
     # Data simulation & processing
@@ -252,7 +244,6 @@ class PKF:
         self.history.record(aStep)
         if self.verbose>1:
             rich_show_fields(aStep, title="First Estimate")
-        # self.logger.info(f"Step {k}: first estimate computed.")
         return aStep
 
     # ------------------------------------------------------------------
@@ -270,7 +261,7 @@ class PKF:
         Skp1 = PYYkp1_predict.copy()
 
         condS = np.linalg.cond(Skp1)
-        if condS > 1e12:
+        if condS > COND_FAIL:
             self.logger.warning(f"Step {k}: Skp1 ill-conditioned (cond={condS:.2e})")
             Skp1 += EPS_ABS * self.eye_dim_y
 

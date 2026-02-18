@@ -39,11 +39,6 @@ class Model_A_mQ_x1_y1_augmented(LinearAmQ):
         mQ = np.zeros(shape=(dim_xy+dim_y, dim_xy+dim_y))
         mQ[0:dim_xy, 0:dim_xy] = Cov
 
-        # print(f'A={A}')
-        # print(f'B={B}')
-        # print(f'mQ={mQ}')
-        # input('grigrigrigrigrigr')
-
         z00  = np.zeros(shape=(dim_xy+dim_y, 1))
         Pz00 = np.eye(dim_xy+dim_y)
 

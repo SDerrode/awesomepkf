@@ -51,32 +51,29 @@ class ParamLinear:
         self.verbose   = verbose
         self.augmented = None
         self._set_log_level()
-        
-        # print(len(kwargs.keys()))
-        # print(kwargs)
-        
 
         # Two ways to construct the object
-        if len(kwargs.keys()) == 11:  # parametrization (A, mQ, z00, Pz00)
-            self.constructorFrom_AB_mQ(kwargs['g'], kwargs['A'], kwargs['B'],
-                                       kwargs['mQ'], kwargs['z00'], kwargs['Pz00'], kwargs['augmented'])
-        elif len(kwargs.keys()) == 13:  # parametrization (sxx, syy, a, b, c, d, e) --> Sigma
-            self.constructorFrom_Sigma(kwargs['g'], kwargs['sxx'], kwargs['syy'],
-                                       kwargs['a'], kwargs['b'], kwargs['c'], kwargs['d'], kwargs['e'],
-                                       kwargs['augmented'])
+        if len(kwargs.keys()) == 12:  # parametrization (A, mQ, z00, Pz00)
+            self.constructorFrom_AB_mQ(kwargs['A'], kwargs['B'],
+                                       kwargs['mQ'], kwargs['z00'], kwargs['Pz00'])
+        elif len(kwargs.keys()) == 14:  # parametrization (sxx, syy, a, b, c, d, e) --> Sigma
+            self.constructorFrom_Sigma(kwargs['sxx'], kwargs['syy'],
+                                       kwargs['a'], kwargs['b'], kwargs['c'], kwargs['d'], kwargs['e'])
         else:
             logger.warning(f"⚠️ Le modèle n'est pas bien paramétré : {kwargs.keys()}")
+        
+        # Paramètre communs
+        self.augmented = kwargs['augmented']
+        self.g         = kwargs['g']
         
         # Paramètres spécifiques UPKF - lorsque souhaite filtrer des données linéaire par upkf
         self.alpha   = kwargs['alpha']
         self.beta    = kwargs['beta']
         self.kappa   = kwargs['kappa']
         self.lambda_ = kwargs['lambda_']
-        # print(f'alpha={self.alpha}')
-        # print(f'beta={self.beta}')
-        # print(f'kappa={self.kappa}')
-        # print(f'lambda_={self.lambda_}')
-        # exit(1)
+
+        # Paramètres spécifiques EPKF - lorsque souhaite filtrer des données linéaire par epkf
+        self.jacobiens_g = kwargs['jacobiens_g']
 
         if __debug__:
             self._check_dimensions()
@@ -91,10 +88,8 @@ class ParamLinear:
     # ------------------------------------------------------------------
     # Constructeurs
     # ------------------------------------------------------------------
-    def constructorFrom_AB_mQ(self, g, A: np.ndarray, B: np.ndarray, mQ: np.ndarray,
-                              z00: np.ndarray, Pz00: np.ndarray, augmented: bool) -> None:
-        self.augmented = augmented
-        self.g = g
+    def constructorFrom_AB_mQ(self, A: np.ndarray, B: np.ndarray, mQ: np.ndarray,
+                              z00: np.ndarray, Pz00: np.ndarray) -> None:
 
         self._A = np.array(A, dtype=float)
         if __debug__:
@@ -102,18 +97,15 @@ class ParamLinear:
             if np.any(np.abs(eigvals) >= 1.0):
                 logger.warning(f"⚠️ Certaines valeurs propres de A ont un module >= 1 : {eigvals}")
 
-        self._B = np.array(B, dtype=float)
-        self._mQ = np.array(mQ, dtype=float)
-        self._z00 = np.array(z00, dtype=float)
+        self._B    = np.array(B, dtype=float)
+        self._mQ   = np.array(mQ, dtype=float)
+        self._z00  = np.array(z00, dtype=float)
         self._Pz00 = np.array(Pz00, dtype=float)
 
         self._update_Sigma_from_A_B_mQ()
 
-    def constructorFrom_Sigma(self, g, sxx: np.ndarray, syy: np.ndarray,
-                              a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray, e: np.ndarray,
-                              augmented: bool) -> None:
-        self.augmented = augmented
-        self.g = g
+    def constructorFrom_Sigma(self, sxx: np.ndarray, syy: np.ndarray,
+                              a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray, e: np.ndarray) -> None:
 
         self._sxx, self._syy = np.array(sxx), np.array(syy)
         self._a, self._b, self._c, self._d, self._e = map(np.array, [a, b, c, d, e])
@@ -138,12 +130,12 @@ class ParamLinear:
         self._Q1 = np.block([[self._sxx, self._b.T], [self._b, self._syy]])
         self._Q2 = np.block([[self._a, self._e], [self._d, self._c]])
 
-        c, low = cho_factor(self._Q1)
-        self._A = self._Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
-        self._B = np.eye(self.dim_xy)
-        self._mQ = self._Q1 - self._A @ self._Q2.T
+        c, low     = cho_factor(self._Q1)
+        self._A    = self._Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
+        self._B    = np.eye(self.dim_xy)
+        self._mQ   = self._Q1 - self._A @ self._Q2.T
 
-        self._z00 = np.zeros((self.dim_xy, 1))
+        self._z00  = np.zeros((self.dim_xy, 1))
         self._Pz00 = self._Q1.copy()
 
     def _update_Sigma_from_A_B_mQ(self) -> None:
@@ -187,8 +179,8 @@ class ParamLinear:
     # ------------------------------------------------------------------
     def _check_dimensions(self) -> None:
         expected_shapes = {
-            'mQ': (self.dim_xy, self.dim_xy),
-            'z00': (self.dim_xy, 1),
+            'mQ':   (self.dim_xy, self.dim_xy),
+            'z00':  (self.dim_xy, 1),
             'Pz00': (self.dim_xy, self.dim_xy),
         }
         for attr, shape in expected_shapes.items():
@@ -228,24 +220,24 @@ class ParamLinear:
             self._check_consistency()
 
     @property
-    def z00(self) -> np.ndarray: return self._z00
+    def z00(self)  -> np.ndarray: return self._z00
     @property
     def Pz00(self) -> np.ndarray: return self._Pz00
 
     @property
-    def sxx(self) -> np.ndarray: return self._sxx
+    def sxx(self)  -> np.ndarray: return self._sxx
     @property
-    def syy(self) -> np.ndarray: return self._syy
+    def syy(self)  -> np.ndarray: return self._syy
     @property
-    def a(self) -> np.ndarray: return self._a
+    def a(self)    -> np.ndarray: return self._a
     @property
-    def b(self) -> np.ndarray: return self._b
+    def b(self)    -> np.ndarray: return self._b
     @property
-    def c(self) -> np.ndarray: return self._c
+    def c(self)    -> np.ndarray: return self._c
     @property
-    def d(self) -> np.ndarray: return self._d
+    def d(self)    -> np.ndarray: return self._d
     @property
-    def e(self) -> np.ndarray: return self._e
+    def e(self)    -> np.ndarray: return self._e
 
     # ------------------------------------------------------------------
     # Summary
@@ -256,13 +248,12 @@ class ParamLinear:
 
         print("=== ParamLinear Summary ===")
         print(f"dim_x={self.dim_x}, dim_y={self.dim_y}, verbose={self.verbose}\n")
-        print("A:\n", fmt(self.A))
-        print("B:\n", fmt(self.B))
-        print("mQ:\n", fmt(self.mQ))
-        print("z00:\n", fmt(self.z00))
+        print("A:\n",    fmt(self.A))
+        print("B:\n",    fmt(self.B))
+        print("mQ:\n",   fmt(self.mQ))
+        print("z00:\n",  fmt(self.z00))
         print("Pz00:\n", fmt(self.Pz00))
         print("========================\n")
 
         if __debug__:
             self._check_consistency()
-
