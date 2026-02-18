@@ -50,8 +50,8 @@ def addParseToParser(parser, listOptions):
         },
         'N': {
             'type':    int,
-            'default': 5000,
-            'help':    'Set the number of samples to process (default: 5000)'
+            'default': None,
+            'help':    'Set the number of samples to process (default: None)'
         },
         'nbParticles': {
             'type':    int,
@@ -66,8 +66,8 @@ def addParseToParser(parser, listOptions):
         'linearModelName': {
             'choices': ['A_mQ_x1_y1', 'A_mQ_x1_y1_VPgreaterThan1', 'A_mQ_x1_y1_augmented', 'A_mQ_x2_y2', \
                         'A_mQ_x3_y1', 'Sigma_x1_y1', 'Sigma_x2_y2', 'Sigma_x3_y1'],
-            'default': 'A_mQ_x3_y1',
-            'help':    'Linear model to process data (default: A_mQ_x3_y1)'
+            'default': None,
+            'help':    'Linear model to process data (default: None)'
         },
         'sigmaSet': {
             'choices': ['wan2000', 'cpkf', 'lerner2002', 'ito2000'],
@@ -78,8 +78,8 @@ def addParseToParser(parser, listOptions):
             'choices': ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', \
                         'x1_y1_withRetroactions', 'x1_y1_withRetroactions_augmented', 'x2_y1', 'x2_y1_rapport', \
                         'x2_y1_withRetroactionsOfObservations', 'x2_y1_withRetroactionsOfObservations_augmented'],
-            'default': 'x2_y1_rapport',
-            'help':    'Non linear model to process data (default: x2_y1_rapport)'
+            'default': None,
+            'help':    'Non linear model to process data (default: None)'
         },
         'dataFileName': {
             'type':    str,

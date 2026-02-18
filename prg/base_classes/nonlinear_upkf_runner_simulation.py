@@ -6,30 +6,21 @@ from typing import Optional
 
 from classes.NonLinear_UPKF import NonLinear_UPKF
 
-from base_classes.nonlinear_upkf_runner_base import NonLinearUPKFRunner
+from base_classes.nonlinear_upkf_runner_base import BaseNonLinearUPKFRunner
 
 
-class NonLinearUPKFRunner(NonLinearUPKFRunner):
+class BaseNonLinearUPKFRunnerSim(BaseNonLinearUPKFRunner):
     """
     Runner for nonlinear simulation + UPKF filtering.
     """
 
-    def __init__(
-        self,
-        model_name: str,
-        N: int,
-        sKey: Optional[int],
-        sigmaSet: Optional[int],
-        verbose: int,
-        plot: bool,
-        save_history: bool,
-        base_dir: str = "."
-    ) -> None:
-
+    def __init__(self, model_name: str, N: int, sKey: Optional[int], sigmaSet: Optional[int], verbose: int, plot: bool, save_history: bool, base_dir: str = ".") -> None:
+        
+        self.N    = N
+        self.sKey = sKey
+        
         super().__init__(model_name, sigmaSet, verbose, plot, save_history, base_dir)
 
-        self.N = N
-        self.sKey = sKey
 
     # ==========================================================
 

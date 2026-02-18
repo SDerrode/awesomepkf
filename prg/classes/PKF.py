@@ -77,6 +77,12 @@ class PKF:
             raise ValueError("sKey must be None or a number>0")
         if verbose not in [0, 1, 2]:
             raise ValueError("verbose must be 0, 1 or 2")
+        
+        # stack = inspect.stack()
+        # print("Pile d'appels :")
+        # for frame in stack[:5]:  # limiter pour lisibilité
+        #     print(f"Function: {frame.function}, File: {frame.filename}, Line: {frame.lineno}")
+        # input('ATTENTE STACK APPEL')
 
         self.dt        = 1
         self.verbose   = verbose
@@ -102,11 +108,7 @@ class PKF:
         # History tracker
         self.history = HistoryTracker(self.verbose)
         # print(f' classe PKF - self.history={self.history}')
-        # stack = inspect.stack()
-        # print("Pile d'appels :")
-        # for frame in stack[:5]:  # limiter pour lisibilité
-        #     print(f"Function: {frame.function}, File: {frame.filename}, Line: {frame.lineno}")
-        # input('ATTENTE STACK APPEL')
+
 
         # ----------------------------
         # Logger

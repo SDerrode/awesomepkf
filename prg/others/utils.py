@@ -159,10 +159,6 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
     
     Retour : dictionary with several error measures
     """
-    
-    # print(f'type(P_list)={type(P_list)}')
-    # print(f'type(S_list)={type(S_list)}')
-    # print(S_list[0:3])
 
     # Conversion en tableaux
     x_true  = np.hstack(x_true).T      # on empile horizontalement puis on transpose
@@ -176,7 +172,7 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
     mae_total   = float(np.mean(np.abs(errors_flat)))
     rmse        = float(np.sqrt(mse_total))
 
-    errors  = x_true - x_hat  # forme (1000, 2)
+    errors  = x_true - x_hat
 
     # Calcul de la MSE et MAE pour X et pour Y séparemment si c'est une modele a état augmenté
     if model.param.augmented:

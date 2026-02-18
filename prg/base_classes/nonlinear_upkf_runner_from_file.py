@@ -8,24 +8,18 @@ from typing import Optional
 from classes.NonLinear_UPKF import NonLinear_UPKF
 from others.utils import file_data_generator
 
-from base_classes.nonlinear_upkf_runner_base import NonLinearUPKFRunner
+from base_classes.nonlinear_upkf_runner_base import BaseNonLinearUPKFRunner
 
 
-class NonLinearUPKFRunnerFromFile(NonLinearUPKFRunner):
+class BaseNonLinearUPKFRunnerFromFile(BaseNonLinearUPKFRunner):
     """
     Runner for filtering nonlinear data loaded from file.
     """
 
-    def __init__(
-        self,
-        model_name: str,
-        sigmaSet: int,
-        data_filename: Optional[str],
-        verbose: int = 0,
-        plot: bool = False,
-        save_history: bool = False,
-        base_dir: str = ".",
-    ) -> None:
+    def __init__(self, model_name: str, sigmaSet: int, data_filename: Optional[str], verbose: int = 0, plot: bool = False, save_history: bool = False, base_dir: str = ".",) -> None:
+ 
+        self.N    = -1
+        self.sKey = None
 
         super().__init__(model_name, sigmaSet, verbose, plot, save_history, base_dir)
 

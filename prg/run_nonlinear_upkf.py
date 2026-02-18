@@ -3,8 +3,8 @@
 
 import argparse
 
-from base_classes.nonlinear_upkf_runner_simulation import NonLinearUPKFRunner
-from base_classes.nonlinear_upkf_runner_from_file import NonLinearUPKFRunnerFromFile
+from base_classes.nonlinear_upkf_runner_simulation import BaseNonLinearUPKFRunnerSim
+from base_classes.nonlinear_upkf_runner_from_file import BaseNonLinearUPKFRunnerFromFile
 from others.parser import addParseToParser
 
 
@@ -13,26 +13,42 @@ def parse_arguments() -> argparse.Namespace:
         description="Run NonLinear UPKF"
     )
 
-    parser.add_argument(
-        "--mode",
-        choices=["sim", "file"],
-        required=True,
-        help="Execution mode: sim (simulation) or file (from CSV)"
-    )
-
     addParseToParser(
         parser,
         ['nonLinearModelName', 'N', 'sKey', 'sigmaSet', 'dataFileName']
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # Validation logique
+    if args.dataFileName is not None and args.N is not None:
+        parser.error("--N should not be used with --dataFileName")
+
+    if args.dataFileName is None and args.N is None:
+        parser.error("--N must be used when --dataFileName is not specified")
+
+    return args
 
 
 def main() -> None:
     args = parse_arguments()
+    
+     # 🔎 Distinction automatique selon dataFileName
+    if args.dataFileName is not None:
 
-    if args.mode == "sim":
-        runner = NonLinearUPKFRunner(
+        # Mode FILE
+        runner = BaseNonLinearUPKFRunnerFromFile(
+            model_name=args.nonLinearModelName,
+            sigmaSet=args.sigmaSet,
+            data_filename=args.dataFileName,
+            verbose=args.verbose,
+            plot=args.plot,
+            save_history=args.saveHistory,
+        )
+    else:
+        
+        # Mode SIM
+        runner = BaseNonLinearUPKFRunnerSim(
             model_name=args.nonLinearModelName,
             N=args.N,
             sKey=args.sKey,
@@ -42,18 +58,12 @@ def main() -> None:
             save_history=args.saveHistory,
         )
 
-    elif args.mode == "file":
-        runner = NonLinearUPKFRunnerFromFile(
-            model_name=args.nonLinearModelName,
-            sigmaSet=args.sigmaSet,
-            data_filename=args.dataFileName,
-            verbose=args.verbose,
-            plot=args.plot,
-            save_history=args.saveHistory,
-        )
-
     runner.run()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        printf(f'{e}')
+        

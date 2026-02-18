@@ -6,7 +6,7 @@ import logging
 
 from base_classes.simulator_linear import LinearDataSimulator
 from base_classes.simulator_nonlinear import NonLinearDataSimulator
-
+from others.parser import addParseToParser
 
 # =============================================================
 # Logger
@@ -28,17 +28,17 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Simulate linear or non-linear data"
     )
+    
+    addParseToParser(
+        parser,
+        ['linearModelName', 'nonLinearModelName', 'N', 'sKey', 'dataFileName', 'withoutX']
+    )
 
-    # Arguments communs
-    parser.add_argument("--N", type=int, default=1000, help="Number of samples")
-    parser.add_argument("--sKey", type=int, default=None, help="Seed key")
-    parser.add_argument("--dataFileName", default=None, help="Output filename")
-    parser.add_argument("--verbose", type=int, default=1, help="Verbosity level")
-    parser.add_argument("--withoutX", action="store_true", help="Do not store X in output")
+    args = parser.parse_args()
 
-    # Arguments spécifiques
-    parser.add_argument("--linearModelName", help="Name of linear model")
-    parser.add_argument("--nonLinearModelName", help="Name of non-linear model")
+    # Validation logique
+    if args.linearModelName is not None and args.nonLinearModelName is not None:
+        parser.error("--nonLinearModelName should not be used with --linearModelName. One or the other!")
 
     return parser.parse_args()
 

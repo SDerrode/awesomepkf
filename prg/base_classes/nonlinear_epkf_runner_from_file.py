@@ -8,15 +8,18 @@ from typing import Optional
 from classes.NonLinear_EPKF import NonLinear_EPKF
 from others.utils import file_data_generator
 
-from base_classes.nonlinear_epkf_runner_base import NonLinearEPKFRunner
+from base_classes.nonlinear_epkf_runner_base import BaseNonLinearEPKFRunner
 
 
-class NonLinearEPKFRunnerFromFile(NonLinearEPKFRunner):
+class BaseNonLinearEPKFRunnerFromFile(BaseNonLinearEPKFRunner):
     """
     Runner for filtering nonlinear data loaded from file.
     """
 
     def __init__(self, model_name: str, ell: int, data_filename: Optional[str], verbose: int = 0, plot: bool = False, save_history: bool = False, base_dir: str = ".") -> None:
+
+        self.N    = -1
+        self.sKey = None
 
         super().__init__(model_name, ell, verbose, plot, save_history, base_dir)
 
