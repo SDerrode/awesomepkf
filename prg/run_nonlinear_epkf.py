@@ -3,8 +3,8 @@
 
 import argparse
 
-from base_classes.nonlinear_epkf_runner_simulation import NonLinearEPKFRunner
-from base_classes.nonlinear_epkf_runner_from_file import NonLinearEPKFRunnerFromFile
+from base_classes.nonlinear_epkf_runner_simulation import BaseNonLinearEPKFRunnerSim
+from base_classes.nonlinear_epkf_runner_from_file import BaseNonLinearEPKFRunnerFromFile
 from others.parser import addParseToParser
 
 
@@ -13,40 +13,46 @@ def parse_arguments() -> argparse.Namespace:
         description="Run NonLinear EPKF"
     )
 
-    parser.add_argument(
-        "--mode",
-        choices=["sim", "file"],
-        required=True,
-        help="Execution mode: sim (simulation) or file (from CSV)"
-    )
-
     addParseToParser(
         parser,
         ['nonLinearModelName', 'N', 'sKey', 'ell', 'dataFileName']
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # Validation logique
+    if args.dataFileName is not None and args.N is not None:
+        parser.error("--N should not be used with --dataFileName")
+
+    if args.dataFileName is None and args.N is None:
+        parser.error("--N must be used when --dataFileName is not specified")
+
+    return args
 
 
 def main() -> None:
     args = parse_arguments()
+    
+     # 🔎 Distinction automatique selon dataFileName
+    if args.dataFileName is not None:
 
-    if args.mode == "sim":
-        runner = NonLinearEPKFRunner(
+        # Mode FILE
+        runner = BaseNonLinearEPKFRunnerFromFile(
             model_name=args.nonLinearModelName,
-            N=args.N,
-            sKey=args.sKey,
             ell=args.ell,
+            data_filename=args.dataFileName,
             verbose=args.verbose,
             plot=args.plot,
             save_history=args.saveHistory,
         )
+    else:
 
-    elif args.mode == "file":
-        runner = NonLinearEPKFRunnerFromFile(
+        # Mode SIM
+        runner = BaseNonLinearEPKFRunnerSim(
             model_name=args.nonLinearModelName,
+            N=args.N,
+            sKey=args.sKey,
             ell=args.ell,
-            data_filename=args.dataFileName,
             verbose=args.verbose,
             plot=args.plot,
             save_history=args.saveHistory,

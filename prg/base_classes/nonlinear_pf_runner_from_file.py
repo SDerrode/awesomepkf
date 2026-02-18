@@ -8,24 +8,18 @@ from typing import Optional
 from classes.NonLinear_PF import NonLinear_PF
 from others.utils import file_data_generator
 
-from base_classes.nonlinear_pf_runner_base import NonLinearPFRunner
+from base_classes.nonlinear_pf_runner_base import BaseNonLinearPFRunner
 
 
-class NonLinearPFRunnerFromFile(NonLinearPFRunner):
+class BaseNonLinearPFRunnerFromFile(BaseNonLinearPFRunner):
     """
     Runner for filtering nonlinear data loaded from file.
     """
 
-    def __init__(
-        self,
-        model_name: str,
-        nbParticles: int,
-        data_filename: Optional[str],
-        verbose: int = 0,
-        plot: bool = False,
-        save_history: bool = False,
-        base_dir: str = ".",
-    ) -> None:
+    def __init__(self, model_name: str, nbParticles: int, data_filename: Optional[str], verbose: int = 0, plot: bool = False, save_history: bool = False, base_dir: str = ".",) -> None:
+        
+        self.N    = -1
+        self.sKey = None
 
         super().__init__(model_name, nbParticles, verbose, plot, save_history, base_dir)
 

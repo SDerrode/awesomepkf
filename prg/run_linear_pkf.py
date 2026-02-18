@@ -3,7 +3,7 @@
 
 import argparse
 
-from base_classes.linear_pkf_runner_simulation import LinearPKFRunner
+from base_classes.linear_pkf_runner_simulation import LinearPKFRunnerSim
 from base_classes.linear_pkf_runner_from_file import LinearPKFRunnerFromFile
 from others.parser import addParseToParser
 
@@ -13,38 +13,43 @@ def parse_arguments() -> argparse.Namespace:
         description="Run Linear PKF"
     )
 
-    parser.add_argument(
-        "--mode",
-        choices=["sim", "file"],
-        required=True,
-        help="Execution mode: sim (simulation) or file (from CSV)"
-    )
-
     addParseToParser(
         parser,
         ['linearModelName', 'N', 'sKey', 'dataFileName']
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # Validation logique
+    if args.dataFileName is not None and args.N is not None:
+        parser.error("--N should not be used with --dataFileName")
+
+    if args.dataFileName is None and args.N is None:
+        parser.error("--N must be used when --dataFileName is not specified")
+
+    return args
 
 
 def main() -> None:
     args = parse_arguments()
 
-    if args.mode == "sim":
-        runner = LinearPKFRunner(
+    # 🔎 Distinction automatique selon dataFileName
+    if args.dataFileName is not None:
+        
+        # Mode FILE
+        runner = LinearPKFRunnerFromFile(
             model_name=args.linearModelName,
-            N=args.N,
-            sKey=args.sKey,
+            data_filename=args.dataFileName,
             verbose=args.verbose,
             plot=args.plot,
             save_history=args.saveHistory,
         )
-
-    elif args.mode == "file":
-        runner = LinearPKFRunnerFromFile(
+    else:
+        # Mode SIM
+        runner = LinearPKFRunnerSim(
             model_name=args.linearModelName,
-            data_filename=args.dataFileName,
+            N=args.N,
+            sKey=args.sKey,
             verbose=args.verbose,
             plot=args.plot,
             save_history=args.saveHistory,

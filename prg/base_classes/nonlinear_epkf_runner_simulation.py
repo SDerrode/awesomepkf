@@ -6,20 +6,21 @@ from typing import Optional
 
 from classes.NonLinear_EPKF import NonLinear_EPKF
 
-from base_classes.nonlinear_epkf_runner_base import NonLinearEPKFRunner
+from base_classes.nonlinear_epkf_runner_base import BaseNonLinearEPKFRunner
 
 
-class NonLinearEPKFRunner(NonLinearEPKFRunner):
+class BaseNonLinearEPKFRunnerSim(BaseNonLinearEPKFRunner):
     """
     Runner for nonlinear simulation + EPKF filtering.
     """
 
     def __init__(self, model_name: str, N: int, sKey: Optional[int], ell: Optional[int], verbose: int, plot: bool, save_history: bool, base_dir: str = ".") -> None:
-
+        
+        self.N    = N
+        self.sKey = sKey
+        
         super().__init__(model_name, ell, verbose, plot, save_history, base_dir)
 
-        self.N = N
-        self.sKey = sKey
 
     # ==========================================================
 

@@ -22,9 +22,11 @@ class Linear_PKF(PKF):
     """PKF : Linear coupled Kalman filter."""
 
     def __init__(self, param: ParamLinear, sKey: Optional[int] = None, verbose: int = 0):
+        
         if __debug__:
             if not isinstance(param, ParamLinear):
                 raise TypeError("param must be an object from class ParamLinear")
+        
         self.param = param
         super().__init__(sKey, verbose)
         

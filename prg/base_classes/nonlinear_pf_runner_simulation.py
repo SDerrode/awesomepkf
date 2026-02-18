@@ -6,30 +6,21 @@ from typing import Optional
 
 from classes.NonLinear_PF import NonLinear_PF
 
-from base_classes.nonlinear_pf_runner_base import NonLinearPFRunner
+from base_classes.nonlinear_pf_runner_base import BaseNonLinearPFRunner
 
 
-class NonLinearPFRunner(NonLinearPFRunner):
+class BaseNonLinearPFRunnerSim(BaseNonLinearPFRunner):
     """
     Runner for nonlinear simulation + PF filtering.
     """
 
-    def __init__(
-        self,
-        model_name: str,
-        N: int,
-        sKey: Optional[int],
-        nbParticles: Optional[int],
-        verbose: int,
-        plot: bool,
-        save_history: bool,
-        base_dir: str = "."
-    ) -> None:
+    def __init__(self, model_name: str, N: int, sKey: Optional[int], nbParticles: Optional[int], verbose: int, plot: bool, save_history: bool, base_dir: str = ".") -> None:
+
+        self.N    = N
+        self.sKey = sKey
 
         super().__init__(model_name, nbParticles, verbose, plot, save_history, base_dir)
 
-        self.N = N
-        self.sKey = sKey
 
     # ==========================================================
 

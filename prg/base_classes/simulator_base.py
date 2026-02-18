@@ -101,8 +101,8 @@ class BaseDataSimulator(ABC):
             self.logger.debug(f"Model selected: {model.MODEL_NAME}")
 
         params = model.get_params().copy()
-        dim_x = params.pop("dim_x")
-        dim_y = params.pop("dim_y")
+        dim_x  = params.pop("dim_x")
+        dim_y  = params.pop("dim_y")
 
         param = self.create_param(dim_x, dim_y, params)
 

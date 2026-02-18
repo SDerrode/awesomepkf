@@ -3,8 +3,8 @@
 
 import argparse
 
-from base_classes.nonlinear_pf_runner_simulation import NonLinearPFRunner
-from base_classes.nonlinear_pf_runner_from_file import NonLinearPFRunnerFromFile
+from base_classes.nonlinear_pf_runner_simulation import BaseNonLinearPFRunnerSim
+from base_classes.nonlinear_pf_runner_from_file import BaseNonLinearPFRunnerFromFile
 from others.parser import addParseToParser
 
 
@@ -13,40 +13,46 @@ def parse_arguments() -> argparse.Namespace:
         description="Run NonLinear PF"
     )
 
-    parser.add_argument(
-        "--mode",
-        choices=["sim", "file"],
-        required=True,
-        help="Execution mode: sim (simulation) or file (from CSV)"
-    )
-
     addParseToParser(
         parser,
         ['nonLinearModelName', 'N', 'sKey', 'nbParticles', 'dataFileName']
     )
 
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    # Validation logique
+    if args.dataFileName is not None and args.N is not None:
+        parser.error("--N should not be used with --dataFileName")
+
+    if args.dataFileName is None and args.N is None:
+        parser.error("--N must be used when --dataFileName is not specified")
+
+    return args
 
 
 def main() -> None:
     args = parse_arguments()
-
-    if args.mode == "sim":
-        runner = NonLinearPFRunner(
+    
+    # 🔎 Distinction automatique selon dataFileName
+    if args.dataFileName is not None:
+        
+        # Mode FILE
+        runner = BaseNonLinearPFRunnerFromFile(
             model_name=args.nonLinearModelName,
-            N=args.N,
-            sKey=args.sKey,
             nbParticles=args.nbParticles,
+            data_filename=args.dataFileName,
             verbose=args.verbose,
             plot=args.plot,
             save_history=args.saveHistory,
         )
-
-    elif args.mode == "file":
-        runner = NonLinearPFRunnerFromFile(
+    else:
+        
+        # Mode SIM
+        runner = BaseNonLinearPFRunnerSim(
             model_name=args.nonLinearModelName,
+            N=args.N,
+            sKey=args.sKey,
             nbParticles=args.nbParticles,
-            data_filename=args.dataFileName,
             verbose=args.verbose,
             plot=args.plot,
             save_history=args.saveHistory,
