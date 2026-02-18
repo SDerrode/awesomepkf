@@ -1,5 +1,7 @@
+from classes.ParamNonLinear import ParamNonLinear
 from classes.ParamLinear import ParamLinear
 from classes.Linear_PKF import Linear_PKF
+from models.nonLinear import ModelFactoryNonLinear
 from models.linear import ModelFactoryLinear
 from base_classes.runner_base import BaseRunner
 from others.plot_settings import WINDOW
@@ -11,10 +13,10 @@ class BaseLinearPKFRunner(BaseRunner):
         self.runner_instance = Linear_PKF(param=self.param, sKey=self.sKey, verbose=self.verbose)
 
     def _get_model_factory(self):
-        return ModelFactoryLinear
+        return ModelFactoryLinear, ModelFactoryNonLinear
 
     def _get_param_class(self):
-        return ParamLinear
+        return ParamLinear, ParamNonLinear
 
     def _plot_results(self) -> None:
 

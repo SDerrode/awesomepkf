@@ -1,24 +1,25 @@
 from classes.ParamNonLinear import ParamNonLinear
+from classes.ParamLinear import ParamLinear
 from classes.NonLinear_EPKF import NonLinear_EPKF
 from models.nonLinear import ModelFactoryNonLinear
+from models.linear import ModelFactoryLinear
 from base_classes.runner_base import BaseRunner
 from others.plot_settings import WINDOW
 
 class BaseNonLinearEPKFRunner(BaseRunner):
 
     def __init__(self, model_name, ell=None, verbose=1, plot=False, save_history=False, base_dir="."):
-        self.ell = ell
+        
+        self.ell = ell # Avant le constructeur
         super().__init__(model_name, verbose, plot, save_history, base_dir)
 
         self.runner_instance = NonLinear_EPKF(param=self.param, ell=self.ell, sKey=self.sKey, verbose=self.verbose)
 
     def _get_model_factory(self):
-        return ModelFactoryNonLinear
+        return ModelFactoryLinear, ModelFactoryNonLinear
 
     def _get_param_class(self):
-        return ParamNonLinear
-
-    # ----------------------------------------------------------
+        return ParamLinear, ParamNonLinear
 
     def _plot_results(self) -> None:
 

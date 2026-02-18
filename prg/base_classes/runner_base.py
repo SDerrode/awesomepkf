@@ -18,6 +18,7 @@ class BaseRunner(ABC):
 
     def __init__(self, model_name: str, verbose: int = 1, plot: bool = False, save_history: bool = False, base_dir: str = ".", **kwargs) -> None:
         self.model_name = model_name
+        # print(f'model_name={model_name}')
         self.verbose = verbose
         self.plot = plot
         self.save_history = save_history
@@ -78,8 +79,28 @@ class BaseRunner(ABC):
         pass
 
     def _build_model(self):
-        factory = self._get_model_factory()
-        param_class = self._get_param_class()
+        # print('entrée dans _build_model - BaseRunner')
+        
+        factoryL, factoryNL = self._get_model_factory()
+        # print(f'factoryL={factoryL}')
+        # print('Liste models : ', factoryL.list_models())
+        # print(f'factoryNL={factoryNL}')
+        # print('Liste models : ', factoryNL.list_models())
+        
+        param_class_linear, param_class_nonlinear = self._get_param_class()
+        # print(f'param_class_linear={param_class_linear}')
+        # print(f'param_class_nonlinear={param_class_nonlinear}')
+        
+        if self.model_name in factoryL.list_models():
+            factory     = factoryL
+            param_class = param_class_linear
+        elif self.model_name in factoryNL.list_models():
+            factory     = factoryNL
+            param_class = param_class_nonlinear
+        
+        # print(f'factory={factory}')
+        # print(f'param_class={param_class}')
+        # input('atretreterte')
 
         model = factory.create(self.model_name)
         params = model.get_params().copy()
@@ -87,6 +108,9 @@ class BaseRunner(ABC):
         dim_y = params.pop("dim_y")
 
         param = param_class(self.verbose, dim_x, dim_y, **params)
+        # print(f'model={model}')
+        # print(f'param={param}')
+        # input('ATTENTE _build_model - BaseRunner')
 
         if self.verbose > 1:
             logging.debug(f"Model created: {model}")

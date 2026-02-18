@@ -39,6 +39,8 @@ def parse_arguments():
     # Validation logique
     if args.linearModelName is not None and args.nonLinearModelName is not None:
         parser.error("--nonLinearModelName should not be used with --linearModelName. One or the other!")
+    if args.linearModelName is None and args.nonLinearModelName is None:
+        parser.error("--nonLinearModelName OR --linearModelName must be used.")
 
     return parser.parse_args()
 
