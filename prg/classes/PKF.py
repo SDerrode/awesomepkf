@@ -100,10 +100,10 @@ class PKF:
         # Matrices utiles pour accélérer les calculs
         self.eye_dim_y       = np.eye(self.dim_y)
         self.eye_dim_x       = np.eye(self.dim_x)
-        self.zeros_dim_x_y   = np.zeros(shape=(self.dim_x, self.dim_y))
-        self.zeros_dim_y_1   = np.zeros(shape=(self.dim_y, 1))
-        self.zeros_dim_xy_1  = np.zeros(shape=(self.dim_xy, 1))
-        self.zeros_dim_xy_xy = np.zeros(shape=(self.dim_xy, self.dim_xy))
+        self.zeros_dim_x_y   = np.zeros((self.dim_x, self.dim_y))
+        self.zeros_dim_y_1   = np.zeros((self.dim_y, 1))
+        self.zeros_dim_xy_1  = np.zeros((self.dim_xy, 1))
+        self.zeros_dim_xy_xy = np.zeros((self.dim_xy, self.dim_xy))
 
         # History tracker
         self.history = HistoryTracker(self.verbose)
@@ -151,7 +151,7 @@ class PKF:
     # Generators
     # ------------------------------------------------------------------
     def _data_generation(self, N: Optional[int] = None) -> Generator[tuple[int, np.ndarray, np.ndarray], None, None]:
-        Zkp1_simul = np.zeros(shape=(self.dim_xy, 1))
+        Zkp1_simul = np.zeros((self.dim_xy, 1))
 
         # First step
         if self.augmented:
@@ -169,7 +169,7 @@ class PKF:
         # Next steps
         zerosvector_xy = np.zeros(self.dim_xy)
         zerosvector_x  = np.zeros(self.dim_x)
-        noise_z        = np.zeros(shape=(self.dim_xy, 1))
+        noise_z        = np.zeros((self.dim_xy, 1))
         while N is None or k<N:
             if self.augmented:
                 noise_z[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(mean=zerosvector_x, cov=self.mQ[0:self.dim_x, 0:self.dim_x])
@@ -223,7 +223,7 @@ class PKF:
     # ------------------------------------------------------------------
     def _firstEstimate(self, generator):
         k, xkp1, ykp1 = next(generator)
-        Xkp1_update = xkp1.copy()
+        Xkp1_update   = xkp1.copy()
         PXXkp1_update = self.Pz00[0:self.dim_x, 0:self.dim_x].copy()
         self._test_CovMatrix(PXXkp1_update, k)
 

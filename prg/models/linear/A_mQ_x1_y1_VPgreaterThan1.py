@@ -25,7 +25,7 @@ class Model_A_mQ_x1_y1_VPgreaterThan1(LinearAmQ):
         #                      [0.27774725274725276, 0.9968131868131868]] )
         mQ   = np.diag( [0.4, 0.2])
         
-        z00  = np.zeros(shape=(dim_x+dim_y, 1))
+        z00  = np.zeros((dim_x+dim_y, 1))
         Pz00 = np.eye(dim_x+dim_y)
 
         super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, z00=z00, Pz00=Pz00)

@@ -128,7 +128,7 @@ class SetLERNER2002(SigmaPointsSet, key="lerner2002"):
         
         self.nbSigmaPoint = 2 * self.dim**2 + 1
         
-        self.Wm = np.zeros(shape=(self.nbSigmaPoint))
+        self.Wm = np.zeros((self.nbSigmaPoint))
         self.Wm[0]                            = (self.dim**2 - 7.*self.dim)/18 + 1.
         self.Wm[1:2*self.dim+1]               = (4-self.dim) / 18.
         self.Wm[2*self.dim+1:2*self.dim**2+1] = 1./36.
@@ -194,7 +194,7 @@ class SetIto2000(SigmaPointsSet, key="ito2000"):
         self.p            = 4
         self.nbSigmaPoint = self.p**self.dim
         
-        self.Wm = np.zeros(shape=(self.nbSigmaPoint))
+        self.Wm = np.zeros((self.nbSigmaPoint))
         xi_1d, w_1d = np.polynomial.hermite.hermgauss(self.p)
 
         # Produit tensoriel

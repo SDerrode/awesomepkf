@@ -24,7 +24,7 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
         # pour récupérer les paramètre du modèle non augmenté
         self.mod = ModelX2Y1_withRetroactionsOfObservations()
         
-        self.mQ   = np.zeros(shape=(self.dim_xy, self.dim_xy))
+        self.mQ   = np.zeros((self.dim_xy, self.dim_xy))
         self.mQ[0:self.dim_x, 0:self.dim_x] = self.mod.mQ
         self.z00  = np.zeros((self.dim_xy, 1))
         self.z00[0:self.dim_x] = self.mod.z00

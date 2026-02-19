@@ -27,7 +27,7 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
         # (a,b,c,d) = (0.99,\;1.2,\;0.9,\;1.5)
         # Expected behaviour: persistent oscillations of self.moderate amplitude; nonlinear terms drive and sustain the cycles.
         # Numeric tips: choose \(x_0,y_0\) small but nonzero, \(\sigma\) very small (e.g.\ 0.005) to reveal deterministic oscillation, \(N\ge 300\).
-        self.mQ   = np.zeros(shape=(self.dim_xy, self.dim_xy))
+        self.mQ   = np.zeros((self.dim_xy, self.dim_xy))
         self.mQ[0:self.dim_x, 0:self.dim_x] = self.mod.mQ
         self.z00  = np.zeros((self.dim_xy, 1))
         self.z00[0:self.dim_x] = self.mod.z00

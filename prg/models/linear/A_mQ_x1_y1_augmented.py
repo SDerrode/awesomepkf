@@ -26,20 +26,20 @@ class Model_A_mQ_x1_y1_augmented(LinearAmQ):
         Fn  = mod.A
         Cn  = mod.B
         Cov = mod.mQ
-        Hn  = np.zeros(shape=(dim_y, dim_xy))
+        Hn  = np.zeros((dim_y, dim_xy))
         Hn[:, dim_x:] = np.eye(dim_y)
-        Dn  = np.zeros(shape=(dim_y, dim_y))
+        Dn  = np.zeros((dim_y, dim_y))
 
-        A = np.block([ [Fn,      np.zeros(shape=(dim_xy, dim_y))],
-                       [Hn @ Fn, np.zeros(shape=(1,      dim_y))] ])
+        A = np.block([ [Fn,      np.zeros((dim_xy, dim_y))],
+                       [Hn @ Fn, np.zeros((1,      dim_y))] ])
         
-        B = np.block([ [Cn,      np.zeros(shape=(dim_xy, dim_y))],
+        B = np.block([ [Cn,      np.zeros((dim_xy, dim_y))],
                        [Hn @ Cn, Dn]])
 
-        mQ = np.zeros(shape=(dim_xy+dim_y, dim_xy+dim_y))
+        mQ = np.zeros((dim_xy+dim_y, dim_xy+dim_y))
         mQ[0:dim_xy, 0:dim_xy] = Cov
 
-        z00  = np.zeros(shape=(dim_xy+dim_y, 1))
+        z00  = np.zeros((dim_xy+dim_y, 1))
         Pz00 = np.eye(dim_xy+dim_y)
 
         super().__init__(dim_x=dim_xy, dim_y=dim_y, A=A, B=B, mQ=mQ, z00=z00, Pz00=Pz00, augmented=True)

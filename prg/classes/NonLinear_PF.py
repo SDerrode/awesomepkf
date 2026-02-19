@@ -105,7 +105,7 @@ class NonLinear_PF(NonLinear_PKF):
         ##################################################################################################@
         # The next ones
         
-        # accel_zero = np.zeros(shape=(self.dim_xy, 1))
+        # accel_zero = np.zeros((self.dim_xy, 1))
         k=0
         while N is None or k<N:
 

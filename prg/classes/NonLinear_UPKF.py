@@ -71,7 +71,7 @@ class NonLinear_UPKF(NonLinear_PKF):
 
         ###################
         # The next ones
-        Xkp1_update_augmented = np.zeros(shape=(2*self.dim_xy, 1))
+        Xkp1_update_augmented = np.zeros((2*self.dim_xy, 1))
         Pa_base               = np.zeros((2*self.dim_xy, 2*self.dim_xy))
         Pa_base[self.dim_xy:, self.dim_xy:] = self.mQ
         Pkp1_predict          = self.zeros_dim_xy_xy.copy()
