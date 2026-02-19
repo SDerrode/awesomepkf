@@ -57,7 +57,7 @@ class NonLinear_EPKF(NonLinear_PKF):
         ##################################################################################################@
         # The next ones
         accel_xy_xy = self.zeros_dim_xy_xy.copy()
-        z_iterated  = np.zeros(shape=(self.dim_xy, 1))
+        z_iterated  = np.zeros((self.dim_xy, 1))
         while N is None or step.k<N:
 
             # New data is arriving ##################################

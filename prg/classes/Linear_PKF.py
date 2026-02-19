@@ -78,7 +78,6 @@ class Linear_PKF(PKF):
             Zkp1_predict = self.g(Xkp1_update_augmented, self.zeros_dim_xy_1, self.dt)
             accel_xy_xy[0:self.dim_x, 0:self.dim_x] = step.PXXkp1_update
             Pkp1_predict = A @ accel_xy_xy @ AT + BmQBT
-            # self.logger.debug(f"Step {step.k}: prediction done, testing covariance")
             self._test_CovMatrix(Pkp1_predict, step.k)
 
             # New data arrives
