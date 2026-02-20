@@ -97,7 +97,7 @@ class PKF:
         
         # Shortcuts
         self.dim_x, self.dim_y, self.dim_xy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
-        self.z0, self.Pz0, self.g, self.mQ, self.augmented = self.param._z0, self.param._Pz0, self.param.g, self.param.mQ, self.param.augmented
+        self.mz0, self.Pmz0, self.g, self.mQ, self.augmented = self.param._mz0, self.param._Pmz0, self.param.g, self.param.mQ, self.param.augmented
 
         # Matrices utiles pour accélérer les calculs
         self.eye_dim_y       = np.eye(self.dim_y)
@@ -158,11 +158,11 @@ class PKF:
         # First step
         if self.augmented:
             Zkp1_simul[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(
-                mean=self.z0[0:self.dim_x, 0], cov=self.Pz0[0:self.dim_x, 0:self.dim_x]
+                mean=self.mz0[0:self.dim_x, 0], cov=self.Pmz0[0:self.dim_x, 0:self.dim_x]
             )
             Zkp1_simul[self.dim_x:, 0] = Zkp1_simul[self.dim_x-self.dim_y:self.dim_x, 0]
         else:
-            Zkp1_simul[:,0] = self._seed_gen.rng.multivariate_normal(mean=self.z0[:, 0], cov=self.Pz0)
+            Zkp1_simul[:,0] = self._seed_gen.rng.multivariate_normal(mean=self.mz0[:, 0], cov=self.Pmz0)
 
         Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
         k = 0
@@ -229,32 +229,25 @@ class PKF:
         
         Xkp1_update   = np.zeros((self.dim_x, 1))
         PXXkp1_update = np.zeros((self.dim_x, self.dim_x))
-        print('_firstEstimate')
-        exit(1)
-        
-        if self.augmented:
-            x0 = np.zeros((self.dim_x-self.dim_y, 1)) + 1.5
-            print(f'x0={x0}')
-            print(f'self.dim_x={self.dim_x}')
-            x0p = np.zeros((self.dim_x, 1))
-            x0p[0:self.dim_x-self.dim_y, 0] = x0
-            Xkp1_update[0:self.dim_x, 0]          = x0p
-            Xkp1_update[self.dim_x:self.dim_xy, 0] = ykp1
-        else:
-            x0 = np.zeros((self.dim_x, 1)) + 1.5
-            Xkp1_update[0:self.dim_x, 0] = x0
-        
-        # # Conditionnement gaussien pour le premier
-        # mu_1, mu_2 = np.split(self.z0, [self.dim_x])
-        # Sigma11 = self.Pz0[:self.dim_x, :self.dim_x]
-        # Sigma12 = self.Pz0[:self.dim_x, self.dim_x:]
-        # Sigma21 = self.Pz0[self.dim_x:, :self.dim_x]
-        # Sigma22 = self.Pz0[self.dim_x:, self.dim_x:]
-        
-        # Xkp1_update   = mu_1 + Sigma12 @ np.linalg.inv(Sigma22) * (ykp1 - mu_2)
-        # PXXkp1_update = Sigma11 - Sigma12 @ np.linalg.inv(Sigma22) @ Sigma21
-        # # Xkp1_update   = self.param.b.T @ np.linalg.inv(self.param.Sigma_Y1) @ ykp1
-        # # PXXkp1_update = self.param.Sigma_X1 - self.param.b.T @ np.linalg.inv(self.param.Sigma_Y1) @ self.param.b
+       
+        # Conditionnement gaussien pour le premier
+        mu_x0, mu_y0 = np.split(self.mz0, [self.dim_x])
+        Sigma11 = self.Pmz0[:self.dim_x, :self.dim_x]
+        Sigma12 = self.Pmz0[:self.dim_x, self.dim_x:]
+        Sigma21 = self.Pmz0[self.dim_x:, :self.dim_x]
+        Sigma22 = self.Pmz0[self.dim_x:, self.dim_x:]
+        # print(f'self.dim_x={self.dim_x}')
+        # print(f'mu_x0={mu_x0}')
+        # print(f'mu_y0={mu_y0}')
+        # exit(1)
+ 
+        # print(Xkp1_update[0:self.dim_x, 0].shape)
+        # print((mu_x0   + Sigma12 @ np.linalg.inv(Sigma22) * (ykp1 - mu_y0)).shape)
+        # print(mu_x0.shape)
+        # print((Sigma12 @ np.linalg.inv(Sigma22) * (ykp1 - mu_y0)).shape)
+ 
+        Xkp1_update[0:self.dim_x, 0] = (mu_x0   + Sigma12 @ np.linalg.inv(Sigma22) @ (ykp1 - mu_y0)).reshape(-1)
+        PXXkp1_update                =  Sigma11 - Sigma12 @ np.linalg.inv(Sigma22) @ Sigma21
         self._test_CovMatrix(PXXkp1_update, k)
 
         Xkp1_predict = np.zeros((self.dim_x, 1))

@@ -53,9 +53,9 @@ class ParamLinear:
         self._set_log_level()
 
         # Two ways to construct the object
-        if len(kwargs.keys()) == 12:  # parametrization (A, mQ, z0, Pz0)
+        if len(kwargs.keys()) == 12:  # parametrization (A, mQ, mz0, Pmz0)
             self.constructorFrom_AB_mQ(kwargs['A'], kwargs['B'],
-                                       kwargs['mQ'], kwargs['z0'], kwargs['Pz0'])
+                                       kwargs['mQ'], kwargs['mz0'], kwargs['Pmz0'])
         elif len(kwargs.keys()) == 14:  # parametrization (sxx, syy, a, b, c, d, e) --> Sigma
             self.constructorFrom_Sigma(kwargs['sxx'], kwargs['syy'],
                                        kwargs['a'], kwargs['b'], kwargs['c'], kwargs['d'], kwargs['e'])
@@ -89,7 +89,7 @@ class ParamLinear:
     # Constructeurs
     # ------------------------------------------------------------------
     def constructorFrom_AB_mQ(self, A: np.ndarray, B: np.ndarray, mQ: np.ndarray,
-                              z0: np.ndarray, Pz0: np.ndarray) -> None:
+                              mz0: np.ndarray, Pmz0: np.ndarray) -> None:
 
         self._A = np.array(A, dtype=float)
         if __debug__:
@@ -99,8 +99,8 @@ class ParamLinear:
 
         self._B    = np.array(B, dtype=float)
         self._mQ   = np.array(mQ, dtype=float)
-        self._z0  = np.array(z0, dtype=float)
-        self._Pz0 = np.array(Pz0, dtype=float)
+        self._mz0  = np.array(mz0, dtype=float)
+        self._Pmz0 = np.array(Pmz0, dtype=float)
 
         self._update_Sigma_from_A_B_mQ()
 
@@ -135,8 +135,8 @@ class ParamLinear:
         self._B    = np.eye(self.dim_xy)
         self._mQ   = self._Q1 - self._A @ self._Q2.T
 
-        self._z0  = np.zeros((self.dim_xy, 1))
-        self._Pz0 = self._Q1.copy()
+        self._mz0  = np.zeros((self.dim_xy, 1))
+        self._Pmz0 = self._Q1.copy()
 
     def _update_Sigma_from_A_B_mQ(self) -> None:
 
@@ -170,7 +170,7 @@ class ParamLinear:
     # ------------------------------------------------------------------
     def _check_consistency(self) -> None:
         for attr, name in [('_mQ', 'mQ'), ('_Q1', 'Q1'), ('_Sigma', 'Sigma'),
-                           ('_sxx', 'sxx'), ('_syy', 'syy'), ('_Pz0', 'Pz0')]:
+                           ('_sxx', 'sxx'), ('_syy', 'syy'), ('_Pmz0', 'Pmz0')]:
             if hasattr(self, attr):
                 is_covariance(getattr(self, attr), name)
 
@@ -180,8 +180,8 @@ class ParamLinear:
     def _check_dimensions(self) -> None:
         expected_shapes = {
             'mQ':   (self.dim_xy, self.dim_xy),
-            'z0':  (self.dim_xy, 1),
-            'Pz0': (self.dim_xy, self.dim_xy),
+            'mz0':  (self.dim_xy, 1),
+            'Pmz0': (self.dim_xy, self.dim_xy),
         }
         for attr, shape in expected_shapes.items():
             if hasattr(self, f"_{attr}"):
@@ -220,9 +220,9 @@ class ParamLinear:
             self._check_consistency()
 
     @property
-    def z0(self)  -> np.ndarray: return self._z0
+    def mz0(self)  -> np.ndarray: return self._mz0
     @property
-    def Pz0(self) -> np.ndarray: return self._Pz0
+    def Pmz0(self) -> np.ndarray: return self._Pmz0
 
     @property
     def sxx(self)  -> np.ndarray: return self._sxx
@@ -251,8 +251,8 @@ class ParamLinear:
         print("A:\n",   fmt(self.A))
         print("B:\n",   fmt(self.B))
         print("mQ:\n",  fmt(self.mQ))
-        print("z0:\n",  fmt(self.z0))
-        print("Pz0:\n", fmt(self.Pz0))
+        print("mz0:\n",  fmt(self.mz0))
+        print("Pmz0:\n", fmt(self.Pmz0))
         print("========================\n")
 
         if __debug__:

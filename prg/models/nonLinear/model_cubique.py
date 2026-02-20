@@ -25,11 +25,11 @@ class ModelCubique(BaseModelNonLinear):
         
         # Covariance and initial state
         self.mQ   = np.diag([1e-4, 1e-4])
-        self.z0  = np.zeros((self.dim_xy, 1))
-        self.Pz0 = np.eye(self.dim_xy)
+        self.mz0  = np.zeros((self.dim_xy, 1))
+        self.Pmz0 = np.eye(self.dim_xy)
 
         if __debug__:
-            check_consistency(mQ=self.mQ, Pz0=self.Pz0)
+            check_consistency(mQ=self.mQ, Pmz0=self.Pmz0)
 
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:

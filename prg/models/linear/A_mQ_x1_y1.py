@@ -17,18 +17,12 @@ class Model_A_mQ_x1_y1(LinearAmQ):
         dim_xy = dim_x+dim_y
 
         a, b, c, d = 0.95, -0.3, 0.2, 0.85
-        # a, b, c, d =  0.533, -0.1099, 0.0418, 0.0275
-        A = np.array( [[a, b],
-                       [c, d]] )
-        B = np.eye(A.shape[0])
-        # mQ   = np.array( [[0.739,  0.2777], 
-        #                   [0.2777, 0.9968]])
+        A    = np.array( [[a, b],
+                          [c, d]] )
+        B    = np.eye(A.shape[0])
         mQ   = np.diag( [0.1, 0.2])
 
-        z0  = np.zeros((dim_xy, 1))
-        Pz0 = np.zeros((dim_xy, dim_xy))
-        Pz0[0:dim_x, 0:dim_x] = np.eye(dim_x)
+        mz0  = np.zeros((dim_xy, 1))+1.13
+        Pmz0 = np.eye(dim_xy)+1.14
         
-        x0 = np.zeros((dim_x, 1)) + 1.13
-
-        super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, z0=z0, Pz0=Pz0)
+        super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, mz0=mz0, Pmz0=Pmz0)

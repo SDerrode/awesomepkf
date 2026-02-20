@@ -26,13 +26,25 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
         self.mQ = np.zeros((self.dim_xy, self.dim_xy))
         self.mQ[0:self.dim_x, 0:self.dim_x] = self.mod.mQ
         
-        self.z0  = np.zeros((self.dim_xy, 1))
-        self.z0[0:self.dim_x] = self.mod.z0
-        self.Pz0 = np.zeros((self.dim_xy, self.dim_xy))
-        self.Pz0[0:self.dim_x, 0:self.dim_x] = self.mod.Pz0
+        # Dimensions état augmenté x=2, y=1
+        # Dimensions état original (non augmenté) x=1, y=1
+        dim_x  = self.mod.dim_x
+        dim_y  = self.mod.dim_y
+        dim_xy = self.mod.dim_xy
+        
+        self.mz0  = np.zeros((dim_xy+dim_y, 1))
+        self.mz0[0:dim_xy] = self.mod.mz0
+        self.mz0[dim_xy:dim_xy+dim_y] = self.mz0[dim_xy-dim_y:dim_xy]
+
+        self.Pmz0 = np.zeros((dim_xy+dim_y, dim_xy+dim_y))
+        self.Pmz0[0:dim_xy, 0:dim_xy] = self.mod.Pmz0
+        # On recopie la derniere ligne
+        self.Pmz0[dim_xy:dim_xy+dim_y, :] = self.Pmz0[dim_xy-dim_y:dim_xy, :]
+        # On recopie la derniere colonne
+        self.Pmz0[:, dim_xy:dim_xy+dim_y] = self.Pmz0[:, dim_xy-dim_y:dim_xy]
         
         if __debug__:
-            check_consistency(mQ=self.mQ, Pz0=self.Pz0)
+            check_consistency(mQ=self.mQ, Pmz0=self.Pmz0)
 
         self.a, self.b, self.c, self.d, self.e, self.f = self.mod.a, self.mod.b, self.mod.c, self.mod.d, self.mod.e, self.mod.f
 
