@@ -266,7 +266,9 @@ class HistoryTracker:
 
         df = self.as_dataframe().iloc[window['xmin']:window['xmax']]
         if df.empty:
-            raise ValueError("Aucune donnée enregistrée.")
+            df = self.as_dataframe()
+            if df.empty:
+                raise ValueError("Aucune donnée enregistrée.")
         for p in list_param:
             if p not in df.columns:
                 raise KeyError(f"'{p}' n'est pas une colonne connue : {list(df.columns)}")

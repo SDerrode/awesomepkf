@@ -5,9 +5,10 @@ import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
 from others.utils import check_consistency
 
+
 class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
     """
-    Nonlinear model with retro-actions of observations.
+    Nonlinear model with retro-actions of observations and of states.
     The model includes additive Gaussian process and observation noises.
     """
 
@@ -17,13 +18,14 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
         self.mQ   = np.diag([1E-1, 1E-1, 5E-1])
-        self.z00  = np.zeros((self.dim_xy, 1))
-        self.Pz00 = np.eye(self.dim_xy)
+        
+        self.z0  = np.zeros((self.dim_xy, 1))
+        self.Pz0 = np.eye(self.dim_xy)
 
         self.a, self.b, self.c, self.d, self.e, self.f = 1.0, 0.8, 0.05, 0.9, 0.30, 0.6
 
         if __debug__:
-            check_consistency(mQ=self.mQ, Pz00=self.Pz00)
+            check_consistency(mQ=self.mQ, Pz0=self.Pz0)
 
     # ------------------------------------------------------------------
     def _gx(self, x, y, t, u, dt):

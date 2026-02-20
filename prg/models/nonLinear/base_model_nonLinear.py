@@ -37,8 +37,8 @@ class BaseModelNonLinear:
 
         # Initialisation des matrices / vecteurs d'état
         self.mQ   = None
-        self.z00  = None
-        self.Pz00 = None
+        self.z0  = None
+        self.Pz0 = None
 
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
@@ -81,8 +81,8 @@ class BaseModelNonLinear:
                 'kappa'      : self.kappa,        # pour UPKF
                 'lambda_'    : self.lambda_,      # pour UPKF
                 'mQ'         : self.mQ,
-                'z00'        : self.z00,
-                'Pz00'       : self.Pz00,
+                'z0'        : self.z0,
+                'Pz0'       : self.Pz0,
                }
 
     # ------------------------------------------------------------------

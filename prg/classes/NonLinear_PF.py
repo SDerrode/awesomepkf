@@ -70,7 +70,7 @@ class NonLinear_PF(NonLinear_PKF):
         # Initial particles: joint Gaussian prior
         Z_particles = np.random.multivariate_normal(
             mean = np.zeros(self.dim_xy),
-            cov  = self.param.Pz00,
+            cov  = self.param.Pz0,
             size = self.nbParticles
         )
         weights     = np.ones(self.nbParticles) / self.nbParticles

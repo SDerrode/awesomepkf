@@ -84,18 +84,18 @@ class LinearAmQ(BaseModelLinear):
     """
     Modèle linéaire avec matrice de transition A et covariance Q.
     """
-    def __init__(self, dim_x: int, dim_y: int, A: np.ndarray, B: np.ndarray, mQ: np.ndarray, z00: np.ndarray, Pz00: np.ndarray, augmented=False):
+    def __init__(self, dim_x: int, dim_y: int, A: np.ndarray, B: np.ndarray, mQ: np.ndarray, z0: np.ndarray, Pz0: np.ndarray, augmented=False):
         
         super().__init__(dim_x, dim_y, model_type="linear_AmQ", augmented=augmented)
         
         self.A    = A
         self.B    = B
         self.mQ   = mQ
-        self.z00  = z00
-        self.Pz00 = Pz00
+        self.z0  = z0
+        self.Pz0 = Pz0
         
         if __debug__:
-            check_consistency(mQ=self.mQ, Pz00=self.Pz00)
+            check_consistency(mQ=self.mQ, Pz0=self.Pz0)
 
     def get_params(self) -> dict[str, Any]:
         return { 'dim_x'      : self.dim_x,
@@ -106,8 +106,8 @@ class LinearAmQ(BaseModelLinear):
                  'A'          : self.A,
                  'B'          : self.B,
                  'mQ'         : self.mQ,
-                 'z00'        : self.z00,
-                 'Pz00'       : self.Pz00,
+                 'z0'        : self.z0,
+                 'Pz0'       : self.Pz0,
                  'alpha'      : self.alpha,        # pour UPKF
                  'beta'       : self.beta,         # pour UPKF
                  'kappa'      : self.kappa,        # pour UPKF

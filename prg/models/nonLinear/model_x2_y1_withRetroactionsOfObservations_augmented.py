@@ -6,7 +6,6 @@ from .base_model_nonLinear import BaseModelNonLinear
 from others.utils import check_consistency
 from .model_x2_y1_withRetroactionsOfObservations import ModelX2Y1_withRetroactionsOfObservations
 
-
 class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
     """
     Nonlinear model with retro-actions of observations and of states.
@@ -21,18 +20,19 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
     def __init__(self) -> None: 
         super().__init__(dim_x=3, dim_y=1, model_type="nonlinear", augmented=True)
         
-        # pour récupérer les paramètre du modèle non augmenté
+        # pour récupérer les paramètres du modèle non augmenté
         self.mod = ModelX2Y1_withRetroactionsOfObservations()
         
-        self.mQ   = np.zeros((self.dim_xy, self.dim_xy))
+        self.mQ = np.zeros((self.dim_xy, self.dim_xy))
         self.mQ[0:self.dim_x, 0:self.dim_x] = self.mod.mQ
-        self.z00  = np.zeros((self.dim_xy, 1))
-        self.z00[0:self.dim_x] = self.mod.z00
-        self.Pz00 = np.eye(self.dim_xy)
-        self.Pz00[0:self.dim_x, 0:self.dim_x] = self.mod.Pz00
+        
+        self.z0  = np.zeros((self.dim_xy, 1))
+        self.z0[0:self.dim_x] = self.mod.z0
+        self.Pz0 = np.zeros((self.dim_xy, self.dim_xy))
+        self.Pz0[0:self.dim_x, 0:self.dim_x] = self.mod.Pz0
         
         if __debug__:
-            check_consistency(mQ=self.mQ, Pz00=self.Pz00)
+            check_consistency(mQ=self.mQ, Pz0=self.Pz0)
 
         self.a, self.b, self.c, self.d, self.e, self.f = self.mod.a, self.mod.b, self.mod.c, self.mod.d, self.mod.e, self.mod.f
 
