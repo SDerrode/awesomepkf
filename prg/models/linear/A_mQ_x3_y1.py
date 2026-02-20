@@ -28,8 +28,8 @@ class Model_A_mQ_x3_y1(LinearAmQ):
             [0.21131687242798355, 0.14120370370370378, 0.6734053497942387, 0.41944444444444445],
             [0.6555555555555556, 0.22500000000000003, 0.4194444444444445, 0.8500000000000001]] )
         
-        z0  = np.zeros((dim_x+dim_y, 1))
-        Pz0 = np.eye(dim_x+dim_y)
+        mz0  = np.zeros((dim_x+dim_y, 1))
+        Pmz0 = np.eye(dim_x+dim_y)
 
-        super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, z0=z0, Pz0=Pz0)
+        super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, mz0=mz0, Pmz0=Pmz0)
 

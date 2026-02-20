@@ -58,8 +58,8 @@ class ParamNonLinear:
 
         # Covariance matrices
         self._mQ       = np.array(kwargs['mQ'], dtype=float)
-        self._z0      = np.array(kwargs['z0'], dtype=float)
-        self._Pz0     = np.array(kwargs['Pz0'], dtype=float)
+        self._mz0      = np.array(kwargs['mz0'], dtype=float)
+        self._Pmz0     = np.array(kwargs['Pmz0'], dtype=float)
 
         # UPKF specific parameters
         self.alpha     = kwargs['alpha']
@@ -98,8 +98,8 @@ class ParamNonLinear:
     def _check_dimensions(self) -> None:
         expected_shapes = {
             'mQ': (self.dim_xy, self.dim_xy),
-            'z0': (self.dim_xy, 1),
-            'Pz0': (self.dim_xy, self.dim_xy),
+            'mz0': (self.dim_xy, 1),
+            'Pmz0': (self.dim_xy, self.dim_xy),
         }
         for attr, shape in expected_shapes.items():
             actual = getattr(self, f"_{attr}")
@@ -112,16 +112,16 @@ class ParamNonLinear:
     def _check_consistency(self) -> None:
         """Check internal matrices for symmetry and positive semi-definiteness."""
         is_covariance(self._mQ, "mQ")
-        is_covariance(self._Pz0, "Pz0")
+        is_covariance(self._Pmz0, "Pmz0")
 
     # ------------------------------------------------------------------
     # Getters / Setters and Properties
     # ------------------------------------------------------------------
     @property
-    def z0(self) -> np.ndarray: return self._z0
+    def mz0(self) -> np.ndarray: return self._mz0
 
     @property
-    def Pz0(self) -> np.ndarray: return self._Pz0
+    def Pmz0(self) -> np.ndarray: return self._Pmz0
 
     @property
     def mQ(self) -> np.ndarray: return self._mQ
@@ -148,8 +148,8 @@ class ParamNonLinear:
         print(f"dim_x={self.dim_x}, dim_y={self.dim_y}, verbose={self.verbose}\n")
         print("g:\n", self.g)
         print("mQ:\n", fmt(self.mQ))
-        print("z0:\n", fmt(self.z0))
-        print("Pz0:\n", fmt(self.Pz0))
+        print("mz0:\n", fmt(self.mz0))
+        print("Pmz0:\n", fmt(self.Pmz0))
 
         if self.verbose > 0:
             print("========================")
@@ -158,8 +158,8 @@ class ParamNonLinear:
         print("========================")
         if self.verbose > 1:  # Ready to copy in python code
             print("mQ = np.array(", repr(self.mQ.tolist()), ')')
-            print("z0 = np.array(", repr(self.z0.tolist()), ')')
-            print("Pz0 = np.array(", repr(self.Pz0.tolist()), ')')
+            print("mz0 = np.array(", repr(self.mz0.tolist()), ')')
+            print("Pmz0 = np.array(", repr(self.Pmz0.tolist()), ')')
 
         if __debug__:
             self._check_consistency()

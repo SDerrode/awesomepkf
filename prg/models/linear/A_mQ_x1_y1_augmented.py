@@ -39,12 +39,15 @@ class Model_A_mQ_x1_y1_augmented(LinearAmQ):
         mQ = np.zeros((dim_xy+dim_y, dim_xy+dim_y))
         mQ[0:dim_xy, 0:dim_xy] = Cov
         
-        z0  = np.zeros((dim_xy+dim_y, 1))
-        Pz0 = np.zeros((dim_xy+dim_y, dim_xy+dim_y))
-        z0[0:dim_xy] = mod.z0
-        Pz0[0:dim_xy, 0:dim_xy] = mod.Pz0
-        
-        x0 = np.zeros((dim_xy, 1))
-        x0[0:dim_x] = mod.x0
+        mz0  = np.zeros((dim_xy+dim_y, 1))
+        mz0[0:dim_xy] = mod.mz0
+        mz0[dim_xy:dim_xy+dim_y] = mz0[dim_xy-dim_y:dim_xy]
 
-        super().__init__(dim_x=dim_xy, dim_y=dim_y, A=A, B=B, mQ=mQ, z0=z0, Pz0=Pz0, augmented=True)
+        Pmz0 = np.zeros((dim_xy+dim_y, dim_xy+dim_y))
+        Pmz0[0:dim_xy, 0:dim_xy] = mod.Pmz0
+        # On recopie la derniere ligne
+        Pmz0[dim_xy:dim_xy+dim_y, :] = Pmz0[dim_xy-dim_y:dim_xy, :]
+        # On recopie la derniere colonne
+        Pmz0[:, dim_xy:dim_xy+dim_y] = Pmz0[:, dim_xy-dim_y:dim_xy]
+
+        super().__init__(dim_x=dim_xy, dim_y=dim_y, A=A, B=B, mQ=mQ, mz0=mz0, Pmz0=Pmz0, augmented=True)
