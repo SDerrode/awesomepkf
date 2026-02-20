@@ -10,6 +10,8 @@ Unscented Pairwise Kalman filter (UPKF) implementation
 from __future__ import annotations
 import numpy as np
 from rich import print
+from scipy.linalg import LinAlgError
+
 from classes.NonLinear_PKF import NonLinear_PKF
 from others.utils import diagnose_covariance, rich_show_fields
 from classes.SigmaPointsSet import SigmaPointsSet

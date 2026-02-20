@@ -38,8 +38,13 @@ class Model_A_mQ_x1_y1_augmented(LinearAmQ):
 
         mQ = np.zeros((dim_xy+dim_y, dim_xy+dim_y))
         mQ[0:dim_xy, 0:dim_xy] = Cov
+        
+        z0  = np.zeros((dim_xy+dim_y, 1))
+        Pz0 = np.zeros((dim_xy+dim_y, dim_xy+dim_y))
+        z0[0:dim_xy] = mod.z0
+        Pz0[0:dim_xy, 0:dim_xy] = mod.Pz0
+        
+        x0 = np.zeros((dim_xy, 1))
+        x0[0:dim_x] = mod.x0
 
-        z00  = np.zeros((dim_xy+dim_y, 1))
-        Pz00 = np.eye(dim_xy+dim_y)
-
-        super().__init__(dim_x=dim_xy, dim_y=dim_y, A=A, B=B, mQ=mQ, z00=z00, Pz00=Pz00, augmented=True)
+        super().__init__(dim_x=dim_xy, dim_y=dim_y, A=A, B=B, mQ=mQ, z0=z0, Pz0=Pz0, augmented=True)

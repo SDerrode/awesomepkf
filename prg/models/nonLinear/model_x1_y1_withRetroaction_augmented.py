@@ -29,13 +29,13 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
         # Numeric tips: choose \(x_0,y_0\) small but nonzero, \(\sigma\) very small (e.g.\ 0.005) to reveal deterministic oscillation, \(N\ge 300\).
         self.mQ   = np.zeros((self.dim_xy, self.dim_xy))
         self.mQ[0:self.dim_x, 0:self.dim_x] = self.mod.mQ
-        self.z00  = np.zeros((self.dim_xy, 1))
-        self.z00[0:self.dim_x] = self.mod.z00
-        self.Pz00 = np.eye(self.dim_xy)
-        self.Pz00[0:self.dim_x, 0:self.dim_x] = self.mod.Pz00
+        self.z0  = np.zeros((self.dim_xy, 1))
+        self.z0[0:self.dim_x] = self.mod.z0
+        self.Pz0 = np.zeros((self.dim_xy, self.dim_xy))
+        self.Pz0[0:self.dim_x, 0:self.dim_x] = self.mod.Pz0
         
         if __debug__:
-            check_consistency(mQ=self.mQ, Pz00=self.Pz00)
+            check_consistency(mQ=self.mQ, Pz0=self.Pz0)
             
         self.a, self.b, self.c, self.d = self.mod.a, self.mod.b, self.mod.c, self.mod.d
 

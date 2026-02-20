@@ -191,7 +191,7 @@ class SetIto2000(SigmaPointsSet, key="ito2000"):
     def __init__(self, dim, param):
         super().__init__(dim)
         
-        self.p            = 4
+        self.p            = 3
         self.nbSigmaPoint = self.p**self.dim
         
         self.Wm = np.zeros((self.nbSigmaPoint))

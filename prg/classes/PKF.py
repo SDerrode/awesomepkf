@@ -52,7 +52,9 @@ class PKFStep:
                 )
             # Symétrie
             if not np.allclose(arr, arr.T, atol=EPS_ABS):
-                raise ValueError(f"{name} must be symmetric")
+                # print(f'arr={arr}')
+                # raise ValueError(f"{name} must be symmetric")
+                arr = 0.5 * (arr + arr.T)
             # Semi-définie positive
             eigvals = np.linalg.eigvalsh(arr)
             if np.any(eigvals < -EPS_ABS):
@@ -95,7 +97,7 @@ class PKF:
         
         # Shortcuts
         self.dim_x, self.dim_y, self.dim_xy = self.param.dim_x, self.param.dim_y, self.param.dim_xy
-        self.z00, self.Pz00, self.g, self.mQ, self.augmented = self.param._z00, self.param._Pz00, self.param.g, self.param.mQ, self.param.augmented
+        self.z0, self.Pz0, self.g, self.mQ, self.augmented = self.param._z0, self.param._Pz0, self.param.g, self.param.mQ, self.param.augmented
 
         # Matrices utiles pour accélérer les calculs
         self.eye_dim_y       = np.eye(self.dim_y)
@@ -156,11 +158,11 @@ class PKF:
         # First step
         if self.augmented:
             Zkp1_simul[0:self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(
-                mean=self.z00[0:self.dim_x, 0], cov=self.Pz00[0:self.dim_x, 0:self.dim_x]
+                mean=self.z0[0:self.dim_x, 0], cov=self.Pz0[0:self.dim_x, 0:self.dim_x]
             )
             Zkp1_simul[self.dim_x:, 0] = Zkp1_simul[self.dim_x-self.dim_y:self.dim_x, 0]
         else:
-            Zkp1_simul[:,0] = self._seed_gen.rng.multivariate_normal(mean=self.z00[:, 0], cov=self.Pz00)
+            Zkp1_simul[:,0] = self._seed_gen.rng.multivariate_normal(mean=self.z0[:, 0], cov=self.Pz0)
 
         Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
         k = 0
@@ -215,30 +217,58 @@ class PKF:
 
             if self.verbose > 1:
                 rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", 
-                                        "near_singular", "ill_conditioned", "numerically_singular"], 
-                                title=f"Covariance diagnostic - Step {k}")
+                                            "near_singular", "ill_conditioned", "numerically_singular"], 
+                                 title=f"Covariance diagnostic - Step {k}")
     
     # ------------------------------------------------------------------
     # First estimate
     # ------------------------------------------------------------------
     def _firstEstimate(self, generator):
+
         k, xkp1, ykp1 = next(generator)
-        Xkp1_update   = xkp1.copy()
-        PXXkp1_update = self.Pz00[0:self.dim_x, 0:self.dim_x].copy()
+        
+        Xkp1_update   = np.zeros((self.dim_x, 1))
+        PXXkp1_update = np.zeros((self.dim_x, self.dim_x))
+        print('_firstEstimate')
+        exit(1)
+        
+        if self.augmented:
+            x0 = np.zeros((self.dim_x-self.dim_y, 1)) + 1.5
+            print(f'x0={x0}')
+            print(f'self.dim_x={self.dim_x}')
+            x0p = np.zeros((self.dim_x, 1))
+            x0p[0:self.dim_x-self.dim_y, 0] = x0
+            Xkp1_update[0:self.dim_x, 0]          = x0p
+            Xkp1_update[self.dim_x:self.dim_xy, 0] = ykp1
+        else:
+            x0 = np.zeros((self.dim_x, 1)) + 1.5
+            Xkp1_update[0:self.dim_x, 0] = x0
+        
+        # # Conditionnement gaussien pour le premier
+        # mu_1, mu_2 = np.split(self.z0, [self.dim_x])
+        # Sigma11 = self.Pz0[:self.dim_x, :self.dim_x]
+        # Sigma12 = self.Pz0[:self.dim_x, self.dim_x:]
+        # Sigma21 = self.Pz0[self.dim_x:, :self.dim_x]
+        # Sigma22 = self.Pz0[self.dim_x:, self.dim_x:]
+        
+        # Xkp1_update   = mu_1 + Sigma12 @ np.linalg.inv(Sigma22) * (ykp1 - mu_2)
+        # PXXkp1_update = Sigma11 - Sigma12 @ np.linalg.inv(Sigma22) @ Sigma21
+        # # Xkp1_update   = self.param.b.T @ np.linalg.inv(self.param.Sigma_Y1) @ ykp1
+        # # PXXkp1_update = self.param.Sigma_X1 - self.param.b.T @ np.linalg.inv(self.param.Sigma_Y1) @ self.param.b
         self._test_CovMatrix(PXXkp1_update, k)
 
         Xkp1_predict = np.zeros((self.dim_x, 1))
         aStep = PKFStep(
-            k=k,
-            xkp1=xkp1.copy() if xkp1 is not None else None,
-            ykp1=ykp1.copy(),
-            Xkp1_predict=Xkp1_predict.copy(),
-            PXXkp1_predict=self.eye_dim_x.copy(),
-            ikp1=self.zeros_dim_y_1.copy(),
-            Skp1=self.eye_dim_y.copy(),
-            Kkp1=self.zeros_dim_x_y.copy(),
-            Xkp1_update=Xkp1_update.copy(),
-            PXXkp1_update=PXXkp1_update.copy(),
+            k             = k,
+            xkp1          = xkp1.copy() if xkp1 is not None else None,
+            ykp1          = ykp1.copy(),
+            Xkp1_predict  = Xkp1_predict.copy(),
+            PXXkp1_predict= self.eye_dim_x.copy(),
+            ikp1          = self.zeros_dim_y_1.copy(),
+            Skp1          = self.eye_dim_y.copy(),
+            Kkp1          = self.zeros_dim_x_y.copy(),
+            Xkp1_update   = Xkp1_update.copy(),
+            PXXkp1_update = PXXkp1_update.copy(),
         )
 
         self.history.record(aStep)

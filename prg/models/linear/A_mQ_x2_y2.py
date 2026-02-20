@@ -26,7 +26,7 @@ class Model_A_mQ_x2_y2(LinearAmQ):
             [0.5678943937418514, 0.1698174706649283, 0.957513037809648,  0.2719361147327249],
             [0.1698174706649283, 0.5678943937418514, 0.2719361147327249, 0.957513037809648]] )
         
-        z00  = np.zeros((dim_x+dim_y, 1))
-        Pz00 = np.eye(dim_x+dim_y)
+        z0  = np.zeros((dim_x+dim_y, 1))
+        Pz0 = np.eye(dim_x+dim_y)
 
-        super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, z00=z00, Pz00=Pz00)
+        super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, z0=z0, Pz0=Pz0)

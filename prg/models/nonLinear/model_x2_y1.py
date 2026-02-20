@@ -33,11 +33,11 @@ class ModelX2Y1(BaseModelNonLinear):
 
         # Covariance and initial state
         self.mQ   = np.diag([1e-4, 1e-4, 1e-4])
-        self.z00  = np.zeros((self.dim_xy, 1))
-        self.Pz00 = np.eye(self.dim_xy)
+        self.z0  = np.zeros((self.dim_xy, 1))
+        self.Pz0 = np.eye(self.dim_xy)
 
         if __debug__:
-            check_consistency(mQ=self.mQ, Pz00=self.Pz00)
+            check_consistency(mQ=self.mQ, Pz0=self.Pz0)
 
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:
