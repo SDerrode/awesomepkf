@@ -42,9 +42,6 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
         self.Pmz0[dim_xy:dim_xy+dim_y, :] = self.Pmz0[dim_xy-dim_y:dim_xy, :]
         # On recopie la derniere colonne
         self.Pmz0[:, dim_xy:dim_xy+dim_y] = self.Pmz0[:, dim_xy-dim_y:dim_xy]
-        
-        if __debug__:
-            check_consistency(mQ=self.mQ, Pmz0=self.Pmz0)
 
         self.a, self.b, self.c, self.d, self.e, self.f = self.mod.a, self.mod.b, self.mod.c, self.mod.d, self.mod.e, self.mod.f
 

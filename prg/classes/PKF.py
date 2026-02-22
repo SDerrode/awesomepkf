@@ -202,23 +202,39 @@ class PKF:
         verdict, report = diagnose_covariance(Mat)
 
         if not verdict:
-            # il y a un problème
-            # Récupération des valeurs propres négatives
-            eigvals = np.linalg.eigvalsh(Mat)
+            # Récupération des valeurs propres déjà calculées
+            eigvals = report["eigenvalues"]
             neg_eigvals = eigvals[eigvals < -EPS_ABS]
+
+            from rich import print
+            print(report)
 
             self.logger.warning(
                 f"Step {k}: Covariance matrix invalid. "
-                f"Symmetric: {report['is_symmetric']}, Cholesky OK: {report['cholesky_ok']}, PSD: {report['is_psd']}, "
-                f"Near singular: {report['near_singular']}, Ill conditioned: {report['ill_conditioned']}, "
+                f"Symmetric: {report['is_symmetric']}, "
+                f"Cholesky OK: {report['cholesky_ok']}, "
+                f"PSD: {report['is_psd']}, "
+                f"Ill conditioned: {report['ill_conditioned']}, "
                 f"Numerically singular: {report['numerically_singular']}, "
+                f"λ_min: {report['lambda_min']:.3e}, "
+                f"Condition number: {report['condition_number']:.3e}, "
                 f"Negative eigenvalues: {neg_eigvals}"
             )
 
             if self.verbose > 1:
-                rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", 
-                                            "near_singular", "ill_conditioned", "numerically_singular"], 
-                                 title=f"Covariance diagnostic - Step {k}")
+                rich_show_fields(
+                    report,
+                    [
+                        "is_symmetric",
+                        "cholesky_ok",
+                        "is_psd",
+                        "ill_conditioned",
+                        "numerically_singular",
+                        "lambda_min",
+                        "condition_number",
+                    ],
+                    title=f"Covariance diagnostic - Step {k}",
+                )
     
     # ------------------------------------------------------------------
     # First estimate

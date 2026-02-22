@@ -94,7 +94,7 @@ class LinearAmQ(BaseModelLinear):
         self.mz0  = mz0
         self.Pmz0 = Pmz0
         
-        if __debug__:
+        if __debug__ and not self.augmented:
             check_consistency(mQ=self.mQ, Pmz0=self.Pmz0)
 
     def get_params(self) -> dict[str, Any]:
