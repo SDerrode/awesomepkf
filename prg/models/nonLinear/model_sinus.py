@@ -24,8 +24,8 @@ class ModelSinus(BaseModelNonLinear):
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
 
         # Covariance and initial state
-        self.mQ   = np.diag([1e-4, 1e-4])
-        self.mz0  = np.zeros((self.dim_xy, 1))
+        self.mQ   = np.diag([1e-3, 1e-3])
+        self.mz0  = np.zeros((self.dim_xy, 1)) +1. # le +1 est important pour lancer le filtre
         self.Pmz0 = np.eye(self.dim_xy)
 
         if __debug__:

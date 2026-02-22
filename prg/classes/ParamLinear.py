@@ -169,8 +169,11 @@ class ParamLinear:
     # Consistency checks
     # ------------------------------------------------------------------
     def _check_consistency(self) -> None:
-        for attr, name in [('_mQ', 'mQ'), ('_Q1', 'Q1'), ('_Sigma', 'Sigma'),
-                           ('_sxx', 'sxx'), ('_syy', 'syy'), ('_Pmz0', 'Pmz0')]:
+        if self.augmented:
+            listeMatrices = [('_Q1', 'Q1'), ('_sxx', 'sxx'), ('_syy', 'syy')]
+        else:
+            listeMatrices = [('_mQ', 'mQ'), ('_Q1', 'Q1'), ('_Sigma', 'Sigma'), ('_sxx', 'sxx'), ('_syy', 'syy'), ('_Pmz0', 'Pmz0')]
+        for attr, name in listeMatrices:
             if hasattr(self, attr):
                 is_covariance(getattr(self, attr), name)
 

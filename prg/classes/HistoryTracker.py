@@ -10,20 +10,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 
-from dataclasses import is_dataclass, asdict
+from dataclasses import dataclass, is_dataclass, asdict
 
 from rich.table import Table
 from rich.console import Console
-
+from rich.pretty import Pretty
+        
 from others.utils import compute_errors
 from others.plot_settings import DPI, FACECOLOR, BIG_SIZE
 # A few utils functions that are used several times
 from others.utils import rich_show_fields
 
 from others.numerics import EPS_ABS, EPS_REL
-
-# Arrondir l'affichage à 4 chiffres après la virgule
-# np.set_printoptions(precision=4, suppress=True)
 
 # ----------------------------------------------------------------------
 # Configuration globale du logging
@@ -109,7 +107,9 @@ class HistoryTracker:
 
     # ------------------------------------------------------------------
     def save_pickle(self, path: str) -> None:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
+        dir_path = os.path.dirname(path)
+        if dir_path:  # Si dir_path n'est pas vide
+            os.makedirs(dir_path, exist_ok=True)
         with open(path, "wb") as f:
             pickle.dump(self._history, f)
         if self.verbose > 0:
@@ -160,26 +160,23 @@ class HistoryTracker:
         """
         
         df = self.as_dataframe()
-        # print(f'df.head()={df.head()}')
-        from rich.pretty import Pretty
-        from rich.console import Console
 
         console = Console(force_terminal=True, color_system="truecolor")  # console globale partagée
         
         if ListeD is None or ListeE is None:
             for a, b, c in zip(ListeA, ListeB, ListeC):
-                report = compute_errors(model, \
+                reportError = compute_errors(model, \
                                         df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
                                         None, None)
                 if self.verbose>0:
-                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"{a} vs {b}")
+                    rich_show_fields(reportError, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"{a} vs {b}")
         else:
             for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
-                report = compute_errors(model, \
+                reportError = compute_errors(model, \
                                         df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
                                         df[d].to_numpy(), df[e].to_numpy())
                 if self.verbose>0:
-                    rich_show_fields(report, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"{a} vs {b}")
+                    rich_show_fields(reportError, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"{a} vs {b}")
 
 
     def _compute_sigma_envelope(self, var_series: pd.Series, col_name: str) -> np.ndarray:
@@ -320,7 +317,7 @@ class HistoryTracker:
 
             if has_var:
                 
-                # Detection de variances très légèrement négatives (et celles qui le serainet plus que légèrement)
+                # Detection de variances très légèrement négatives (et celles qui le seraient plus que légèrement)
                 sigma = self._compute_sigma_envelope(df_subset_var[col_e], col_e)
 
                 # On dessine l'enveloppe
@@ -373,7 +370,7 @@ class HistoryTracker:
 
 # ======================================================================
 
-from dataclasses import dataclass
+
 
 @dataclass
 class SimpleStep:
@@ -424,5 +421,13 @@ if __name__ == "__main__":
     for step in a.iterate_gen(5):
         print(step)
 
-    a.history.plot(["x"], ["x"], color="blue", show=False, base_dir=graph_dir)
+    a.history.plot(
+        title="Évolution de x",
+        list_param=["x"],
+        list_label=["x"],
+        list_covar=[None],
+        window={"xmin": 0, "xmax": len(a.history)},
+        show=False,
+        base_dir=graph_dir
+    )
     a.history.save_pickle(os.path.join(tracker_dir, "history_run_a.pkl"))

@@ -111,8 +111,12 @@ class ParamNonLinear:
     # ------------------------------------------------------------------
     def _check_consistency(self) -> None:
         """Check internal matrices for symmetry and positive semi-definiteness."""
-        is_covariance(self._mQ, "mQ")
-        is_covariance(self._Pmz0, "Pmz0")
+        listeMatrices = []
+        if not self.augmented:
+            listeMatrices = [('_mQ', 'mQ'), ('_Pmz0', 'Pmz0')]
+        for attr, name in listeMatrices:
+            if hasattr(self, attr):
+                is_covariance(getattr(self, attr), name)
 
     # ------------------------------------------------------------------
     # Getters / Setters and Properties
