@@ -17,7 +17,7 @@ from scipy.linalg import cho_factor, cho_solve, solve_discrete_lyapunov
 # Linear models
 from models.linear import BaseModelLinear, ModelFactoryLinear
 # A few utils functions that are used several fois
-from others.utils import is_covariance, check_consistency
+from others.utils import check_consistency
 from others.numerics import EPS_ABS, EPS_REL
 
 # ----------------------------------------------------------------------
@@ -76,7 +76,6 @@ class ParamLinear:
         self.jacobiens_g = kwargs['jacobiens_g']
 
         if __debug__:
-            self._check_dimensions()
             self._check_consistency()
 
     # ------------------------------------------------------------------
@@ -106,7 +105,7 @@ class ParamLinear:
 
     def constructorFrom_Sigma(self, sxx: np.ndarray, syy: np.ndarray,
                               a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray, e: np.ndarray) -> None:
-
+ 
         self._sxx, self._syy = np.array(sxx), np.array(syy)
         self._a, self._b, self._c, self._d, self._e = map(np.array, [a, b, c, d, e])
 
@@ -127,8 +126,11 @@ class ParamLinear:
     # Update derived matrices
     # ------------------------------------------------------------------
     def _update_A_B_mQ_from_Sigma(self) -> None:
+
         self._Q1 = np.block([[self._sxx, self._b.T], [self._b, self._syy]])
         self._Q2 = np.block([[self._a, self._e], [self._d, self._c]])
+        self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
+        
 
         c, low     = cho_factor(self._Q1)
         self._A    = self._Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
@@ -139,7 +141,7 @@ class ParamLinear:
         self._Pmz0 = self._Q1.copy()
 
     def _update_Sigma_from_A_B_mQ(self) -> None:
-
+        
         self._Q1    = solve_discrete_lyapunov(self._A, self._mQ)
         self._Q2    = self._A @ self._Q1
         self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
@@ -147,7 +149,7 @@ class ParamLinear:
         # Vérification cohérence
         if __debug__:
             Q_est = self._Q1 - self._A @ self._Q2.T
-            diff = self._mQ - Q_est
+            diff  = self._mQ - Q_est
             rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + EPS_ABS)
             if rel_error > EPS_REL:
                 logger.warning(f"⚠️ Incohérence : Q ≉ Q1 - A Q2^T (erreur relative = {rel_error:.2e})")
@@ -170,27 +172,9 @@ class ParamLinear:
     # ------------------------------------------------------------------
     def _check_consistency(self) -> None:
         if self.augmented:
-            listeMatrices = [('_Q1', 'Q1'), ('_sxx', 'sxx'), ('_syy', 'syy')]
+            check_consistency(Q1=self._Q1, sxx=self._sxx, syy=self._syy)
         else:
-            listeMatrices = [('_mQ', 'mQ'), ('_Q1', 'Q1'), ('_Sigma', 'Sigma'), ('_sxx', 'sxx'), ('_syy', 'syy'), ('_Pmz0', 'Pmz0')]
-        for attr, name in listeMatrices:
-            if hasattr(self, attr):
-                is_covariance(getattr(self, attr), name)
-
-    # ------------------------------------------------------------------    
-    # Check dimensions
-    # ------------------------------------------------------------------
-    def _check_dimensions(self) -> None:
-        expected_shapes = {
-            'mQ':   (self.dim_xy, self.dim_xy),
-            'mz0':  (self.dim_xy, 1),
-            'Pmz0': (self.dim_xy, self.dim_xy),
-        }
-        for attr, shape in expected_shapes.items():
-            if hasattr(self, f"_{attr}"):
-                actual = getattr(self, f"_{attr}")
-                if actual.shape != shape:
-                    raise ValueError(f"⚠️ Matrice {attr} a une forme {actual.shape}, attendue {shape}")
+            check_consistency(Q1=self._Q1, sxx=self._sxx, syy=self._syy, mQ=self._mQ, Sigma=self._Sigma, Pmz0=self._Pmz0)
 
     # ------------------------------------------------------------------
     # Getters / Setters and Properties
@@ -258,5 +242,3 @@ class ParamLinear:
         print("Pmz0:\n", fmt(self.Pmz0))
         print("========================\n")
 
-        if __debug__:
-            self._check_consistency()

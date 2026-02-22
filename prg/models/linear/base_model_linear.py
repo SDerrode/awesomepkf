@@ -157,14 +157,14 @@ class LinearSigma(BaseModelLinear):
 
         # Vérification optionnelle
         if __debug__:
-            check_consistency(sxx=self.sxx, syy=self.syy)
+            check_consistency(sxx=self.sxx, syy=self.syy, Q1=Q1)
 
     def get_params(self) -> dict[str, Any]:
         return { 'dim_x'      : self.dim_x,
                  'dim_y'      : self.dim_y,
                  'augmented'  : self.augmented,
                  'g'          : self.g,
-                 'jacobiens_g' : self.jacobiens_g, # pour EPKF
+                 'jacobiens_g': self.jacobiens_g, # pour EPKF
                  'sxx'        : self.sxx,
                  'syy'        : self.syy,
                  'a'          : self.a,

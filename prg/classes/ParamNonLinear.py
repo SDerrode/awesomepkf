@@ -15,7 +15,7 @@ import numpy as np
 # Non linear models
 from models.nonLinear import ModelFactoryNonLinear
 # A few utils functions that are used several times
-from others.utils import is_covariance
+from others.utils import check_consistency
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -71,8 +71,8 @@ class ParamNonLinear:
         self.jacobiens_g = kwargs['jacobiens_g']
 
         if __debug__:
-            self._check_dimensions()
-            self._check_consistency()
+            if not self.augmented:
+                check_consistency(mQ=self._mQ, Pmz0=self._Pmz0)
 
     # ------------------------------------------------------------------
     def __repr__(self) -> str:
@@ -92,31 +92,7 @@ class ParamNonLinear:
         else:
             logger.setLevel(logging.DEBUG)
 
-    # ------------------------------------------------------------------
-    # Check dimensions
-    # ------------------------------------------------------------------
-    def _check_dimensions(self) -> None:
-        expected_shapes = {
-            'mQ': (self.dim_xy, self.dim_xy),
-            'mz0': (self.dim_xy, 1),
-            'Pmz0': (self.dim_xy, self.dim_xy),
-        }
-        for attr, shape in expected_shapes.items():
-            actual = getattr(self, f"_{attr}")
-            if actual.shape != shape:
-                raise ValueError(f"⚠️ Matrice {attr} a une forme {actual.shape}, attendue {shape}")
 
-    # ------------------------------------------------------------------
-    # Consistency checks
-    # ------------------------------------------------------------------
-    def _check_consistency(self) -> None:
-        """Check internal matrices for symmetry and positive semi-definiteness."""
-        listeMatrices = []
-        if not self.augmented:
-            listeMatrices = [('_mQ', 'mQ'), ('_Pmz0', 'Pmz0')]
-        for attr, name in listeMatrices:
-            if hasattr(self, attr):
-                is_covariance(getattr(self, attr), name)
 
     # ------------------------------------------------------------------
     # Getters / Setters and Properties
@@ -137,7 +113,8 @@ class ParamNonLinear:
             assert new_Q.shape == (self.dim_xy, self.dim_xy), f"mQ must be ({self.dim_xy},{self.dim_xy})"
         self._mQ = new_Q
         if __debug__:
-            self._check_consistency()
+            if not self.augmented:
+                check_consistency(mQ=self._mQ)
         logger.info("[ParamNonLinear] ✅ mQ matrix updated")
 
     # ------------------------------------------------------------------
@@ -164,9 +141,6 @@ class ParamNonLinear:
             print("mQ = np.array(", repr(self.mQ.tolist()), ')')
             print("mz0 = np.array(", repr(self.mz0.tolist()), ')')
             print("Pmz0 = np.array(", repr(self.Pmz0.tolist()), ')')
-
-        if __debug__:
-            self._check_consistency()
 
 
 # ----------------------------------------------------------------------

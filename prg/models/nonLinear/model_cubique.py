@@ -3,7 +3,6 @@
 
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
-from others.utils import check_consistency
 
 class ModelCubique(BaseModelNonLinear):
     """
@@ -27,9 +26,6 @@ class ModelCubique(BaseModelNonLinear):
         self.mQ   = np.diag([1e-4, 1e-4])
         self.mz0  = np.zeros((self.dim_xy, 1))
         self.Pmz0 = np.eye(self.dim_xy)
-
-        if __debug__:
-            check_consistency(mQ=self.mQ, Pmz0=self.Pmz0)
 
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:

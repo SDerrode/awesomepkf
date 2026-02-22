@@ -2,17 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 utils.py — Utilitaires pour filtres de Kalman (PKF/UKF/EKF)
-
-Corrections appliquées :
-  - compute_errors : empilement robuste via np.stack, suppression du double calcul
-    d'erreur redondant, remplacement de pinv par solve, vectorisation NEES/NIS,
-    factorisation en _compute_quadratic_form.
-  - diagnose_covariance : vérification du nombre de condition et test de Cholesky
-    réactivés et corrigés.
-  - is_covariance / check_consistency : délégation à diagnose_covariance.
-  - file_data_generator : validation lisible avec messages d'erreur clairs.
-  - data_to_dataframe : comparaison pythonique (if withoutX).
-  - Style général : PEP 8, annotations de type, docstrings.
 """
 
 from __future__ import annotations
@@ -161,12 +150,6 @@ def data_to_dataframe(
 
     return pd.DataFrame(data, columns=columns)
 
-
-
-# ----------------------------------------------------------------------
-# Calcul des formes quadratiques (NEES / NIS)
-# ----------------------------------------------------------------------
-
 # ----------------------------------------------------------------------
 # Calcul des formes quadratiques (NEES / NIS)
 # ----------------------------------------------------------------------
@@ -259,26 +242,7 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
         nis_mean = float(np.nanmean(nis_all))
     else:
          nis_mean = 'na'
-         
-    for k in range(errors.shape[0]):
-        ek = errors[k].reshape(-1, 1)  # Assure un vecteur colonne
-        Pk = tab_Pk[k]
 
-        try:
-            # Inverse robuste : pseudo-inverse si nécessaire
-            Pk_inv = np.linalg.pinv(Pk)  # gère aussi les matrices singulières
-
-            # NEES : ek.T @ Pk_inv @ ek
-            nees_value = float((ek.T @ Pk_inv @ ek).squeeze())  # squeeze + float pour toute dimension
-            nees_all[k] = nees_value
-
-        except Exception as e:
-            print(f"Erreur lors du calcul de NEES : {e}")
-            nees_all[k] = np.nan  # on peut mettre NaN si on ne peut pas calculer
-            print('P singulière : on ignore')
-            logger.warning("P singulière détectée lors du calcul de NEES - on ignore")
-            continue
-    
     report = {
         "mse_total" : mse_total,
         "mae_total" : mae_total,
