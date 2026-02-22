@@ -3,7 +3,6 @@
 
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
-from others.utils import check_consistency
 
 class ModelX1Y1_withRetroactions(BaseModelNonLinear):
     """
@@ -58,8 +57,7 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         # self.a, self.b, self.c, self.d = 1.2, 2.0, 0.8, 2.5
         
         self.Pmz0 = np.eye(self.dim_xy)
-        if __debug__:
-            check_consistency(mQ=self.mQ, Pmz0=self.Pmz0)
+
 
     # ------------------------------------------------------------------
     def _gx(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:

@@ -3,8 +3,6 @@
 
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
-from others.utils import check_consistency
-
 
 class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
     """
@@ -23,9 +21,6 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         self.Pmz0 = np.eye(self.dim_xy)
 
         self.a, self.b, self.c, self.d, self.e, self.f = 1.0, 0.8, 0.05, 0.9, 0.30, 0.6
-
-        if __debug__:
-            check_consistency(mQ=self.mQ, Pmz0=self.Pmz0)
 
     # ------------------------------------------------------------------
     def _gx(self, x, y, t, u, dt):

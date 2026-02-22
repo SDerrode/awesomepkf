@@ -3,7 +3,6 @@
 
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
-from others.utils import check_consistency
 from .model_x2_y1_withRetroactionsOfObservations import ModelX2Y1_withRetroactionsOfObservations
 
 class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
