@@ -12,33 +12,39 @@ from others.parser import addParseToParser
 # Logger
 # =============================================================
 
+
 def setup_logging(verbose: int) -> None:
     level = {0: logging.WARNING, 1: logging.INFO}.get(verbose, logging.DEBUG)
-    logging.basicConfig(
-        level=level,
-        format="[%(levelname)s] %(name)s: %(message)s"
-    )
+    logging.basicConfig(level=level, format="[%(levelname)s] %(name)s: %(message)s")
 
 
 # =============================================================
 # Parser
 # =============================================================
 
+
 def parse_arguments():
-    parser = argparse.ArgumentParser(
-        description="Simulate linear or non-linear data"
-    )
-    
+    parser = argparse.ArgumentParser(description="Simulate linear or non-linear data")
+
     addParseToParser(
         parser,
-        ['linearModelName', 'nonLinearModelName', 'N', 'sKey', 'dataFileName', 'withoutX']
+        [
+            "linearModelName",
+            "nonLinearModelName",
+            "N",
+            "sKey",
+            "dataFileName",
+            "withoutX",
+        ],
     )
 
     args = parser.parse_args()
 
     # Validation logique
     if args.linearModelName is not None and args.nonLinearModelName is not None:
-        parser.error("--nonLinearModelName should not be used with --linearModelName. One or the other!")
+        parser.error(
+            "--nonLinearModelName should not be used with --linearModelName. One or the other!"
+        )
     if args.linearModelName is None and args.nonLinearModelName is None:
         parser.error("--nonLinearModelName OR --linearModelName must be used.")
 
@@ -49,12 +55,15 @@ def parse_arguments():
 # Main
 # =============================================================
 
+
 def main() -> None:
     args = parse_arguments()
     setup_logging(args.verbose)
 
     if args.linearModelName and args.nonLinearModelName:
-        raise ValueError("Please provide only one of --linearModelName or --nonLinearModelName")
+        raise ValueError(
+            "Please provide only one of --linearModelName or --nonLinearModelName"
+        )
 
     if args.linearModelName:
         simulator = LinearDataSimulator(
@@ -77,7 +86,9 @@ def main() -> None:
         )
 
     else:
-        raise ValueError("Please provide either --linearModelName or --nonLinearModelName")
+        raise ValueError(
+            "Please provide either --linearModelName or --nonLinearModelName"
+        )
 
     simulator.run()
 

@@ -4,18 +4,23 @@
 import argparse
 
 from base_classes.nonlinear_pf_runner_simulation import BaseNonLinearPFRunnerSim
-from base_classes.nonlinear_pf_runner_from_file  import BaseNonLinearPFRunnerFromFile
+from base_classes.nonlinear_pf_runner_from_file import BaseNonLinearPFRunnerFromFile
 from others.parser import addParseToParser
 
 
 def parse_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run NonLinear PF"
-    )
+    parser = argparse.ArgumentParser(description="Run NonLinear PF")
 
     addParseToParser(
         parser,
-        ['nonLinearModelName', 'linearModelName', 'N', 'sKey', 'nbParticles', 'dataFileName']
+        [
+            "nonLinearModelName",
+            "linearModelName",
+            "N",
+            "sKey",
+            "nbParticles",
+            "dataFileName",
+        ],
     )
 
     args = parser.parse_args()
@@ -26,12 +31,14 @@ def parse_arguments() -> argparse.Namespace:
 
     if args.dataFileName is None and args.N is None:
         parser.error("--N must be used when --dataFileName is not specified")
-        
+
     if args.linearModelName is not None and args.nonLinearModelName is not None:
-        parser.error("--nonLinearModelName should not be used with --linearModelName. One or the other!")
+        parser.error(
+            "--nonLinearModelName should not be used with --linearModelName. One or the other!"
+        )
     if args.linearModelName is None and args.nonLinearModelName is None:
         parser.error("--nonLinearModelName OR --linearModelName must be used.")
-    
+
     if args.linearModelName is None:
         model_name = args.nonLinearModelName
     else:
@@ -42,10 +49,10 @@ def parse_arguments() -> argparse.Namespace:
 
 def main() -> None:
     args, model_name = parse_arguments()
-    
+
     # 🔎 Distinction automatique selon dataFileName
     if args.dataFileName is not None:
-        
+
         # Mode FILE
         runner = BaseNonLinearPFRunnerFromFile(
             model_name=model_name,
@@ -56,7 +63,7 @@ def main() -> None:
             save_history=args.saveHistory,
         )
     else:
-        
+
         # Mode SIM
         runner = BaseNonLinearPFRunnerSim(
             model_name=model_name,

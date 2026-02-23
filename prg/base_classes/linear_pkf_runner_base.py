@@ -6,11 +6,16 @@ from models.linear import ModelFactoryLinear
 from base_classes.runner_base import BaseRunner
 from others.plot_settings import WINDOW
 
+
 class BaseLinearPKFRunner(BaseRunner):
 
-    def __init__(self, model_name, verbose=1, plot=False, save_history=False, base_dir="."):
+    def __init__(
+        self, model_name, verbose=1, plot=False, save_history=False, base_dir="."
+    ):
         super().__init__(model_name, verbose, plot, save_history, base_dir)
-        self.runner_instance = Linear_PKF(param=self.param, sKey=self.sKey, verbose=self.verbose)
+        self.runner_instance = Linear_PKF(
+            param=self.param, sKey=self.sKey, verbose=self.verbose
+        )
 
     def _get_model_factory(self):
         return ModelFactoryLinear, ModelFactoryNonLinear
@@ -30,9 +35,9 @@ class BaseLinearPKFRunner(BaseRunner):
             window=WINDOW,
             basename=f"pkf_observations_{self.model_name}",
             show=False,
-            base_dir=self.graph_dir
+            base_dir=self.graph_dir,
         )
-        
+
         if self.runner_instance.ground_truth:
             title = f"'{self.model_name}' model data filtered with PKF"
 
@@ -44,5 +49,5 @@ class BaseLinearPKFRunner(BaseRunner):
                 window=WINDOW,
                 basename=f"pkf_{self.model_name}",
                 show=False,
-                base_dir=self.graph_dir
+                base_dir=self.graph_dir,
             )

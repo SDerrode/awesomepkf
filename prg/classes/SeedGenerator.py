@@ -50,7 +50,9 @@ class SeedGenerator:
         if seed_key is None:
             seed_key = secrets.randbits(128)
             if __debug__ and self.verbose > 0:
-                logger.info(f"[SeedGenerator] Graine forte générée aléatoirement ({seed_key}).")
+                logger.info(
+                    f"[SeedGenerator] Graine forte générée aléatoirement ({seed_key})."
+                )
 
         self._root_seed: int = seed_key
         self._seed_seq: np.random.SeedSequence = np.random.SeedSequence(self._root_seed)

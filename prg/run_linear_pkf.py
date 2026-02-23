@@ -9,14 +9,9 @@ from others.parser import addParseToParser
 
 
 def parse_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run Linear PKF"
-    )
+    parser = argparse.ArgumentParser(description="Run Linear PKF")
 
-    addParseToParser(
-        parser,
-        ['linearModelName', 'N', 'sKey', 'dataFileName']
-    )
+    addParseToParser(parser, ["linearModelName", "N", "sKey", "dataFileName"])
 
     args = parser.parse_args()
 
@@ -35,7 +30,7 @@ def main() -> None:
 
     # 🔎 Distinction automatique selon dataFileName
     if args.dataFileName is not None:
-        
+
         # Mode FILE
         runner = LinearPKFRunnerFromFile(
             model_name=args.linearModelName,

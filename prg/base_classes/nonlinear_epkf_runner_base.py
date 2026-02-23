@@ -6,14 +6,25 @@ from models.linear import ModelFactoryLinear
 from base_classes.runner_base import BaseRunner
 from others.plot_settings import WINDOW
 
+
 class BaseNonLinearEPKFRunner(BaseRunner):
 
-    def __init__(self, model_name, ell=None, verbose=1, plot=False, save_history=False, base_dir="."):
-        
-        self.ell = ell # Avant le constructeur
+    def __init__(
+        self,
+        model_name,
+        ell=None,
+        verbose=1,
+        plot=False,
+        save_history=False,
+        base_dir=".",
+    ):
+
+        self.ell = ell  # Avant le constructeur
         super().__init__(model_name, verbose, plot, save_history, base_dir)
 
-        self.runner_instance = NonLinear_EPKF(param=self.param, ell=self.ell, sKey=self.sKey, verbose=self.verbose)
+        self.runner_instance = NonLinear_EPKF(
+            param=self.param, ell=self.ell, sKey=self.sKey, verbose=self.verbose
+        )
 
     def _get_model_factory(self):
         return ModelFactoryLinear, ModelFactoryNonLinear
@@ -33,9 +44,9 @@ class BaseNonLinearEPKFRunner(BaseRunner):
             window=WINDOW,
             basename=f"epkf_observations_{self.model_name}",
             show=False,
-            base_dir=self.graph_dir
+            base_dir=self.graph_dir,
         )
-        
+
         if self.runner_instance.ground_truth:
             title = f"'{self.model_name}' model data filtered with EPKF"
 
@@ -47,5 +58,5 @@ class BaseNonLinearEPKFRunner(BaseRunner):
                 window=WINDOW,
                 basename=f"epkf_{self.model_name}",
                 show=False,
-                base_dir=self.graph_dir
+                base_dir=self.graph_dir,
             )

@@ -16,9 +16,17 @@ class LinearPKFRunnerFromFile(BaseLinearPKFRunner):
     Runner for filtering linear data loaded from file.
     """
 
-    def __init__(self, model_name: str, data_filename: Optional[str], verbose: int = 0, plot: bool = False, save_history: bool = False, base_dir: str = ".") -> None:
-        
-        self.N    = -1
+    def __init__(
+        self,
+        model_name: str,
+        data_filename: Optional[str],
+        verbose: int = 0,
+        plot: bool = False,
+        save_history: bool = False,
+        base_dir: str = ".",
+    ) -> None:
+
+        self.N = -1
         self.sKey = None
 
         super().__init__(model_name, verbose, plot, save_history, base_dir)
@@ -33,17 +41,14 @@ class LinearPKFRunnerFromFile(BaseLinearPKFRunner):
 
     def run(self) -> None:
 
-        if self.verbose>1:
+        if self.verbose > 1:
             logging.info("Starting Linear PKF Runner (file mode)")
 
         self.runner_instance.process_N_data(
             N=None,
             data_generator=file_data_generator(
-                self.data_filename,
-                self.param.dim_x,
-                self.param.dim_y,
-                self.verbose
-            )
+                self.data_filename, self.param.dim_x, self.param.dim_y, self.verbose
+            ),
         )
 
         if self.save_history:

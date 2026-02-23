@@ -6,15 +6,31 @@ from models.linear import ModelFactoryLinear
 from base_classes.runner_base import BaseRunner
 from others.plot_settings import WINDOW
 
+
 class BaseNonLinearUPKFRunner(BaseRunner):
 
-    def __init__(self, model_name, sigmaSet=None, verbose=1, plot=False, save_history=False, base_dir="."):
-        
-        self.sigmaSet=sigmaSet
+    def __init__(
+        self,
+        model_name,
+        sigmaSet=None,
+        verbose=1,
+        plot=False,
+        save_history=False,
+        base_dir=".",
+    ):
 
-        super().__init__(model_name, verbose, plot, save_history, base_dir, sigmaSet=sigmaSet)
+        self.sigmaSet = sigmaSet
 
-        self.runner_instance = NonLinear_UPKF(param=self.param, sigmaSet=self.sigmaSet, sKey=self.sKey, verbose=self.verbose)
+        super().__init__(
+            model_name, verbose, plot, save_history, base_dir, sigmaSet=sigmaSet
+        )
+
+        self.runner_instance = NonLinear_UPKF(
+            param=self.param,
+            sigmaSet=self.sigmaSet,
+            sKey=self.sKey,
+            verbose=self.verbose,
+        )
 
     def _get_model_factory(self):
         return ModelFactoryLinear, ModelFactoryNonLinear
@@ -34,9 +50,9 @@ class BaseNonLinearUPKFRunner(BaseRunner):
             window=WINDOW,
             basename=f"upkf_observations_{self.model_name}",
             show=False,
-            base_dir=self.graph_dir
+            base_dir=self.graph_dir,
         )
-        
+
         if self.runner_instance.ground_truth:
             title = f"'{self.model_name}' model data filtered with UPKF"
 
@@ -48,5 +64,5 @@ class BaseNonLinearUPKFRunner(BaseRunner):
                 window=WINDOW,
                 basename=f"upkf_{self.model_name}",
                 show=False,
-                base_dir=self.graph_dir
+                base_dir=self.graph_dir,
             )
