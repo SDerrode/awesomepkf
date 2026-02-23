@@ -12,19 +12,28 @@ class BaseNonLinearUPKFRunnerSim(BaseNonLinearUPKFRunner):
     Runner for nonlinear simulation + UPKF filtering.
     """
 
-    def __init__(self, model_name: str, N: int, sKey: Optional[int], sigmaSet: Optional[int], verbose: int, plot: bool, save_history: bool, base_dir: str = ".") -> None:
-        
-        self.N    = N
-        self.sKey = sKey
-        
-        super().__init__(model_name, sigmaSet, verbose, plot, save_history, base_dir)
+    def __init__(
+        self,
+        model_name: str,
+        N: int,
+        sKey: Optional[int],
+        sigmaSet: Optional[int],
+        verbose: int,
+        plot: bool,
+        save_history: bool,
+        base_dir: str = ".",
+    ) -> None:
 
+        self.N = N
+        self.sKey = sKey
+
+        super().__init__(model_name, sigmaSet, verbose, plot, save_history, base_dir)
 
     # ==========================================================
 
     def run(self) -> None:
 
-        if self.verbose>1:
+        if self.verbose > 1:
             logging.info("Starting NonLinear UPKF Runner (simulation mode)")
 
         self.runner_instance.process_N_data(N=self.N)
@@ -36,4 +45,3 @@ class BaseNonLinearUPKFRunnerSim(BaseNonLinearUPKFRunner):
 
         if self.plot:
             self._plot_results()
-

@@ -4,18 +4,16 @@
 import argparse
 
 from base_classes.nonlinear_epkf_runner_simulation import BaseNonLinearEPKFRunnerSim
-from base_classes.nonlinear_epkf_runner_from_file  import BaseNonLinearEPKFRunnerFromFile
+from base_classes.nonlinear_epkf_runner_from_file import BaseNonLinearEPKFRunnerFromFile
 from others.parser import addParseToParser
 
 
 def parse_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Run NonLinear EPKF"
-    )
+    parser = argparse.ArgumentParser(description="Run NonLinear EPKF")
 
     addParseToParser(
         parser,
-        ['nonLinearModelName', 'linearModelName', 'N', 'sKey', 'ell', 'dataFileName']
+        ["nonLinearModelName", "linearModelName", "N", "sKey", "ell", "dataFileName"],
     )
 
     args = parser.parse_args()
@@ -26,12 +24,14 @@ def parse_arguments() -> argparse.Namespace:
 
     if args.dataFileName is None and args.N is None:
         parser.error("--N must be used when --dataFileName is not specified")
-        
+
     if args.linearModelName is not None and args.nonLinearModelName is not None:
-        parser.error("--nonLinearModelName should not be used with --linearModelName. One or the other!")
+        parser.error(
+            "--nonLinearModelName should not be used with --linearModelName. One or the other!"
+        )
     if args.linearModelName is None and args.nonLinearModelName is None:
         parser.error("--nonLinearModelName OR --linearModelName must be used.")
-    
+
     if args.linearModelName is None:
         model_name = args.nonLinearModelName
     else:
@@ -42,8 +42,8 @@ def parse_arguments() -> argparse.Namespace:
 
 def main() -> None:
     args, model_name = parse_arguments()
-    
-     # 🔎 Distinction automatique selon dataFileName
+
+    # 🔎 Distinction automatique selon dataFileName
     if args.dataFileName is not None:
 
         # Mode FILE

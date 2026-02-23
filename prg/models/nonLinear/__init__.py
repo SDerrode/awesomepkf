@@ -6,6 +6,7 @@ import pkgutil
 from pathlib import Path
 from .base_model_nonLinear import BaseModelNonLinear
 
+
 class ModelFactoryNonLinear:
     """Fabrique automatique : découvre et instancie tous les modèles du dossier."""
 
@@ -21,8 +22,14 @@ class ModelFactoryNonLinear:
             module = importlib.import_module(f"{__package__}.{module_name}")
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if isinstance(attr, type) and issubclass(attr, BaseModelNonLinear) and attr is not BaseModelNonLinear:
-                    name = getattr(attr, "MODEL_NAME", attr.__name__.lower().replace("model", ""))
+                if (
+                    isinstance(attr, type)
+                    and issubclass(attr, BaseModelNonLinear)
+                    and attr is not BaseModelNonLinear
+                ):
+                    name = getattr(
+                        attr, "MODEL_NAME", attr.__name__.lower().replace("model", "")
+                    )
                     cls._registry[name] = attr
 
     @classmethod
@@ -32,8 +39,10 @@ class ModelFactoryNonLinear:
             cls._discover_models()
         key = name.strip()
         if key not in cls._registry:
-            raise ValueError(f"Modèle inconnu: '{key}'. "
-                             f"Disponibles: {list(cls._registry.keys())}")
+            raise ValueError(
+                f"Modèle inconnu: '{key}'. "
+                f"Disponibles: {list(cls._registry.keys())}"
+            )
         return cls._registry[key]()
 
     @classmethod

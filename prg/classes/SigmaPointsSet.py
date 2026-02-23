@@ -9,6 +9,7 @@ from itertools import product
 
 from others.numerics import EPS_ABS
 
+
 class SigmaPointsSet(ABC):
     """
     Base class for all sigma-point sets.
@@ -30,119 +31,123 @@ class SigmaPointsSet(ABC):
     @abstractmethod
     def _sigma_point(self):
         pass
-    
+
     def _chol(self, P):
         try:
             return np.linalg.cholesky(P)
         except np.linalg.LinAlgError:
             try:
-                return np.linalg.cholesky(P + EPS_ABS*np.eye(self.dim))
+                return np.linalg.cholesky(P + EPS_ABS * np.eye(self.dim))
             except np.linalg.LinAlgError:
-                raise("Méthode _chol : décomposition Choleski impossible")
+                raise ("Méthode _chol : décomposition Choleski impossible")
 
 
 class SetWAN2000(SigmaPointsSet, key="wan2000"):
     """
     The most commonly used set, defined in the paper:
-    E. A. Wan and R. V. D. Merwe, 
-    “The unscented Kalman filter for nonlinear estimation,” 
+    E. A. Wan and R. V. D. Merwe,
+    “The unscented Kalman filter for nonlinear estimation,”
     in Proc. IEEE Adaptive Syst. Signal Process. Commun. Control Symp. (ASSPCCS’00), 2000, pp. 153–158.
     """
-    
+
     def __init__(self, dim, param):
         super().__init__(dim)
-        
-        self.nbSigmaPoint = 2*self.dim+1
-        
-        self.Wm     = np.full(self.nbSigmaPoint, 1. / (2. * (self.dim + param.lambda_)))
-        self.Wm[0]  = param.lambda_ / (self.dim + param.lambda_)
+
+        self.nbSigmaPoint = 2 * self.dim + 1
+
+        self.Wm = np.full(self.nbSigmaPoint, 1.0 / (2.0 * (self.dim + param.lambda_)))
+        self.Wm[0] = param.lambda_ / (self.dim + param.lambda_)
         if not np.isclose(self.Wm.sum(), 1.0, atol=EPS_ABS):
             raise ValueError(f"Wm weights do not sum to 1 (sum={self.Wm.sum()})")
-        self.Wm /= self.Wm.sum() # normalisation au cas ou il reste un résidu
-        self.Wc     = np.copy(self.Wm)
-        self.Wc[0] += 1. - param.alpha**2 + param.beta  # corrective term
+        self.Wm /= self.Wm.sum()  # normalisation au cas ou il reste un résidu
+        self.Wc = np.copy(self.Wm)
+        self.Wc[0] += 1.0 - param.alpha**2 + param.beta  # corrective term
 
-        self.gamma  = np.sqrt(self.dim + param.lambda_)
-        
+        self.gamma = np.sqrt(self.dim + param.lambda_)
 
     def _sigma_point(self, x, P):
-        
-        x = np.atleast_2d(x).reshape(-1,1)  # (dim,1)
-        
+
+        x = np.atleast_2d(x).reshape(-1, 1)  # (dim,1)
+
         # Compute Cholesky factor
         sqrt_P = self._chol(P)
 
         sigma = [x]
         for i in range(self.dim):
-            delta = self.gamma * sqrt_P[:, i].reshape(-1,1)
+            delta = self.gamma * sqrt_P[:, i].reshape(-1, 1)
             sigma.append(x + delta)
             sigma.append(x - delta)
-        
+
         return np.array(sigma)
 
 
 class SetCPKF(SigmaPointsSet, key="cpkf"):
     """
-    NOTE: This is not strictly a UKF, but it can be implemented similarly. 
+    NOTE: This is not strictly a UKF, but it can be implemented similarly.
     This "Cubature Kalman Filter" is defined in:
-    I. Arasaratnam, S. Haykin, and T. R. Hurd, 
-    “Cubature Kalman Filtering for Continuous-Discrete Systems: Theory and Simulations,” 
+    I. Arasaratnam, S. Haykin, and T. R. Hurd,
+    “Cubature Kalman Filtering for Continuous-Discrete Systems: Theory and Simulations,”
     IEEE Trans. Signal Process., vol. 58, no. 10, pp. 4977–4993, 2010.
     """
+
     def __init__(self, dim, param):
         super().__init__(dim)
-        
+
         self.nbSigmaPoint = 2 * self.dim
-        self.Wm = np.full(self.nbSigmaPoint, 1. / (2. * self.dim))
+        self.Wm = np.full(self.nbSigmaPoint, 1.0 / (2.0 * self.dim))
         if not np.isclose(self.Wm.sum(), 1.0, atol=EPS_ABS):
             raise ValueError(f"Wm weights do not sum to 1 (sum={self.Wm.sum()})")
-        self.Wm /= self.Wm.sum() # normalisation au cas ou il reste un résidu
+        self.Wm /= self.Wm.sum()  # normalisation au cas ou il reste un résidu
         self.Wc = np.copy(self.Wm)
-        
+
         self.gamma = np.sqrt(self.dim)
 
     def _sigma_point(self, x, P):
-        
-        x = np.atleast_2d(x).reshape(-1,1)  # (dim,1)
-        
+
+        x = np.atleast_2d(x).reshape(-1, 1)  # (dim,1)
+
         # Compute Cholesky factor
         sqrt_P = self._chol(P)
-        
+
         sigma = []
         for i in range(self.dim):
-            delta = self.gamma * sqrt_P[:, i].reshape(-1,1)
+            delta = self.gamma * sqrt_P[:, i].reshape(-1, 1)
             sigma.append(x + delta)
             sigma.append(x - delta)
-        
+
         return np.array(sigma)
+
 
 class SetLERNER2002(SigmaPointsSet, key="lerner2002"):
     """
     Set defined in the paper:
-    U. N. Lerner, “Hybrid Bayesian networks for reasoning about complex systems,” 
+    U. N. Lerner, “Hybrid Bayesian networks for reasoning about complex systems,”
     Ph.D., Stanford University, 2002.
     There are more points. The unscented transform is exact up to order 4.
     """
+
     def __init__(self, dim, param):
         super().__init__(dim)
-        
+
         self.nbSigmaPoint = 2 * self.dim**2 + 1
-        
+
         self.Wm = np.zeros((self.nbSigmaPoint))
-        self.Wm[0]                            = (self.dim**2 - 7.*self.dim)/18 + 1.
-        self.Wm[1:2*self.dim+1]               = (4-self.dim) / 18.
-        self.Wm[2*self.dim+1:2*self.dim**2+1] = 1./36.
+        self.Wm[0] = (self.dim**2 - 7.0 * self.dim) / 18 + 1.0
+        self.Wm[1 : 2 * self.dim + 1] = (4 - self.dim) / 18.0
+        self.Wm[2 * self.dim + 1 : 2 * self.dim**2 + 1] = 1.0 / 36.0
         if not np.isclose(self.Wm.sum(), 1.0, atol=EPS_ABS):
             raise ValueError(f"Wm weights do not sum to 1 (sum={self.Wm.sum()})")
-        self.Wm /= self.Wm.sum() # normalisation au cas ou il reste un résidu
-        self.Wc     = np.copy(self.Wm)
-        self.Wc[0] += 1. - param.alpha**2 + param.beta  # same corrective term as for WAN2000
-        
-        self.gamma  = np.sqrt(3.)
+        self.Wm /= self.Wm.sum()  # normalisation au cas ou il reste un résidu
+        self.Wc = np.copy(self.Wm)
+        self.Wc[0] += (
+            1.0 - param.alpha**2 + param.beta
+        )  # same corrective term as for WAN2000
+
+        self.gamma = np.sqrt(3.0)
 
     def _sigma_point(self, x, P):
-        
-        x = np.atleast_2d(x).reshape(-1,1)  # (dim,1)
+
+        x = np.atleast_2d(x).reshape(-1, 1)  # (dim,1)
 
         # Compute Cholesky factor
         sqrt_P = self._chol(P)
@@ -155,15 +160,15 @@ class SetLERNER2002(SigmaPointsSet, key="lerner2002"):
             delta = self.gamma * sqrt_P[:, i].reshape(self.dim, 1)
             sigma.append(x + delta)
             sigma.append(x - delta)
-        
-        delta_plus  = np.empty((self.dim, 1))
+
+        delta_plus = np.empty((self.dim, 1))
         delta_minus = np.empty((self.dim, 1))
 
         for i in range(self.dim):
             # print(f'i={i}')
             col_i = sqrt_P[:, i]  # vue, pas de copie
 
-            for j in range(i+1, self.dim):
+            for j in range(i + 1, self.dim):
                 # print(f'  j={j}')
                 col_j = sqrt_P[:, j]  # vue
 
@@ -182,18 +187,20 @@ class SetLERNER2002(SigmaPointsSet, key="lerner2002"):
 
         return np.array(sigma)
 
+
 class SetIto2000(SigmaPointsSet, key="ito2000"):
     """
     Set defined in the paper:
     K. Ito and K. Xiong, “Gaussian filters for nonlinear filtering problems,” IEEE Trans. Autom. Control, vol. 45, no. 5, pp. 910–927, May 2000.
     Attention, il y a un paramètre p et le nombre de points explose en p^dim. Donc pour dim = 1,2, rester sur p<=4.
     """
+
     def __init__(self, dim, param):
         super().__init__(dim)
-        
-        self.p            = 3
+
+        self.p = 3
         self.nbSigmaPoint = self.p**self.dim
-        
+
         self.Wm = np.zeros((self.nbSigmaPoint))
         xi_1d, w_1d = np.polynomial.hermite.hermgauss(self.p)
 
@@ -205,21 +212,19 @@ class SetIto2000(SigmaPointsSet, key="ito2000"):
         self.Wm /= np.pi ** (self.dim / 2)
         if not np.isclose(self.Wm.sum(), 1.0, atol=EPS_ABS):
             raise ValueError(f"Wm weights do not sum to 1 (sum={self.Wm.sum()})")
-        self.Wm /= self.Wm.sum() # normalisation au cas ou il reste un résidu
+        self.Wm /= self.Wm.sum()  # normalisation au cas ou il reste un résidu
 
-        self.Wc     = np.copy(self.Wm)
-
+        self.Wc = np.copy(self.Wm)
 
     def _sigma_point(self, x, P):
-        
-        x = np.atleast_2d(x).reshape(-1,1)  # (dim,1)
+
+        x = np.atleast_2d(x).reshape(-1, 1)  # (dim,1)
 
         # Compute Cholesky factor
         sqrt_P = self._chol(P)
-        
+
         sigma = []
         for xi in self.Xi:
-            sigma.append( x + (sqrt_P @ xi).reshape(self.dim, 1))
-
+            sigma.append(x + (sqrt_P @ xi).reshape(self.dim, 1))
 
         return np.array(sigma)

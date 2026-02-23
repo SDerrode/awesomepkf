@@ -15,9 +15,10 @@ from dataclasses import dataclass, is_dataclass, asdict
 from rich.table import Table
 from rich.console import Console
 from rich.pretty import Pretty
-        
+
 from others.utils import compute_errors
 from others.plot_settings import DPI, FACECOLOR, BIG_SIZE
+
 # A few utils functions that are used several times
 from others.utils import rich_show_fields
 
@@ -75,7 +76,7 @@ class HistoryTracker:
         if not __debug__:
             logger.setLevel(logging.ERROR)
             return
-        if self.verbose==0 or self.verbose==1:
+        if self.verbose == 0 or self.verbose == 1:
             logger.setLevel(logging.CRITICAL + 1)
         elif self.verbose == 2:
             logger.setLevel(logging.INFO)
@@ -113,8 +114,9 @@ class HistoryTracker:
         with open(path, "wb") as f:
             pickle.dump(self._history, f)
         if self.verbose > 0:
-            logger.info(f"[HistoryTracker] Sauvegardé dans '{path}' ({len(self)} enregistrements)")
-
+            logger.info(
+                f"[HistoryTracker] Sauvegardé dans '{path}' ({len(self)} enregistrements)"
+            )
 
     @classmethod
     def load_pickle(cls, path: str) -> "HistoryTracker":
@@ -140,7 +142,9 @@ class HistoryTracker:
         tracker = cls()
         tracker._history = data
         if tracker.verbose > 0:
-            logger.info(f"[HistoryTracker] Rechargé depuis '{path}' ({len(tracker)} enregistrements)")
+            logger.info(
+                f"[HistoryTracker] Rechargé depuis '{path}' ({len(tracker)} enregistrements)"
+            )
         return tracker
 
     # ------------------------------------------------------------------
@@ -158,28 +162,63 @@ class HistoryTracker:
         ListeD, ListeE : list[str] or None
             Colonnes supplémentaires pour certains filtres (ex : particulaire).
         """
-        
+
         df = self.as_dataframe()
 
-        console = Console(force_terminal=True, color_system="truecolor")  # console globale partagée
-        
+        console = Console(
+            force_terminal=True, color_system="truecolor"
+        )  # console globale partagée
+
         if ListeD is None or ListeE is None:
             for a, b, c in zip(ListeA, ListeB, ListeC):
-                reportError = compute_errors(model, \
-                                        df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
-                                        None, None)
-                if self.verbose>0:
-                    rich_show_fields(reportError, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"{a} vs {b}")
+                reportError = compute_errors(
+                    model,
+                    df[a].to_numpy(),
+                    df[b].to_numpy(),
+                    df[c].to_numpy(),
+                    None,
+                    None,
+                )
+                if self.verbose > 0:
+                    rich_show_fields(
+                        reportError,
+                        [
+                            "mse_total",
+                            "mae_total",
+                            "nees_mean",
+                            "nis_mean",
+                            "list_mses_X_and_Y",
+                            "list_maes_X_and_Y",
+                        ],
+                        title=f"{a} vs {b}",
+                    )
         else:
             for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
-                reportError = compute_errors(model, \
-                                        df[a].to_numpy(), df[b].to_numpy(), df[c].to_numpy(), \
-                                        df[d].to_numpy(), df[e].to_numpy())
-                if self.verbose>0:
-                    rich_show_fields(reportError, ["mse_total", "mae_total", "nees_mean", "nis_mean", 'list_mses_X_and_Y', 'list_maes_X_and_Y'], title=f"{a} vs {b}")
+                reportError = compute_errors(
+                    model,
+                    df[a].to_numpy(),
+                    df[b].to_numpy(),
+                    df[c].to_numpy(),
+                    df[d].to_numpy(),
+                    df[e].to_numpy(),
+                )
+                if self.verbose > 0:
+                    rich_show_fields(
+                        reportError,
+                        [
+                            "mse_total",
+                            "mae_total",
+                            "nees_mean",
+                            "nis_mean",
+                            "list_mses_X_and_Y",
+                            "list_maes_X_and_Y",
+                        ],
+                        title=f"{a} vs {b}",
+                    )
 
-
-    def _compute_sigma_envelope(self, var_series: pd.Series, col_name: str) -> np.ndarray:
+    def _compute_sigma_envelope(
+        self, var_series: pd.Series, col_name: str
+    ) -> np.ndarray:
         """
         Calcule un sigma stable à partir d'une série de variances et détecte les anomalies.
 
@@ -206,7 +245,9 @@ class HistoryTracker:
         strongly_negative = v < -tol
 
         if slightly_negative.any() and self.verbose > 0:
-            logger.info(f"[{col_name}] Variances légèrement négatives corrigées : {np.sum(slightly_negative)} points")
+            logger.info(
+                f"[{col_name}] Variances légèrement négatives corrigées : {np.sum(slightly_negative)} points"
+            )
 
         if strongly_negative.any():
             idx = np.where(strongly_negative)[0][:5]
@@ -219,9 +260,19 @@ class HistoryTracker:
         v_corrected[slightly_negative] = 0.0
         return np.sqrt(v_corrected)
 
-
     # ------------------------------------------------------------------
-    def plot(self, title, list_param, list_label, list_covar, window, basename="plot", show=True, base_dir=None, **kwargs):
+    def plot(
+        self,
+        title,
+        list_param,
+        list_label,
+        list_covar,
+        window,
+        basename="plot",
+        show=True,
+        base_dir=None,
+        **kwargs,
+    ):
         """
         Trace l'évolution des états avec leurs covariances ±2σ.
 
@@ -253,23 +304,26 @@ class HistoryTracker:
         fig, axes : tuple
             Figure et axes matplotlib.
         """
-        
+
         if not (len(list_param) == len(list_label) == len(list_covar)):
-            raise ValueError("list_param, list_label et list_covar doivent avoir la même longueur")
-        
+            raise ValueError(
+                "list_param, list_label et list_covar doivent avoir la même longueur"
+            )
+
         for key in ("xmin", "xmax"):
             if key not in window:
                 raise KeyError(f"window doit contenir '{key}'")
 
-        df = self.as_dataframe().iloc[window['xmin']:window['xmax']]
+        df = self.as_dataframe().iloc[window["xmin"] : window["xmax"]]
         if df.empty:
             df = self.as_dataframe()
             if df.empty:
                 raise ValueError("Aucune donnée enregistrée.")
         for p in list_param:
             if p not in df.columns:
-                raise KeyError(f"'{p}' n'est pas une colonne connue : {list(df.columns)}")
-
+                raise KeyError(
+                    f"'{p}' n'est pas une colonne connue : {list(df.columns)}"
+                )
 
         # Vérifie que le premier élément est bien un vecteur
         first = df[list_param[0]].iloc[0]
@@ -280,53 +334,72 @@ class HistoryTracker:
         # On récupère le nombre de composantes de X
         nb_components = first.shape[0]
         # print('nb_components=', nb_components)
-        
-        df_subset     = pd.DataFrame()
+
+        df_subset = pd.DataFrame()
         df_subset_var = pd.DataFrame()
         list_labels_p = []
         list_labels_e = []
-        list_has_var  = []
+        list_has_var = []
         for p, e in zip(list_param, list_covar):
             has_var = e is not None
             list_has_var += [has_var] * nb_components
-            
+
             list_labels_p_local = []
             list_labels_e_local = []
             for component in range(nb_components):
-                list_labels_p_local.append(f'{p}_{component}')
-                list_labels_e_local.append(f'{e}_{component}')
+                list_labels_p_local.append(f"{p}_{component}")
+                list_labels_e_local.append(f"{e}_{component}")
             list_labels_p += list_labels_p_local
             list_labels_e += list_labels_e_local
 
-            df_subset[list_labels_p_local] = df[p].apply(lambda x: pd.Series(x.flatten()))
+            df_subset[list_labels_p_local] = df[p].apply(
+                lambda x: pd.Series(x.flatten())
+            )
             if has_var:
-                df_subset_var[list_labels_e_local] = df[e].apply(lambda x: pd.Series(x.diagonal()))
+                df_subset_var[list_labels_e_local] = df[e].apply(
+                    lambda x: pd.Series(x.diagonal())
+                )
 
-        fig, axes = plt.subplots(nb_components, 1, figsize=(7, 2*nb_components), sharex=True, facecolor=FACECOLOR)
-        if nb_components == 1: axes = [axes]
+        fig, axes = plt.subplots(
+            nb_components,
+            1,
+            figsize=(7, 2 * nb_components),
+            sharex=True,
+            facecolor=FACECOLOR,
+        )
+        if nb_components == 1:
+            axes = [axes]
         fig.suptitle(title, y=0.85, fontsize=BIG_SIZE)
 
-        for i, (col_p, col_e, has_var) in enumerate(zip(list_labels_p, list_labels_e, list_has_var)):
- 
-            j = i%nb_components
+        for i, (col_p, col_e, has_var) in enumerate(
+            zip(list_labels_p, list_labels_e, list_has_var)
+        ):
+
+            j = i % nb_components
             k = i // nb_components
             df_subset[col_p].plot(ax=axes[j], label=list_label[k], alpha=0.5)
-            
+
             if has_var and col_e not in df_subset_var:
                 raise KeyError(f"Variance '{col_e}' absente de df_subset_var")
 
             if has_var:
-                
+
                 # Detection de variances très légèrement négatives (et celles qui le seraient plus que légèrement)
                 sigma = self._compute_sigma_envelope(df_subset_var[col_e], col_e)
 
                 # On dessine l'enveloppe
-                y_upper   = df_subset[col_p] + 2.*sigma
-                y_lower   = df_subset[col_p] - 2.*sigma
-                last_line = axes[j].lines[-1]       # dernière courbe tracée
-                color     = last_line.get_color()
-                axes[j].fill_between(df_subset.index, y_lower, y_upper, color=color, alpha=0.2, label=f'{list_label[k]} ± 2*' + r'$\sigma$')
-                
+                y_upper = df_subset[col_p] + 2.0 * sigma
+                y_lower = df_subset[col_p] - 2.0 * sigma
+                last_line = axes[j].lines[-1]  # dernière courbe tracée
+                color = last_line.get_color()
+                axes[j].fill_between(
+                    df_subset.index,
+                    y_lower,
+                    y_upper,
+                    color=color,
+                    alpha=0.2,
+                    label=f"{list_label[k]} ± 2*" + r"$\sigma$",
+                )
 
         for ax in axes:
             ax.grid(True, linestyle="--", alpha=0.6)
@@ -337,10 +410,10 @@ class HistoryTracker:
             unique.keys(),
             loc="upper center",
             bbox_to_anchor=(0.5, 1.15),
-            ncol=len(unique)
+            ncol=len(unique),
         )
-        axes[-1].set_xlim(window['xmin'], window['xmax']-1)
-        axes[-1].set_xlabel('n')
+        axes[-1].set_xlim(window["xmin"], window["xmax"] - 1)
+        axes[-1].set_xlabel("n")
 
         # Nettoyage explicite de l’axe partagé
         axes[-1].minorticks_off()
@@ -357,7 +430,7 @@ class HistoryTracker:
             if self.verbose > 0:
                 logger.info(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
             plt.close(fig)
-        
+
         return fig, axes
 
     # ------------------------------------------------------------------
@@ -371,14 +444,14 @@ class HistoryTracker:
 # ======================================================================
 
 
-
 @dataclass
 class SimpleStep:
-    iter:  int
-    x:     float
+    iter: int
+    x: float
     new_x: float
-    diff:  float
-    
+    diff: float
+
+
 class A:
     """Classe jouet pour illustrer l'usage de HistoryTracker."""
 
@@ -412,8 +485,8 @@ class A:
 # ======================================================================
 if __name__ == "__main__":
     verbose = 1
-    graph_dir = os.path.join('.', 'data', 'plot')
-    tracker_dir = os.path.join('.', 'data', 'historyTracker')
+    graph_dir = os.path.join(".", "data", "plot")
+    tracker_dir = os.path.join(".", "data", "historyTracker")
     os.makedirs(graph_dir, exist_ok=True)
     os.makedirs(tracker_dir, exist_ok=True)
 
@@ -428,6 +501,6 @@ if __name__ == "__main__":
         list_covar=[None],
         window={"xmin": 0, "xmax": len(a.history)},
         show=False,
-        base_dir=graph_dir
+        base_dir=graph_dir,
     )
     a.history.save_pickle(os.path.join(tracker_dir, "history_run_a.pkl"))

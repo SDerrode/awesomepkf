@@ -12,6 +12,7 @@ from others.utils import save_dataframe_to_csv, data_to_dataframe
 # Logger configuration
 # =============================================================
 
+
 def setup_logger(verbose: int) -> logging.Logger:
     logger = logging.getLogger(__name__)
 
@@ -37,12 +38,21 @@ def setup_logger(verbose: int) -> logging.Logger:
 # Base class
 # =============================================================
 
+
 class BaseDataSimulator(ABC):
     """
     Abstract base class for data simulation.
     """
 
-    def __init__(self, model_name: str, N: int, sKey: int | None, data_file_name: str | None, verbose: int, withoutX: bool) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        N: int,
+        sKey: int | None,
+        data_file_name: str | None,
+        verbose: int,
+        withoutX: bool,
+    ) -> None:
 
         self.verbose = verbose
         self.logger = setup_logger(verbose)
@@ -101,8 +111,8 @@ class BaseDataSimulator(ABC):
             self.logger.debug(f"Model selected: {model.MODEL_NAME}")
 
         params = model.get_params().copy()
-        dim_x  = params.pop("dim_x")
-        dim_y  = params.pop("dim_y")
+        dim_x = params.pop("dim_x")
+        dim_y = params.pop("dim_y")
 
         param = self.create_param(dim_x, dim_y, params)
 
