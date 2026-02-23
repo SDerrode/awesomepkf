@@ -18,19 +18,26 @@ from filterpy.monte_carlo import systematic_resample
 from scipy.linalg import cho_factor, cho_solve
 
 from classes.NonLinear_PKF import NonLinear_PKF
+
 # A few utils functions that are used several times
 from others.utils import diagnose_covariance, rich_show_fields
-
 
 
 class NonLinear_PF(NonLinear_PKF):
     """Implementation of PF."""
 
-    def __init__(self, param: ParamLinear | ParamNonLinear,  nbParticles=300, resample_threshold=0.5, sKey=None, verbose=0):
-        
+    def __init__(
+        self,
+        param: ParamLinear | ParamNonLinear,
+        nbParticles=300,
+        resample_threshold=0.5,
+        sKey=None,
+        verbose=0,
+    ):
+
         super().__init__(param, sKey, verbose)
-        
-        self.nbParticles        = nbParticles
+
+        self.nbParticles = nbParticles
         self.resample_threshold = resample_threshold
 
     # ======================================================
@@ -54,8 +61,10 @@ class NonLinear_PF(NonLinear_PKF):
             if not ((isinstance(N, int) and N > 0) or N is None):
                 raise ValueError("N must be None or a number >0")
 
-        generator = data_generator if data_generator is not None else self._data_generation()
-        
+        generator = (
+            data_generator if data_generator is not None else self._data_generation()
+        )
+
         # short-cuts
         g, mQ, augmented = self.param.g, self.param.mQ, self.param.augmented
 
@@ -66,14 +75,12 @@ class NonLinear_PF(NonLinear_PKF):
         # ==========================
         # Init
         # ==========================
-        
+
         # Initial particles: joint Gaussian prior
         Z_particles = np.random.multivariate_normal(
-            mean = np.zeros(self.dim_xy),
-            cov  = self.param.Pmz0,
-            size = self.nbParticles
+            mean=np.zeros(self.dim_xy), cov=self.param.Pz0, size=self.nbParticles
         )
-        weights     = np.ones(self.nbParticles) / self.nbParticles
+        weights = np.ones(self.nbParticles) / self.nbParticles
 
         # # ==========================
         # # Update estimate
@@ -104,41 +111,52 @@ class NonLinear_PF(NonLinear_PKF):
 
         ##################################################################################################@
         # The next ones
-        
+
         # accel_zero = np.zeros((self.dim_xy, 1))
-        k=0
-        while N is None or k<N:
+        k = 0
+        while N is None or k < N:
 
             # ==========================
             # Predict
             # ==========================
 
             noise = np.random.multivariate_normal(
-                mean = np.zeros(self.dim_xy),
-                cov  = mQ,
-                size = self.nbParticles
+                mean=np.zeros(self.dim_xy), cov=mQ, size=self.nbParticles
             )
 
             for i in range(self.nbParticles):
-                Z_particles[i] = g(Z_particles[i].reshape(-1, 1), noise[i].reshape(-1, 1), self.dt).ravel()
+                Z_particles[i] = g(
+                    Z_particles[i].reshape(-1, 1), noise[i].reshape(-1, 1), self.dt
+                ).ravel()
 
             Zkp1_predict = self.weighted_mean(Z_particles, weights).reshape(-1, 1)
             Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
             # print(f'Zkp1_predict={Zkp1_predict}')
             # print(f'Xkp1_predict={Xkp1_predict}')
-            
+
             Pkp1_predict = self.weighted_cov(Z_particles, weights, Zkp1_predict.ravel())
             if not augmented:
                 verdict, report = diagnose_covariance(Pkp1_predict)
                 if not verdict:
-                    print(f'Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:')
-                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
-                    input('attente')
+                    print(f"Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:")
+                    rich_show_fields(
+                        report,
+                        [
+                            "is_symmetric",
+                            "cholesky_ok",
+                            "is_psd",
+                            "near_singular",
+                            "ill_conditioned",
+                            "numerically_singular",
+                        ],
+                        title="",
+                    )
+                    input("attente")
 
             # Cutting Pkp1 into 4 blocks
-            M_top, M_bottom                = np.vsplit(Pkp1_predict, [self.dim_x])
-            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top,        [self.dim_x])
-            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom,     [self.dim_x])
+            M_top, M_bottom = np.vsplit(Pkp1_predict, [self.dim_x])
+            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top, [self.dim_x])
+            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom, [self.dim_x])
 
             # ==========================
             # Observation
@@ -147,47 +165,47 @@ class NonLinear_PF(NonLinear_PKF):
             try:
                 k, xkp1, ykp1 = next(generator)
             except StopIteration:
-                return # we stop as the data generator is stopped itself
+                return  # we stop as the data generator is stopped itself
 
             y_obs = ykp1.ravel()
 
             # ==========================
             # Update / weighting
             # =========================
-            ikp1   = ykp1 - Ykp1_predict
-            Skp1   = PYYkp1_predict
-            
+            ikp1 = ykp1 - Ykp1_predict
+            Skp1 = PYYkp1_predict
+
             # Kalman gain - Version robuste du calcul
             try:
                 c, low = cho_factor(Skp1)
-                S_inv  = cho_solve((c, low), eye_dim_y)
+                S_inv = cho_solve((c, low), eye_dim_y)
             except np.linalg.LinAlgError as e:
-                print(f'Skp1={Skp1}')
-                input('ATTENTE')
+                print(f"Skp1={Skp1}")
+                input("ATTENTE")
             except ValueError as e:
                 print("Erreur de valeur :", e)
-                input('ATTENTE')
-                
-            Kkp1   = PXYkp1_predict @ S_inv
-            
+                input("ATTENTE")
+
+            Kkp1 = PXYkp1_predict @ S_inv
+
             # Version robuste du calcul d'inversion de la cov d'innovation
-            det_S  = np.linalg.det(Skp1)
-            norm   = 1.0 / np.sqrt((2 * np.pi) ** self.dim_y * det_S)
+            det_S = np.linalg.det(Skp1)
+            norm = 1.0 / np.sqrt((2 * np.pi) ** self.dim_y * det_S)
 
             for i in range(self.nbParticles):
-                innov = y_obs - Z_particles[i, self.dim_x:]
-                weights[i] *= norm * np.exp( -0.5 * innov.T @ S_inv @ innov )
+                innov = y_obs - Z_particles[i, self.dim_x :]
+                weights[i] *= norm * np.exp(-0.5 * innov.T @ S_inv @ innov)
 
-            weights += 1e-300            # avoid round-off to zero
-            weights /= np.sum(weights)   # normalize
+            weights += 1e-300  # avoid round-off to zero
+            weights /= np.sum(weights)  # normalize
 
             # ==========================
             # ESS + Resampling
             # ==========================
 
-            ess = 1.0 / np.sum(weights ** 2)
+            ess = 1.0 / np.sum(weights**2)
             if ess < self.resample_threshold * self.nbParticles:
-                idx         = systematic_resample(weights)
+                idx = systematic_resample(weights)
                 Z_particles = Z_particles[idx]
                 weights.fill(1.0 / self.nbParticles)
             # print(f'ess={ess}')
@@ -196,42 +214,70 @@ class NonLinear_PF(NonLinear_PKF):
             # Update estimate
             # ==========================
 
-            Xkp1_update = self.weighted_mean(Z_particles[:, :self.dim_x], weights).reshape(-1, 1)
-            PXXkp1_update = self.weighted_cov(Z_particles[:, :self.dim_x], weights, Xkp1_update.ravel())
+            Xkp1_update = self.weighted_mean(
+                Z_particles[:, : self.dim_x], weights
+            ).reshape(-1, 1)
+            PXXkp1_update = self.weighted_cov(
+                Z_particles[:, : self.dim_x], weights, Xkp1_update.ravel()
+            )
             if not augmented:
                 # print('TITITIITITIT')
                 verdict, report = diagnose_covariance(PXXkp1_update)
                 # print(f'verdict TITITIITITIT={verdict}')
                 if not verdict:
-                    print(f'PXXkp1_update={PXXkp1_update}\nReport - iteration k={k}:')
-                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
-                    input('attente')
-
+                    print(f"PXXkp1_update={PXXkp1_update}\nReport - iteration k={k}:")
+                    rich_show_fields(
+                        report,
+                        [
+                            "is_symmetric",
+                            "cholesky_ok",
+                            "is_psd",
+                            "near_singular",
+                            "ill_conditioned",
+                            "numerically_singular",
+                        ],
+                        title="",
+                    )
+                    input("attente")
 
             # Forme de Joseph
             temp = np.vstack((eye_dim_x, -Kkp1.T))
             PXXkp1_update_Joseph = temp.T @ Pkp1_predict @ temp
-            
+
             if not augmented:
                 # print('TOTOTOTOTOO')
                 verdict, report = diagnose_covariance(PXXkp1_update_Joseph)
                 # print(f'verdict TOTOTOTOTOO={verdict}')
                 if not verdict:
-                    print(f'PXXkp1_update_Joseph={PXXkp1_update_Joseph}\nReport - iteration k={k}:')
-                    rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
-                    input('attente')
+                    print(
+                        f"PXXkp1_update_Joseph={PXXkp1_update_Joseph}\nReport - iteration k={k}:"
+                    )
+                    rich_show_fields(
+                        report,
+                        [
+                            "is_symmetric",
+                            "cholesky_ok",
+                            "is_psd",
+                            "near_singular",
+                            "ill_conditioned",
+                            "numerically_singular",
+                        ],
+                        title="",
+                    )
+                    input("attente")
 
             # Record data in the tracker
-            self.history.record(iter           = k,
-                                 xkp1           = xkp1.copy() if xkp1 is not None else None,
-                                 ykp1           = ykp1.copy(),
-                                 Xkp1_predict   = Xkp1_predict.copy(),
-                                 PXXkp1_predict = PXXkp1_predict.copy(),
-                                 Xkp1_update    = Xkp1_update.copy(),
-                                 PXXkp1_update  = PXXkp1_update_Joseph.copy(),
-                                 ESS            = ess
+            self.history.record(
+                iter=k,
+                xkp1=xkp1.copy() if xkp1 is not None else None,
+                ykp1=ykp1.copy(),
+                Xkp1_predict=Xkp1_predict.copy(),
+                PXXkp1_predict=PXXkp1_predict.copy(),
+                Xkp1_update=Xkp1_update.copy(),
+                PXXkp1_update=PXXkp1_update_Joseph.copy(),
+                ESS=ess,
             )
-            
+
             # Si on veut la forme robuste de la variance, on décommente
             PXXkp1_update = PXXkp1_update_Joseph
 

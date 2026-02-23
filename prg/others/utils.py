@@ -36,6 +36,7 @@ console = Console(force_terminal=True, color_system="truecolor")
 # Affichage Rich
 # ----------------------------------------------------------------------
 
+
 def rich_show_fields(
     d,
     fields: list | None = None,
@@ -97,6 +98,7 @@ def rich_show_fields(
 # I/O DataFrames
 # ----------------------------------------------------------------------
 
+
 def save_dataframe_to_csv(df: pd.DataFrame, filepath, index: bool = False) -> None:
     """Sauvegarde un DataFrame en CSV UTF-8 sans index."""
     path = Path(filepath)
@@ -150,9 +152,11 @@ def data_to_dataframe(
 
     return pd.DataFrame(data, columns=columns)
 
+
 # ----------------------------------------------------------------------
 # Calcul des formes quadratiques (NEES / NIS)
 # ----------------------------------------------------------------------
+
 
 def _compute_quadratic_form(
     errors: np.ndarray,
@@ -168,9 +172,9 @@ def _compute_quadratic_form(
     -------
     vals : (N,) — valeurs de la forme quadratique, NaN si calcul impossible
     """
-    N    = errors.shape[0]
+    N = errors.shape[0]
     vals = np.full(N, np.nan)
-    
+
     for k in range(N):
         ek = errors[k].reshape(-1, 1)  # Assure un vecteur colonne
         Pk = cov_list[k]
@@ -180,7 +184,9 @@ def _compute_quadratic_form(
             Pk_inv = np.linalg.pinv(Pk)  # gère aussi les matrices singulières
 
             # NEES : ek.T @ Pk_inv @ ek
-            vals[k] = float((ek.T @ Pk_inv @ ek).squeeze())  # squeeze + float pour toute dimension
+            vals[k] = float(
+                (ek.T @ Pk_inv @ ek).squeeze()
+            )  # squeeze + float pour toute dimension
 
         except np.linalg.LinAlgError:
             # Régularisation minimale sur singularité
@@ -200,54 +206,60 @@ def _compute_quadratic_form(
 def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
     """
     Calcul MSE, MAE, RMSE et NEES moyen entre deux séquences d'états.
-    
+
     x_true, x_hat : listes ou colonnes pandas où chaque élément est un array (n,1) ou (n,)
     P_list : liste ou ndarray de matrices covariance (n,n) pour chaque instant
-    
+
     Retour : dictionary with several error measures
     """
 
     # Conversion en tableaux
-    x_true  = np.hstack(x_true).T      # on empile horizontalement puis on transpose
-    x_hat   = np.hstack(x_hat).T       # on empile horizontalement puis on transpose
+    x_true = np.hstack(x_true).T  # on empile horizontalement puis on transpose
+    x_hat = np.hstack(x_hat).T  # on empile horizontalement puis on transpose
     # concaténer pour calcul global
     x_true_flat = np.concatenate(x_true)
-    x_hat_flat  = np.concatenate(x_hat)
+    x_hat_flat = np.concatenate(x_hat)
     errors_flat = x_true_flat - x_hat_flat
-    
-    # --- Métriques globales ---
-    mse_total   = float(np.mean(errors_flat**2))
-    mae_total   = float(np.mean(np.abs(errors_flat)))
-    rmse        = float(np.sqrt(mse_total))
 
-    errors  = x_true - x_hat
+    # --- Métriques globales ---
+    mse_total = float(np.mean(errors_flat**2))
+    mae_total = float(np.mean(np.abs(errors_flat)))
+    rmse = float(np.sqrt(mse_total))
+
+    errors = x_true - x_hat
 
     # Calcul de la MSE et MAE pour X et pour Y séparemment si c'est une modele a état augmenté
     if model.param.augmented:
         dim_x = model.dim_x
         dim_y = model.dim_y
-        list_mses_X_and_Y = [np.mean(errors[:, 0:dim_x-dim_y]**2),      np.mean(errors[:, dim_x-dim_y:]**2)]
-        list_maes_X_and_Y = [np.mean(np.abs(errors[:, 0:dim_x-dim_y])), np.mean(np.abs(errors[:, dim_x-dim_y:]))]
-    
+        list_mses_X_and_Y = [
+            np.mean(errors[:, 0 : dim_x - dim_y] ** 2),
+            np.mean(errors[:, dim_x - dim_y :] ** 2),
+        ]
+        list_maes_X_and_Y = [
+            np.mean(np.abs(errors[:, 0 : dim_x - dim_y])),
+            np.mean(np.abs(errors[:, dim_x - dim_y :])),
+        ]
+
     # NEES moyen
-    tab_Pk    = np.stack(P_list, axis=0) # empile le long du premier axe
-    nees_all  = _compute_quadratic_form(errors, tab_Pk)
+    tab_Pk = np.stack(P_list, axis=0)  # empile le long du premier axe
+    nees_all = _compute_quadratic_form(errors, tab_Pk)
     nees_mean = float(np.nanmean(nees_all))
 
     # NIS moyen
     if i_list is not None:
-        nis_all  = np.zeros(i_list.shape[0])
-        tab_Sk   = np.stack(S_list, axis=0) # empile le long du premier axe
-        nis_all  = _compute_quadratic_form(i_list, tab_Sk)
+        nis_all = np.zeros(i_list.shape[0])
+        tab_Sk = np.stack(S_list, axis=0)  # empile le long du premier axe
+        nis_all = _compute_quadratic_form(i_list, tab_Sk)
         nis_mean = float(np.nanmean(nis_all))
     else:
-         nis_mean = 'na'
+        nis_mean = "na"
 
     report = {
-        "mse_total" : mse_total,
-        "mae_total" : mae_total,
-        "nees_mean" : nees_mean,
-        "nis_mean"  : nis_mean,
+        "mse_total": mse_total,
+        "mae_total": mae_total,
+        "nees_mean": nees_mean,
+        "nis_mean": nis_mean,
     }
 
     return report
@@ -256,6 +268,7 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
 # ----------------------------------------------------------------------
 # Lecture robuste de fichiers de données
 # ----------------------------------------------------------------------
+
 
 def read_unknown_file(
     filepath: str,
@@ -272,10 +285,12 @@ def read_unknown_file(
         with open(filepath, "rb") as f:
             raw_data = f.read(50_000)
             enc_info = chardet.detect(raw_data)
-            encoding   = enc_info["encoding"] or "utf-8"
+            encoding = enc_info["encoding"] or "utf-8"
             confidence = enc_info.get("confidence", 0)
         if verbose > 1:
-            logger.info(f"🧬 Encodage détecté : {encoding} (confiance={confidence:.2f})")
+            logger.info(
+                f"🧬 Encodage détecté : {encoding} (confiance={confidence:.2f})"
+            )
 
         if ext == ".parquet":
             return pd.read_parquet(filepath)
@@ -292,11 +307,11 @@ def read_unknown_file(
             sample = "".join(sample_lines)
 
             try:
-                dialect    = csv.Sniffer().sniff(sample, delimiters=",;\t| ")
-                sep        = dialect.delimiter
+                dialect = csv.Sniffer().sniff(sample, delimiters=",;\t| ")
+                sep = dialect.delimiter
                 has_header = csv.Sniffer().has_header(sample)
             except csv.Error:
-                sep        = None
+                sep = None
                 has_header = True
                 if verbose > 1:
                     logger.warning(
@@ -331,14 +346,15 @@ def name_analysis(listStr: list[str]) -> dict:
         raise TypeError("L'entrée doit être une liste ou un tuple de chaînes.")
 
     dim_x_true = sum(s.startswith("True") for s in listStr)
-    dim_x      = sum(s.startswith("X") for s in listStr)
-    dim_y      = sum(s.startswith("Y") for s in listStr)
-    autres     = [
-        s for s in listStr
+    dim_x = sum(s.startswith("X") for s in listStr)
+    dim_y = sum(s.startswith("Y") for s in listStr)
+    autres = [
+        s
+        for s in listStr
         if not (s.startswith("X") or s.startswith("Y") or s.startswith("True"))
     ]
 
-    ok      = True
+    ok = True
     x_ended = False
     for s in listStr:
         if s.startswith("X"):
@@ -350,16 +366,17 @@ def name_analysis(listStr: list[str]) -> dict:
 
     return {
         "dim_x_true": dim_x_true,
-        "dim_x":      dim_x,
-        "dim_y":      dim_y,
-        "Correct":    ok,
-        "autres":     autres,
+        "dim_x": dim_x,
+        "dim_y": dim_y,
+        "Correct": ok,
+        "autres": autres,
     }
 
 
 # ----------------------------------------------------------------------
 # Générateur de données à partir d'un fichier
 # ----------------------------------------------------------------------
+
 
 def file_data_generator(
     filename: str,
@@ -380,7 +397,7 @@ def file_data_generator(
     dim_y    : dimension attendue du vecteur d'observation
     verbose  : niveau de verbosité (0=silencieux, 2=détaillé)
     """
-    df   = read_unknown_file(filename, verbose=verbose)
+    df = read_unknown_file(filename, verbose=verbose)
     dico = name_analysis(list(df.columns))
     has_x_columns = dico["dim_x"] != 0
 
@@ -414,6 +431,7 @@ def file_data_generator(
 # Vérification de cohérence des matrices de covariance
 # ----------------------------------------------------------------------
 
+
 def diagnose_covariance(
     P: np.ndarray,
     cond_warn: float = COND_WARN,
@@ -441,7 +459,7 @@ def diagnose_covariance(
     # 1) Symétrie
     sym_err = float(np.linalg.norm(P - P.T, ord="fro"))
     report["symmetry_error"] = sym_err
-    report["is_symmetric"]   = sym_err < symmetry_tol
+    report["is_symmetric"] = sym_err < symmetry_tol
     verdict &= report["is_symmetric"]
 
     # Force la symétrie pour la suite (évite les artefacts numériques)
@@ -453,9 +471,9 @@ def diagnose_covariance(
     lam_max = float(eigvals.max())
 
     report["eigenvalues"] = eigvals
-    report["lambda_min"]  = lam_min
-    report["lambda_max"]  = lam_max
-    report["is_psd"]      = lam_min >= -eig_tol
+    report["lambda_min"] = lam_min
+    report["lambda_max"] = lam_max
+    report["is_psd"] = lam_min >= -eig_tol
     verdict &= report["is_psd"]
 
     # 3) Nombre de condition (rapport max/min valeur propre)
@@ -463,8 +481,8 @@ def diagnose_covariance(
         cond = lam_max / lam_min
     else:
         cond = np.inf
-    report["condition_number"]     = cond
-    report["ill_conditioned"]      = cond > cond_warn
+    report["condition_number"] = cond
+    report["ill_conditioned"] = cond > cond_warn
     report["numerically_singular"] = cond > cond_fail
     verdict &= not report["numerically_singular"]
 
@@ -479,11 +497,11 @@ def diagnose_covariance(
     # 5) Résidu d'inversion (uniquement si inversible)
     if not report["numerically_singular"]:
         try:
-            I_approx         = P_sym @ np.linalg.inv(P_sym)
-            inv_residual     = float(np.linalg.norm(I_approx - np.eye(n), ord="fro"))
+            I_approx = P_sym @ np.linalg.inv(P_sym)
+            inv_residual = float(np.linalg.norm(I_approx - np.eye(n), ord="fro"))
         except np.linalg.LinAlgError:
             inv_residual = np.inf
-            verdict      = False
+            verdict = False
         report["inverse_residual"] = inv_residual
     else:
         report["inverse_residual"] = np.inf
@@ -521,9 +539,41 @@ def check_consistency(**kwargs: np.ndarray) -> None:
         is_covariance(M, name)
 
 
+def random_covariance(rng, dim_x, dim_y):
+    """
+    Génère aléatoirement une matrice de covariance (dim_x+dim_y) × (dim_x+dim_y)
+    structurée par blocs, avec la propriété :
+        Σ11 - Σ12 Σ22⁻¹ Σ12ᵀ est SPD.
+
+    Σ = [[Σ11, Σ12],
+        [Σ12ᵀ, Σ22]]
+    """
+    # --- Bloc bas-droite (Sigma22) SPD et inversible ---
+    A2 = rng.standard_normal((dim_y, dim_y))
+    Sigma22 = A2 @ A2.T + 1e-3 * np.eye(dim_y)
+
+    # --- Bloc croisé ---
+    Sigma12 = rng.standard_normal((dim_x, dim_y))
+
+    # --- Choisir S librement SPD ---
+    A1 = rng.standard_normal((dim_x, dim_x))
+    S = A1 @ A1.T + 1e-3 * np.eye(dim_x)
+
+    # --- Calcul de Sigma11 pour assurer la condition de Schur ---
+    Sigma11 = S + Sigma12 @ np.linalg.inv(Sigma22) @ Sigma12.T
+
+    # --- Assemblage ---
+    top = np.hstack((Sigma11, Sigma12))
+    bottom = np.hstack((Sigma12.T, Sigma22))
+    Sigma = np.vstack((top, bottom))
+
+    return Sigma
+
+
 # ----------------------------------------------------------------------
 # Vérification d'égalité de matrices
 # ----------------------------------------------------------------------
+
 
 def check_equality(**kwargs: np.ndarray) -> None:
     """
@@ -534,16 +584,16 @@ def check_equality(**kwargs: np.ndarray) -> None:
         logger.warning("⚠️ check_equality : au moins 2 matrices requises.")
         return
 
-    names    = list(kwargs.keys())
+    names = list(kwargs.keys())
     matrices = [np.asarray(m, dtype=float) for m in kwargs.values()]
-    shapes   = [m.shape for m in matrices]
+    shapes = [m.shape for m in matrices]
 
     if len(set(shapes)) != 1:
         logger.warning(f"⚠️ Matrices de formes différentes : {dict(zip(names, shapes))}")
         return
 
     ref, ref_name = matrices[0], names[0]
-    all_equal     = True
+    all_equal = True
 
     for name, M in zip(names[1:], matrices[1:]):
         if not np.allclose(ref, M, atol=EPS_ABS, rtol=EPS_REL):

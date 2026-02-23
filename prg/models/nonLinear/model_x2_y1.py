@@ -5,6 +5,7 @@ import numpy as np
 from typing import Callable
 from .base_model_nonLinear import BaseModelNonLinear
 
+
 class ModelX2Y1(BaseModelNonLinear):
     """
     Nonlinear model with:
@@ -29,9 +30,9 @@ class ModelX2Y1(BaseModelNonLinear):
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
         # Covariance and initial state
-        self.mQ   = np.diag([1e-4, 1e-4, 1e-4])
-        self.mz0  = np.zeros((self.dim_xy, 1))
-        self.Pmz0 = np.eye(self.dim_xy)
+        self.mQ = np.diag([1e-4, 1e-4, 1e-4])
+        self.mz0 = np.zeros((self.dim_xy, 1))
+        self.Pz0 = np.eye(self.dim_xy)
 
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:
@@ -49,10 +50,12 @@ class ModelX2Y1(BaseModelNonLinear):
         x1, x2 = x.flatten()
         t1, t2 = t.flatten()
 
-        return np.array([
-            [x1 + 0.05 * x2 + 0.5 * np.sin(0.1 * x2) + t1],
-            [     0.9  * x2 + 0.2 * np.cos(0.3 * x1) + t2]
-        ])
+        return np.array(
+            [
+                [x1 + 0.05 * x2 + 0.5 * np.sin(0.1 * x2) + t1],
+                [0.9 * x2 + 0.2 * np.cos(0.3 * x1) + t2],
+            ]
+        )
 
     # ------------------------------------------------------------------
     def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -68,12 +71,12 @@ class ModelX2Y1(BaseModelNonLinear):
             np.ndarray, shape (1,1) - measurement
         """
 
-        return np.array([
-            [np.sqrt(x[0,0]**2 + x[1,0]**2) + u[0,0]]
-        ])
+        return np.array([[np.sqrt(x[0, 0] ** 2 + x[1, 0] ** 2) + u[0, 0]]])
 
     # ------------------------------------------------------------------
-    def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
+    def _g(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ) -> np.ndarray:
         """
         Combined state + observation function for filtering.
 
@@ -99,7 +102,9 @@ class ModelX2Y1(BaseModelNonLinear):
         return np.vstack((fx_val, hx_val))
 
     # ------------------------------------------------------------------
-    def _jacobiens_g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float):
+    def _jacobiens_g(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ):
         """
         Computes Jacobians of the combined function g w.r.t state and noise.
 
@@ -122,17 +127,21 @@ class ModelX2Y1(BaseModelNonLinear):
         r_val = np.sqrt(A_val**2 + B_val**2)
 
         # Jacobian w.r.t state (2x2)
-        An = np.array([
-            [1.,                                  0.05 * (1 + np.cos(0.1 * x2)),                     0.],
-            [-0.06 * np.sin(0.3 * x1),            0.9,                                               0.],
-            [(A_val - 0.06*np.sin(0.3*x1))/r_val, (0.05*A_val*(1+np.cos(0.1*x2)) + 0.9*B_val)/r_val, 0.]
-        ])
+        An = np.array(
+            [
+                [1.0, 0.05 * (1 + np.cos(0.1 * x2)), 0.0],
+                [-0.06 * np.sin(0.3 * x1), 0.9, 0.0],
+                [
+                    (A_val - 0.06 * np.sin(0.3 * x1)) / r_val,
+                    (0.05 * A_val * (1 + np.cos(0.1 * x2)) + 0.9 * B_val) / r_val,
+                    0.0,
+                ],
+            ]
+        )
 
         # Jacobian w.r.t noise (2x3)
-        Bn = np.array([
-            [1.,          0.,          0.],
-            [0.,          1.,          0.],
-            [A_val/r_val, B_val/r_val, 1.]
-        ])
+        Bn = np.array(
+            [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [A_val / r_val, B_val / r_val, 1.0]]
+        )
 
         return An, Bn

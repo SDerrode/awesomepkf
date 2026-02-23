@@ -4,6 +4,7 @@
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
 
+
 class ModelSinus(BaseModelNonLinear):
     """
     Nonlinear model with 1D state and 1D observation:
@@ -23,9 +24,11 @@ class ModelSinus(BaseModelNonLinear):
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
 
         # Covariance and initial state
-        self.mQ   = np.diag([1e-3, 1e-3])
-        self.mz0  = np.zeros((self.dim_xy, 1)) +1. # le +1 est important pour lancer le filtre
-        self.Pmz0 = np.eye(self.dim_xy)
+        self.mQ = np.diag([1e-3, 1e-3])
+        self.mz0 = (
+            np.zeros((self.dim_xy, 1)) + 1.0
+        )  # le +1 est important pour lancer le filtre
+        self.Pz0 = np.eye(self.dim_xy)
 
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:
@@ -58,7 +61,9 @@ class ModelSinus(BaseModelNonLinear):
         return x**2 + u
 
     # ------------------------------------------------------------------
-    def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
+    def _g(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ) -> np.ndarray:
         """
         Combine state and observation using Wojciech's formulation.
 
@@ -66,17 +71,19 @@ class ModelSinus(BaseModelNonLinear):
             np.ndarray, shape (2,1) - stacked state + observation
         """
         if __debug__:
-            assert x.shape == (1,1)
-            assert y.shape == (1,1)
-            assert t.shape == (1,1)
-            assert u.shape == (1,1)
+            assert x.shape == (1, 1)
+            assert y.shape == (1, 1)
+            assert t.shape == (1, 1)
+            assert u.shape == (1, 1)
 
         fx_val = self._fx(x, t, dt)
         hx_val = self._hx(fx_val, u, dt)
         return np.vstack((fx_val, hx_val))
 
     # ------------------------------------------------------------------
-    def _jacobiens_g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float):
+    def _jacobiens_g(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ):
         """
         Compute Jacobians of g w.r.t state and noise.
 
@@ -84,10 +91,10 @@ class ModelSinus(BaseModelNonLinear):
             Tuple[np.ndarray, np.ndarray] : (dg/dz, dg/dnoise)
         """
         if __debug__:
-            assert x.shape == (1,1)
-            assert y.shape == (1,1)
-            assert t.shape == (1,1)
-            assert u.shape == (1,1)
+            assert x.shape == (1, 1)
+            assert y.shape == (1, 1)
+            assert t.shape == (1, 1)
+            assert u.shape == (1, 1)
 
         x1 = x.flatten()[0]
         t1 = t.flatten()[0]
@@ -96,9 +103,9 @@ class ModelSinus(BaseModelNonLinear):
         A = 0.8 * x1 + 0.3 * np.sin(x1) + t1
 
         # Jacobians exactly as in original code
-        An = np.array([[0.8 + 0.3 * np.cos(x1),            0.],
-                       [2. * A * (0.8 + 0.3 * np.cos(x1)), 0.]])
-        Bn = np.array([[1.,     0.],
-                       [2. * A, 1.]])
+        An = np.array(
+            [[0.8 + 0.3 * np.cos(x1), 0.0], [2.0 * A * (0.8 + 0.3 * np.cos(x1)), 0.0]]
+        )
+        Bn = np.array([[1.0, 0.0], [2.0 * A, 1.0]])
 
         return An, Bn
