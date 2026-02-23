@@ -6,6 +6,7 @@ import pkgutil
 from pathlib import Path
 from .base_model_linear import *
 
+
 class ModelFactoryLinear:
     """Fabrique automatique : découvre et instancie tous les modèles du dossier."""
 
@@ -21,22 +22,32 @@ class ModelFactoryLinear:
             module = importlib.import_module(f"{__package__}.{module_name}")
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if isinstance(attr, type) and (issubclass(attr, LinearAmQ) or issubclass(attr, LinearSigma)) \
-                    and attr is not BaseModelLinear and attr is not LinearAmQ  and attr is not LinearSigma :
-                    
-                    name = getattr(attr, "MODEL_NAME", attr.__name__.lower().replace("model", ""))
-                    cls._registry[name] = attr
+                if (
+                    isinstance(attr, type)
+                    and (issubclass(attr, LinearAmQ) or issubclass(attr, LinearSigma))
+                    and attr is not BaseModelLinear
+                    and attr is not LinearAmQ
+                    and attr is not LinearSigma
+                ):
 
+                    name = getattr(
+                        attr, "MODEL_NAME", attr.__name__.lower().replace("model", "")
+                    )
+                    cls._registry[name] = attr
 
     @classmethod
     def create(cls, name: str) -> BaseModelLinear:
-        """Crée un modèle par son nom."""
         if not cls._registry:
             cls._discover_models()
+
         key = name.strip()
+
         if key not in cls._registry:
-            raise ValueError(f"Modèle inconnu: '{key}'. "
-                             f"Disponibles: {list(cls._registry.keys())}")
+            raise ValueError(
+                f"Modèle inconnu: '{key}'. "
+                f"Disponibles: {list(cls._registry.keys())}"
+            )
+
         return cls._registry[key]()
 
     @classmethod

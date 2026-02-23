@@ -19,26 +19,28 @@ class BaseModelNonLinear:
     En mode optimisé (lancé avec `python3 -O`), les vérifications sont désactivées.
     """
 
-    def __init__(self, dim_x: int, dim_y: int, model_type: str = "nonlinear", augmented = False):
+    def __init__(
+        self, dim_x: int, dim_y: int, model_type: str = "nonlinear", augmented=False
+    ):
         assert isinstance(dim_x, int) and dim_x > 0, "dim_x doit être un entier positif"
         assert isinstance(dim_y, int) and dim_y > 0, "dim_y doit être un entier positif"
 
-        self.model_type  = model_type
-        self.augmented   = augmented
-        self.dim_x       = dim_x
-        self.dim_y       = dim_y
-        self.dim_xy      = dim_x + dim_y
+        self.model_type = model_type
+        self.augmented = augmented
+        self.dim_x = dim_x
+        self.dim_y = dim_y
+        self.dim_xy = dim_x + dim_y
 
         # Specific UPKF parameters
-        self.alpha       = 0.25
-        self.beta        = 2.0
-        self.kappa       = 0.0
-        self.lambda_     = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
+        self.alpha = 0.25
+        self.beta = 2.0
+        self.kappa = 0.0
+        self.lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
 
         # Initialisation des matrices / vecteurs d'état
-        self.mQ   = None
-        self.mz0  = None
-        self.Pmz0 = None
+        self.mQ = None
+        self.mz0 = None
+        self.Pz0 = None
 
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
@@ -47,7 +49,7 @@ class BaseModelNonLinear:
             assert z.shape == (self.dim_xy, 1)
             assert noise_z.shape == (self.dim_xy, 1)
 
-        x, y   = np.split(z,       [self.dim_x])
+        x, y = np.split(z, [self.dim_x])
         nx, ny = np.split(noise_z, [self.dim_x])
         return self._g(x, y, nx, ny, dt)
 
@@ -56,7 +58,7 @@ class BaseModelNonLinear:
         if __debug__:
             assert z.shape == (self.dim_xy, 1)
             assert noise_z.shape == (self.dim_xy, 1)
-        x, y   = np.split(z, [self.dim_x])
+        x, y = np.split(z, [self.dim_x])
         nx, ny = np.split(noise_z, [self.dim_x])
         return self._jacobiens_g(x, y, nx, ny, dt)
 
@@ -71,19 +73,20 @@ class BaseModelNonLinear:
 
     # ------------------------------------------------------------------
     def get_params(self) -> dict:
-        return {'dim_x'      : self.dim_x,
-                'dim_y'      : self.dim_y,
-                'augmented'  : self.augmented,
-                'g'          : self.g,
-                'jacobiens_g': self.jacobiens_g,  # pour EPKF
-                'alpha'      : self.alpha,        # pour UPKF
-                'beta'       : self.beta,         # pour UPKF
-                'kappa'      : self.kappa,        # pour UPKF
-                'lambda_'    : self.lambda_,      # pour UPKF
-                'mQ'         : self.mQ,
-                'mz0'        : self.mz0,
-                'Pmz0'       : self.Pmz0,
-               }
+        return {
+            "dim_x": self.dim_x,
+            "dim_y": self.dim_y,
+            "augmented": self.augmented,
+            "g": self.g,
+            "jacobiens_g": self.jacobiens_g,  # pour EPKF
+            "alpha": self.alpha,  # pour UPKF
+            "beta": self.beta,  # pour UPKF
+            "kappa": self.kappa,  # pour UPKF
+            "lambda_": self.lambda_,  # pour UPKF
+            "mQ": self.mQ,
+            "mz0": self.mz0,
+            "Pz0": self.Pz0,
+        }
 
     # ------------------------------------------------------------------
     def __repr__(self) -> str:

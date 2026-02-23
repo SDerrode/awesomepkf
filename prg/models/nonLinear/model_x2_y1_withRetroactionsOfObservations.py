@@ -4,6 +4,7 @@
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
 
+
 class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
     """
     Nonlinear model with retro-actions of observations and of states.
@@ -15,10 +16,10 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
-        self.mQ   = np.diag([1E-1, 1E-1, 5E-1])
-        
-        self.mz0  = np.zeros((self.dim_xy, 1))
-        self.Pmz0 = np.eye(self.dim_xy)
+        self.mQ = np.diag([1e-1, 1e-1, 5e-1])
+
+        self.mz0 = np.zeros((self.dim_xy, 1))
+        self.Pz0 = np.eye(self.dim_xy)
 
         self.a, self.b, self.c, self.d, self.e, self.f = 1.0, 0.8, 0.05, 0.9, 0.30, 0.6
 
@@ -28,13 +29,15 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         Nonlinear state function with retro-action on observation.
         """
         x1, x2 = x.flatten()
-        y1     = y.flatten()[0]
+        y1 = y.flatten()[0]
         t1, t2 = t.flatten()
 
-        return np.array([
-            [self.a * x1 + self.b * x2 + self.c * np.tanh(y1) + t1],
-            [self.d * x2               + self.e * np.sin(y1)  + t2]
-        ])
+        return np.array(
+            [
+                [self.a * x1 + self.b * x2 + self.c * np.tanh(y1) + t1],
+                [self.d * x2 + self.e * np.sin(y1) + t2],
+            ]
+        )
 
     # ------------------------------------------------------------------
     def _gy(self, x, y, t, u, dt):
@@ -42,9 +45,7 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         Nonlinear observation function with retro-action on previous observation.
         """
 
-        return np.array([
-            [x[0,0]**2 + self.f*y[0,0] + u[0,0]]
-        ])
+        return np.array([[x[0, 0] ** 2 + self.f * y[0, 0] + u[0, 0]]])
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
@@ -77,11 +78,13 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         x1 = x.flatten()[0]
         y1 = y.flatten()[0]
 
-        An = np.array([
-            [self.a, self.b,  self.c*(1.-np.tanh(y1)**2)],
-            [0.,    self.d,  self.e*np.cos(y1)          ],
-            [2.*x1, 0.,      self.f                      ]
-        ])
+        An = np.array(
+            [
+                [self.a, self.b, self.c * (1.0 - np.tanh(y1) ** 2)],
+                [0.0, self.d, self.e * np.cos(y1)],
+                [2.0 * x1, 0.0, self.f],
+            ]
+        )
 
         Bn = np.eye(self.dim_xy)
 

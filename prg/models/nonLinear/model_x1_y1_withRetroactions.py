@@ -4,6 +4,7 @@
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
 
+
 class ModelX1Y1_withRetroactions(BaseModelNonLinear):
     """
     Nonlinear model with retro-actions of observations and states.
@@ -22,7 +23,7 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         # self.mQ   = np.diag([0.01, 0.01]) #[1E-1, 1E-1])
         # self.mz0  = np.zeros((self.dim_xy, 1)) + 0.5
         # self.a, self.b, self.c, self.d = 0.4, 0.1, 0.3, 0.1
-        
+
         # (B) Weakly damped / lightly oscillatory:
         # Quand on regarde N=10000 ech, on voit comme des sauts
         # (a,b,c,d) = (0.9,\;0.5,\;0.95,\;0.8)
@@ -31,36 +32,37 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         # self.mQ   = np.diag([0.05, 0.05]) #[1E-1, 1E-1])
         # self.mz0  = np.array([[0.1],[1.]])
         # self.a, self.b, self.c, self.d = 0.9, 0.5, 0.95, 0.8
-        
+
         # (C) Sustained oscillations / limit-cycle-like: INTERESSANT
         # (a,b,c,d) = (0.99,\;1.2,\;0.9,\;1.5)
         # Expected behaviour: persistent oscillations of moderate amplitude; nonlinear terms drive and sustain the cycles.
         # Numeric tips: choose \(x_0,y_0\) small but nonzero, \(\sigma\) very small (e.g.\ 0.005) to reveal deterministic oscillation, \(N\ge 300\).
-        self.mQ  = np.array([[0.1, 0.], [0., 0.5]]) #np.diag([0.1, 0.5])
-        self.mz0 = np.array([[0.], [0.]])
+        self.mQ = np.array([[0.1, 0.0], [0.0, 0.5]])  # np.diag([0.1, 0.5])
+        self.mz0 = np.array([[0.0], [0.0]])
         self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5
-        
+
         # (D) Complex / quasi-periodic dynamics:
         # (a,b,c,d) = (1.05,\;1.5,\;0.95,\;2.0)
         # Expected behaviour: rich, possibly quasi-periodic or mixed-mode oscillations; sensitive dependence on initial condition; intermittent bursts.
         # Numeric tips: try several initial conditions, \(\sigma_x=\sigma_y=0.01\), run \(N\ge 2000\) and inspect time series & phase portrait.
-        # self.mQ   = np.diag([0.5, 0.5]) 
+        # self.mQ   = np.diag([0.5, 0.5])
         # self.mz0  = np.array([[-5],[0.5]])
         # self.a, self.b, self.c, self.d = 1.05, 1.5, 0.95, 2.0
-        
+
         # (E) Chaotic-like / high nonlinearity (exploratory):
         # (a,b,c,d) = (1.2,\;2.0,\;0.8,\;2.5)
         # Expected behaviour: very irregular trajectories; can look chaotic or may diverge — use with caution.
         # Numeric tips: set \(\sigma_x=\sigma_y\) small (e.g.\ 0.001) to see deterministic structure; monitor for divergence; compute Lyapunov exponent if needed.
-        # self.mQ   = np.diag([0.1, 0.1]) 
+        # self.mQ   = np.diag([0.1, 0.1])
         # self.mz0  = np.array([[-5],[0.5]])
         # self.a, self.b, self.c, self.d = 1.2, 2.0, 0.8, 2.5
-        
-        self.Pmz0 = np.eye(self.dim_xy)
 
+        self.Pz0 = np.eye(self.dim_xy)
 
     # ------------------------------------------------------------------
-    def _gx(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
+    def _gx(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ) -> np.ndarray:
         """
         Nonlinear state function with retro-action of observations on state.
         """
@@ -68,7 +70,9 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         return self.a * x + self.b * np.tanh(y) + t
 
     # ------------------------------------------------------------------
-    def _gy(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
+    def _gy(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ) -> np.ndarray:
         """
         Nonlinear state function with retro-action of states on observation.
         """
@@ -76,7 +80,9 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         return self.c * y + self.d * np.sin(x) + u
 
     # ------------------------------------------------------------------
-    def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
+    def _g(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ) -> np.ndarray:
         """
         Combine state and observation using Wojciech’s formulation.
         """
@@ -92,7 +98,9 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         return np.vstack((gx_val, gy_val))
 
     # ------------------------------------------------------------------
-    def _jacobiens_g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float):
+    def _jacobiens_g(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ):
         """
         Compute Jacobians of g w.r.t state and noise.
         """
@@ -103,10 +111,12 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
             assert u.shape == (1, 1)
             assert isinstance(dt, (float, int))
 
-        An = np.array([
-            [self.a,                  self.b / np.cosh(y[0,0])**2],
-            [self.d * np.cos(x[0,0]), self.c                     ]
-        ])
+        An = np.array(
+            [
+                [self.a, self.b / np.cosh(y[0, 0]) ** 2],
+                [self.d * np.cos(x[0, 0]), self.c],
+            ]
+        )
         Bn = np.eye(self.dim_xy)
 
         return An, Bn

@@ -10,13 +10,22 @@ from typing import Optional, Tuple, Type
 # Base Runner
 # ---------------------------------------------------------
 
+
 class BaseRunner(ABC):
     """
     Abstract base runner for all PKF/EPKF/PF/UPKF workflows.
     Factorizes logging, directories, model building, and history management.
     """
 
-    def __init__(self, model_name: str, verbose: int = 1, plot: bool = False, save_history: bool = False, base_dir: str = ".", **kwargs) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        verbose: int = 1,
+        plot: bool = False,
+        save_history: bool = False,
+        base_dir: str = ".",
+        **kwargs,
+    ) -> None:
         self.model_name = model_name
         # print(f'model_name={model_name}')
         self.verbose = verbose
@@ -43,8 +52,7 @@ class BaseRunner(ABC):
             level = logging.DEBUG
 
         logging.basicConfig(
-            level=level,
-            format="%(asctime)s | %(levelname)s | %(message)s"
+            level=level, format="%(asctime)s | %(levelname)s | %(message)s"
         )
 
     # ----------------------------------------------------------
@@ -52,9 +60,9 @@ class BaseRunner(ABC):
     def _setup_directories(self) -> Tuple[str, str, str]:
         base_dir = os.path.join(self.base_dir, "data")
 
-        tracker_dir  = os.path.join(base_dir, "historyTracker")
+        tracker_dir = os.path.join(base_dir, "historyTracker")
         datafile_dir = os.path.join(base_dir, "datafile")
-        graph_dir    = os.path.join(base_dir, "plot")
+        graph_dir = os.path.join(base_dir, "plot")
 
         os.makedirs(tracker_dir, exist_ok=True)
         os.makedirs(datafile_dir, exist_ok=True)
@@ -79,16 +87,16 @@ class BaseRunner(ABC):
         pass
 
     def _build_model(self):
-        
+
         factoryL, factoryNL = self._get_model_factory()
-        
+
         param_class_linear, param_class_nonlinear = self._get_param_class()
 
         if self.model_name in factoryL.list_models():
-            factory     = factoryL
+            factory = factoryL
             param_class = param_class_linear
         elif self.model_name in factoryNL.list_models():
-            factory     = factoryNL
+            factory = factoryNL
             param_class = param_class_nonlinear
 
         model = factory.create(self.model_name)
@@ -115,11 +123,11 @@ class BaseRunner(ABC):
         history_keys = self.runner_instance.history.last().keys()
         self.runner_instance.history.compute_errors(
             self.runner_instance,
-            ['xkp1'],
-            ['Xkp1_update'],
-            ['PXXkp1_update'],
-            ['ikp1'] if 'ikp1' in history_keys else None,
-            ['Skp1'] if 'Skp1' in history_keys else None
+            ["xkp1"],
+            ["Xkp1_update"],
+            ["PXXkp1_update"],
+            ["ikp1"] if "ikp1" in history_keys else None,
+            ["Skp1"] if "Skp1" in history_keys else None,
         )
 
     # ----------------------------------------------------------

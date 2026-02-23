@@ -4,6 +4,7 @@
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
 
+
 class ModelCubique(BaseModelNonLinear):
     """
     Cubic nonlinear model with 1D state and 1D observation.
@@ -16,16 +17,16 @@ class ModelCubique(BaseModelNonLinear):
 
     Includes additive Gaussian process and observation noise.
     """
-    
+
     MODEL_NAME: str = "x1_y1_cubique"
 
     def __init__(self) -> None:
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
-        
+
         # Covariance and initial state
-        self.mQ   = np.diag([1e-4, 1e-4])
-        self.mz0  = np.zeros((self.dim_xy, 1))
-        self.Pmz0 = np.eye(self.dim_xy)
+        self.mQ = np.diag([1e-4, 1e-4])
+        self.mz0 = np.zeros((self.dim_xy, 1))
+        self.Pz0 = np.eye(self.dim_xy)
 
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:
@@ -41,7 +42,7 @@ class ModelCubique(BaseModelNonLinear):
             np.ndarray, shape (1,1) - next state
         """
 
-        return 0.9*x - 0.2*x**3 + t
+        return 0.9 * x - 0.2 * x**3 + t
 
     # ------------------------------------------------------------------
     def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -57,10 +58,12 @@ class ModelCubique(BaseModelNonLinear):
             np.ndarray, shape (1,1) - measurement
         """
 
-        return x+u
+        return x + u
 
     # ------------------------------------------------------------------
-    def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
+    def _g(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ) -> np.ndarray:
         """
         Combine state and observation using Wojciech's formulation.
 
@@ -75,17 +78,19 @@ class ModelCubique(BaseModelNonLinear):
             np.ndarray, shape (2,1) - combined state + observation
         """
         if __debug__:
-            assert x.shape == (1,1)
-            assert y.shape == (1,1)
-            assert t.shape == (1,1)
-            assert u.shape == (1,1)
+            assert x.shape == (1, 1)
+            assert y.shape == (1, 1)
+            assert t.shape == (1, 1)
+            assert u.shape == (1, 1)
 
         fx_val = self._fx(x, t, dt)
         hx_val = self._hx(fx_val, u, dt)
         return np.vstack((fx_val, hx_val))
 
-   # ------------------------------------------------------------------
-    def _jacobiens_g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float):
+    # ------------------------------------------------------------------
+    def _jacobiens_g(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ):
         """
         Compute Jacobians of g w.r.t state and noise.
 
@@ -93,14 +98,14 @@ class ModelCubique(BaseModelNonLinear):
             Tuple[np.ndarray, np.ndarray] : (dg/dz, dg/dnoise)
         """
         if __debug__:
-            assert x.shape == (1,1)
-            assert y.shape == (1,1)
-            assert t.shape == (1,1)
-            assert u.shape == (1,1)
+            assert x.shape == (1, 1)
+            assert y.shape == (1, 1)
+            assert t.shape == (1, 1)
+            assert u.shape == (1, 1)
 
-        An = np.array([[0.9 - 0.6*x[0,0]**2, 0.],
-                       [0.9 - 0.6*x[0,0]**2, 0.]])
-        Bn = np.array([[1., 0.],
-                       [1., 1.]])
+        An = np.array(
+            [[0.9 - 0.6 * x[0, 0] ** 2, 0.0], [0.9 - 0.6 * x[0, 0] ** 2, 0.0]]
+        )
+        Bn = np.array([[1.0, 0.0], [1.0, 1.0]])
 
         return An, Bn

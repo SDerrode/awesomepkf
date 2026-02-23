@@ -4,6 +4,7 @@
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
 
+
 class ModelGordon(BaseModelNonLinear):
     """
     Gordon et al. (1993) nonlinear model:
@@ -21,11 +22,11 @@ class ModelGordon(BaseModelNonLinear):
 
     def __init__(self) -> None:
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
-        
+
         # Covariance and initial state
-        self.mQ   = np.diag([1e-4, 1e-4])
-        self.mz0  = np.zeros((self.dim_xy, 1))
-        self.Pmz0 = np.eye(self.dim_xy)
+        self.mQ = np.diag([1e-4, 1e-4])
+        self.mz0 = np.zeros((self.dim_xy, 1))
+        self.Pz0 = np.eye(self.dim_xy)
 
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:
@@ -41,7 +42,7 @@ class ModelGordon(BaseModelNonLinear):
             np.ndarray, shape (1,1) - next state
         """
 
-        return 0.5 * x + 25 * x / (1. + x**2) + 8 * np.cos(1.2 * dt) + t
+        return 0.5 * x + 25 * x / (1.0 + x**2) + 8 * np.cos(1.2 * dt) + t
 
     # ------------------------------------------------------------------
     def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -59,7 +60,9 @@ class ModelGordon(BaseModelNonLinear):
         return 0.05 * x**2 + u
 
     # ------------------------------------------------------------------
-    def _g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
+    def _g(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ) -> np.ndarray:
         """
         Combine state and observation using Wojciech's formulation.
 
@@ -67,17 +70,19 @@ class ModelGordon(BaseModelNonLinear):
             np.ndarray, shape (2,1) - stacked state + observation
         """
         if __debug__:
-            assert x.shape == (1,1)
-            assert y.shape == (1,1)
-            assert t.shape == (1,1)
-            assert u.shape == (1,1)
+            assert x.shape == (1, 1)
+            assert y.shape == (1, 1)
+            assert t.shape == (1, 1)
+            assert u.shape == (1, 1)
 
         fx_val = self._fx(x, t, dt)
         hx_val = self._hx(fx_val, u, dt)
         return np.vstack((fx_val, hx_val))
 
     # ------------------------------------------------------------------
-    def _jacobiens_g(self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float):
+    def _jacobiens_g(
+        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
+    ):
         """
         Compute Jacobians of g w.r.t state and noise.
 
@@ -85,21 +90,24 @@ class ModelGordon(BaseModelNonLinear):
             Tuple[np.ndarray, np.ndarray] : (dg/dz, dg/dnoise)
         """
         if __debug__:
-            assert x.shape == (1,1)
-            assert y.shape == (1,1)
-            assert t.shape == (1,1)
-            assert u.shape == (1,1)
+            assert x.shape == (1, 1)
+            assert y.shape == (1, 1)
+            assert t.shape == (1, 1)
+            assert u.shape == (1, 1)
 
         x1 = x.flatten()[0]
         t1 = t.flatten()[0]
-    
+
         # State plus noise
-        A = 0.5 * x1 + 25 * x1 / (1. + x1**2) + 8 * np.cos(1.2 * dt) + t1
+        A = 0.5 * x1 + 25 * x1 / (1.0 + x1**2) + 8 * np.cos(1.2 * dt) + t1
 
         # Jacobians exactly as in original code
-        An = np.array([[0.5 + 25.*(1.-x1**2)/(1.+x1**2)**2,             0.],
-                       [0.1 * A * (0.5 + 25.*(1.-x1**2)/(1.+x1**2)**2), 0.]])
-        Bn = np.array([[1.,      0.],
-                       [0.1 * A, 1.]])
+        An = np.array(
+            [
+                [0.5 + 25.0 * (1.0 - x1**2) / (1.0 + x1**2) ** 2, 0.0],
+                [0.1 * A * (0.5 + 25.0 * (1.0 - x1**2) / (1.0 + x1**2) ** 2), 0.0],
+            ]
+        )
+        Bn = np.array([[1.0, 0.0], [0.1 * A, 1.0]])
 
         return An, Bn
