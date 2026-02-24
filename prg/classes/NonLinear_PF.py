@@ -16,11 +16,14 @@ from rich import print
 from filterpy.monte_carlo import systematic_resample
 
 from scipy.linalg import cho_factor, cho_solve
+from scipy.linalg import solve, cholesky, inv, eigh
 
 from classes.NonLinear_PKF import NonLinear_PKF
+from classes.PKF import PKFStep
 
 # A few utils functions that are used several times
 from others.utils import diagnose_covariance, rich_show_fields
+from others.numerics import EPS_ABS
 
 
 class NonLinear_PF(NonLinear_PKF):
@@ -40,21 +43,63 @@ class NonLinear_PF(NonLinear_PKF):
         self.nbParticles = nbParticles
         self.resample_threshold = resample_threshold
 
-    # ======================================================
-    # Utilities
-    # ======================================================
+    # # ==========================
+    # # ESS + Resampling
+    # # ==========================
 
-    @staticmethod
-    def weighted_mean(X, w):
-        return np.average(X, axis=0, weights=w)
+    # ess = 1.0 / np.sum(weights**2)
+    # if ess < self.resample_threshold * self.nbParticles:
+    #     idx = systematic_resample(weights)
+    #     Z_particles = Z_particles[idx]
+    #     weights.fill(1.0 / self.nbParticles)
+    # # print(f'ess={ess}')
 
-    @staticmethod
-    def weighted_cov(X, w, mean):
-        P = np.zeros((X.shape[1], X.shape[1]))
-        for i in range(X.shape[0]):
-            dx = (X[i] - mean).reshape(-1, 1)
-            P += w[i] * (dx @ dx.T)
-        return P
+    # =========================
+    # RESAMPLING UNIFIÉ
+    # =========================
+    def resample(self, weights, rng, method="stratified"):
+        N = self.nbParticles
+        cumulative_sum = np.cumsum(weights)
+        # print(f"cumulative_sum={cumulative_sum[0:4]}")
+        cumulative_sum[-1] = 1.0
+
+        if method == "multinomial":
+            indexes = np.searchsorted(cumulative_sum, rng.random(N))
+        elif method in ["systematic", "stratified"]:
+            if method == "systematic":
+                positions = (np.arange(N) + rng.random()) / N
+            else:
+                positions = (np.arange(N) + rng.random(N)) / N
+            # print(f"positions={positions[0:4]}")
+
+            indexes = np.zeros(N, dtype=int)
+            i = j = 0
+            while i < N:
+                if positions[i] < cumulative_sum[j]:
+                    indexes[i] = j
+                    i += 1
+                else:
+                    j += 1
+            # print(f"i={i}, j={j}")
+            # input("ATTENTE - debut resample")
+        elif method == "residual":
+            indexes = []
+            num_copies = np.floor(N * self.weights).astype(int)
+            for i in range(N):
+                indexes += [i] * num_copies[i]
+            residual = self.weights - num_copies / N
+            residual /= residual.sum()
+            cumulative_sum_res = np.cumsum(residual)
+            cumulative_sum_res[-1] = 1.0
+            remaining = N - len(indexes)
+            random_vals = rng.random(remaining)
+            res_indexes = np.searchsorted(cumulative_sum_res, random_vals)
+            indexes += list(res_indexes)
+            indexes = np.array(indexes)
+        else:
+            raise ValueError(f"Unknown resampling method: {method}")
+
+        return indexes
 
     def process_filter(self, N=None, data_generator=None):
         if __debug__:
@@ -65,224 +110,194 @@ class NonLinear_PF(NonLinear_PKF):
             data_generator if data_generator is not None else self._data_generation()
         )
 
-        # short-cuts
+        seed = 303
+        # seed_seq: np.random.SeedSequence = np.random.SeedSequence(seed)
+        # rng: np.random.Generator = np.random.default_rng(seed_seq)
+        rng: np.random.Generator = np.random.default_rng(seed)
+
+        # Additionnal short-cuts
         g, mQ, augmented = self.param.g, self.param.mQ, self.param.augmented
 
-        # for speed
-        eye_dim_y = np.eye(self.dim_y)
-        eye_dim_x = np.eye(self.dim_x)
-
-        # ==========================
-        # Init
-        # ==========================
-
-        # Initial particles: joint Gaussian prior
-        Z_particles = np.random.multivariate_normal(
-            mean=np.zeros(self.dim_xy), cov=self.param.Pz0, size=self.nbParticles
+        # Les particules et leur poids
+        # print("mz0=", self.mz0[: self.dim_x].flatten())
+        # print("Pz0=", self.Pz0[: self.dim_x, : self.dim_x])
+        particles_courant = rng.multivariate_normal(
+            self.mz0[: self.dim_x].flatten(),
+            self.Pz0[: self.dim_x, : self.dim_x],
+            self.nbParticles,
         )
-        weights = np.ones(self.nbParticles) / self.nbParticles
+        particles_courant = particles_courant[..., np.newaxis]
+        # print(particles_courant)
+        # print("EHEOHE4", particles_courant.shape)
+        particles_precedent = np.zeros_like(particles_courant)
+        weights = np.full(self.nbParticles, 1.0 / self.nbParticles)
+        # print(particles_precedent)
+        # print(particles_precedent.shape)
+        # print(weights)
+        # exit(1)
+        # print(particles_courant[:3])
+        # input("ATTENTE __init__")
 
-        # # ==========================
-        # # Update estimate
-        # # ==========================
-        # Xkp1_update = self.weighted_mean(
-        #     Z_particles[:, :self.dim_x], weights
-        # ).reshape(-1, 1)
-        # PXXkp1_update = self.weighted_cov(
-        #     Z_particles[:, :self.dim_x], weights, Xkp1_update.ravel()
-        # )
-        # verdict, report = diagnose_covariance(PXXkp1_update)
-        # if verdict is not None:
-        #     print(f'PXXkp1_update={PXXkp1_update}\nReport for PXXkp1_update - iteration k={k}:')
-        #     rich_show_fields(report, ["is_symmetric", "cholesky_ok", "is_psd", "near_singular", "ill_conditioned", "numerically_singular"], title="")
-        #     input('attente')
+        Q = self.mQ[: self.dim_x, : self.dim_x]
+        M = self.mQ[: self.dim_x, self.dim_x :]
+        MT = M.T
+        R = self.mQ[self.dim_x :, self.dim_x :]
+        R_inv = inv(R)
+        sign, logdet = np.linalg.slogdet(R)
+        log_norm_const = -0.5 * (self.dim_y * np.log(2 * np.pi) + logdet)
 
-        # Record data in the tracker
-        #     self.history.record(iter          = k,
-        #                          xkp1          = xkp1.copy() if xkp1 is not None else None,
-        #                          ykp1          = ykp1.copy(),
-        #                          Xkp1_predict  = Xkp1_predict.copy(),
-        #                          PXXkp1_predict= PXXkp1_predict.copy(),
-        #                          Xkp1_update   = Xkp1_update.copy(),
-        #                          PXXkp1_update = PXXkp1_update.copy(),
-        #                          ESS           = self.nbParticles)
+        # for speed
+        # eye_dim_y = np.eye(self.dim_y)
+        # eye_dim_x = np.eye(self.dim_x)
 
-        # yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
+        # The first
+        ##################################################################################################
+        step = self._firstEstimate(generator)
+        if step.xkp1 is None:  # Il n'y a pas de VT
+            self.ground_truth = False
 
-        ##################################################################################################@
+        # print(f"kp1={step.k}")
+        # print(f"step.Xkp1_predict={step.Xkp1_predict}")
+        # print(f"step.Xkp1_update={step.Xkp1_update}")
+        # input("ATTENTE - kp1 = 0")
+
+        yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
+
+        ###################
         # The next ones
 
-        # accel_zero = np.zeros((self.dim_xy, 1))
-        k = 0
-        while N is None or k < N:
+        while N is None or step.k < N:
 
-            # ==========================
-            # Predict
-            # ==========================
+            # Maj des particules
+            particles_precedent = particles_courant.copy()
+            # print(particles_courant[:3])
+            # print(particles_precedent[:3])
+            # input("ATTENTE - particles_precedent")
 
-            noise = np.random.multivariate_normal(
-                mean=np.zeros(self.dim_xy), cov=mQ, size=self.nbParticles
+            # =========================
+            # PREDICTION
+            # =========================
+
+            Xkp1_predict = np.mean(particles_courant, axis=0)
+            # print(f"Xkp1_predict={Xkp1_predict}")
+            diff = particles_courant - Xkp1_predict
+            # print(f"diff={diff}")
+            # Pkp1_predict = diff.T @ diff / (self.nbParticles - 1)
+            PXXkp1_predict = np.einsum("tik,tjk->ij", diff, diff) / (
+                self.nbParticles - 1
             )
+            # print(f"PXXkp1_predict={PXXkp1_predict}")
+            self._test_CovMatrix(PXXkp1_predict, step.k)
 
-            for i in range(self.nbParticles):
-                Z_particles[i] = g(
-                    Z_particles[i].reshape(-1, 1), noise[i].reshape(-1, 1), self.dt
-                ).ravel()
-
-            Zkp1_predict = self.weighted_mean(Z_particles, weights).reshape(-1, 1)
-            Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
-            # print(f'Zkp1_predict={Zkp1_predict}')
-            # print(f'Xkp1_predict={Xkp1_predict}')
-
-            Pkp1_predict = self.weighted_cov(Z_particles, weights, Zkp1_predict.ravel())
-            if not augmented:
-                verdict, report = diagnose_covariance(Pkp1_predict)
-                if not verdict:
-                    print(f"Pkp1_predict={Pkp1_predict}\nReport - iteration k={k}:")
-                    rich_show_fields(
-                        report,
-                        [
-                            "is_symmetric",
-                            "cholesky_ok",
-                            "is_psd",
-                            "near_singular",
-                            "ill_conditioned",
-                            "numerically_singular",
-                        ],
-                        title="",
-                    )
-                    input("attente")
-
-            # Cutting Pkp1 into 4 blocks
-            M_top, M_bottom = np.vsplit(Pkp1_predict, [self.dim_x])
-            PXXkp1_predict, PXYkp1_predict = np.hsplit(M_top, [self.dim_x])
-            PYXkp1_predict, PYYkp1_predict = np.hsplit(M_bottom, [self.dim_x])
-
-            # ==========================
-            # Observation
-            # ==========================
-
+            # New data is arriving ##################################
             try:
-                k, xkp1, ykp1 = next(generator)
+                new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
                 return  # we stop as the data generator is stopped itself
 
-            y_obs = ykp1.ravel()
+            # Updating ##############################################
 
-            # ==========================
-            # Update / weighting
-            # =========================
-            ikp1 = ykp1 - Ykp1_predict
-            Skp1 = PYYkp1_predict
-
-            # Kalman gain - Version robuste du calcul
-            try:
-                c, low = cho_factor(Skp1)
-                S_inv = cho_solve((c, low), eye_dim_y)
-            except np.linalg.LinAlgError as e:
-                print(f"Skp1={Skp1}")
-                input("ATTENTE")
-            except ValueError as e:
-                print("Erreur de valeur :", e)
-                input("ATTENTE")
-
-            Kkp1 = PXYkp1_predict @ S_inv
-
-            # Version robuste du calcul d'inversion de la cov d'innovation
-            det_S = np.linalg.det(Skp1)
-            norm = 1.0 / np.sqrt((2 * np.pi) ** self.dim_y * det_S)
-
-            for i in range(self.nbParticles):
-                innov = y_obs - Z_particles[i, self.dim_x :]
-                weights[i] *= norm * np.exp(-0.5 * innov.T @ S_inv @ innov)
-
-            weights += 1e-300  # avoid round-off to zero
-            weights /= np.sum(weights)  # normalize
-
-            # ==========================
-            # ESS + Resampling
-            # ==========================
-
-            ess = 1.0 / np.sum(weights**2)
-            if ess < self.resample_threshold * self.nbParticles:
-                idx = systematic_resample(weights)
-                Z_particles = Z_particles[idx]
-                weights.fill(1.0 / self.nbParticles)
-            # print(f'ess={ess}')
-
-            # ==========================
-            # Update estimate
-            # ==========================
-
-            Xkp1_update = self.weighted_mean(
-                Z_particles[:, : self.dim_x], weights
-            ).reshape(-1, 1)
-            PXXkp1_update = self.weighted_cov(
-                Z_particles[:, : self.dim_x], weights, Xkp1_update.ravel()
+            # tableau des moyennes x et y
+            muxy = np.array(
+                [
+                    self.g(
+                        np.vstack(
+                            [p, step.ykp1]
+                        ),  # ici step.ykp1 désigne le y précédent
+                        self.zeros_dim_xy_1,
+                        self.dt,
+                    )
+                    for p in particles_precedent
+                ]
             )
-            if not augmented:
-                # print('TITITIITITIT')
-                verdict, report = diagnose_covariance(PXXkp1_update)
-                # print(f'verdict TITITIITITIT={verdict}')
-                if not verdict:
-                    print(f"PXXkp1_update={PXXkp1_update}\nReport - iteration k={k}:")
-                    rich_show_fields(
-                        report,
-                        [
-                            "is_symmetric",
-                            "cholesky_ok",
-                            "is_psd",
-                            "near_singular",
-                            "ill_conditioned",
-                            "numerically_singular",
-                        ],
-                        title="",
-                    )
-                    input("attente")
+            # print(f"muxy={muxy[:3]}")
+            # input("ATTENTE")
 
-            # Forme de Joseph
-            temp = np.vstack((eye_dim_x, -Kkp1.T))
-            PXXkp1_update_Joseph = temp.T @ Pkp1_predict @ temp
+            # Calculer innovations pour toutes les particules pour la mise à jour des poids
+            innovations = new_ykp1 - muxy[:, self.dim_x :, :]
+            tmp = np.matmul(R_inv, innovations)  # (300,2,1)
+            quad = np.matmul(
+                innovations.transpose(0, 2, 1), tmp  # (300,1,2)  # (300,2,1)
+            )
+            exponents = -0.5 * quad.squeeze()
+            # print(f"exponents = {exponents.shape}")
+            # print(f"exponents = {exponents[:3]}")
+            # input("ATTENTE titut")
 
-            if not augmented:
-                # print('TOTOTOTOTOO')
-                verdict, report = diagnose_covariance(PXXkp1_update_Joseph)
-                # print(f'verdict TOTOTOTOTOO={verdict}')
-                if not verdict:
-                    print(
-                        f"PXXkp1_update_Joseph={PXXkp1_update_Joseph}\nReport - iteration k={k}:"
-                    )
-                    rich_show_fields(
-                        report,
-                        [
-                            "is_symmetric",
-                            "cholesky_ok",
-                            "is_psd",
-                            "near_singular",
-                            "ill_conditioned",
-                            "numerically_singular",
-                        ],
-                        title="",
-                    )
-                    input("attente")
+            # Log-weights pour stabilité
+            log_weights = np.log(weights) + exponents + log_norm_const
+            log_weights -= np.max(log_weights)
+            weights = np.exp(log_weights)
+            weights /= np.sum(weights)
+            # print(f"weights = {weights[:3]}")
 
-            # Record data in the tracker
-            self.history.record(
-                iter=k,
-                xkp1=xkp1.copy() if xkp1 is not None else None,
-                ykp1=ykp1.copy(),
+            # Mise à jour des particules
+            for i in range(self.nbParticles):
+                mu_prime_x = muxy[i, : self.dim_x] + M @ R_inv @ (
+                    new_ykp1 - muxy[i, self.dim_x :]
+                )
+                P_prime_x = Q - M @ R_inv @ MT
+                # print("mu_prime_x=", mu_prime_x)
+                # print("P_prime_x=", P_prime_x)
+
+                # Forcer PSD pour stabilité
+                eigvals, eigvecs = np.linalg.eigh(P_prime_x)
+                eigvals[eigvals < EPS_ABS] = EPS_ABS
+                P_prime_x = eigvecs @ np.diag(eigvals) @ eigvecs.T
+                # print("P_prime_x=", P_prime_x)
+
+                # Tirage stable via Cholesky
+                # Paramètres de la loi recherchée pour le tirage sont :
+                L = cholesky(P_prime_x, lower=True)
+                # print(f"L = {L}")
+                particles_courant[i] = mu_prime_x + L @ rng.standard_normal(
+                    self.dim_x
+                ).reshape(-1, 1)
+                # print(f"particles_courant[i]={particles_courant[i]}")
+                # input("ATTENTE titut")
+
+            particles_courant_temp = particles_courant.squeeze(-1)
+            X = particles_courant_temp[:, : self.dim_x]
+            Xkp1_update = np.average(X, axis=0, weights=weights)[:, None]
+            # print(f"Xkp1_update={Xkp1_update}")
+            dx = X - Xkp1_update.T  # (300,2)
+            PXXkp1_update = (weights[:, None] * dx).T @ dx  # (2,2)
+            # print(f"PXXkp1_update={PXXkp1_update}")
+
+            step = PKFStep(
+                k=new_k,
+                xkp1=new_xkp1.copy() if new_xkp1 is not None else None,
+                ykp1=new_ykp1.copy(),
                 Xkp1_predict=Xkp1_predict.copy(),
                 PXXkp1_predict=PXXkp1_predict.copy(),
+                ikp1=self.zeros_dim_y_1.copy(),
+                Skp1=self.eye_dim_y.copy(),
+                Kkp1=self.zeros_dim_x_y.copy(),
                 Xkp1_update=Xkp1_update.copy(),
-                PXXkp1_update=PXXkp1_update_Joseph.copy(),
-                ESS=ess,
+                # PXXkp1_update  = PXXkp1_update.copy(),
+                PXXkp1_update=PXXkp1_update.copy(),
             )
 
-            # Si on veut la forme robuste de la variance, on décommente
-            PXXkp1_update = PXXkp1_update_Joseph
+            # print(f"kp1={step.k}")
+            # print(f"step.Xkp1_predict={step.Xkp1_predict}")
+            # print(f"step.Xkp1_update={step.Xkp1_update}")
+            # input(f"ATTENTE - kp1 = {step.k}")
 
-            # last = self.history.last()
-            # rich_show_fields(last, ["iter", "xkp1", "Xkp1_predict", "PXXkp1_predict", "ikp1", "Skp1", "Kkp1", "Xkp1_update", "PXXkp1_update"], title="")
-            # input('ATTENTE')
+            # Ré-échantillonnage des particules
+            indexes = self.resample(weights, rng)
+            particles_courant = particles_courant[indexes]
+            weights.fill(1.0 / self.nbParticles)
 
-            yield k, xkp1, ykp1, Xkp1_predict, Xkp1_update
+            # print(f"particles_courant={particles_courant[:3]}")
+            # input("ATTENTE - prg principal")
+
+            # Sauvegarde dans l'historique
+            self.history.record(step)
+
+            if self.verbose > 1:
+                rich_show_fields(step, title=f"Step {step.k} Update")
+
+            # print("k=", step.k)
+            # input("ATTENTE")
+
+            yield new_k, new_xkp1, new_ykp1, step.Xkp1_predict, step.Xkp1_update

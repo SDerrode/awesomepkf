@@ -104,6 +104,7 @@ def addParseToParser(parser, listOptions):
                 "x2_y1_rapport",
                 "x2_y1_withRetroactionsOfObservations",
                 "x2_y1_withRetroactionsOfObservations_augmented",
+                "x2_y2_withRetroactions",
             ],
             "default": None,
             "help": "Non linear model to process data (default: None)",
