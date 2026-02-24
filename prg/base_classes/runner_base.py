@@ -120,14 +120,15 @@ class BaseRunner(ABC):
         if self.verbose > 1:
             logging.debug("Computing errors")
 
-        history_keys = self.runner_instance.history.last().keys()
+        ikp1_last = self.runner_instance.history.last()["ikp1"]
+        Skp1_last = self.runner_instance.history.last()["Skp1"]
         self.runner_instance.history.compute_errors(
             self.runner_instance,
             ["xkp1"],
             ["Xkp1_update"],
             ["PXXkp1_update"],
-            ["ikp1"] if "ikp1" in history_keys else None,
-            ["Skp1"] if "Skp1" in history_keys else None,
+            ["ikp1"] if ikp1_last is not None else None,
+            ["Skp1"] if Skp1_last is not None else None,
         )
 
     # ----------------------------------------------------------

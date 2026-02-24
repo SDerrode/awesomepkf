@@ -27,11 +27,14 @@ class PKFStep:
     ykp1: np.ndarray
     Xkp1_predict: np.ndarray
     PXXkp1_predict: np.ndarray
-    ikp1: np.ndarray
-    Skp1: np.ndarray
-    Kkp1: np.ndarray
-    Xkp1_update: np.ndarray
-    PXXkp1_update: np.ndarray
+
+    # Champs optionnels
+    ikp1: Optional[np.ndarray] = None
+    Skp1: Optional[np.ndarray] = None
+    Kkp1: Optional[np.ndarray] = None
+
+    Xkp1_update: Optional[np.ndarray] = None
+    PXXkp1_update: Optional[np.ndarray] = None
 
     def __post_init__(self):
         # ------------------------
@@ -39,7 +42,7 @@ class PKFStep:
         # ------------------------
         for name in ["xkp1", "ykp1", "Xkp1_predict", "ikp1", "Xkp1_update"]:
             arr = getattr(self, name)
-            if arr.ndim != 2 or arr.shape[1] != 1:
+            if arr is not None and (arr.ndim != 2 or arr.shape[1] != 1):
                 raise ValueError(
                     f"{name} must be a column vector of shape (n,1), got {arr.shape}"
                 )
@@ -49,27 +52,28 @@ class PKFStep:
         # ------------------------
         for name in ["PXXkp1_predict", "Skp1", "PXXkp1_update"]:
             arr = getattr(self, name)
-            if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
-                raise ValueError(
-                    f"{name} must be a square matrix, got shape {arr.shape}"
-                )
-            # Symétrie
-            if not np.allclose(arr, arr.T, atol=EPS_ABS):
-                # print(f'arr={arr}')
-                # raise ValueError(f"{name} must be symmetric")
-                arr = 0.5 * (arr + arr.T)
-            # Semi-définie positive
-            eigvals = np.linalg.eigvalsh(arr)
-            if np.any(eigvals < -EPS_ABS):
-                raise ValueError(
-                    f"{name} must be positive semi-definite, found negative eigenvalues: {eigvals[eigvals<0]}"
-                )
+            if arr is not None:
+                if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
+                    raise ValueError(
+                        f"{name} must be a square matrix, got shape {arr.shape}"
+                    )
+                # Symétrie
+                if not np.allclose(arr, arr.T, atol=EPS_ABS):
+                    # print(f'arr={arr}')
+                    # raise ValueError(f"{name} must be symmetric")
+                    arr = 0.5 * (arr + arr.T)
+                # Semi-définie positive
+                eigvals = np.linalg.eigvalsh(arr)
+                if np.any(eigvals < -EPS_ABS):
+                    raise ValueError(
+                        f"{name} must be positive semi-definite, found negative eigenvalues: {eigvals[eigvals<0]}"
+                    )
 
         # ------------------------
         # Vérification Kkp1 (dx × dy)
         # ------------------------
         arr = getattr(self, "Kkp1")
-        if arr.ndim != 2:
+        if arr is not None and arr.ndim != 2:
             raise ValueError(f"Kkp1 must be a 2D matrix, got shape {arr.shape}")
 
 
@@ -164,7 +168,6 @@ class PKF:
     ) -> list:
 
         listResults = list(self.process_filter(N=N, data_generator=data_generator))
-        # print(listResults[-5:])
         return listResults
 
     # ------------------------------------------------------------------
@@ -285,15 +288,6 @@ class PKF:
         Sigma12 = self.Pz0[: self.dim_x, self.dim_x :]
         Sigma21 = self.Pz0[self.dim_x :, : self.dim_x]
         Sigma22 = self.Pz0[self.dim_x :, self.dim_x :]
-        # print(f'self.dim_x={self.dim_x}')
-        # print(f'mu_x0={mu_x0}')
-        # print(f'mu_y0={mu_y0}')
-        # exit(1)
-
-        # print(Xkp1_update[0:self.dim_x, 0].shape)
-        # print((mu_x0   + Sigma12 @ np.linalg.inv(Sigma22) * (ykp1 - mu_y0)).shape)
-        # print(mu_x0.shape)
-        # print((Sigma12 @ np.linalg.inv(Sigma22) * (ykp1 - mu_y0)).shape)
 
         Xkp1_update[0 : self.dim_x, 0] = (
             mu_x0 + Sigma12 @ np.linalg.inv(Sigma22) @ (ykp1 - mu_y0)
