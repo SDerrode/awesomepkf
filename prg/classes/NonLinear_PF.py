@@ -13,6 +13,8 @@ from typing import Generator, Optional, Tuple
 import numpy as np
 from rich import print
 
+from dataclasses import replace
+
 from filterpy.monte_carlo import systematic_resample
 
 from scipy.linalg import cho_factor, cho_solve
@@ -57,20 +59,18 @@ class NonLinear_PF(NonLinear_PKF):
     # =========================
     # RESAMPLING UNIFIÉ
     # =========================
-    def resample(self, weights, rng, method="stratified"):
+    def resample(self, weights, method="stratified"):
         N = self.nbParticles
         cumulative_sum = np.cumsum(weights)
-        # print(f"cumulative_sum={cumulative_sum[0:4]}")
         cumulative_sum[-1] = 1.0
 
         if method == "multinomial":
-            indexes = np.searchsorted(cumulative_sum, rng.random(N))
+            indexes = np.searchsorted(cumulative_sum, self._seed_gen.rng.random(N))
         elif method in ["systematic", "stratified"]:
             if method == "systematic":
-                positions = (np.arange(N) + rng.random()) / N
+                positions = (np.arange(N) + self._seed_gen.rng.random()) / N
             else:
-                positions = (np.arange(N) + rng.random(N)) / N
-            # print(f"positions={positions[0:4]}")
+                positions = (np.arange(N) + self._seed_gen.rng.random(N)) / N
 
             indexes = np.zeros(N, dtype=int)
             i = j = 0
@@ -80,8 +80,6 @@ class NonLinear_PF(NonLinear_PKF):
                     i += 1
                 else:
                     j += 1
-            # print(f"i={i}, j={j}")
-            # input("ATTENTE - debut resample")
         elif method == "residual":
             indexes = []
             num_copies = np.floor(N * self.weights).astype(int)
@@ -92,7 +90,7 @@ class NonLinear_PF(NonLinear_PKF):
             cumulative_sum_res = np.cumsum(residual)
             cumulative_sum_res[-1] = 1.0
             remaining = N - len(indexes)
-            random_vals = rng.random(remaining)
+            random_vals = self._seed_gen.rng.random(remaining)
             res_indexes = np.searchsorted(cumulative_sum_res, random_vals)
             indexes += list(res_indexes)
             indexes = np.array(indexes)
@@ -110,33 +108,18 @@ class NonLinear_PF(NonLinear_PKF):
             data_generator if data_generator is not None else self._data_generation()
         )
 
-        seed = 303
-        # seed_seq: np.random.SeedSequence = np.random.SeedSequence(seed)
-        # rng: np.random.Generator = np.random.default_rng(seed_seq)
-        rng: np.random.Generator = np.random.default_rng(seed)
-
-        # Additionnal short-cuts
+        # Additional short-cuts
         g, mQ, augmented = self.param.g, self.param.mQ, self.param.augmented
 
         # Les particules et leur poids
-        # print("mz0=", self.mz0[: self.dim_x].flatten())
-        # print("Pz0=", self.Pz0[: self.dim_x, : self.dim_x])
-        particles_courant = rng.multivariate_normal(
+        particles_courant = self._seed_gen.rng.multivariate_normal(
             self.mz0[: self.dim_x].flatten(),
             self.Pz0[: self.dim_x, : self.dim_x],
             self.nbParticles,
         )
         particles_courant = particles_courant[..., np.newaxis]
-        # print(particles_courant)
-        # print("EHEOHE4", particles_courant.shape)
         particles_precedent = np.zeros_like(particles_courant)
         weights = np.full(self.nbParticles, 1.0 / self.nbParticles)
-        # print(particles_precedent)
-        # print(particles_precedent.shape)
-        # print(weights)
-        # exit(1)
-        # print(particles_courant[:3])
-        # input("ATTENTE __init__")
 
         Q = self.mQ[: self.dim_x, : self.dim_x]
         M = self.mQ[: self.dim_x, self.dim_x :]
@@ -146,20 +129,14 @@ class NonLinear_PF(NonLinear_PKF):
         sign, logdet = np.linalg.slogdet(R)
         log_norm_const = -0.5 * (self.dim_y * np.log(2 * np.pi) + logdet)
 
-        # for speed
-        # eye_dim_y = np.eye(self.dim_y)
-        # eye_dim_x = np.eye(self.dim_x)
-
         # The first
         ##################################################################################################
-        step = self._firstEstimate(generator)
+        step_big = self._firstEstimate(generator)
+        # On enleve les 3 champs qui n'ont pas d'interet dans cet algo
+        step = replace(step_big, ikp1=None, Skp1=None, Kkp1=None)
+
         if step.xkp1 is None:  # Il n'y a pas de VT
             self.ground_truth = False
-
-        # print(f"kp1={step.k}")
-        # print(f"step.Xkp1_predict={step.Xkp1_predict}")
-        # print(f"step.Xkp1_update={step.Xkp1_update}")
-        # input("ATTENTE - kp1 = 0")
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
@@ -170,9 +147,6 @@ class NonLinear_PF(NonLinear_PKF):
 
             # Maj des particules
             particles_precedent = particles_courant.copy()
-            # print(particles_courant[:3])
-            # print(particles_precedent[:3])
-            # input("ATTENTE - particles_precedent")
 
             # =========================
             # PREDICTION
@@ -181,7 +155,6 @@ class NonLinear_PF(NonLinear_PKF):
             Xkp1_predict = np.mean(particles_courant, axis=0)
             # print(f"Xkp1_predict={Xkp1_predict}")
             diff = particles_courant - Xkp1_predict
-            # print(f"diff={diff}")
             # Pkp1_predict = diff.T @ diff / (self.nbParticles - 1)
             PXXkp1_predict = np.einsum("tik,tjk->ij", diff, diff) / (
                 self.nbParticles - 1
@@ -210,8 +183,6 @@ class NonLinear_PF(NonLinear_PKF):
                     for p in particles_precedent
                 ]
             )
-            # print(f"muxy={muxy[:3]}")
-            # input("ATTENTE")
 
             # Calculer innovations pour toutes les particules pour la mise à jour des poids
             innovations = new_ykp1 - muxy[:, self.dim_x :, :]
@@ -220,16 +191,12 @@ class NonLinear_PF(NonLinear_PKF):
                 innovations.transpose(0, 2, 1), tmp  # (300,1,2)  # (300,2,1)
             )
             exponents = -0.5 * quad.squeeze()
-            # print(f"exponents = {exponents.shape}")
-            # print(f"exponents = {exponents[:3]}")
-            # input("ATTENTE titut")
 
             # Log-weights pour stabilité
             log_weights = np.log(weights) + exponents + log_norm_const
             log_weights -= np.max(log_weights)
             weights = np.exp(log_weights)
             weights /= np.sum(weights)
-            # print(f"weights = {weights[:3]}")
 
             # Mise à jour des particules
             for i in range(self.nbParticles):
@@ -237,24 +204,19 @@ class NonLinear_PF(NonLinear_PKF):
                     new_ykp1 - muxy[i, self.dim_x :]
                 )
                 P_prime_x = Q - M @ R_inv @ MT
-                # print("mu_prime_x=", mu_prime_x)
-                # print("P_prime_x=", P_prime_x)
 
                 # Forcer PSD pour stabilité
                 eigvals, eigvecs = np.linalg.eigh(P_prime_x)
                 eigvals[eigvals < EPS_ABS] = EPS_ABS
                 P_prime_x = eigvecs @ np.diag(eigvals) @ eigvecs.T
-                # print("P_prime_x=", P_prime_x)
 
                 # Tirage stable via Cholesky
                 # Paramètres de la loi recherchée pour le tirage sont :
                 L = cholesky(P_prime_x, lower=True)
-                # print(f"L = {L}")
-                particles_courant[i] = mu_prime_x + L @ rng.standard_normal(
-                    self.dim_x
-                ).reshape(-1, 1)
-                # print(f"particles_courant[i]={particles_courant[i]}")
-                # input("ATTENTE titut")
+                particles_courant[i] = (
+                    mu_prime_x
+                    + L @ self._seed_gen.rng.standard_normal(self.dim_x).reshape(-1, 1)
+                )
 
             particles_courant_temp = particles_courant.squeeze(-1)
             X = particles_courant_temp[:, : self.dim_x]
@@ -269,35 +231,24 @@ class NonLinear_PF(NonLinear_PKF):
                 xkp1=new_xkp1.copy() if new_xkp1 is not None else None,
                 ykp1=new_ykp1.copy(),
                 Xkp1_predict=Xkp1_predict.copy(),
+                ikp1=None,
+                Skp1=None,
+                Kkp1=None,
                 PXXkp1_predict=PXXkp1_predict.copy(),
-                ikp1=self.zeros_dim_y_1.copy(),
-                Skp1=self.eye_dim_y.copy(),
-                Kkp1=self.zeros_dim_x_y.copy(),
                 Xkp1_update=Xkp1_update.copy(),
                 # PXXkp1_update  = PXXkp1_update.copy(),
                 PXXkp1_update=PXXkp1_update.copy(),
             )
 
-            # print(f"kp1={step.k}")
-            # print(f"step.Xkp1_predict={step.Xkp1_predict}")
-            # print(f"step.Xkp1_update={step.Xkp1_update}")
-            # input(f"ATTENTE - kp1 = {step.k}")
-
             # Ré-échantillonnage des particules
-            indexes = self.resample(weights, rng)
+            indexes = self.resample(weights)
             particles_courant = particles_courant[indexes]
             weights.fill(1.0 / self.nbParticles)
-
-            # print(f"particles_courant={particles_courant[:3]}")
-            # input("ATTENTE - prg principal")
 
             # Sauvegarde dans l'historique
             self.history.record(step)
 
             if self.verbose > 1:
                 rich_show_fields(step, title=f"Step {step.k} Update")
-
-            # print("k=", step.k)
-            # input("ATTENTE")
 
             yield new_k, new_xkp1, new_ykp1, step.Xkp1_predict, step.Xkp1_update

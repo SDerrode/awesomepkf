@@ -228,19 +228,6 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
 
     errors = x_true - x_hat
 
-    # Calcul de la MSE et MAE pour X et pour Y séparemment si c'est une modele a état augmenté
-    if model.param.augmented:
-        dim_x = model.dim_x
-        dim_y = model.dim_y
-        list_mses_X_and_Y = [
-            np.mean(errors[:, 0 : dim_x - dim_y] ** 2),
-            np.mean(errors[:, dim_x - dim_y :] ** 2),
-        ]
-        list_maes_X_and_Y = [
-            np.mean(np.abs(errors[:, 0 : dim_x - dim_y])),
-            np.mean(np.abs(errors[:, dim_x - dim_y :])),
-        ]
-
     # NEES moyen
     tab_Pk = np.stack(P_list, axis=0)  # empile le long du premier axe
     nees_all = _compute_quadratic_form(errors, tab_Pk)
@@ -261,6 +248,21 @@ def compute_errors(model, x_true, x_hat, P_list, i_list=None, S_list=None):
         "nees_mean": nees_mean,
         "nis_mean": nis_mean,
     }
+
+    # Calcul de la MSE et MAE pour X et pour Y séparemment si c'est une modele a état augmenté
+    if model.param.augmented:
+        dim_x = model.dim_x
+        dim_y = model.dim_y
+        list_mses_X_and_Y = [
+            np.mean(errors[:, 0 : dim_x - dim_y] ** 2),
+            np.mean(errors[:, dim_x - dim_y :] ** 2),
+        ]
+        list_maes_X_and_Y = [
+            np.mean(np.abs(errors[:, 0 : dim_x - dim_y])),
+            np.mean(np.abs(errors[:, dim_x - dim_y :])),
+        ]
+        report["list_mses_X_and_Y"] = list_mses_X_and_Y
+        report["list_maes_X_and_Y"] = list_maes_X_and_Y
 
     return report
 

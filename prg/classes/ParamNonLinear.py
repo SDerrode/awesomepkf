@@ -74,8 +74,8 @@ class ParamNonLinear:
 
         if __debug__:
             if not self.augmented:
-                print(f"mQ = {self._mQ}")
-                print(f"Pz0 = {self._Pz0}")
+                # print(f"mQ = {self._mQ}")
+                # print(f"Pz0 = {self._Pz0}")
                 check_consistency(mQ=self._mQ, Pz0=self._Pz0)
 
     # ------------------------------------------------------------------
