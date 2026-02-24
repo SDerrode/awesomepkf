@@ -5,6 +5,7 @@
 from typing import Generator, Optional
 from dataclasses import dataclass
 import logging
+import inspect
 
 # Third-party
 import numpy as np
@@ -72,9 +73,6 @@ class PKFStep:
             raise ValueError(f"Kkp1 must be a 2D matrix, got shape {arr.shape}")
 
 
-import inspect
-
-
 class PKF:
 
     def __init__(self, sKey: Optional[int] = None, verbose: int = 0):
@@ -119,6 +117,7 @@ class PKF:
         self.zeros_dim_x_y = np.zeros((self.dim_x, self.dim_y))
         self.zeros_dim_y_1 = np.zeros((self.dim_y, 1))
         self.zeros_dim_xy_1 = np.zeros((self.dim_xy, 1))
+        self.zeros_dim_xy = np.zeros((self.dim_xy))
         self.zeros_dim_xy_xy = np.zeros((self.dim_xy, self.dim_xy))
 
         # History tracker
@@ -149,10 +148,10 @@ class PKF:
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
-    @property
-    def seed_gen(self) -> int:
-        """Return generator seed."""
-        return self._seed_gen.seed
+    # @property
+    # def seed_gen(self) -> int:
+    #     """Return generator seed."""
+    #     return self._seed_gen.seed
 
     # ------------------------------------------------------------------
     # Data simulation & processing
@@ -163,7 +162,10 @@ class PKF:
     def process_N_data(
         self, N: Optional[int], data_generator: Optional[Generator] = None
     ) -> list:
-        return list(self.process_filter(N=N, data_generator=data_generator))
+
+        listResults = list(self.process_filter(N=N, data_generator=data_generator))
+        # print(listResults[-5:])
+        return listResults
 
     # ------------------------------------------------------------------
     # Generators
@@ -195,6 +197,7 @@ class PKF:
         zerosvector_xy = np.zeros(self.dim_xy)
         zerosvector_x = np.zeros(self.dim_x)
         noise_z = np.zeros((self.dim_xy, 1))
+
         while N is None or k < N:
             if self.augmented:
                 noise_z[0 : self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(
@@ -207,9 +210,9 @@ class PKF:
                 noise_z[:, 0] = self._seed_gen.rng.multivariate_normal(
                     mean=zerosvector_xy, cov=self.mQ
                 )
-
             Zkp1_simul = self.g(Zkp1_simul, noise_z, self.dt)
             Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
+            # print(Xkp1_simul, Ykp1_simul)
             k += 1
             yield k, Xkp1_simul, Ykp1_simul
 

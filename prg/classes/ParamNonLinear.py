@@ -74,6 +74,8 @@ class ParamNonLinear:
 
         if __debug__:
             if not self.augmented:
+                print(f"mQ = {self._mQ}")
+                print(f"Pz0 = {self._Pz0}")
                 check_consistency(mQ=self._mQ, Pz0=self._Pz0)
 
     # ------------------------------------------------------------------
@@ -160,7 +162,9 @@ if __name__ == "__main__":
     verbose = 1
 
     # Available non linear models:
-    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations']
+    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x1_y1_withRetroactions',
+    #  'x1_y1_withRetroactions_augmented', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations',
+    #  'x2_y1_withRetroactionsOfObservations_augmented', 'x2_y2_withRetroactions']
     model = ModelFactoryNonLinear.create("x2_y1_rapport")
     print(f"model={model}")
     print(f"model.get_params()={model.get_params()}")

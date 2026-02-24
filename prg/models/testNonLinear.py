@@ -10,12 +10,10 @@ if __name__ == "__main__":
     print("Available models :", ModelFactoryNonLinear.list_models())
 
     # Available non linear models:
-    #  ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x1_y1_withRetroactions', \
-    # 'x1_y1_withRetroactions_augmented', 'x2_y1', 'x2_y1_rapport', \
-    # 'x2_y1_withRetroactionsOfObservations', 'x2_y1_withRetroactionsOfObservations_augmented']
-    model = ModelFactoryNonLinear.create(
-        "x2_y1_withRetroactionsOfObservations_augmented"
-    )
+    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x1_y1_withRetroactions',
+    #  'x1_y1_withRetroactions_augmented', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations',
+    #  'x2_y1_withRetroactionsOfObservations_augmented', 'x2_y2_withRetroactions']
+    model = ModelFactoryNonLinear.create("x2_y2_withRetroactions")
     print(f"model={model}")
     print(f"model.model_type={model.model_type}")
 

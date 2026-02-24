@@ -45,7 +45,6 @@ class NonLinear_UPKF(NonLinear_PKF):
         sKey: Optional[int] = None,
         verbose: int = 0,
     ):
-        # print(f'NonLinear_UPKF - __init__ - param={param}')
         super().__init__(param, sKey, verbose)
 
         self.sigma_point_set_name = sigmaSet
@@ -84,6 +83,7 @@ class NonLinear_UPKF(NonLinear_PKF):
         step = self._firstEstimate(generator)
         if step.xkp1 is None:  # Il n'y a pas de VT
             self.ground_truth = False
+
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
         ###################

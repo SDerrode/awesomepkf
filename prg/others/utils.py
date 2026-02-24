@@ -194,7 +194,7 @@ def _compute_quadratic_form(
                 f"Matrice singulière à k={k} — régularisation EPS_ABS appliquée."
             )
             try:
-                Pk_inv_reg = Ck + EPS_ABS * np.eye(n)
+                Pk_inv_reg = Pk_inv + EPS_ABS * np.eye(n)
                 val = float((ek.T @ Pk_inv_reg @ ek).squeeze())
             except np.linalg.LinAlgError:
                 logger.error(f"Impossible d'inverser la matrice à k={k}, NaN inséré.")
