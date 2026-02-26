@@ -1,5 +1,7 @@
 import numpy as np
 
+from others.utils import check_eigvals
+
 
 def generate_block_matrix(
     rng: np.random.Generator,
@@ -155,11 +157,13 @@ def _verify(M: np.ndarray, dim_x: int, dim_y: int, threshold: float = 1.0):
 
     # A SDP
     eigs_A = np.linalg.eigvalsh(A)
+    check_eigvals(eigs_A)
     assert eigs_A.min() >= -1e-9, f"A non SDP, valeur propre min = {eigs_A.min():.2e}"
 
     # Complément de Schur SDP
     S = A - B @ np.linalg.inv(D) @ B.T
     eigs_S = np.linalg.eigvalsh(S)
+    check_eigvals(eigs_S)
     assert (
         eigs_S.min() >= -1e-9
     ), f"Complément de Schur non SDP, valeur propre min = {eigs_S.min():.2e}"

@@ -5,22 +5,59 @@
 from typing import Generator, Optional
 from dataclasses import dataclass
 import logging
-import inspect
 
 # Third-party
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve, LinAlgError
+from rich import print
 
 # Local imports
 from .HistoryTracker import HistoryTracker
 from .SeedGenerator import SeedGenerator
-from others.utils import diagnose_covariance, rich_show_fields
-from others.numerics import EPS_ABS, COND_FAIL
+from others.utils import (
+    diagnose_covariance,
+    rich_show_fields,
+    symmetrize,
+    check_eigvals,
+)
+from others.numerics import EPS_ABS, COND_FAIL, EIG_TOL_WARN, EIG_TOL_FAIL
+from classes.ParamLinear import ParamLinear
+from classes.ParamNonLinear import ParamNonLinear
 
 
 @dataclass(slots=True, frozen=True)
 class PKFStep:
-    """Container for one PKF iteration step."""
+    """
+    Immutable container for the outputs of one PKF filter step.
+
+    Stores both the predicted and updated state estimates, along with
+    the associated covariance matrices, innovation, and Kalman gain.
+    All array fields are validated on construction via :meth:`__post_init__`.
+
+    Attributes
+    ----------
+    k : int
+        Time step index.
+    xkp1 : np.ndarray or None
+        Ground truth state at step ``k``, shape ``(dim_x, 1)``.
+        ``None`` if no ground truth is available.
+    ykp1 : np.ndarray
+        Observation vector at step ``k``, shape ``(dim_y, 1)``.
+    Xkp1_predict : np.ndarray
+        Predicted state estimate, shape ``(dim_x, 1)``.
+    PXXkp1_predict : np.ndarray
+        Predicted state covariance matrix, shape ``(dim_x, dim_x)``.
+    ikp1 : np.ndarray or None
+        Innovation vector ``y - H*X_predict``, shape ``(dim_y, 1)``.
+    Skp1 : np.ndarray or None
+        Innovation covariance matrix, shape ``(dim_y, dim_y)``.
+    Kkp1 : np.ndarray or None
+        Kalman gain matrix, shape ``(dim_x, dim_y)``.
+    Xkp1_update : np.ndarray or None
+        Updated (posterior) state estimate, shape ``(dim_x, 1)``.
+    PXXkp1_update : np.ndarray or None
+        Updated state covariance matrix (Joseph form), shape ``(dim_x, dim_x)``.
+    """
 
     k: int
     xkp1: Optional[np.ndarray]
@@ -28,119 +65,168 @@ class PKFStep:
     Xkp1_predict: np.ndarray
     PXXkp1_predict: np.ndarray
 
-    # Champs optionnels
+    # Optional fields — None at the first step
     ikp1: Optional[np.ndarray] = None
     Skp1: Optional[np.ndarray] = None
     Kkp1: Optional[np.ndarray] = None
-
     Xkp1_update: Optional[np.ndarray] = None
     PXXkp1_update: Optional[np.ndarray] = None
 
-    def __post_init__(self):
-        # ------------------------
-        # Vérification vecteurs colonnes
-        # ------------------------
+    def __post_init__(self) -> None:
+        """Validate all array fields upon construction."""
+        self._validate_column_vectors()
+        self._validate_covariance_matrices()
+        self._validate_kalman_gain()
+
+    def _validate_column_vectors(self) -> None:
+        """Check that state and observation vectors are column vectors of shape (n, 1)."""
         for name in ["xkp1", "ykp1", "Xkp1_predict", "ikp1", "Xkp1_update"]:
             arr = getattr(self, name)
             if arr is not None and (arr.ndim != 2 or arr.shape[1] != 1):
                 raise ValueError(
-                    f"{name} must be a column vector of shape (n,1), got {arr.shape}"
+                    f"{name} must be a column vector of shape (n, 1), got {arr.shape}"
                 )
 
-        # ------------------------
-        # Vérification matrices carrées et covariances
-        # ------------------------
+    def _validate_covariance_matrices(self) -> None:
+        """
+        Check that covariance matrices are square, symmetric, and positive semi-definite.
+
+        Raises
+        ------
+        ValueError
+            If a matrix is not square, not symmetric, or has negative eigenvalues
+            below ``-EPS_ABS``.
+        """
         for name in ["PXXkp1_predict", "Skp1", "PXXkp1_update"]:
             arr = getattr(self, name)
-            if arr is not None:
-                if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
-                    raise ValueError(
-                        f"{name} must be a square matrix, got shape {arr.shape}"
-                    )
-                # Symétrie
-                if not np.allclose(arr, arr.T, atol=EPS_ABS):
-                    # print(f'arr={arr}')
-                    # raise ValueError(f"{name} must be symmetric")
-                    arr = 0.5 * (arr + arr.T)
-                # Semi-définie positive
-                eigvals = np.linalg.eigvalsh(arr)
-                if np.any(eigvals < -EPS_ABS):
-                    raise ValueError(
-                        f"{name} must be positive semi-definite, found negative eigenvalues: {eigvals[eigvals<0]}"
-                    )
+            if arr is None:
+                continue
+            if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
+                raise ValueError(
+                    f"{name} must be a square matrix, got shape {arr.shape}"
+                )
+            if not np.allclose(arr, arr.T, atol=EPS_ABS):
+                print(f"arr={arr}")
+                raise ValueError(f"{name} must be symmetric")
+            eigvals = np.linalg.eigvalsh(arr)
+            check_eigvals(eigvals)
 
-        # ------------------------
-        # Vérification Kkp1 (dx × dy)
-        # ------------------------
-        arr = getattr(self, "Kkp1")
+    def _validate_kalman_gain(self) -> None:
+        """Check that the Kalman gain is a 2D matrix of shape (dim_x, dim_y)."""
+        arr = self.Kkp1
         if arr is not None and arr.ndim != 2:
             raise ValueError(f"Kkp1 must be a 2D matrix, got shape {arr.shape}")
 
 
 class PKF:
+    """
+    Base class for Pairwise Kalman Filters (PKF).
 
-    def __init__(self, sKey: Optional[int] = None, verbose: int = 0):
+    Provides the shared infrastructure for all PKF variants: parameter
+    validation, matrix pre-allocation, random number generation, data
+    simulation, covariance diagnostics, and the core prediction/update steps.
 
+    Subclasses must implement :meth:`process_filter`.
+
+    Attributes
+    ----------
+    param : ParamLinear | ParamNonLinear
+        Model parameters (transition function, noise covariances, etc.).
+    verbose : int
+        Verbosity level: ``0`` = silent, ``1`` = warnings only, ``2`` = debug.
+    dt : int
+        Time step, fixed to ``1``.
+    ground_truth : bool
+        Whether ground truth data is available. Set to ``False`` if the
+        first observation yields ``xkp1 = None``.
+    history : HistoryTracker
+        Records all filter steps for post-processing.
+    """
+
+    def __init__(
+        self,
+        param: ParamLinear | ParamNonLinear,
+        sKey: Optional[int] = None,
+        verbose: int = 0,
+    ) -> None:
+        """
+        Initialise the PKF base class.
+
+        Parameters
+        ----------
+        param : ParamLinear | ParamNonLinear
+            Object holding the model parameters.
+        sKey : int, optional
+            Random seed for reproducibility (default ``None``).
+        verbose : int, optional
+            Verbosity level: ``0`` = silent, ``1`` = warnings, ``2`` = debug
+            (default ``0``).
+
+        Raises
+        ------
+        TypeError
+            If ``param`` is not an instance of ``ParamLinear`` or ``ParamNonLinear``.
+        ValueError
+            If ``sKey`` is not a strictly positive integer or ``None``.
+        ValueError
+            If ``verbose`` is not in ``{0, 1, 2}``.
+        """
+        if not isinstance(param, (ParamLinear, ParamNonLinear)):
+            raise TypeError(
+                "param must be an instance of ParamLinear or ParamNonLinear"
+            )
         if not ((isinstance(sKey, int) and sKey > 0) or sKey is None):
-            raise ValueError("sKey must be None or a number>0")
+            raise ValueError("sKey must be None or a strictly positive integer")
         if verbose not in [0, 1, 2]:
             raise ValueError("verbose must be 0, 1 or 2")
 
-        # stack = inspect.stack()
-        # print("Pile d'appels :")
-        # for frame in stack[:5]:  # limiter pour lisibilité
-        #     print(f"Function: {frame.function}, File: {frame.filename}, Line: {frame.lineno}")
-        # input('ATTENTE STACK APPEL')
-
-        self.dt = 1
+        self.param = param
         self.verbose = verbose
+        self.dt: int = 1  # Time step — fixed to 1 throughout
 
-        # Générateur de nombres aléatoires
+        # Random number generator
         self._seed_gen = SeedGenerator(sKey)
 
-        # Do we have a ground truth? Defult Yes
-        self.ground_truth = True
+        # Ground truth availability — set to False if xkp1 is None at first step
+        self.ground_truth: bool = True
 
-        # Shortcuts
-        self.dim_x, self.dim_y, self.dim_xy = (
-            self.param.dim_x,
-            self.param.dim_y,
-            self.param.dim_xy,
-        )
-        self.mz0, self.Pz0, self.g, self.mQ, self.augmented = (
-            self.param._mz0,
-            self.param._Pz0,
-            self.param.g,
-            self.param.mQ,
-            self.param.augmented,
-        )
+        # Dimension shortcuts
+        self.dim_x: int = self.param.dim_x
+        self.dim_y: int = self.param.dim_y
+        self.dim_xy: int = self.param.dim_xy
 
-        # Matrices utiles pour accélérer les calculs
-        self.eye_dim_y = np.eye(self.dim_y)
-        self.eye_dim_x = np.eye(self.dim_x)
-        self.zeros_dim_x_y = np.zeros((self.dim_x, self.dim_y))
-        self.zeros_dim_y_1 = np.zeros((self.dim_y, 1))
-        self.zeros_dim_xy_1 = np.zeros((self.dim_xy, 1))
-        self.zeros_dim_xy = np.zeros((self.dim_xy))
-        self.zeros_dim_xy_xy = np.zeros((self.dim_xy, self.dim_xy))
+        # Model shortcuts — avoids repeated attribute lookups in tight loops
+        self.mz0: np.ndarray = self.param._mz0
+        self.Pz0: np.ndarray = self.param._Pz0
+        self.g = self.param.g
+        self.mQ: np.ndarray = self.param.mQ
+        self.augmented: bool = self.param.augmented
+
+        # Pre-allocated constant matrices — reused across all filter steps
+        self.eye_dim_y: np.ndarray = np.eye(self.dim_y)
+        self.eye_dim_x: np.ndarray = np.eye(self.dim_x)
+        self.zeros_dim_x_y: np.ndarray = np.zeros((self.dim_x, self.dim_y))
+        self.zeros_dim_y_1: np.ndarray = np.zeros((self.dim_y, 1))
+        self.zeros_dim_xy_1: np.ndarray = np.zeros((self.dim_xy, 1))
+        self.zeros_dim_xy: np.ndarray = np.zeros(self.dim_xy)
+        self.zeros_dim_xy_xy: np.ndarray = np.zeros((self.dim_xy, self.dim_xy))
 
         # History tracker
         self.history = HistoryTracker(self.verbose)
 
-        # ----------------------------
-        # Logger
-        # ----------------------------
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(logging.DEBUG)  # Always debug; handler filters by verbose
+        # Logger — level is always DEBUG on the logger itself;
+        # the handler filters according to the verbose setting.
+        self.logger = logging.getLogger(f"{self.__class__.__name__}.{id(self)}")
+        self.logger.setLevel(logging.DEBUG)
 
         if not self.logger.handlers:
             ch = logging.StreamHandler()
             if verbose == 0:
-                ch.setLevel(logging.CRITICAL + 1)  # Rien n'est affiché
+                ch.setLevel(logging.CRITICAL + 1)  # Nothing is displayed
             elif verbose == 1:
-                ch.setLevel(logging.WARNING)  # Warnings et erreurs seulement
-            else:  # verbose == 2
-                ch.setLevel(logging.DEBUG)  # Tout est affiché
+                ch.setLevel(logging.WARNING)  # Warnings and errors only
+            else:
+                ch.setLevel(logging.DEBUG)  # Everything is displayed
 
             formatter = logging.Formatter(
                 fmt="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
@@ -150,39 +236,99 @@ class PKF:
             self.logger.addHandler(ch)
 
     # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-    # @property
-    # def seed_gen(self) -> int:
-    #     """Return generator seed."""
-    #     return self._seed_gen.seed
-
-    # ------------------------------------------------------------------
     # Data simulation & processing
     # ------------------------------------------------------------------
-    def simulate_N_data(self, N):
+    def simulate_N_data(self, N: int) -> list[tuple[int, np.ndarray, np.ndarray]]:
+        """
+        Simulate ``N`` steps of data and return them as a list.
+
+        Parameters
+        ----------
+        N : int
+            Number of steps to simulate.
+
+        Returns
+        -------
+        list of tuple[int, np.ndarray, np.ndarray]
+            Each tuple is ``(k, x_true, y_observed)``.
+        """
+        self._validate_N(N)
         return list(self._data_generation(N))
 
     def process_N_data(
-        self, N: Optional[int], data_generator: Optional[Generator] = None
-    ) -> list:
+        self,
+        N: Optional[int],
+        data_generator: Optional[Generator] = None,
+    ) -> list[tuple[int, Optional[np.ndarray], np.ndarray, np.ndarray, np.ndarray]]:
+        """
+        Run the filter for ``N`` steps and return all outputs as a list.
 
-        listResults = list(self.process_filter(N=N, data_generator=data_generator))
-        return listResults
+        Parameters
+        ----------
+        N : int or None
+            Number of steps to process. If ``None``, runs until the generator
+            is exhausted.
+        data_generator : Generator, optional
+            External data generator. If ``None``, the internal generator is used.
+
+        Returns
+        -------
+        list of tuple
+            Each tuple is ``(k, x_true, y_observed, X_predict, X_update)``.
+        """
+        return list(self.process_filter(N=N, data_generator=data_generator))
+
+    @staticmethod
+    def _validate_N(N: Optional[int]) -> None:
+        """
+        Validate the ``N`` parameter shared by all filter variants.
+
+        Parameters
+        ----------
+        N : int or None
+            Number of steps. Must be a strictly positive integer or ``None``.
+
+        Raises
+        ------
+        ValueError
+            If ``N`` is not a strictly positive integer or ``None``.
+        """
+        if not ((isinstance(N, int) and N > 0) or N is None):
+            raise ValueError("N must be None or a strictly positive integer")
 
     # ------------------------------------------------------------------
-    # Generators
+    # Data generation
     # ------------------------------------------------------------------
     def _data_generation(
         self, N: Optional[int] = None
     ) -> Generator[tuple[int, np.ndarray, np.ndarray], None, None]:
+        """
+        Simulate state-space data and yield one step at a time.
+
+        Handles both standard and augmented model structures. At each step,
+        process noise is sampled and the transition function ``g`` is applied.
+
+        Parameters
+        ----------
+        N : int or None
+            Number of steps to generate. If ``None``, generates indefinitely.
+
+        Yields
+        ------
+        k : int
+            Current time step index.
+        Xkp1_simul : np.ndarray
+            Simulated state vector at step ``k``, shape ``(dim_x, 1)``.
+        Ykp1_simul : np.ndarray
+            Simulated observation vector at step ``k``, shape ``(dim_y, 1)``.
+        """
         Zkp1_simul = np.zeros((self.dim_xy, 1))
 
-        # First step
+        # First step — sample initial state from prior distribution
         if self.augmented:
-            Zkp1_simul[0 : self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(
-                mean=self.mz0[0 : self.dim_x, 0],
-                cov=self.Pz0[0 : self.dim_x, 0 : self.dim_x],
+            Zkp1_simul[: self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(
+                mean=self.mz0[: self.dim_x, 0],
+                cov=self.Pz0[: self.dim_x, : self.dim_x],
             )
             Zkp1_simul[self.dim_x :, 0] = Zkp1_simul[
                 self.dim_x - self.dim_y : self.dim_x, 0
@@ -196,15 +342,16 @@ class PKF:
         k = 0
         yield k, Xkp1_simul, Ykp1_simul
 
-        # Next steps
+        # Subsequent steps — propagate state and sample process noise
         zerosvector_xy = np.zeros(self.dim_xy)
         zerosvector_x = np.zeros(self.dim_x)
         noise_z = np.zeros((self.dim_xy, 1))
 
         while N is None or k < N:
             if self.augmented:
-                noise_z[0 : self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(
-                    mean=zerosvector_x, cov=self.mQ[0 : self.dim_x, 0 : self.dim_x]
+                noise_z[: self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(
+                    mean=zerosvector_x,
+                    cov=self.mQ[: self.dim_x, : self.dim_x],
                 )
                 noise_z[self.dim_x :, 0] = noise_z[
                     self.dim_x - self.dim_y : self.dim_x, 0
@@ -215,40 +362,44 @@ class PKF:
                 )
             Zkp1_simul = self.g(Zkp1_simul, noise_z, self.dt)
             Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
-            # print(Xkp1_simul, Ykp1_simul)
             k += 1
             yield k, Xkp1_simul, Ykp1_simul
 
     # ------------------------------------------------------------------
     # Covariance diagnostics
     # ------------------------------------------------------------------
-    def _test_CovMatrix(self, Mat, k):
+    def _test_CovMatrix(self, mat: np.ndarray, k: int) -> None:
         """
-        Vérifie si une matrice est une covariance valide :
-        - symétrique
-        - semi-définie positive
+        Check whether a matrix is a valid covariance matrix.
 
-        Log les problèmes rencontrés et affiche le rapport via rich_show_fields si verbose > 1.
+        Verifies symmetry and positive semi-definiteness. Skipped entirely
+        for augmented models. Issues are logged as warnings and optionally
+        displayed via ``rich_show_fields`` when ``verbose > 1``.
+
+        Parameters
+        ----------
+        mat : np.ndarray
+            Matrix to validate, shape ``(n, n)``.
+        k : int
+            Current time step index, used in log messages.
         """
         if self.augmented:
-            # Pas de check sur models augmentés
+            # No check performed on augmented models
             return
 
-        verdict, report = diagnose_covariance(Mat)
+        verdict, report = diagnose_covariance(mat)
 
         if not verdict:
-            # Récupération des valeurs propres déjà calculées
             eigvals = report["eigenvalues"]
-            neg_eigvals = eigvals[eigvals < -EPS_ABS]
+            neg_eigvals = eigvals[eigvals < EIG_TOL_FAIL]
 
-            from rich import print
-
-            print(report)
+            # print(report)
+            # input("ATTENTE - report")
 
             self.logger.warning(
                 f"Step {k}: Covariance matrix invalid. "
                 f"Symmetric: {report['is_symmetric']}, "
-                f"Cholesky OK: {report['cholesky_ok']}, "
+                # f"Cholesky OK: {report['cholesky_ok']}, "
                 f"PSD: {report['is_psd']}, "
                 f"Ill conditioned: {report['ill_conditioned']}, "
                 f"Numerically singular: {report['numerically_singular']}, "
@@ -262,7 +413,7 @@ class PKF:
                     report,
                     [
                         "is_symmetric",
-                        "cholesky_ok",
+                        # "cholesky_ok",
                         "is_psd",
                         "ill_conditioned",
                         "numerically_singular",
@@ -275,67 +426,130 @@ class PKF:
     # ------------------------------------------------------------------
     # First estimate
     # ------------------------------------------------------------------
-    def _firstEstimate(self, generator):
+    def _firstEstimate(
+        self,
+        generator: Generator[tuple[int, Optional[np.ndarray], np.ndarray], None, None],
+    ) -> PKFStep:
+        """
+        Compute the initial filter estimate from the first data point.
 
+        The initial state estimate is obtained via Gaussian conditioning
+        of the prior ``p(x_0)`` on the first observation ``y_0``:
+
+            X_update  = mu_x + Sigma_xy @ Sigma_yy^{-1} @ (y - mu_y)
+            PXX_update = Sigma_xx - Sigma_xy @ Sigma_yy^{-1} @ Sigma_yx
+
+        Parameters
+        ----------
+        generator : Generator
+            Data generator yielding ``(k, x_true, y_observed)`` tuples.
+
+        Returns
+        -------
+        PKFStep
+            The first filter step with predicted and updated estimates.
+        """
         k, xkp1, ykp1 = next(generator)
 
-        Xkp1_update = np.zeros((self.dim_x, 1))
-        PXXkp1_update = np.zeros((self.dim_x, self.dim_x))
-
-        # Conditionnement gaussien pour le premier
+        # Gaussian conditioning on the first observation
         mu_x0, mu_y0 = np.split(self.mz0, [self.dim_x])
         Sigma11 = self.Pz0[: self.dim_x, : self.dim_x]
         Sigma12 = self.Pz0[: self.dim_x, self.dim_x :]
         Sigma21 = self.Pz0[self.dim_x :, : self.dim_x]
         Sigma22 = self.Pz0[self.dim_x :, self.dim_x :]
 
-        Xkp1_update[0 : self.dim_x, 0] = (
-            mu_x0 + Sigma12 @ np.linalg.inv(Sigma22) @ (ykp1 - mu_y0)
-        ).reshape(-1)
-        PXXkp1_update = Sigma11 - Sigma12 @ np.linalg.inv(Sigma22) @ Sigma21
+        Sigma22_inv: np.ndarray = np.linalg.inv(Sigma22)
+        Xkp1_update: np.ndarray = mu_x0 + Sigma12 @ Sigma22_inv @ (ykp1 - mu_y0)
+        PXXkp1_update: np.ndarray = Sigma11 - Sigma12 @ Sigma22_inv @ Sigma21
         self._test_CovMatrix(PXXkp1_update, k)
 
-        Xkp1_predict = np.zeros((self.dim_x, 1))
-        aStep = PKFStep(
+        Xkp1_predict: np.ndarray = np.zeros((self.dim_x, 1))
+        step = PKFStep(
             k=k,
             xkp1=xkp1.copy() if xkp1 is not None else None,
             ykp1=ykp1.copy(),
-            Xkp1_predict=Xkp1_predict.copy(),
+            Xkp1_predict=Xkp1_predict,
             PXXkp1_predict=self.eye_dim_x.copy(),
             ikp1=self.zeros_dim_y_1.copy(),
             Skp1=self.eye_dim_y.copy(),
             Kkp1=self.zeros_dim_x_y.copy(),
             Xkp1_update=Xkp1_update.copy(),
-            PXXkp1_update=PXXkp1_update.copy(),
+            PXXkp1_update=symmetrize(PXXkp1_update),
         )
 
-        self.history.record(aStep)
+        self.history.record(step)
         if self.verbose > 1:
-            rich_show_fields(aStep, title="First Estimate")
-        return aStep
+            rich_show_fields(step, title="First Estimate")
+        return step
 
     # ------------------------------------------------------------------
-    # Next update
+    # Update step
     # ------------------------------------------------------------------
-    def _nextUpdating(self, k, xkp1, ykp1, Zkp1_predict, Pkp1_predict, store=True):
+    def _nextUpdating(
+        self,
+        k: int,
+        xkp1: Optional[np.ndarray],
+        ykp1: np.ndarray,
+        Zkp1_predict: np.ndarray,
+        Pkp1_predict: np.ndarray,
+        store: bool = True,
+    ) -> PKFStep:
+        """
+        Perform one Kalman update step given a new observation.
 
+        Computes the innovation, Kalman gain, and updated state estimate.
+        The updated covariance is computed using the numerically stable
+        Joseph form to preserve positive semi-definiteness.
+
+        Parameters
+        ----------
+        k : int
+            Current time step index.
+        xkp1 : np.ndarray or None
+            Ground truth state at step ``k``, shape ``(dim_x, 1)``.
+            ``None`` if unavailable.
+        ykp1 : np.ndarray
+            Observation vector at step ``k``, shape ``(dim_y, 1)``.
+        Zkp1_predict : np.ndarray
+            Augmented predicted state ``[X_predict; Y_predict]``,
+            shape ``(dim_xy, 1)``.
+        Pkp1_predict : np.ndarray
+            Augmented predicted covariance matrix, shape ``(dim_xy, dim_xy)``.
+        store : bool, optional
+            Whether to record the step in the history tracker (default ``True``).
+            Set to ``False`` during intermediate IEPKF iterations.
+
+        Returns
+        -------
+        PKFStep
+            The updated filter step.
+
+        Raises
+        ------
+        LinAlgError
+            If Cholesky factorisation of the innovation covariance fails.
+        ValueError
+            If the innovation covariance has an unexpected shape or content.
+        """
         Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
         PXXkp1_predict = Pkp1_predict[: self.dim_x, : self.dim_x]
         PXYkp1_predict = Pkp1_predict[: self.dim_x, self.dim_x :]
         PYXkp1_predict = Pkp1_predict[self.dim_x :, : self.dim_x]
         PYYkp1_predict = Pkp1_predict[self.dim_x :, self.dim_x :]
 
-        ikp1 = ykp1 - Ykp1_predict
-        Skp1 = PYYkp1_predict.copy()
+        ikp1: np.ndarray = ykp1 - Ykp1_predict
+        Skp1: np.ndarray = PYYkp1_predict.copy()
 
+        # Regularise innovation covariance if ill-conditioned
         condS = np.linalg.cond(Skp1)
         if condS > COND_FAIL:
             self.logger.warning(f"Step {k}: Skp1 ill-conditioned (cond={condS:.2e})")
             Skp1 += EPS_ABS * self.eye_dim_y
 
+        # Kalman gain via Cholesky solve — more stable than direct inversion
         try:
             c, low = cho_factor(Skp1)
-            Kkp1 = PXYkp1_predict @ cho_solve((c, low), self.eye_dim_y)
+            Kkp1: np.ndarray = PXYkp1_predict @ cho_solve((c, low), self.eye_dim_y)
         except LinAlgError as e:
             self.logger.error(f"Step {k}: LinAlgError in cho_factor/solve: {e}")
             raise
@@ -343,16 +557,16 @@ class PKF:
             self.logger.error(f"Step {k}: ValueError in cho_factor/solve: {e}")
             raise
 
-        Xkp1_update = Xkp1_predict + Kkp1 @ ikp1
-        PXXkp1_update = PXXkp1_predict - Kkp1 @ PYXkp1_predict
-        self._test_CovMatrix(PXXkp1_update, k)
+        Xkp1_update: np.ndarray = Xkp1_predict + Kkp1 @ ikp1
 
-        # Joseph form
-        temp = np.vstack((self.eye_dim_x, -Kkp1.T))
-        PXXkp1_update_Joseph = temp.T @ Pkp1_predict @ temp
+        # Joseph form: (I - K*H) @ P @ (I - K*H)^T — preserves PSD
+        Joseph_factor: np.ndarray = np.vstack((self.eye_dim_x, -Kkp1.T))
+        PXXkp1_update_Joseph: np.ndarray = symmetrize(
+            Joseph_factor.T @ Pkp1_predict @ Joseph_factor
+        )
         self._test_CovMatrix(PXXkp1_update_Joseph, k)
 
-        aStep = PKFStep(
+        step = PKFStep(
             k=k,
             xkp1=xkp1.copy() if xkp1 is not None else None,
             ykp1=ykp1.copy(),
@@ -362,14 +576,13 @@ class PKF:
             Skp1=Skp1.copy(),
             Kkp1=Kkp1.copy(),
             Xkp1_update=Xkp1_update.copy(),
-            # PXXkp1_update  = PXXkp1_update.copy(),
             PXXkp1_update=PXXkp1_update_Joseph.copy(),
         )
 
         if store:
-            self.history.record(aStep)
+            self.history.record(step)
 
         if self.verbose > 1:
-            rich_show_fields(aStep, title=f"Step {k} Update")
+            rich_show_fields(step, title=f"Step {k} Update")
 
-        return aStep
+        return step

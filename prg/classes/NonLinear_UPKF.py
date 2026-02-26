@@ -7,35 +7,16 @@ Unscented Pairwise Kalman filter (UPKF) implementation
 ####################################################################
 """
 
-from __future__ import annotations
-import numpy as np
-from rich import print
-from scipy.linalg import LinAlgError
-
-from classes.NonLinear_PKF import NonLinear_PKF
-from others.utils import diagnose_covariance, rich_show_fields
-from classes.SigmaPointsSet import SigmaPointsSet
-
-
-class FilterConfig:
-    def __init__(self, sigma_point_set_name: str, dim: int, param) -> None:
-        self.sigma_point_set_name = sigma_point_set_name
-        self.dim = dim
-        self.param = param
-
-    def create_sigma_point_set(self) -> SigmaPointsSet:
-        try:
-            cls = SigmaPointsSet.registry[self.sigma_point_set_name]
-        except KeyError:
-            raise ValueError(
-                f"Jeu de sigma-points inconnu '{self.sigma_point_set_name}'. "
-                f"Disponibles : {list(SigmaPointsSet.registry.keys())}"
-            )
-
-        return cls(dim=self.dim, param=self.param)
+from __future__ import annotations  # Annotations de type
+from typing import Generator, Optional
+import numpy as np  # Utilisé partout
+from scipy.linalg import LinAlgError  # Utilisé dans le try/except
+from classes.PKF import PKF  # Classe parente
+from classes.SigmaPointsSet import SigmaPointsSet  # Utilisé dans FilterConfig
+from others.utils import symmetrize
 
 
-class NonLinear_UPKF(NonLinear_PKF):
+class NonLinear_UPKF(PKF):
     """Implementation of UPKF."""
 
     def __init__(
@@ -47,15 +28,15 @@ class NonLinear_UPKF(NonLinear_PKF):
     ):
         super().__init__(param, sKey, verbose)
 
-        self.sigma_point_set_name = sigmaSet
-
-        cfg = FilterConfig(
-            sigma_point_set_name=self.sigma_point_set_name,
-            dim=2 * self.dim_xy,
-            param=self.param,
-        )
-
-        self.sigma_point_set_obj = cfg.create_sigma_point_set()
+        # Dans NonLinear_UPKF.__init__, à la place de FilterConfig
+        try:
+            cls = SigmaPointsSet.registry[sigmaSet]
+        except KeyError:
+            raise ValueError(
+                f"Jeu de sigma-points inconnu '{sigmaSet}'. "
+                f"Disponibles : {list(SigmaPointsSet.registry.keys())}"
+            )
+        self.sigma_point_set_obj = cls(dim=2 * self.dim_xy, param=self.param)
 
     def process_filter(
         self,
@@ -70,9 +51,7 @@ class NonLinear_UPKF(NonLinear_PKF):
         Generator of UPKF filter using optional data generator.
         """
 
-        if __debug__:
-            if not ((isinstance(N, int) and N > 0) or N is None):
-                raise ValueError("N must be None or a number >0")
+        self._validate_N(N)
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()
@@ -98,8 +77,8 @@ class NonLinear_UPKF(NonLinear_PKF):
             # Sigma points et leur propagation par g
             Xkp1_update_augmented[: self.dim_x] = step.Xkp1_update
             Xkp1_update_augmented[self.dim_x : self.dim_xy] = step.ykp1
-            Pa = Pa_base.copy()  # seulement copier une fois
-            Pa[0 : self.dim_x, 0 : self.dim_x] = step.PXXkp1_update
+            Pa = Pa_base.copy()  # copier Pa_base plutôt que recréer la matrice entière
+            Pa[: self.dim_x, : self.dim_x] = step.PXXkp1_update
             sigma = self.sigma_point_set_obj._sigma_point(Xkp1_update_augmented, Pa)
             # here ykp1 still gives the previous : it is yk indeed!
             sigma_propag = [
@@ -113,9 +92,10 @@ class NonLinear_UPKF(NonLinear_PKF):
 
             # Remise à 0
             Pkp1_predict.fill(0.0)
-            for i in range(self.sigma_point_set_obj.nbSigmaPoint):
-                diff = sigma_propag[i] - Zkp1_predict
-                Pkp1_predict += self.sigma_point_set_obj.Wc[i] * np.outer(diff, diff)
+            diffs = np.array(sigma_propag) - Zkp1_predict  # (n, dim, 1)
+            Pkp1_predict = symmetrize(
+                np.einsum("i,ijk,ilk->jl", self.sigma_point_set_obj.Wc, diffs, diffs)
+            )
             self._test_CovMatrix(Pkp1_predict, step.k)
 
             # New data is arriving ##################################

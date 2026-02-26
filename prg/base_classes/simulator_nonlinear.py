@@ -4,7 +4,7 @@
 from base_classes.simulator_base import BaseDataSimulator
 
 from models.nonLinear import ModelFactoryNonLinear
-from classes.NonLinear_PKF import NonLinear_PKF
+from classes.PKF import PKF
 from classes.ParamNonLinear import ParamNonLinear
 
 
@@ -20,4 +20,4 @@ class NonLinearDataSimulator(BaseDataSimulator):
         return ParamNonLinear(self.verbose, dim_x, dim_y, **params)
 
     def create_pkf(self):
-        return NonLinear_PKF(self.param, sKey=self.sKey, verbose=self.verbose)
+        return PKF(self.param, sKey=self.sKey, verbose=self.verbose)
