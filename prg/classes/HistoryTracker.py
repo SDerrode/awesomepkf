@@ -314,11 +314,15 @@ class HistoryTracker:
             if key not in window:
                 raise KeyError(f"window doit contenir '{key}'")
 
-        df = self.as_dataframe().iloc[window["xmin"] : window["xmax"]]
+        xmin, xmax = window["xmin"], window["xmax"]
+        df = self.as_dataframe().iloc[xmin:xmax]
+
         if df.empty:
             df = self.as_dataframe()
             if df.empty:
                 raise ValueError("Aucune donnée enregistrée.")
+            xmin, xmax = 0, len(df)  # ← fenêtre mise à jour
+
         for p in list_param:
             if p not in df.columns:
                 raise KeyError(
@@ -333,7 +337,6 @@ class HistoryTracker:
             )
         # On récupère le nombre de composantes de X
         nb_components = first.shape[0]
-        # print('nb_components=', nb_components)
 
         df_subset = pd.DataFrame()
         df_subset_var = pd.DataFrame()
@@ -355,6 +358,7 @@ class HistoryTracker:
             df_subset[list_labels_p_local] = df[p].apply(
                 lambda x: pd.Series(x.flatten())
             )
+
             if has_var:
                 df_subset_var[list_labels_e_local] = df[e].apply(
                     lambda x: pd.Series(x.diagonal())
@@ -412,7 +416,7 @@ class HistoryTracker:
             bbox_to_anchor=(0.5, 1.15),
             ncol=len(unique),
         )
-        axes[-1].set_xlim(window["xmin"], window["xmax"] - 1)
+        axes[-1].set_xlim(xmin, xmax - 1)
         axes[-1].set_xlabel("n")
 
         # Nettoyage explicite de l’axe partagé
