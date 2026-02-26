@@ -53,7 +53,7 @@ Each filter has two types of programs:
 
 ### Particle Filter (PF)
 
-- **run_nonlinear_pf.py** – filter non-linear data either from simulated data or from a previously saved file e.g., generated with `simulateNonLinearData.py`)  
+- **run_nonlinear_ppf.py** – filter non-linear data either from simulated data or from a previously saved file e.g., generated with `simulateNonLinearData.py`)  
 
 ---
 
@@ -73,7 +73,7 @@ python3 prg/simulateNonLinearData.py   --N 1000 --nonLinearModelName "x2_y1_with
 
 python3 prg/run_nonlinear_epkf.py --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --ell 1              --verbose 1 --saveHistory --plot
 python3 prg/run_nonlinear_upkf.py --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --sigmaSet "wan2000" --verbose 1 --saveHistory --plot
-python3 prg/run_nonlinear_pf.py   --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --nbParticles 300    --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_ppf.py   --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --nbParticles 300    --verbose 1 --saveHistory --plot
 ```
 
 ---

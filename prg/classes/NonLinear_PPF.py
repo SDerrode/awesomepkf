@@ -25,8 +25,8 @@ from others.numerics import EPS_ABS
 from others.utils import rich_show_fields, symmetrize, check_eigvals
 
 
-class NonLinear_PF(PKF):
-    """Implementation of PF."""
+class NonLinear_PPF(PKF):
+    """Implementation of PPF."""
 
     def __init__(
         self,
