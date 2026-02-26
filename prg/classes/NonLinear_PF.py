@@ -3,39 +3,37 @@
 
 """
 ####################################################################
-Extended Pairwise Kalman filter (EPKF) implementation
+Parwise Particle Filter implementation
 ####################################################################
 """
 
 from __future__ import annotations
 
-from typing import Generator, Optional, Tuple
+# Stdlib
+from dataclasses import replace
+from typing import Generator
+
+# Third-party
 import numpy as np
 from rich import print
+from scipy.linalg import cholesky, inv
 
-from dataclasses import replace
-
-from filterpy.monte_carlo import systematic_resample
-
-from scipy.linalg import cho_factor, cho_solve
-from scipy.linalg import solve, cholesky, inv, eigh
-
-from classes.NonLinear_PKF import NonLinear_PKF
+# Local
+from classes.PKF import PKF
 from classes.PKF import PKFStep
-
-# A few utils functions that are used several times
-from others.utils import diagnose_covariance, rich_show_fields
 from others.numerics import EPS_ABS
+from others.utils import rich_show_fields, symmetrize, check_eigvals
 
 
-class NonLinear_PF(NonLinear_PKF):
+class NonLinear_PF(PKF):
     """Implementation of PF."""
 
     def __init__(
         self,
         param: ParamLinear | ParamNonLinear,
         nbParticles=300,
-        resample_threshold=0.5,
+        resample_threshold=0.7,
+        resample_method="stratified",
         sKey=None,
         verbose=0,
     ):
@@ -44,17 +42,10 @@ class NonLinear_PF(NonLinear_PKF):
 
         self.nbParticles = nbParticles
         self.resample_threshold = resample_threshold
+        self.resample_method = resample_method
 
-    # # ==========================
-    # # ESS + Resampling
-    # # ==========================
-
-    # ess = 1.0 / np.sum(weights**2)
-    # if ess < self.resample_threshold * self.nbParticles:
-    #     idx = systematic_resample(weights)
-    #     Z_particles = Z_particles[idx]
-    #     weights.fill(1.0 / self.nbParticles)
-    # # print(f'ess={ess}')
+        # dictionnaire des constantes
+        self._cached = {}
 
     # =========================
     # RESAMPLING UNIFIÉ
@@ -82,11 +73,16 @@ class NonLinear_PF(NonLinear_PKF):
                     j += 1
         elif method == "residual":
             indexes = []
-            num_copies = np.floor(N * self.weights).astype(int)
+            num_copies = np.floor(N * weights).astype(int)
             for i in range(N):
                 indexes += [i] * num_copies[i]
-            residual = self.weights - num_copies / N
-            residual /= residual.sum()
+            residual = weights - num_copies / N
+            # residual /= residual.sum()
+            residual_sum = residual.sum()
+            if residual_sum > EPS_ABS:
+                residual /= residual_sum
+            else:
+                residual = np.ones(N) / N
             cumulative_sum_res = np.cumsum(residual)
             cumulative_sum_res[-1] = 1.0
             remaining = N - len(indexes)
@@ -99,35 +95,49 @@ class NonLinear_PF(NonLinear_PKF):
 
         return indexes
 
+    def _precompute(self):
+        Q = self.mQ[: self.dim_x, : self.dim_x]
+        M = self.mQ[: self.dim_x, self.dim_x :]
+        R = self.mQ[self.dim_x :, self.dim_x :]
+        R_inv = inv(R)
+        P_prime_x_base = Q - M @ R_inv @ M.T
+
+        # Stabilisation PSD + Cholesky — calculés une seule fois
+        eigvals, eigvecs = np.linalg.eigh(P_prime_x_base)
+        check_eigvals(eigvals)
+        P_prime_x = eigvecs @ np.diag(eigvals) @ eigvecs.T
+
+        self._cached = dict(
+            R_inv=R_inv,
+            MRinv=M @ R_inv,
+            L=cholesky(P_prime_x, lower=True),
+            log_norm_const=-0.5
+            * (self.dim_y * np.log(2 * np.pi) + np.linalg.slogdet(R)[1]),
+        )
+
     def process_filter(self, N=None, data_generator=None):
-        if __debug__:
-            if not ((isinstance(N, int) and N > 0) or N is None):
-                raise ValueError("N must be None or a number >0")
+
+        self._validate_N(N)
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()
         )
 
         # Additional short-cuts
-        g, mQ, augmented = self.param.g, self.param.mQ, self.param.augmented
+        # augmented = self.param.augmented
+
+        # precalcul des constantes
+        self._precompute()
 
         # Les particules et leur poids
-        particles_courant = self._seed_gen.rng.multivariate_normal(
+        particles_current = self._seed_gen.rng.multivariate_normal(
             self.mz0[: self.dim_x].flatten(),
             self.Pz0[: self.dim_x, : self.dim_x],
             self.nbParticles,
         )
-        particles_courant = particles_courant[..., np.newaxis]
-        particles_precedent = np.zeros_like(particles_courant)
+        particles_current = particles_current[..., np.newaxis]
+        # particles_previous = np.zeros_like(particles_current)
         weights = np.full(self.nbParticles, 1.0 / self.nbParticles)
-
-        Q = self.mQ[: self.dim_x, : self.dim_x]
-        M = self.mQ[: self.dim_x, self.dim_x :]
-        MT = M.T
-        R = self.mQ[self.dim_x :, self.dim_x :]
-        R_inv = inv(R)
-        sign, logdet = np.linalg.slogdet(R)
-        log_norm_const = -0.5 * (self.dim_y * np.log(2 * np.pi) + logdet)
 
         # The first
         ##################################################################################################
@@ -146,18 +156,18 @@ class NonLinear_PF(NonLinear_PKF):
         while N is None or step.k < N:
 
             # Maj des particules
-            particles_precedent = particles_courant.copy()
+            particles_previous = particles_current.copy()
 
             # =========================
             # PREDICTION
             # =========================
 
-            Xkp1_predict = np.mean(particles_courant, axis=0)
+            Xkp1_predict = np.mean(particles_current, axis=0)
             # print(f"Xkp1_predict={Xkp1_predict}")
-            diff = particles_courant - Xkp1_predict
-            # Pkp1_predict = diff.T @ diff / (self.nbParticles - 1)
-            PXXkp1_predict = np.einsum("tik,tjk->ij", diff, diff) / (
-                self.nbParticles - 1
+            diff = particles_current - Xkp1_predict
+            # PXXkp1_predict n'est pas utilisé
+            PXXkp1_predict = symmetrize(
+                np.einsum("tik,tjk->ij", diff, diff) / (self.nbParticles - 1)
             )
             # print(f"PXXkp1_predict={PXXkp1_predict}")
             self._test_CovMatrix(PXXkp1_predict, step.k)
@@ -180,50 +190,54 @@ class NonLinear_PF(NonLinear_PKF):
                         self.zeros_dim_xy_1,
                         self.dt,
                     )
-                    for p in particles_precedent
+                    for p in particles_previous
                 ]
             )
 
             # Calculer innovations pour toutes les particules pour la mise à jour des poids
             innovations = new_ykp1 - muxy[:, self.dim_x :, :]
-            tmp = np.matmul(R_inv, innovations)  # (300,2,1)
+            tmp = np.matmul(self._cached["R_inv"], innovations)  # (300,2,1)
             quad = np.matmul(
                 innovations.transpose(0, 2, 1), tmp  # (300,1,2)  # (300,2,1)
             )
-            exponents = -0.5 * quad.squeeze()
+            exponents = -0.5 * quad.reshape(self.nbParticles)
 
             # Log-weights pour stabilité
-            log_weights = np.log(weights) + exponents + log_norm_const
+            log_weights = (
+                np.log(np.maximum(weights, EPS_ABS))
+                + exponents
+                + self._cached["log_norm_const"]
+            )
             log_weights -= np.max(log_weights)
             weights = np.exp(log_weights)
             weights /= np.sum(weights)
+            if __debug__:
+                assert not np.any(
+                    np.isnan(weights)
+                ), f"NaN dans les poids au step {new_k}"
+                assert np.isclose(
+                    weights.sum(), 1.0, atol=1e-6
+                ), f"Poids non normalisés : {weights.sum()}"
 
-            # Mise à jour des particules
-            for i in range(self.nbParticles):
-                mu_prime_x = muxy[i, : self.dim_x] + M @ R_inv @ (
-                    new_ykp1 - muxy[i, self.dim_x :]
-                )
-                P_prime_x = Q - M @ R_inv @ MT
+            # Mise à jour des particules — entièrement vectorisée
+            # innovations_all = new_ykp1 - muxy[:, self.dim_x :, :]  # (N, dim_y, 1)
+            mu_prime_x_all = (
+                muxy[:, : self.dim_x, :] + self._cached["MRinv"] @ innovations
+            )  # (N, dim_x, 1)
+            noise = self._seed_gen.rng.standard_normal(
+                (self.nbParticles, self.dim_x, 1)
+            )
+            particles_current = mu_prime_x_all + np.einsum(
+                "ij,njk->nik", self._cached["L"], noise
+            )
 
-                # Forcer PSD pour stabilité
-                eigvals, eigvecs = np.linalg.eigh(P_prime_x)
-                eigvals[eigvals < EPS_ABS] = EPS_ABS
-                P_prime_x = eigvecs @ np.diag(eigvals) @ eigvecs.T
-
-                # Tirage stable via Cholesky
-                # Paramètres de la loi recherchée pour le tirage sont :
-                L = cholesky(P_prime_x, lower=True)
-                particles_courant[i] = (
-                    mu_prime_x
-                    + L @ self._seed_gen.rng.standard_normal(self.dim_x).reshape(-1, 1)
-                )
-
-            particles_courant_temp = particles_courant.squeeze(-1)
-            X = particles_courant_temp[:, : self.dim_x]
-            Xkp1_update = np.average(X, axis=0, weights=weights)[:, None]
+            particles_current_temp = particles_current.squeeze(-1)
+            Xkp1_update = np.average(particles_current_temp, axis=0, weights=weights)[
+                :, None
+            ]
             # print(f"Xkp1_update={Xkp1_update}")
-            dx = X - Xkp1_update.T  # (300,2)
-            PXXkp1_update = (weights[:, None] * dx).T @ dx  # (2,2)
+            dx = particles_current_temp - Xkp1_update.T
+            PXXkp1_update = symmetrize((weights[:, None] * dx).T @ dx)
             # print(f"PXXkp1_update={PXXkp1_update}")
 
             step = PKFStep(
@@ -231,19 +245,26 @@ class NonLinear_PF(NonLinear_PKF):
                 xkp1=new_xkp1.copy() if new_xkp1 is not None else None,
                 ykp1=new_ykp1.copy(),
                 Xkp1_predict=Xkp1_predict.copy(),
+                PXXkp1_predict=PXXkp1_predict.copy(),
                 ikp1=None,
                 Skp1=None,
                 Kkp1=None,
-                PXXkp1_predict=PXXkp1_predict.copy(),
                 Xkp1_update=Xkp1_update.copy(),
                 # PXXkp1_update  = PXXkp1_update.copy(),
                 PXXkp1_update=PXXkp1_update.copy(),
             )
 
             # Ré-échantillonnage des particules
-            indexes = self.resample(weights)
-            particles_courant = particles_courant[indexes]
-            weights.fill(1.0 / self.nbParticles)
+            ess = 1.0 / np.sum(weights**2)
+            if ess < self.resample_threshold * self.nbParticles:
+                indexes = self.resample(weights, self.resample_method)
+                particles_current = particles_current[indexes]
+                weights.fill(1.0 / self.nbParticles)
+
+            if __debug__:
+                assert not np.any(
+                    np.isnan(particles_current)
+                ), f"NaN dans les particules au step {new_k}"
 
             # Sauvegarde dans l'historique
             self.history.record(step)

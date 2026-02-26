@@ -28,7 +28,7 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
         # Expected behaviour: persistent oscillations of self.moderate amplitude; nonlinear terms drive and sustain the cycles.
         # Numeric tips: choose \(x_0,y_0\) small but nonzero, \(\sigma\) very small (e.g.\ 0.005) to reveal deterministic oscillation, \(N\ge 300\).
         self.mQ = np.zeros((self.dim_xy, self.dim_xy))
-        self.mQ[0 : self.dim_x, 0 : self.dim_x] = self.mod.mQ
+        self.mQ[: self.dim_x, : self.dim_x] = self.mod.mQ
 
         # Dimensions état augmenté x=2, y=1
         # Dimensions état original (non augmenté) x=1, y=1
@@ -57,16 +57,16 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
 
         # Le fait d'utiliser le modèle non augmenté garanti que l'on fait les mêmes choses
         ax = self.mod._gx(
-            x[0 : self.dim_x - self.dim_y],
+            x[: self.dim_x - self.dim_y],
             x[self.dim_x - self.dim_y :],
-            t[0 : self.dim_x - self.dim_y],
+            t[: self.dim_x - self.dim_y],
             t[self.dim_x - self.dim_y :],
             dt,
         )
         ay = self.mod._gy(
-            x[0 : self.dim_x - self.dim_y],
+            x[: self.dim_x - self.dim_y],
             x[self.dim_x - self.dim_y :],
-            t[0 : self.dim_x - self.dim_y],
+            t[: self.dim_x - self.dim_y],
             t[self.dim_x - self.dim_y :],
             dt,
         )

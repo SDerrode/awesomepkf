@@ -2,36 +2,65 @@
 # -*- coding: utf-8 -*-
 
 """
-Module LINEAR PKF ##################################################
 ####################################################################
-Implémente un filtre de Kalman couple (PKF)
-Un exemple d'usage est donné dans le programme principal ci-dessous.
+Linear Pairwise Kalman filter (PKF) implementation
 ####################################################################
 """
 
-from __future__ import annotations
-from typing import Generator, Optional
-import numpy as np
-from scipy.linalg import LinAlgError
+from __future__ import annotations  # Used for type annotations
+from typing import Generator, Optional  # Used in signatures
+import numpy as np  # Used throughout
+from scipy.linalg import LinAlgError  # Used in try/except
+from .PKF import PKF  # Parent class
+from classes.ParamLinear import ParamLinear  # Used in type hints
+from classes.ParamNonLinear import ParamNonLinear  # Used in type hints
 
-from .PKF import PKF
-from others.utils import diagnose_covariance, rich_show_fields
-from classes.ParamLinear import ParamLinear
+from others.utils import symmetrize
 
 
 class Linear_PKF(PKF):
-    """PKF : Linear coupled Kalman filter."""
+    """
+    Linear Pairwise Kalman Filter (PKF).
+
+    Implements the coupled Kalman filter for linear state-space models.
+    The transition and observation models are assumed to be linear, allowing
+    the Jacobians to be replaced by the constant matrices ``A`` and ``B``
+    from the parameter object.
+
+    The filter operates as a generator: it consumes observations one by one
+    and yields the filter outputs at each time step.
+
+    Attributes
+    ----------
+    param : ParamLinear | ParamNonLinear
+        Object holding the model parameters (transition matrices,
+        noise covariances, etc.).
+    """
 
     def __init__(
-        self, param: ParamLinear, sKey: Optional[int] = None, verbose: int = 0
-    ):
+        self,
+        param: ParamLinear | ParamNonLinear,
+        sKey: Optional[int] = None,
+        verbose: int = 0,
+    ) -> None:
+        """
+        Initialise the Linear PKF filter.
 
-        if __debug__:
-            if not isinstance(param, ParamLinear):
-                raise TypeError("param must be an object from class ParamLinear")
+        Parameters
+        ----------
+        param : ParamLinear | ParamNonLinear
+            Object holding the model parameters (transition matrices ``A``,
+            ``B``, noise covariance ``Q``, etc.).
+        sKey : int, optional
+            Random seed for reproducibility (default ``None``).
+        verbose : int, optional
+            Verbosity level passed to the parent class (default ``0``).
+        """
+        super().__init__(param, sKey, verbose)
 
-        self.param = param
-        super().__init__(sKey, verbose)
+        self._A: np.ndarray = self.param.A
+        self._AT: np.ndarray = self.param.A.T
+        self._BmQBT: np.ndarray = self.param.B @ self.mQ @ self.param.B.T
 
     def process_filter(
         self,
@@ -40,64 +69,108 @@ class Linear_PKF(PKF):
             Generator[tuple[int, np.ndarray, np.ndarray], None, None]
         ] = None,
     ) -> Generator[
-        tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray], None, None
+        tuple[int, Optional[np.ndarray], np.ndarray, np.ndarray, np.ndarray],
+        None,
+        None,
     ]:
         """
-        Generator for Linear PKF filter.
-        Yields: k, xkp1, ykp1, Xkp1_predict, Xkp1_update
-        """
+        Run the Linear PKF filter as a generator.
 
-        if __debug__:
-            if not ((isinstance(N, int) and N > 0) or N is None):
-                raise ValueError("N must be None or a number >0")
+        At each time step, the method performs a prediction step using the
+        constant linear matrices ``A`` and ``B``, then an update step upon
+        receiving a new observation, and yields the current filter outputs.
+
+        Data is consumed either from ``data_generator`` if provided, or from
+        the internal :meth:`_data_generation` method.
+
+        Parameters
+        ----------
+        N : int, optional
+            Maximum number of time steps to process. If ``None`` (default),
+            the filter runs until the data generator is exhausted.
+        data_generator : Generator, optional
+            External data generator yielding tuples
+            ``(k, x_true, y_observed)`` at each time step, where:
+
+            - ``k``          : int         — time step index
+            - ``x_true``     : np.ndarray  — ground truth state, shape ``(dim_x, 1)``;
+                               may be ``None`` if no ground truth is available
+            - ``y_observed`` : np.ndarray  — observation vector, shape ``(dim_y, 1)``
+
+            If ``None``, the internal generator is used.
+
+        Yields
+        ------
+        k : int
+            Current time step index.
+        x_true : np.ndarray or None
+            Ground truth state at step ``k``, shape ``(dim_x, 1)``.
+            ``None`` if ground truth is unavailable.
+        y_observed : np.ndarray
+            Observation vector at step ``k``, shape ``(dim_y, 1)``.
+        X_predict : np.ndarray
+            Predicted (prior) state estimate at step ``k``, shape ``(dim_x, 1)``.
+        X_update : np.ndarray
+            Updated (posterior) state estimate at step ``k``, shape ``(dim_x, 1)``.
+
+        Raises
+        ------
+        ValueError
+            If ``N`` is not a strictly positive integer or ``None``.
+        LinAlgError
+            If a linear algebra error occurs during the update step
+            (e.g. non-invertible innovation covariance matrix).
+        """
+        self._validate_N(N)
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()
         )
 
-        # Short-cuts
-        A, B = self.param.A, self.param.B
-        AT = A.T
-        BmQBT = B @ self.mQ @ B.T
-
         # ------------------------------------------------------------------
         # First step
         # ------------------------------------------------------------------
         step = self._firstEstimate(generator)
-        if step.xkp1 is None:  # Il n'y a pas de VT
+        if step.xkp1 is None:  # There is no ground truth
             self.ground_truth = False
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
         # ------------------------------------------------------------------
-        # Initialize temporary matrices
+        # Pre-allocate temporary matrices (reused at every step)
         # ------------------------------------------------------------------
-        accel_xy_xy = self.zeros_dim_xy_xy.copy()
-        Xkp1_update_augmented = self.zeros_dim_xy_1.copy()
+        P_augmented: np.ndarray = self.zeros_dim_xy_xy.copy()
+        z_augmented: np.ndarray = self.zeros_dim_xy_1.copy()
 
         # ------------------------------------------------------------------
-        # Next steps
+        # Main filtering loop
         # ------------------------------------------------------------------
         while N is None or step.k < N:
 
-            # Assemble augmented state
-            Xkp1_update_augmented[: self.dim_x] = step.Xkp1_update
-            Xkp1_update_augmented[self.dim_x :] = step.ykp1
+            # Assemble augmented state vector [X_update ; y]
+            z_augmented[: self.dim_x] = step.Xkp1_update
+            z_augmented[self.dim_x :] = step.ykp1
 
-            # Prediction
-            Zkp1_predict = self.g(Xkp1_update_augmented, self.zeros_dim_xy_1, self.dt)
-            accel_xy_xy[0 : self.dim_x, 0 : self.dim_x] = step.PXXkp1_update
-            Pkp1_predict = A @ accel_xy_xy @ AT + BmQBT
+            # Prediction step
+            Zkp1_predict: np.ndarray = self.g(z_augmented, self.zeros_dim_xy_1, self.dt)
+            # Embed the state covariance into the augmented covariance matrix
+            P_augmented[: self.dim_x, : self.dim_x] = step.PXXkp1_update
+            Pkp1_predict: np.ndarray = symmetrize(
+                self._A @ P_augmented @ self._AT + self._BmQBT
+            )
             self._test_CovMatrix(Pkp1_predict, step.k)
 
-            # New data arrives
+            # Consume the next observation
             try:
+                new_k: int
+                new_xkp1: Optional[np.ndarray]
+                new_ykp1: np.ndarray
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
-                # self.logger.info("Data generator exhausted. Stopping filter.")
-                return
+                self.logger.debug("Data generator exhausted at step %d.", step.k)
+                return  # Data generator exhausted
 
-            # Updating
+            # Update step
             try:
                 step = self._nextUpdating(
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict
@@ -106,5 +179,4 @@ class Linear_PKF(PKF):
                 self.logger.error(f"Step {new_k}: LinAlgError during update")
                 raise
 
-            # self.logger.info(f"Step {step.k}: update computed successfully")
             yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update

@@ -143,7 +143,7 @@ class ParamNonLinear:
 
         if self.verbose > 0:
             print("========================")
-            print("  Q_xx:\n", fmt(self._mQ[0 : self.dim_x, 0 : self.dim_x]))
+            print("  Q_xx:\n", fmt(self._mQ[: self.dim_x, : self.dim_x]))
             print(
                 "  Q_yy:\n",
                 fmt(self._mQ[self.dim_x : self.dim_xy, self.dim_x : self.dim_xy]),

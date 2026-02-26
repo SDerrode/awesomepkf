@@ -188,18 +188,16 @@ class ParamLinear:
                 )
 
         # Sous-blocs
-        self._a = self._Sigma[self.dim_xy : self.dim_xy + self.dim_x, 0 : self.dim_x]
-        self._b = self._Sigma[self.dim_x : self.dim_xy, 0 : self.dim_x]
+        self._a = self._Sigma[self.dim_xy : self.dim_xy + self.dim_x, : self.dim_x]
+        self._b = self._Sigma[self.dim_x : self.dim_xy, : self.dim_x]
         self._c = self._Sigma[
             self.dim_xy + self.dim_x : 2 * self.dim_xy, self.dim_x : self.dim_xy
         ]
-        self._d = self._Sigma[
-            self.dim_xy + self.dim_x : 2 * self.dim_xy, 0 : self.dim_x
-        ]
+        self._d = self._Sigma[self.dim_xy + self.dim_x : 2 * self.dim_xy, : self.dim_x]
         self._e = self._Sigma[
             self.dim_xy : self.dim_xy + self.dim_x, self.dim_x : self.dim_xy
         ]
-        self._sxx = self._Sigma[0 : self.dim_x, 0 : self.dim_x]
+        self._sxx = self._Sigma[: self.dim_x, : self.dim_x]
         self._syy = self._Sigma[self.dim_x : self.dim_xy, self.dim_x : self.dim_xy]
 
     # ------------------------------------------------------------------
