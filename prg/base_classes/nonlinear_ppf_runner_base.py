@@ -1,13 +1,13 @@
 from classes.ParamNonLinear import ParamNonLinear
 from classes.ParamLinear import ParamLinear
-from classes.NonLinear_PF import NonLinear_PF
+from classes.NonLinear_PPF import NonLinear_PPF
 from models.nonLinear import ModelFactoryNonLinear
 from models.linear import ModelFactoryLinear
 from base_classes.runner_base import BaseRunner
 from others.plot_settings import WINDOW
 
 
-class BaseNonLinearPFRunner(BaseRunner):
+class BaseNonLinearPPFRunner(BaseRunner):
 
     def __init__(
         self,
@@ -23,7 +23,7 @@ class BaseNonLinearPFRunner(BaseRunner):
 
         super().__init__(model_name, verbose, plot, save_history, base_dir)
 
-        self.runner_instance = NonLinear_PF(
+        self.runner_instance = NonLinear_PPF(
             param=self.param,
             nbParticles=self.nbParticles,
             sKey=self.sKey,
@@ -46,13 +46,13 @@ class BaseNonLinearPFRunner(BaseRunner):
             list_label=["Observations y"],
             list_covar=[None],
             window=WINDOW,
-            basename=f"pf_observations_{self.model_name}",
+            basename=f"ppf_observations_{self.model_name}",
             show=False,
             base_dir=self.graph_dir,
         )
 
         if self.runner_instance.ground_truth:
-            title = f"'{self.model_name}' model data filtered with PF"
+            title = f"'{self.model_name}' model data filtered with PPF"
 
             self.runner_instance.history.plot(
                 title,
@@ -60,7 +60,7 @@ class BaseNonLinearPFRunner(BaseRunner):
                 list_label=["x true", "x estimated"],
                 list_covar=[None, "PXXkp1_update"],
                 window=WINDOW,
-                basename=f"pf_{self.model_name}",
+                basename=f"ppf_{self.model_name}",
                 show=False,
                 base_dir=self.graph_dir,
             )

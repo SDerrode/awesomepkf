@@ -3,13 +3,13 @@
 
 import argparse
 
-from base_classes.nonlinear_pf_runner_simulation import BaseNonLinearPFRunnerSim
-from base_classes.nonlinear_pf_runner_from_file import BaseNonLinearPFRunnerFromFile
+from base_classes.nonlinear_ppf_runner_simulation import BaseNonLinearPPFRunnerSim
+from base_classes.nonlinear_ppf_runner_from_file import BaseNonLinearPPFRunnerFromFile
 from others.parser import addParseToParser
 
 
 def parse_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run NonLinear PF")
+    parser = argparse.ArgumentParser(description="Run NonLinear PPF")
 
     addParseToParser(
         parser,
@@ -54,7 +54,7 @@ def main() -> None:
     if args.dataFileName is not None:
 
         # Mode FILE
-        runner = BaseNonLinearPFRunnerFromFile(
+        runner = BaseNonLinearPPFRunnerFromFile(
             model_name=model_name,
             nbParticles=args.nbParticles,
             data_filename=args.dataFileName,
@@ -65,7 +65,7 @@ def main() -> None:
     else:
 
         # Mode SIM
-        runner = BaseNonLinearPFRunnerSim(
+        runner = BaseNonLinearPPFRunnerSim(
             model_name=model_name,
             N=args.N,
             sKey=args.sKey,

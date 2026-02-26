@@ -13,7 +13,7 @@ from typing import Optional, Tuple, Type
 
 class BaseRunner(ABC):
     """
-    Abstract base runner for all PKF/EPKF/PF/UPKF workflows.
+    Abstract base runner for all PKF/EPKF/PPF/UPKF workflows.
     Factorizes logging, directories, model building, and history management.
     """
 
@@ -38,7 +38,7 @@ class BaseRunner(ABC):
         self.tracker_dir, self.datafile_dir, self.graph_dir = self._setup_directories()
 
         self.model, self.param = self._build_model()
-        self.runner_instance = None  # Will be set by child (pkf, epkf, pf, upkf)
+        self.runner_instance = None  # Will be set by child (pkf, epkf, ppf, upkf)
 
     # ==========================================================
     # Infrastructure

@@ -5,13 +5,13 @@ import os
 import logging
 from typing import Optional
 
-from classes.NonLinear_PF import NonLinear_PF
+from classes.NonLinear_PPF import NonLinear_PPF
 from others.utils import file_data_generator
 
-from base_classes.nonlinear_pf_runner_base import BaseNonLinearPFRunner
+from base_classes.nonlinear_ppf_runner_base import BaseNonLinearPPFRunner
 
 
-class BaseNonLinearPFRunnerFromFile(BaseNonLinearPFRunner):
+class BaseNonLinearPPFRunnerFromFile(BaseNonLinearPPFRunner):
     """
     Runner for filtering nonlinear data loaded from file.
     """
@@ -43,7 +43,7 @@ class BaseNonLinearPFRunnerFromFile(BaseNonLinearPFRunner):
     def run(self) -> None:
 
         if self.verbose > 1:
-            logging.info("Starting NonLinear PF Runner (file mode)")
+            logging.info("Starting NonLinear PPF Runner (file mode)")
 
         self.runner_instance.process_N_data(
             N=None,
@@ -53,7 +53,7 @@ class BaseNonLinearPFRunnerFromFile(BaseNonLinearPFRunner):
         )
 
         if self.save_history:
-            self._save_history("history_run_pf_file.pkl")
+            self._save_history("history_run_ppf_file.pkl")
 
         self._compute_errors()
 

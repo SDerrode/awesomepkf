@@ -4,12 +4,12 @@
 import logging
 from typing import Optional
 
-from base_classes.nonlinear_pf_runner_base import BaseNonLinearPFRunner
+from base_classes.nonlinear_ppf_runner_base import BaseNonLinearPPFRunner
 
 
-class BaseNonLinearPFRunnerSim(BaseNonLinearPFRunner):
+class BaseNonLinearPPFRunnerSim(BaseNonLinearPPFRunner):
     """
-    Runner for nonlinear simulation + PF filtering.
+    Runner for nonlinear simulation + PPF filtering.
     """
 
     def __init__(
@@ -34,12 +34,12 @@ class BaseNonLinearPFRunnerSim(BaseNonLinearPFRunner):
     def run(self) -> None:
 
         if self.verbose > 1:
-            logging.info("Starting NonLinear PF Runner (simulation mode)")
+            logging.info("Starting NonLinear PPF Runner (simulation mode)")
 
         self.runner_instance.process_N_data(N=self.N)
 
         if self.save_history:
-            self._save_history("history_run_pf_simulation.pkl")
+            self._save_history("history_run_ppf_simulation.pkl")
 
         self._compute_errors()
 
