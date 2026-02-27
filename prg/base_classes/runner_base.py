@@ -32,7 +32,7 @@ class BaseRunner(ABC):
         self.plot = plot
         self.save_history = save_history
         self.base_dir = base_dir
-        self._extra_args = kwargs  # ell, nbParticles, sigmaSet, etc.
+        self._extra_args = kwargs  # nbParticles, sigmaSet, etc.
 
         self._configure_logging()
         self.tracker_dir, self.datafile_dir, self.graph_dir = self._setup_directories()

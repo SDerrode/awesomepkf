@@ -3,7 +3,7 @@
 
 """
 ####################################################################
-Parwise Particle Filter implementation
+Pairwise Particle Filter implementation
 ####################################################################
 """
 
@@ -136,7 +136,6 @@ class NonLinear_PPF(PKF):
             self.nbParticles,
         )
         particles_current = particles_current[..., np.newaxis]
-        # particles_previous = np.zeros_like(particles_current)
         weights = np.full(self.nbParticles, 1.0 / self.nbParticles)
 
         # The first
@@ -196,10 +195,8 @@ class NonLinear_PPF(PKF):
 
             # Calculer innovations pour toutes les particules pour la mise à jour des poids
             innovations = new_ykp1 - muxy[:, self.dim_x :, :]
-            tmp = np.matmul(self._cached["R_inv"], innovations)  # (300,2,1)
-            quad = np.matmul(
-                innovations.transpose(0, 2, 1), tmp  # (300,1,2)  # (300,2,1)
-            )
+            tmp = np.matmul(self._cached["R_inv"], innovations)
+            quad = np.matmul(innovations.transpose(0, 2, 1), tmp)
             exponents = -0.5 * quad.reshape(self.nbParticles)
 
             # Log-weights pour stabilité

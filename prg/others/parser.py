@@ -53,11 +53,6 @@ def addParseToParser(parser, listOptions):
     # Options optionnelles configurables
     # =========================
     option_config = {
-        "ell": {
-            "type": int_ge_1,
-            "default": 1,
-            "help": "Set the number of iterations for the iterated EPKF (default: 1, means classical EPKF)",
-        },
         "N": {
             "type": int,
             "default": None,
@@ -66,7 +61,7 @@ def addParseToParser(parser, listOptions):
         "nbParticles": {
             "type": int,
             "default": 300,
-            "help": "Set the number of samples to process (default: 300)",
+            "help": "Set the number of particles to deal with (default: 300)",
         },
         "sKey": {
             "type": int,

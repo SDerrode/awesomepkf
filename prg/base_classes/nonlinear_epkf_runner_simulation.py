@@ -17,7 +17,6 @@ class BaseNonLinearEPKFRunnerSim(BaseNonLinearEPKFRunner):
         model_name: str,
         N: int,
         sKey: Optional[int],
-        ell: Optional[int],
         verbose: int,
         plot: bool,
         save_history: bool,
@@ -27,7 +26,7 @@ class BaseNonLinearEPKFRunnerSim(BaseNonLinearEPKFRunner):
         self.N = N
         self.sKey = sKey
 
-        super().__init__(model_name, ell, verbose, plot, save_history, base_dir)
+        super().__init__(model_name, verbose, plot, save_history, base_dir)
 
     # ==========================================================
 

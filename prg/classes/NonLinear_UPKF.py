@@ -36,7 +36,9 @@ class NonLinear_UPKF(PKF):
                 f"Jeu de sigma-points inconnu '{sigmaSet}'. "
                 f"Disponibles : {list(SigmaPointsSet.registry.keys())}"
             )
-        self.sigma_point_set_obj = cls(dim=2 * self.dim_xy, param=self.param)
+        self.sigma_point_set_obj = cls(
+            dim=2 * self.dim_x + self.dim_y, param=self.param
+        )
 
     def process_filter(
         self,
@@ -44,9 +46,7 @@ class NonLinear_UPKF(PKF):
         data_generator: Optional[
             Generator[tuple[int, np.ndarray, np.ndarray], None, None]
         ] = None,
-    ) -> Generator[
-        tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray], None, None
-    ]:
+    ) -> Generator[tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
         """
         Generator of UPKF filter using optional data generator.
         """
@@ -57,33 +57,45 @@ class NonLinear_UPKF(PKF):
             data_generator if data_generator is not None else self._data_generation()
         )
 
-        # The first
-        ##################################################################################################
+        # --- First estimate -----------------------------------------------------------
         step = self._firstEstimate(generator)
-        if step.xkp1 is None:  # Il n'y a pas de VT
+
+        if step.xkp1 is None:  # There is no ground truth
             self.ground_truth = False
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
-        ###################
-        # The next ones
-        Xkp1_update_augmented = np.zeros((2 * self.dim_xy, 1))
-        Pa_base = np.zeros((2 * self.dim_xy, 2 * self.dim_xy))
-        Pa_base[self.dim_xy :, self.dim_xy :] = self.mQ
+        # --- Subsequent steps ---------------------------------------------------------
+        za = np.zeros((2 * self.dim_x + self.dim_y, 1))
+        Pa_base = np.zeros((2 * self.dim_x + self.dim_y, 2 * self.dim_x + self.dim_y))
+        Pa_base[self.dim_x :, self.dim_x :] = self.mQ
         Pkp1_predict = self.zeros_dim_xy_xy.copy()
 
         while N is None or step.k < N:
 
             # Sigma points et leur propagation par g
-            Xkp1_update_augmented[: self.dim_x] = step.Xkp1_update
-            Xkp1_update_augmented[self.dim_x : self.dim_xy] = step.ykp1
+            za[: self.dim_x] = step.Xkp1_update
             Pa = Pa_base.copy()  # copier Pa_base plutôt que recréer la matrice entière
             Pa[: self.dim_x, : self.dim_x] = step.PXXkp1_update
-            sigma = self.sigma_point_set_obj._sigma_point(Xkp1_update_augmented, Pa)
-            # here ykp1 still gives the previous : it is yk indeed!
-            sigma_propag = [
-                self.g(*np.split(spoint, [self.dim_xy]), self.dt) for spoint in sigma
+            # print(f"za = {za}")
+            # print(f"Pa = {Pa}")
+
+            sigma_without_y = self.sigma_point_set_obj._sigma_point(za, Pa)
+            # print(f"sigma_without_y = {sigma_without_y}")
+            # print(f"step.ykp1={step.ykp1}")
+            # input("ATTENTE avant")
+
+            sigma_with_y = [
+                np.concatenate([s[: self.dim_x], step.ykp1, s[self.dim_x :]], axis=0)
+                for s in sigma_without_y
             ]
+            # print(f"sigma_with_y = {sigma_with_y}")
+            # input("ATTENTE")
+            sigma_propag = [
+                self.g(*np.split(spoint, [self.dim_xy]), self.dt)
+                for spoint in sigma_with_y
+            ]
+            # input("ATTENTE")
 
             # Predicting ############################################
             Zkp1_predict = np.sum(

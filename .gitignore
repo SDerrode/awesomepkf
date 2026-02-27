@@ -8,6 +8,7 @@
 /data/historyTracker/*.pkl
 /data/plot/*.png
 /prg/tests
+/prg/README_files
 
 # vdscodium
 AwesomePKF.code-workspace
