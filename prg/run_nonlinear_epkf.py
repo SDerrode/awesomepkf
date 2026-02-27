@@ -13,7 +13,7 @@ def parse_arguments() -> argparse.Namespace:
 
     addParseToParser(
         parser,
-        ["nonLinearModelName", "linearModelName", "N", "sKey", "ell", "dataFileName"],
+        ["nonLinearModelName", "linearModelName", "N", "sKey", "dataFileName"],
     )
 
     args = parser.parse_args()
@@ -49,7 +49,6 @@ def main() -> None:
         # Mode FILE
         runner = BaseNonLinearEPKFRunnerFromFile(
             model_name=model_name,
-            ell=args.ell,
             data_filename=args.dataFileName,
             verbose=args.verbose,
             plot=args.plot,
@@ -62,7 +61,6 @@ def main() -> None:
             model_name=model_name,
             N=args.N,
             sKey=args.sKey,
-            ell=args.ell,
             verbose=args.verbose,
             plot=args.plot,
             save_history=args.saveHistory,

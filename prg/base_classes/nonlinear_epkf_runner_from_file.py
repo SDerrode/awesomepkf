@@ -19,7 +19,6 @@ class BaseNonLinearEPKFRunnerFromFile(BaseNonLinearEPKFRunner):
     def __init__(
         self,
         model_name: str,
-        ell: int,
         data_filename: Optional[str],
         verbose: int = 0,
         plot: bool = False,
@@ -30,7 +29,7 @@ class BaseNonLinearEPKFRunnerFromFile(BaseNonLinearEPKFRunner):
         self.N = -1
         self.sKey = None
 
-        super().__init__(model_name, ell, verbose, plot, save_history, base_dir)
+        super().__init__(model_name, verbose, plot, save_history, base_dir)
 
         self.data_filename = (
             os.path.join(self.datafile_dir, data_filename)

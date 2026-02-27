@@ -701,11 +701,18 @@ def diagnose_covariance(P: np.ndarray) -> tuple[bool, dict]:
     # report["ill_conditioned"] = cond > COND_WARN
     # report["numerically_singular"] = cond > COND_FAIL
     # verdict &= not report["numerically_singular"]
-    cond = lam_max / lam_min if lam_min > EIG_TOL_WARN else np.inf
-    report["condition_number"] = cond
-    report["ill_conditioned"] = False
-    report["numerically_singular"] = False
-    verdict &= not report["numerically_singular"]
+    try:
+        cond = lam_max / lam_min if lam_min > EIG_TOL_WARN else np.inf
+        report["condition_number"] = cond
+        report["ill_conditioned"] = cond > COND_WARN
+        report["numerically_singular"] = cond > COND_FAIL
+        verdict &= not report["numerically_singular"]
+    except ZeroDivisionError:
+        cond = np.inf
+        report["condition_number"] = cond
+        report["ill_conditioned"] = False
+        report["numerically_singular"] = False
+        verdict &= not report["numerically_singular"]
 
     # 4) Cholesky test — most reliable practical criterion for PSD
     try:

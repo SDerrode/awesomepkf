@@ -12,18 +12,16 @@ class BaseNonLinearEPKFRunner(BaseRunner):
     def __init__(
         self,
         model_name,
-        ell=None,
         verbose=1,
         plot=False,
         save_history=False,
         base_dir=".",
     ):
 
-        self.ell = ell  # Avant le constructeur
         super().__init__(model_name, verbose, plot, save_history, base_dir)
 
         self.runner_instance = NonLinear_EPKF(
-            param=self.param, ell=self.ell, sKey=self.sKey, verbose=self.verbose
+            param=self.param, sKey=self.sKey, verbose=self.verbose
         )
 
     def _get_model_factory(self):

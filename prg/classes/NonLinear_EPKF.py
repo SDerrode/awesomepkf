@@ -20,23 +20,13 @@ class NonLinear_EPKF(PKF):
     """
     Extended Pairwise Kalman Filter (EPKF).
 
-    Extends :class:`PKF` by introducing an iterated linearisation
-    loop of ``ell`` steps. When ``ell=1`` the filter reduces to the classical
-    EPKF; for ``ell > 1`` it becomes the Iterated EPKF (IEPKF), which
-    re-linearises the transition model around the latest state estimate at
-    each time step.
+    Extends :class:`PKF` by introducing the EPKF.
 
-    Attributes
-    ----------
-    ell : int
-        Number of linearisation iterations per time step.
-        ``ell=1`` → EPKF, ``ell>1`` → IEPKF.
     """
 
     def __init__(
         self,
         param: ParamLinear | ParamNonLinear,
-        ell: int = 1,
         sKey: Optional[int] = None,
         verbose: int = 0,
     ) -> None:
@@ -48,24 +38,12 @@ class NonLinear_EPKF(PKF):
         param : ParamLinear | ParamNonLinear
             Object holding the model parameters (transition function,
             Jacobians, noise covariances, etc.).
-        ell : int, optional
-            Number of linearisation iterations per time step (default ``1``).
-            Must be strictly positive.
         sKey : int, optional
             Random seed for reproducibility (default ``None``).
         verbose : int, optional
             Verbosity level passed to the parent class (default ``0``).
-
-        Raises
-        ------
-        AssertionError
-            If ``ell < 1`` when Python is run in debug mode.
         """
         super().__init__(param, sKey, verbose)
-
-        if __debug__:
-            assert ell > 0, "ell parameter must be 1 (EPKF) or above (IEPKF)"
-        self.ell: int = ell
 
     def process_filter(
         self,
@@ -149,55 +127,37 @@ class NonLinear_EPKF(PKF):
 
         while N is None or step.k < N:
 
-            # Consume next observation
+            # here ykp1 still gives the previous : it is yk indeed!
+            z_iterated[: self.dim_x] = step.Xkp1_update
+            z_iterated[self.dim_x :] = step.ykp1
+
+            # Prediction
+            Zkp1_predict = self.g(z_iterated, self.zeros_dim_xy_1, self.dt)
+            An, Bn = jg(z_iterated, self.zeros_dim_xy_1, self.dt)
+            if An.shape != (self.dim_xy, self.dim_xy) or Bn.shape != (
+                self.dim_xy,
+                self.dim_xy,
+            ):
+                raise ValueError(
+                    f"Jacobian returned matrices of wrong shape: An={An.shape}, Bn={Bn.shape}"
+                )
+            accel_xy_xy[: self.dim_x, : self.dim_x] = step.PXXkp1_update
+            Pkp1_predict = An @ accel_xy_xy @ An.T + Bn @ self.mQ @ Bn.T
+            self._test_CovMatrix(Pkp1_predict, step.k)
+
+            # New data is arriving ##################################
             try:
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
-                return  # Data generator exhausted
+                return  # we stop as the data generator is stopped itself
 
-            # Initialise iterative loop around the last updated state
-            z_iterated[: self.dim_x] = step.Xkp1_update
-            z_iterated[self.dim_x :] = step.ykp1
-            PXX_iterated: np.ndarray = step.PXXkp1_update
-
-            for iteration in range(self.ell):
-
-                Zl_predict: np.ndarray = self.g(
-                    z_iterated, self.zeros_dim_xy_1, self.dt
+            # Updating ##############################################
+            try:
+                step = self._nextUpdating(
+                    new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict
                 )
-
-                Anl, Bnl = jg(z_iterated, self.zeros_dim_xy_1, self.dt)
-                if Anl.shape != (self.dim_xy, self.dim_xy) or Bnl.shape != (
-                    self.dim_xy,
-                    self.dim_xy,
-                ):
-                    raise ValueError(
-                        f"Jacobian returned matrices of wrong shape: "
-                        f"Anl={Anl.shape}, Bnl={Bnl.shape}"
-                    )
-
-                accel_xy_xy[: self.dim_x, : self.dim_x] = PXX_iterated
-                Pl_predict: np.ndarray = symmetrize(
-                    Anl @ accel_xy_xy @ Anl.T + Bnl @ self.mQ @ Bnl.T
-                )
-                self._test_CovMatrix(Pl_predict, step.k)
-
-                # Store the step only on the last iteration
-                store: bool = iteration == self.ell - 1
-
-                try:
-                    step = self._nextUpdating(
-                        new_k, new_xkp1, new_ykp1, Zl_predict, Pl_predict, store
-                    )
-                except LinAlgError:
-                    self.logger.error(
-                        f"Step {new_k}, iteration {iteration}: LinAlgError during update."
-                    )
-                    raise
-
-                # Update linearisation point for the next iteration
-                if iteration < self.ell - 1:
-                    z_iterated[: self.dim_x] = step.Xkp1_update
-                    PXX_iterated = step.PXXkp1_update
+            except LinAlgError:
+                self.logger.error(f"Step {new_k}: LinAlgError during update")
+                raise
 
             yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update

@@ -167,7 +167,6 @@ class Linear_PKF(PKF):
                 new_ykp1: np.ndarray
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
-                self.logger.debug("Data generator exhausted at step %d.", step.k)
                 return  # Data generator exhausted
 
             # Update step
