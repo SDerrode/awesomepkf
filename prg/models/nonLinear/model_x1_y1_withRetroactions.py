@@ -4,6 +4,8 @@
 import numpy as np
 from .base_model_nonLinear import BaseModelNonLinear
 
+from others.geneMatriceCov import generate_block_matrix
+
 
 class ModelX1Y1_withRetroactions(BaseModelNonLinear):
     """
@@ -37,8 +39,13 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         # (a,b,c,d) = (0.99,\;1.2,\;0.9,\;1.5)
         # Expected behaviour: persistent oscillations of moderate amplitude; nonlinear terms drive and sustain the cycles.
         # Numeric tips: choose \(x_0,y_0\) small but nonzero, \(\sigma\) very small (e.g.\ 0.005) to reveal deterministic oscillation, \(N\ge 300\).
-        self.mQ = np.array([[0.1, 0.0], [0.0, 0.5]])  # np.diag([0.1, 0.5])
-        self.mz0 = np.array([[0.0], [0.0]])
+        # self.mQ = np.array([[0.1, 0.0], [0.0, 0.5]])  # np.diag([0.1, 0.5])
+        # self.mz0 = np.array([[0.0], [0.0]])
+        self.mQ = generate_block_matrix(
+            self._randMatrices.rng, self.dim_x, self.dim_y, 0.15
+        )
+        self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
+
         self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5
 
         # (D) Complex / quasi-periodic dynamics:
@@ -57,7 +64,10 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         # self.mz0  = np.array([[-5],[0.5]])
         # self.a, self.b, self.c, self.d = 1.2, 2.0, 0.8, 2.5
 
-        self.Pz0 = np.eye(self.dim_xy)
+        # self.Pz0 = np.eye(self.dim_xy)
+        self.Pz0 = generate_block_matrix(
+            self._randMatrices.rng, self.dim_x, self.dim_y, 0.15
+        )
 
     # ------------------------------------------------------------------
     def _gx(
