@@ -185,7 +185,7 @@ class PKF:
         self.dt: int = 1  # Time step — fixed to 1 throughout
 
         # Random number generator
-        self._seed_gen = SeedGenerator(sKey)
+        self.__randSimulation = SeedGenerator(sKey)
 
         # Ground truth availability — set to False if xkp1 is None at first step
         self.ground_truth: bool = True
@@ -326,7 +326,7 @@ class PKF:
 
         # First step — sample initial state from prior distribution
         if self.augmented:
-            Zkp1_simul[: self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(
+            Zkp1_simul[: self.dim_x, 0] = self.__randSimulation.rng.multivariate_normal(
                 mean=self.mz0[: self.dim_x, 0],
                 cov=self.Pz0[: self.dim_x, : self.dim_x],
             )
@@ -334,7 +334,7 @@ class PKF:
                 self.dim_x - self.dim_y : self.dim_x, 0
             ]
         else:
-            Zkp1_simul[:, 0] = self._seed_gen.rng.multivariate_normal(
+            Zkp1_simul[:, 0] = self.__randSimulation.rng.multivariate_normal(
                 mean=self.mz0[:, 0], cov=self.Pz0
             )
 
@@ -349,15 +349,17 @@ class PKF:
 
         while N is None or k < N:
             if self.augmented:
-                noise_z[: self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(
-                    mean=zerosvector_x,
-                    cov=self.mQ[: self.dim_x, : self.dim_x],
+                noise_z[: self.dim_x, 0] = (
+                    self.__randSimulation.rng.multivariate_normal(
+                        mean=zerosvector_x,
+                        cov=self.mQ[: self.dim_x, : self.dim_x],
+                    )
                 )
                 noise_z[self.dim_x :, 0] = noise_z[
                     self.dim_x - self.dim_y : self.dim_x, 0
                 ]
             else:
-                noise_z[:, 0] = self._seed_gen.rng.multivariate_normal(
+                noise_z[:, 0] = self.__randSimulation.rng.multivariate_normal(
                     mean=zerosvector_xy, cov=self.mQ
                 )
             Zkp1_simul = self.g(Zkp1_simul, noise_z, self.dt)
@@ -517,7 +519,6 @@ class PKF:
             Augmented predicted covariance matrix, shape ``(dim_xy, dim_xy)``.
         store : bool, optional
             Whether to record the step in the history tracker (default ``True``).
-            Set to ``False`` during intermediate IEPKF iterations.
 
         Returns
         -------

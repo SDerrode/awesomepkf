@@ -57,7 +57,7 @@ class NonLinear_EPKF(PKF):
         None,
     ]:
         """
-        Run the EPKF/IEPKF filter as a generator.
+        Run the EPKF filter as a generator.
 
         At each time step, the method yields the current filter outputs.
         Data is consumed either from ``data_generator`` if provided, or from
