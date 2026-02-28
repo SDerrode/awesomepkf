@@ -17,7 +17,7 @@ class Model_A_mQ_x1_y1_VPgreaterThan1(LinearAmQ):
 
     def __init__(self) -> None:
 
-        randMatrices = SeedGenerator()
+        randMatrices = SeedGenerator(5)
 
         # Dimensions x=1, y=1
         dim_x = 1

@@ -13,7 +13,7 @@ class Model_A_mQ_x2_y2(LinearAmQ):
 
     def __init__(self) -> None:
 
-        randMatrices = SeedGenerator()
+        randMatrices = SeedGenerator(5)
 
         # Dimensions x=2, y=2
         dim_x = 2

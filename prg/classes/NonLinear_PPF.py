@@ -11,7 +11,7 @@ from __future__ import annotations
 
 # Stdlib
 from dataclasses import replace
-from typing import Generator
+from typing import Generator, Optional
 
 # Third-party
 import numpy as np
@@ -27,18 +27,67 @@ from others.utils import rich_show_fields, symmetrize, check_eigvals
 
 
 class NonLinear_PPF(PKF):
-    """Implementation of PPF."""
+    """Filtre Particulaire Non Linéaire (Nonlinear Pairwise Particle Filter).
+
+    Implémente un filtre particulaire pour les systèmes non linéaires à bruit
+    additif gaussien, avec support optionnel des bruits corrélés (M ≠ 0) via
+    la matrice de covariance jointe ``mQ``.
+
+    Le modèle d'état considéré est :
+
+    .. math::
+
+        (X_n,Y_n)  = g_x(X_{n-1}, Y_{n-1}, V^x_n, V^y_n)
+
+    avec :
+
+    .. math::
+
+        \\begin{pmatrix} V^x_n \\\\ V^y_n \\end{pmatrix}
+        \\sim \\mathcal{N}\\!\\left(0,\\,
+        \\begin{pmatrix} Q & M \\\\ M^\\top & R \\end{pmatrix}\\right)
+
+
+    Parameters
+    ----------
+    param : ParamLinear | ParamNonLinear
+        Paramètres du modèle (dimensions, matrices de bruit, conditions
+        initiales, etc.).
+    nbParticles : int, optional
+        Nombre de particules. Par défaut 300.
+    resample_threshold : float, optional
+        Seuil relatif sur l'ESS déclenchant le rééchantillonnage,
+        exprimé en fraction de ``nbParticles``. Par défaut 0.5.
+    resample_method : str, optional
+        Méthode de rééchantillonnage parmi ``'multinomial'``,
+        ``'systematic'``, ``'stratified'`` (défaut) et ``'residual'``.
+    sKey : optional
+        Graine pour le générateur de nombres aléatoires.
+    verbose : int, optional
+        Niveau de verbosité (0 = silencieux). Par défaut 0.
+
+    Attributes
+    ----------
+    nbParticles : int
+        Nombre de particules.
+    resample_threshold : float
+        Seuil de rééchantillonnage.
+    resample_method : str
+        Méthode de rééchantillonnage.
+    _cached : dict
+        Constantes précalculées par ``_precompute()`` : ``R``, ``R_inv``,
+        ``MRinv``, ``L`` (Cholesky de P'_x), ``log_norm_const``.
+    """
 
     def __init__(
         self,
-        param: ParamLinear | ParamNonLinear,
-        nbParticles=300,
-        resample_threshold=0.5,
-        resample_method="stratified",
+        param,
+        nbParticles: int = 300,
+        resample_threshold: float = 0.5,
+        resample_method: str = "stratified",
         sKey=None,
-        verbose=0,
-    ):
-
+        verbose: int = 0,
+    ) -> None:
         super().__init__(param, sKey, verbose)
 
         self.nbParticles = nbParticles
@@ -46,15 +95,42 @@ class NonLinear_PPF(PKF):
         self.resample_method = resample_method
 
         # Random number generator
-        self.__randParticles = SeedGenerator()
+        self.__randParticles = SeedGenerator(9)
 
-        # dictionnaire des constantes
-        self._cached = {}
+        # Dictionnaire des constantes précalculées
+        self._cached: dict = {}
 
     # =========================
     # RESAMPLING UNIFIÉ
     # =========================
-    def resample(self, weights, method="stratified"):
+    def resample(self, weights: np.ndarray, method: str = "stratified") -> np.ndarray:
+        """Rééchantillonne les particules selon les poids normalisés.
+
+        Parameters
+        ----------
+        weights : np.ndarray, shape (N,)
+            Poids normalisés des particules (doivent sommer à 1).
+        method : str, optional
+            Méthode de rééchantillonnage :
+
+            - ``'multinomial'``  : tirage multinomial indépendant.
+            - ``'systematic'``   : rééchantillonnage systématique (un seul
+              tirage aléatoire uniforme).
+            - ``'stratified'``   : rééchantillonnage stratifié (un tirage
+              par strate). Méthode par défaut.
+            - ``'residual'``     : rééchantillonnage résiduel (copies
+              déterministes + résidu stochastique).
+
+        Returns
+        -------
+        indexes : np.ndarray of int, shape (N,)
+            Indices des particules sélectionnées.
+
+        Raises
+        ------
+        ValueError
+            Si ``method`` n'est pas l'une des valeurs admises.
+        """
         N = self.nbParticles
         cumulative_sum = np.cumsum(weights)
         cumulative_sum[-1] = 1.0
@@ -63,6 +139,7 @@ class NonLinear_PPF(PKF):
             indexes = np.searchsorted(
                 cumulative_sum, self.__randParticles.rng.random(N)
             )
+
         elif method in ["systematic", "stratified"]:
             if method == "systematic":
                 positions = (np.arange(N) + self.__randParticles.rng.random()) / N
@@ -77,13 +154,13 @@ class NonLinear_PPF(PKF):
                     i += 1
                 else:
                     j += 1
+
         elif method == "residual":
-            indexes = []
+            indexes: list[int] = []
             num_copies = np.floor(N * weights).astype(int)
             for i in range(N):
                 indexes += [i] * num_copies[i]
             residual = weights - num_copies / N
-            # residual /= residual.sum()
             residual_sum = residual.sum()
             if residual_sum > EPS_ABS:
                 residual /= residual_sum
@@ -96,19 +173,39 @@ class NonLinear_PPF(PKF):
             res_indexes = np.searchsorted(cumulative_sum_res, random_vals)
             indexes += list(res_indexes)
             indexes = np.array(indexes)
+
         else:
             raise ValueError(f"Unknown resampling method: {method}")
 
         return indexes
 
-    def _precompute(self):
+    def _precompute(self) -> None:
+        """Précalcule et met en cache les constantes numériques du filtre.
+
+        Extrait les blocs ``Q``, ``M``, ``R`` de la matrice de covariance
+        jointe ``mQ``, puis calcule :
+
+        - ``P'_x = Q - M @ R^{-1} @ M^T`` (complément de Schur de R dans Q).
+        - ``L = cholesky(P'_x)`` pour le tirage des particules.
+        - ``MRinv = M @ R^{-1}`` pour la correction par corrélation.
+        - ``log_norm_const`` pour le calcul log-vraisemblance.
+
+        Les valeurs propres de ``P'_x`` sont vérifiées via ``check_eigvals``
+        pour garantir la définition positive.
+
+        Notes
+        -----
+        Cette méthode doit être appelée une seule fois avant la boucle
+        principale de ``process_filter``.
+        """
         Q = self.mQ[: self.dim_x, : self.dim_x]
         M = self.mQ[: self.dim_x, self.dim_x :]
         R = self.mQ[self.dim_x :, self.dim_x :]
+
+        # Cas général : R > 0
         R_inv = inv(R)
         P_prime_x_base = Q - M @ R_inv @ M.T
 
-        # Stabilisation PSD + Cholesky — calculés une seule fois
         eigvals, eigvecs = np.linalg.eigh(P_prime_x_base)
         check_eigvals(eigvals)
         P_prime_x = eigvecs @ np.diag(eigvals) @ eigvecs.T
@@ -122,70 +219,113 @@ class NonLinear_PPF(PKF):
             * (self.dim_y * np.log(2 * np.pi) + np.linalg.slogdet(R)[1]),
         )
 
-    def process_filter(self, N=None, data_generator=None):
+    def process_filter(
+        self,
+        N: Optional[int] = None,
+        data_generator: Optional[
+            Generator[tuple[int, Optional[np.ndarray], np.ndarray], None, None]
+        ] = None,
+    ) -> Generator[
+        tuple[int, Optional[np.ndarray], np.ndarray, np.ndarray, np.ndarray],
+        None,
+        None,
+    ]:
+        """Exécute le filtre particulaire et produit les estimées pas à pas.
 
+        À chaque pas de temps, la méthode effectue dans l'ordre :
+
+        1. **Prédiction** : moyenne et covariance empiriques des particules.
+        2. **Propagation** : application de la fonction non linéaire ``g``
+           à chaque particule pour obtenir la prédiction jointe ``(X, Y)``.
+        3. **Innovation** : écart entre l'observation reçue et la prédiction.
+        4. **Mise à jour**  :
+
+           - *Cas général* : gain de Kalman empirique, poids par
+             vraisemblance gaussienne, mise à jour stochastique.
+
+        5. **Estimation a posteriori** : moyenne et covariance pondérées
+           (forme de Joseph pour la covariance).
+        6. **Rééchantillonnage** si l'ESS passe sous le seuil.
+
+        Parameters
+        ----------
+        N : int, optional
+            Nombre maximal de pas de temps à traiter. Si ``None``, la boucle
+            tourne jusqu'à épuisement du générateur de données.
+        data_generator : Generator, optional
+            Générateur externe fournissant des triplets
+            ``(k, x_true, y_obs)``. Si ``None``, le générateur interne
+            ``_data_generation()`` est utilisé.
+
+        Yields
+        ------
+        k : int
+            Indice temporel courant.
+        xkp1 : np.ndarray or None
+            Vérité terrain à l'instant ``k`` (``None`` si indisponible).
+        ykp1 : np.ndarray, shape (dim_y, 1)
+            Observation à l'instant ``k``.
+        Xkp1_predict : np.ndarray, shape (dim_x, 1)
+            Estimée a priori (avant observation).
+        Xkp1_update : np.ndarray, shape (dim_x, 1)
+            Estimée a posteriori (après observation).
+
+        Notes
+        -----
+        Les assertions de débogage (``__debug__``) vérifient l'absence de
+        NaN dans les poids et les particules, ainsi que la normalisation
+        des poids.
+        """
         self._validate_N(N)
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()
         )
 
-        # Additional short-cuts
-        # augmented = self.param.augmented
-
-        # precalcul des constantes
+        # Précalcul des constantes
         self._precompute()
 
-        # Les particules et leur poids
-        particles_current = self.__randParticles.rng.multivariate_normal(
+        # Initialisation des particules et des poids
+        particles_current: np.ndarray = self.__randParticles.rng.multivariate_normal(
             self.mz0[: self.dim_x].flatten(),
             self.Pz0[: self.dim_x, : self.dim_x],
             self.nbParticles,
         )
         particles_current = particles_current[..., np.newaxis]
-        weights = np.full(self.nbParticles, 1.0 / self.nbParticles)
+        weights: np.ndarray = np.full(self.nbParticles, 1.0 / self.nbParticles)
 
-        # The first
-        ##################################################################################################
+        # Premier pas
         step = self._firstEstimate(generator)
-        if step.xkp1 is None:  # Il n'y a pas de VT
+        if step.xkp1 is None:
             self.ground_truth = False
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
-        ###################
-        # The next ones
-
+        # Boucle principale
         while N is None or step.k < N:
 
-            # Maj des particules
             particles_previous = particles_current.copy()
 
             # =========================
-            # PREDICTION (sur x seulement, avant propagation via g)
+            # PREDICTION
             # =========================
-
-            Xkp1_predict = np.mean(particles_current, axis=0)
-            # print(f"Xkp1_predict={Xkp1_predict}")
+            Xkp1_predict: np.ndarray = np.mean(particles_current, axis=0)
             diff = particles_current - Xkp1_predict
-            # PXXkp1_predict n'est pas utilisé
-            PXXkp1_predict = symmetrize(
+            PXXkp1_predict: np.ndarray = symmetrize(
                 np.einsum("tik,tjk->ij", diff, diff) / (self.nbParticles - 1)
             )
-            # print(f"PXXkp1_predict={PXXkp1_predict}")
-            self._test_CovMatrix(PXXkp1_predict, step.k)
+            self._test_CovMatrix(PXXkp1_predict, step.k, name="PXXkp1_predict")
 
-            # New data is arriving ##################################
+            # Nouvelle observation
             try:
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
-                return  # we stop as the data generator is stopped itself
+                return
 
             # =========================
             # PROPAGATION via g
             # =========================
-            # muxy[i] = g(x_k^(i), y_k) — prédiction jointe (x, y) pour chaque particule
-            muxy = np.array(
+            muxy: np.ndarray = np.array(
                 [
                     self.g(
                         np.vstack([p, step.ykp1]),
@@ -195,57 +335,35 @@ class NonLinear_PPF(PKF):
                     for p in particles_previous
                 ]
             )
+
             # =========================
-            # PREDICTION JOINTE Z = (X, Y) — après propagation via g
+            # PREDICTION JOINTE Z = (X, Y)
             # =========================
-
-            # Moyenne prédite jointe pondérée
-            Zkp1_predict = np.average(muxy, axis=0, weights=weights)  # (dim_x+dim_y, 1)
-
-            # Écarts à la moyenne jointe
-            dz = muxy - Zkp1_predict[None, :, :]  # (N, dim_x+dim_y, 1)
-
-            # Covariance prédite jointe
-            Pkp1_predict = symmetrize(
+            Zkp1_predict: np.ndarray = np.average(muxy, axis=0, weights=weights)
+            dz = muxy - Zkp1_predict[None, :, :]
+            Pkp1_predict: np.ndarray = symmetrize(
                 np.einsum("i,ijk,ilk->jl", weights, dz, dz)
-            )  # (dim_x+dim_y, dim_x+dim_y)
-            self._test_CovMatrix(Pkp1_predict, new_k)
+            )
+            self._test_CovMatrix(Pkp1_predict, new_k, name="Pkp1_predict")
 
-            # Extraction des blocs de Pkp1_predict
-            PXXkp1_predict_z = Pkp1_predict[
-                : self.dim_x, : self.dim_x
-            ]  # (dim_x, dim_x)
-            PYYkp1_predict = Pkp1_predict[self.dim_x :, self.dim_x :]  # (dim_y, dim_y)
-            PXYkp1_predict = Pkp1_predict[: self.dim_x, self.dim_x :]  # (dim_x, dim_y)
+            # Extraction des blocs de la covariance jointe
+            PYYkp1_predict: np.ndarray = Pkp1_predict[self.dim_x :, self.dim_x :]
+            PXYkp1_predict: np.ndarray = Pkp1_predict[: self.dim_x, self.dim_x :]
 
             # =========================
             # INNOVATION
             # =========================
+            Ykp1_predict: np.ndarray = Zkp1_predict[self.dim_x :]
+            ikp1: np.ndarray = new_ykp1 - Ykp1_predict
+            innovations: np.ndarray = new_ykp1 - muxy[:, self.dim_x :, :]
 
-            # Observation prédite = bloc Y de Zkp1_predict
-            Ykp1_predict = Zkp1_predict[self.dim_x :]  # (dim_y, 1)
+            # Cas général : R > 0
+            Skp1 = symmetrize(PYYkp1_predict + self._cached["R"])
+            self._test_CovMatrix(Skp1, new_k, name="Skp1")
 
-            # Innovation globale
-            ikp1 = new_ykp1 - Ykp1_predict  # (dim_y, 1)
+            Kkp1 = PXYkp1_predict @ inv(Skp1)
 
-            # Innovations particulaires (pour la mise à jour des poids)
-            innovations = new_ykp1 - muxy[:, self.dim_x :, :]  # (N, dim_y, 1)
-
-            # Covariance de l'innovation — issue directement de Pkp1_predict
-            # S = PYY + R  (on n'a plus besoin de recalculer empiriquement)
-            Skp1 = symmetrize(PYYkp1_predict + self._cached["R"])  # (dim_y, dim_y)
-            self._test_CovMatrix(Skp1, new_k)
-
-            # =========================
-            # GAIN DE KALMAN PARTICULAIRE
-            # =========================
-
-            # K = Pxy @ S^{-1}  — Pxy est directement le bloc XY de Pkp1_predict
-            Kkp1 = PXYkp1_predict @ inv(Skp1)  # (dim_x, dim_y)
-
-            # =========================
-            # MISE À JOUR DES POIDS
-            # =========================
+            # Mise à jour des poids par log-vraisemblance gaussienne
             tmp = np.matmul(self._cached["R_inv"], innovations)
             quad = np.matmul(innovations.transpose(0, 2, 1), tmp)
             exponents = -0.5 * quad.reshape(self.nbParticles)
@@ -267,12 +385,10 @@ class NonLinear_PPF(PKF):
                     weights.sum(), 1.0, atol=1e-6
                 ), f"Poids non normalisés : {weights.sum()}"
 
-            # =========================
-            # MISE À JOUR DES PARTICULES
-            # =========================
+            # Mise à jour stochastique avec correction par corrélation
             mu_prime_x_all = (
                 muxy[:, : self.dim_x, :] + self._cached["MRinv"] @ innovations
-            )  # (N, dim_x, 1)
+            )
             noise = self.__randParticles.rng.standard_normal(
                 (self.nbParticles, self.dim_x, 1)
             )
@@ -283,23 +399,45 @@ class NonLinear_PPF(PKF):
             # =========================
             # ESTIMATION A POSTERIORI
             # =========================
-            particles_current_temp = particles_current.squeeze(-1)
-            Xkp1_update = np.average(particles_current_temp, axis=0, weights=weights)[
-                :, None
-            ]  # (dim_x, 1)
+            particles_current_temp: np.ndarray = particles_current.squeeze(-1)
+            Xkp1_update: np.ndarray = np.average(
+                particles_current_temp, axis=0, weights=weights
+            )[:, None]
 
-            # ── Covariance a posteriori ───────────────────────────────
             dx = particles_current_temp - Xkp1_update.T
-            PXXkp1_update = symmetrize((weights[:, None] * dx).T @ dx)  # ancien
-            # print(f"PXXkp1_update={PXXkp1_update}")
-            # input("ATTENTE")
-            # Joseph form: (I - K*H) @ P @ (I - K*H)^T — preserves PSD
-            Joseph_factor: np.ndarray = np.vstack((self.eye_dim_x, -Kkp1.T))
-            PXXkp1_update_Joseph: np.ndarray = symmetrize(
+            PXXkp1_update = symmetrize((weights[:, None] * dx).T @ dx)
+            verdict1 = self._test_CovMatrix(PXXkp1_update, new_k, name="PXXkp1_update")
+
+            # Forme de Joseph — préserve la définition positive
+            Joseph_factor = np.vstack((self.eye_dim_x, -Kkp1.T))
+            PXXkp1_update_Joseph = symmetrize(
                 Joseph_factor.T @ Pkp1_predict @ Joseph_factor
             )
-            # print(f"PXXkp1_update={PXXkp1_update}")
-            # input("ATTENTE")
+            verdict2 = self._test_CovMatrix(
+                PXXkp1_update_Joseph, new_k, name="PXXkp1_update_Joseph"
+            )
+            if verdict1 == False:
+                print(f"verdict1={verdict1}")
+                print(f"PXXkp1_update={PXXkp1_update}")
+                print(f"verdict2={verdict2}")
+                print(f"PXXkp1_update_Joseph={PXXkp1_update_Joseph}")
+                input("ATTENTE")
+
+            # =========================
+            # RÉÉCHANTILLONNAGE
+            # =========================
+            ess: float = 1.0 / np.sum(weights**2)
+            if ess < self.resample_threshold * self.nbParticles:
+                indexes = self.resample(
+                    weights, "systematic"
+                )  # multinomial, systematic, stratified, residual, self.resample_method,
+                particles_current = particles_current[indexes]
+                weights.fill(1.0 / self.nbParticles)
+
+            if __debug__:
+                assert not np.any(
+                    np.isnan(particles_current)
+                ), f"NaN dans les particules au step {new_k}"
 
             # =========================
             # ENREGISTREMENT
@@ -314,28 +452,12 @@ class NonLinear_PPF(PKF):
                 Skp1=Skp1.copy(),
                 Kkp1=Kkp1.copy(),
                 Xkp1_update=Xkp1_update.copy(),
-                # PXXkp1_update=PXXkp1_update.copy(),
-                PXXkp1_update=PXXkp1_update_Joseph.copy(),
+                PXXkp1_update=PXXkp1_update.copy(),
             )
 
-            # =========================
-            # RÉÉCHANTILLONNAGE
-            # =========================
-            ess = 1.0 / np.sum(weights**2)
-            if ess < self.resample_threshold * self.nbParticles:
-                indexes = self.resample(weights, self.resample_method)
-                particles_current = particles_current[indexes]
-                weights.fill(1.0 / self.nbParticles)
-
-            if __debug__:
-                assert not np.any(
-                    np.isnan(particles_current)
-                ), f"NaN dans les particules au step {new_k}"
-
-            # Sauvegarde dans l'historique
             self.history.record(step)
 
             if self.verbose > 1:
-                rich_show_fields(step, title=f"Step {step.k} Update")
+                rich_show_fields(step, title=f"Step {new_k} Update")
 
             yield new_k, new_xkp1, new_ykp1, step.Xkp1_predict, step.Xkp1_update

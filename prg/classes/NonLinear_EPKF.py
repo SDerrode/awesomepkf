@@ -143,7 +143,7 @@ class NonLinear_EPKF(PKF):
                 )
             accel_xy_xy[: self.dim_x, : self.dim_x] = step.PXXkp1_update
             Pkp1_predict = An @ accel_xy_xy @ An.T + Bn @ self.mQ @ Bn.T
-            self._test_CovMatrix(Pkp1_predict, step.k)
+            self._test_CovMatrix(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # New data is arriving ##################################
             try:

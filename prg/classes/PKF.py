@@ -370,7 +370,7 @@ class PKF:
     # ------------------------------------------------------------------
     # Covariance diagnostics
     # ------------------------------------------------------------------
-    def _test_CovMatrix(self, mat: np.ndarray, k: int) -> None:
+    def _test_CovMatrix(self, mat: np.ndarray, k: int, name="") -> None:
         """
         Check whether a matrix is a valid covariance matrix.
 
@@ -399,7 +399,7 @@ class PKF:
             # input("ATTENTE - report")
 
             self.logger.warning(
-                f"Step {k}: Covariance matrix invalid. "
+                f"Step {k}: {name} covariance matrix invalid. "
                 f"Symmetric: {report['is_symmetric']}, "
                 # f"Cholesky OK: {report['cholesky_ok']}, "
                 f"PSD: {report['is_psd']}, "
@@ -424,6 +424,7 @@ class PKF:
                     ],
                     title=f"Covariance diagnostic - Step {k}",
                 )
+        return verdict
 
     # ------------------------------------------------------------------
     # First estimate
@@ -463,7 +464,7 @@ class PKF:
         Sigma22_inv: np.ndarray = np.linalg.inv(Sigma22)
         Xkp1_update: np.ndarray = mu_x0 + Sigma12 @ Sigma22_inv @ (ykp1 - mu_y0)
         PXXkp1_update: np.ndarray = Sigma11 - Sigma12 @ Sigma22_inv @ Sigma21
-        self._test_CovMatrix(PXXkp1_update, k)
+        self._test_CovMatrix(PXXkp1_update, k, name="PXXkp1_update")
 
         Xkp1_predict: np.ndarray = np.zeros((self.dim_x, 1))
         step = PKFStep(
@@ -565,7 +566,7 @@ class PKF:
         PXXkp1_update_Joseph: np.ndarray = symmetrize(
             Joseph_factor.T @ Pkp1_predict @ Joseph_factor
         )
-        self._test_CovMatrix(PXXkp1_update_Joseph, k)
+        self._test_CovMatrix(PXXkp1_update_Joseph, k, name="PXXkp1_update_Joseph")
 
         step = PKFStep(
             k=k,
