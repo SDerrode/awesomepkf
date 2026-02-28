@@ -44,6 +44,7 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
         self.mQ = generate_block_matrix(
             self._randMatrices.rng, self.dim_x, self.dim_y, 0.15
         )
+        # print(self.mQ)
         self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
 
         self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5

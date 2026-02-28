@@ -108,7 +108,7 @@ class NonLinear_UPKF(PKF):
             Pkp1_predict = symmetrize(
                 np.einsum("i,ijk,ilk->jl", self.sigma_point_set_obj.Wc, diffs, diffs)
             )
-            self._test_CovMatrix(Pkp1_predict, step.k)
+            self._test_CovMatrix(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # New data is arriving ##################################
             try:

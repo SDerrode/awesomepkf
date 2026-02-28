@@ -158,7 +158,7 @@ class Linear_PKF(PKF):
             Pkp1_predict: np.ndarray = symmetrize(
                 self._A @ P_augmented @ self._AT + self._BmQBT
             )
-            self._test_CovMatrix(Pkp1_predict, step.k)
+            self._test_CovMatrix(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # Consume the next observation
             try:
