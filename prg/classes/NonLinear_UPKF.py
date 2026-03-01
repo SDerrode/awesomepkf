@@ -14,7 +14,6 @@ from scipy.linalg import LinAlgError  # Utilisé dans le try/except
 
 from classes.PKF import PKF  # Classe parente
 from classes.SigmaPointsSet import SigmaPointsSet  # Utilisé dans FilterConfig
-from others.utils import symmetrize
 
 
 class NonLinear_UPKF(PKF):
@@ -102,10 +101,9 @@ class NonLinear_UPKF(PKF):
             # Remise à 0
             Pkp1_predict.fill(0.0)
             diffs = np.array(sigma_propag) - Zkp1_predict  # (n, dim, 1)
-            Pkp1_predict = symmetrize(
-                np.einsum("i,ijk,ilk->jl", self.sigma_point_set_obj.Wc, diffs, diffs)
+            Pkp1_predict = np.einsum(
+                "i,ijk,ilk->jl", self.sigma_point_set_obj.Wc, diffs, diffs
             )
-            # Validate result covariance
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # New data is arriving ##################################

@@ -15,8 +15,7 @@ import numpy as np
 # Non linear models
 from models.nonLinear import ModelFactoryNonLinear
 
-# A few utils functions that are used several times
-from others.utils import check_consistency
+from classes.MatrixDiagnostics import CovarianceMatrix
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -74,9 +73,14 @@ class ParamNonLinear:
 
         if __debug__:
             if not self.augmented:
+                for arr in [self._mQ, self._Pz0]:
+                    report = CovarianceMatrix(arr).check()  # single diagnostic call
+                    if not report.is_valid:
+                        raise ValueError(f"Matrix  is not positive semi-definite.")
+
                 # print(f"mQ = {self._mQ}")
                 # print(f"Pz0 = {self._Pz0}")
-                check_consistency(mQ=self._mQ, Pz0=self._Pz0)
+                # check_consistency(mQ=self._mQ, Pz0=self._Pz0)
 
     # ------------------------------------------------------------------
     def __repr__(self) -> str:
@@ -122,7 +126,11 @@ class ParamNonLinear:
         self._mQ = new_Q
         if __debug__:
             if not self.augmented:
-                check_consistency(mQ=self._mQ)
+                for arr in [self._mQ]:
+                    report = CovarianceMatrix(arr).check()  # single diagnostic call
+                    if not report.is_valid:
+                        raise ValueError(f"Matrix  is not positive semi-definite.")
+                # check_consistency(mQ=self._mQ)
         logger.info("[ParamNonLinear] ✅ mQ matrix updated")
 
     # ------------------------------------------------------------------

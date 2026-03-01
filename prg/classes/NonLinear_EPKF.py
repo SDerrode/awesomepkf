@@ -13,7 +13,6 @@ from scipy.linalg import LinAlgError  # Used in try/except
 import numpy as np  # Used throughout
 
 from .PKF import PKF  # Parent class
-from others.utils import symmetrize
 
 
 class NonLinear_EPKF(PKF):
@@ -141,8 +140,6 @@ class NonLinear_EPKF(PKF):
                 )
             accel_xy_xy[: self.dim_x, : self.dim_x] = step.PXXkp1_update
             Pkp1_predict = An @ accel_xy_xy @ An.T + Bn @ self.mQ @ Bn.T
-
-            # Validate result covariance
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # New data is arriving ##################################

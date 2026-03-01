@@ -16,8 +16,6 @@ from .PKF import PKF  # Parent class
 from classes.ParamLinear import ParamLinear  # Used in type hints
 from classes.ParamNonLinear import ParamNonLinear  # Used in type hints
 
-from others.utils import symmetrize
-
 
 class Linear_PKF(PKF):
     """
@@ -149,9 +147,7 @@ class Linear_PKF(PKF):
             Zkp1_predict: np.ndarray = self.g(z_augmented, self.zeros_dim_xy_1, self.dt)
             # Embed the state covariance into the augmented covariance matrix
             P_augmented[: self.dim_x, : self.dim_x] = step.PXXkp1_update
-            Pkp1_predict: np.ndarray = symmetrize(
-                self._A @ P_augmented @ self._AT + self._BmQBT
-            )
+            Pkp1_predict: np.ndarray = self._A @ P_augmented @ self._AT + self._BmQBT
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # Consume the next observation

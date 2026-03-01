@@ -23,7 +23,7 @@ from .SeedGenerator import SeedGenerator
 from classes.PKF import PKF
 from classes.PKF import PKFStep
 from others.numerics import EPS_ABS
-from others.utils import rich_show_fields, symmetrize, check_eigvals
+from others.utils import rich_show_fields
 
 from .MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
 
@@ -205,7 +205,10 @@ class NonLinear_PPF(PKF):
         R = self.mQ[self.dim_x :, self.dim_x :]
 
         # --- Inversion de R avec diagnostic complet ---
-        R_inv = InvertibleMatrix(R).inverse()
+        try:
+            R_inv = InvertibleMatrix(R).inverse()
+        except Exception as e:
+            input("ATTENTE _precompute")
 
         # --- Complément de Schur ---
         P_prime_x_base = Q - M @ R_inv @ M.T
@@ -337,10 +340,9 @@ class NonLinear_PPF(PKF):
             # =========================
             Xkp1_predict: np.ndarray = np.mean(particles_current, axis=0)
             diff = particles_current - Xkp1_predict
-            PXXkp1_predict: np.ndarray = symmetrize(
-                np.einsum("tik,tjk->ij", diff, diff) / (self.nbParticles - 1)
+            PXXkp1_predict: np.ndarray = np.einsum("tik,tjk->ij", diff, diff) / (
+                self.nbParticles - 1
             )
-            # Validate result covariance
             self._check_covariance(PXXkp1_predict, step.k, name="PXXkp1_predict")
 
             # Nouvelle observation
@@ -368,10 +370,7 @@ class NonLinear_PPF(PKF):
             # =========================
             Zkp1_predict: np.ndarray = np.average(muxy, axis=0, weights=weights)
             dz = muxy - Zkp1_predict[None, :, :]
-            Pkp1_predict: np.ndarray = symmetrize(
-                np.einsum("i,ijk,ilk->jl", weights, dz, dz)
-            )
-            # Validate result covariance
+            Pkp1_predict: np.ndarray = np.einsum("i,ijk,ilk->jl", weights, dz, dz)
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # # Extraction des blocs de la covariance jointe
@@ -386,7 +385,7 @@ class NonLinear_PPF(PKF):
             innovations: np.ndarray = new_ykp1 - muxy[:, self.dim_x :, :]
 
             # Cas général : R > 0
-            Skp1 = symmetrize(PYYkp1_predict + self._cached["R"])
+            Skp1 = PYYkp1_predict + self._cached["R"]
             # Validate innovation covariance before Cholesky solve
             self._check_invertible(Skp1, step.k, name="Skp1")
 
@@ -441,12 +440,12 @@ class NonLinear_PPF(PKF):
             )[:, None]
 
             # dx = particles_current_temp - Xkp1_update.T
-            # PXXkp1_update = symmetrize((weights[:, None] * dx).T @ dx)
+            # PXXkp1_update = (weights[:, None] * dx).T @ dx
             # self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
 
             # Forme de Joseph — préserve la définition positive
             Joseph_factor = np.vstack((self.eye_dim_x, -Kkp1.T))
-            PXXkp1_update = symmetrize(Joseph_factor.T @ Pkp1_predict @ Joseph_factor)
+            PXXkp1_update = Joseph_factor.T @ Pkp1_predict @ Joseph_factor
             self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
 
             # =========================
