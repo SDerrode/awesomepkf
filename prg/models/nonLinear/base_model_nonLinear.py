@@ -44,7 +44,7 @@ class BaseModelNonLinear:
         self.mz0 = None
         self.Pz0 = None
 
-        self._randMatrices = SeedGenerator(5)
+        self._randMatrices = SeedGenerator()
 
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:

@@ -11,13 +11,19 @@ from __future__ import annotations  # Annotations de type
 from typing import Generator, Optional
 import numpy as np  # Utilisé partout
 from scipy.linalg import LinAlgError  # Utilisé dans le try/except
+
 from classes.PKF import PKF  # Classe parente
 from classes.SigmaPointsSet import SigmaPointsSet  # Utilisé dans FilterConfig
 from others.utils import symmetrize
 
 
 class NonLinear_UPKF(PKF):
-    """Implementation of UPKF."""
+    """
+    Unscented Pairwise Kalman Filter (UPKF).
+
+    Extends :class:`PKF` by introducing the UPKF.
+
+    """
 
     def __init__(
         self,
@@ -25,7 +31,7 @@ class NonLinear_UPKF(PKF):
         sigmaSet: str,
         sKey: Optional[int] = None,
         verbose: int = 0,
-    ):
+    ) -> None:
         super().__init__(param, sKey, verbose)
 
         # Dans NonLinear_UPKF.__init__, à la place de FilterConfig
@@ -77,25 +83,16 @@ class NonLinear_UPKF(PKF):
             za[: self.dim_x] = step.Xkp1_update
             Pa = Pa_base.copy()  # copier Pa_base plutôt que recréer la matrice entière
             Pa[: self.dim_x, : self.dim_x] = step.PXXkp1_update
-            # print(f"za = {za}")
-            # print(f"Pa = {Pa}")
 
             sigma_without_y = self.sigma_point_set_obj._sigma_point(za, Pa)
-            # print(f"sigma_without_y = {sigma_without_y}")
-            # print(f"step.ykp1={step.ykp1}")
-            # input("ATTENTE avant")
-
             sigma_with_y = [
                 np.concatenate([s[: self.dim_x], step.ykp1, s[self.dim_x :]], axis=0)
                 for s in sigma_without_y
             ]
-            # print(f"sigma_with_y = {sigma_with_y}")
-            # input("ATTENTE")
             sigma_propag = [
                 self.g(*np.split(spoint, [self.dim_xy]), self.dt)
                 for spoint in sigma_with_y
             ]
-            # input("ATTENTE")
 
             # Predicting ############################################
             Zkp1_predict = np.sum(
@@ -108,7 +105,8 @@ class NonLinear_UPKF(PKF):
             Pkp1_predict = symmetrize(
                 np.einsum("i,ijk,ilk->jl", self.sigma_point_set_obj.Wc, diffs, diffs)
             )
-            self._test_CovMatrix(Pkp1_predict, step.k, name="Pkp1_predict")
+            # Validate result covariance
+            self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # New data is arriving ##################################
             try:
@@ -121,8 +119,8 @@ class NonLinear_UPKF(PKF):
                 step = self._nextUpdating(
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict
                 )
-            except LinAlgError:
-                self.logger.error(f"Step {new_k}: LinAlgError during update")
+            except Exception as e:
+                # self.logger.error(f"Step {new_k}: LinAlgError during update")
                 raise
 
             yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
