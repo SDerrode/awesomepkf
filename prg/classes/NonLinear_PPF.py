@@ -16,7 +16,7 @@ from typing import Generator, Optional
 # Third-party
 import numpy as np
 from rich import print
-from scipy.linalg import cholesky, inv
+from scipy.linalg import cholesky, cho_factor, cho_solve
 
 # Local
 from .SeedGenerator import SeedGenerator
@@ -24,6 +24,8 @@ from classes.PKF import PKF
 from classes.PKF import PKFStep
 from others.numerics import EPS_ABS
 from others.utils import rich_show_fields, symmetrize, check_eigvals
+
+from .MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
 
 
 class NonLinear_PPF(PKF):
@@ -190,25 +192,49 @@ class NonLinear_PPF(PKF):
         - ``MRinv = M @ R^{-1}`` pour la correction par corrélation.
         - ``log_norm_const`` pour le calcul log-vraisemblance.
 
-        Les valeurs propres de ``P'_x`` sont vérifiées via ``check_eigvals``
-        pour garantir la définition positive.
-
-        Notes
-        -----
-        Cette méthode doit être appelée une seule fois avant la boucle
-        principale de ``process_filter``.
+        Raises
+        ------
+        RuntimeError
+            Si ``R`` n'est pas inversible (diagnostic FAIL).
+        ValueError
+            Si ``P'_x`` n'est pas définie positive et que la régularisation
+            de Tikhonov échoue.
         """
         Q = self.mQ[: self.dim_x, : self.dim_x]
         M = self.mQ[: self.dim_x, self.dim_x :]
         R = self.mQ[self.dim_x :, self.dim_x :]
 
-        # Cas général : R > 0
-        R_inv = inv(R)
+        # --- Inversion de R avec diagnostic complet ---
+        R_inv = InvertibleMatrix(R).inverse()
+
+        # --- Complément de Schur ---
         P_prime_x_base = Q - M @ R_inv @ M.T
 
-        eigvals, eigvecs = np.linalg.eigh(P_prime_x_base)
-        check_eigvals(eigvals)
-        P_prime_x = eigvecs @ np.diag(eigvals) @ eigvecs.T
+        # --- Validation et régularisation si nécessaire ---
+        cov_diag = CovarianceMatrix(P_prime_x_base)
+        report = cov_diag.check()
+
+        if not report.is_ok:
+            self.logger.warning("_precompute: P'_x — %s", report.overall_status)
+            if self.verbose > 1:
+                self.logger.debug("_precompute: P'_x full diagnostic:\n%s", report)
+
+            if not report.is_valid:
+                self.logger.warning(
+                    "_precompute: P'_x is invalid — attempting regularization."
+                )
+                try:
+                    P_prime_x = cov_diag.regularized()
+                    self.logger.warning("_precompute: P'_x regularized successfully.")
+                except RuntimeError as e:
+                    raise ValueError(
+                        f"_precompute: P'_x is not positive definite and "
+                        f"regularization failed — cannot continue.\n{e}"
+                    ) from e
+            else:
+                P_prime_x = cov_diag.regularized()
+        else:
+            P_prime_x = P_prime_x_base
 
         self._cached = dict(
             R=R,
@@ -294,14 +320,14 @@ class NonLinear_PPF(PKF):
         particles_current = particles_current[..., np.newaxis]
         weights: np.ndarray = np.full(self.nbParticles, 1.0 / self.nbParticles)
 
-        # Premier pas
+        # --- First estimate -----------------------------------------------------------
         step = self._firstEstimate(generator)
         if step.xkp1 is None:
             self.ground_truth = False
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
-        # Boucle principale
+        # --- Subsequent steps ---------------------------------------------------------
         while N is None or step.k < N:
 
             particles_previous = particles_current.copy()
@@ -314,7 +340,8 @@ class NonLinear_PPF(PKF):
             PXXkp1_predict: np.ndarray = symmetrize(
                 np.einsum("tik,tjk->ij", diff, diff) / (self.nbParticles - 1)
             )
-            self._test_CovMatrix(PXXkp1_predict, step.k, name="PXXkp1_predict")
+            # Validate result covariance
+            self._check_covariance(PXXkp1_predict, step.k, name="PXXkp1_predict")
 
             # Nouvelle observation
             try:
@@ -344,9 +371,10 @@ class NonLinear_PPF(PKF):
             Pkp1_predict: np.ndarray = symmetrize(
                 np.einsum("i,ijk,ilk->jl", weights, dz, dz)
             )
-            self._test_CovMatrix(Pkp1_predict, new_k, name="Pkp1_predict")
+            # Validate result covariance
+            self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
-            # Extraction des blocs de la covariance jointe
+            # # Extraction des blocs de la covariance jointe
             PYYkp1_predict: np.ndarray = Pkp1_predict[self.dim_x :, self.dim_x :]
             PXYkp1_predict: np.ndarray = Pkp1_predict[: self.dim_x, self.dim_x :]
 
@@ -359,9 +387,17 @@ class NonLinear_PPF(PKF):
 
             # Cas général : R > 0
             Skp1 = symmetrize(PYYkp1_predict + self._cached["R"])
-            self._test_CovMatrix(Skp1, new_k, name="Skp1")
+            # Validate innovation covariance before Cholesky solve
+            self._check_invertible(Skp1, step.k, name="Skp1")
 
-            Kkp1 = PXYkp1_predict @ inv(Skp1)
+            try:
+                c, low = cho_factor(Skp1)
+                Kkp1: np.ndarray = PXYkp1_predict @ cho_solve((c, low), self.eye_dim_y)
+            except Exception as e:
+                self.logger.error(
+                    "Step %d: LinAlgError/ValueError in cho_factor/solve: %s", step.k, e
+                )
+                raise
 
             # Mise à jour des poids par log-vraisemblance gaussienne
             tmp = np.matmul(self._cached["R_inv"], innovations)
@@ -404,24 +440,14 @@ class NonLinear_PPF(PKF):
                 particles_current_temp, axis=0, weights=weights
             )[:, None]
 
-            dx = particles_current_temp - Xkp1_update.T
-            PXXkp1_update = symmetrize((weights[:, None] * dx).T @ dx)
-            verdict1 = self._test_CovMatrix(PXXkp1_update, new_k, name="PXXkp1_update")
+            # dx = particles_current_temp - Xkp1_update.T
+            # PXXkp1_update = symmetrize((weights[:, None] * dx).T @ dx)
+            # self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
 
             # Forme de Joseph — préserve la définition positive
             Joseph_factor = np.vstack((self.eye_dim_x, -Kkp1.T))
-            PXXkp1_update_Joseph = symmetrize(
-                Joseph_factor.T @ Pkp1_predict @ Joseph_factor
-            )
-            verdict2 = self._test_CovMatrix(
-                PXXkp1_update_Joseph, new_k, name="PXXkp1_update_Joseph"
-            )
-            if verdict1 == False:
-                print(f"verdict1={verdict1}")
-                print(f"PXXkp1_update={PXXkp1_update}")
-                print(f"verdict2={verdict2}")
-                print(f"PXXkp1_update_Joseph={PXXkp1_update_Joseph}")
-                input("ATTENTE")
+            PXXkp1_update = symmetrize(Joseph_factor.T @ Pkp1_predict @ Joseph_factor)
+            self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
 
             # =========================
             # RÉÉCHANTILLONNAGE
@@ -429,7 +455,7 @@ class NonLinear_PPF(PKF):
             ess: float = 1.0 / np.sum(weights**2)
             if ess < self.resample_threshold * self.nbParticles:
                 indexes = self.resample(
-                    weights, "systematic"
+                    weights, self.resample_method
                 )  # multinomial, systematic, stratified, residual, self.resample_method,
                 particles_current = particles_current[indexes]
                 weights.fill(1.0 / self.nbParticles)

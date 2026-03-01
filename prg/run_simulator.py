@@ -90,7 +90,10 @@ def main() -> None:
             "Please provide either --linearModelName or --nonLinearModelName"
         )
 
-    simulator.run()
+    try:
+        simulator.run()
+    except RuntimeError as rte:
+        raise
 
 
 if __name__ == "__main__":

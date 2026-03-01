@@ -40,22 +40,27 @@ class BaseNonLinearPPFRunnerFromFile(BaseNonLinearPPFRunner):
 
     # ==========================================================
 
-    def run(self) -> None:
+    def run(self, i: int = 0) -> None:
 
         if self.verbose > 1:
             logging.info("Starting NonLinear PPF Runner (file mode)")
 
-        self.runner_instance.process_N_data(
-            N=None,
-            data_generator=file_data_generator(
-                self.data_filename, self.param.dim_x, self.param.dim_y, self.verbose
-            ),
-        )
+        try:
+            self.runner_instance.process_N_data(
+                N=None,
+                data_generator=file_data_generator(
+                    self.data_filename, self.param.dim_x, self.param.dim_y, self.verbose
+                ),
+            )
+        except RuntimeError as rte:
+            raise
 
         if self.save_history:
-            self._save_history("history_run_ppf_file.pkl")
+            self._save_history(f"history_run_ppf_file_{i}.pkl")
 
         self._compute_errors()
 
         if self.plot:
             self._plot_results()
+
+        return self.runner_instance.history._history.copy()

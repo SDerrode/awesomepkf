@@ -50,7 +50,10 @@ def main() -> None:
             save_history=args.saveHistory,
         )
 
-    runner.run()
+    try:
+        runner.run()
+    except RuntimeError as rte:
+        raise
 
 
 if __name__ == "__main__":

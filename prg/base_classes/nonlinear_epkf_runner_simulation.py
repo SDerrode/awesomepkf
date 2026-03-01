@@ -30,17 +30,22 @@ class BaseNonLinearEPKFRunnerSim(BaseNonLinearEPKFRunner):
 
     # ==========================================================
 
-    def run(self) -> None:
+    def run(self, i: int = 0):
 
         if self.verbose > 1:
             logging.info("Starting NonLinear EPKF Runner (simulation mode)")
 
-        self.runner_instance.process_N_data(N=self.N)
+        try:
+            self.runner_instance.process_N_data(N=self.N)
+        except RuntimeError as rte:
+            raise
 
         if self.save_history:
-            self._save_history("history_run_epkf_simulation.pkl")
+            self._save_history(f"history_run_epkf_simulation_{i}.pkl")
 
         self._compute_errors()
 
         if self.plot:
             self._plot_results()
+
+        return self.runner_instance.history._history.copy()

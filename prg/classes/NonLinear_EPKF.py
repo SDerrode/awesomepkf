@@ -52,9 +52,7 @@ class NonLinear_EPKF(PKF):
             Generator[tuple[int, np.ndarray, np.ndarray], None, None]
         ] = None,
     ) -> Generator[
-        tuple[int, Optional[np.ndarray], np.ndarray, np.ndarray, np.ndarray],
-        None,
-        None,
+        tuple[int, Optional[np.ndarray], np.ndarray, np.ndarray, np.ndarray]
     ]:
         """
         Run the EPKF filter as a generator.
@@ -143,7 +141,9 @@ class NonLinear_EPKF(PKF):
                 )
             accel_xy_xy[: self.dim_x, : self.dim_x] = step.PXXkp1_update
             Pkp1_predict = An @ accel_xy_xy @ An.T + Bn @ self.mQ @ Bn.T
-            self._test_CovMatrix(Pkp1_predict, step.k, name="Pkp1_predict")
+
+            # Validate result covariance
+            self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # New data is arriving ##################################
             try:
@@ -156,8 +156,8 @@ class NonLinear_EPKF(PKF):
                 step = self._nextUpdating(
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict
                 )
-            except LinAlgError:
-                self.logger.error(f"Step {new_k}: LinAlgError during update")
+            except Exception as e:
+                # self.logger.error(f"Step {new_k}: LinAlgError during update")
                 raise
 
             yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
