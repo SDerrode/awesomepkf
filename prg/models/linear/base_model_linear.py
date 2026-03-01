@@ -15,7 +15,7 @@ sys.path.append(str(directory.parent.parent.parent))
 from scipy.linalg import cho_factor, cho_solve
 import numpy as np
 
-from classes.MatrixDiagnostics import CovarianceMatrix
+from classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
 
 
 class BaseModelLinear:

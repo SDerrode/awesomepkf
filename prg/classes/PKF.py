@@ -19,7 +19,6 @@ from others.utils import rich_show_fields
 
 from classes.ParamLinear import ParamLinear
 from classes.ParamNonLinear import ParamNonLinear
-from others.numerics import EPS_ABS, COND_FAIL, EIG_TOL_WARN, EIG_TOL_FAIL
 from .MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
 
 
