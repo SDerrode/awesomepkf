@@ -3,8 +3,7 @@
 """
 Usage:
     # pour EPKF, UPKF, PPF
-    python3 prg/testErreur.py --N 100 --nonLinearModelName "x1_y1_gordon" \
-        --sigmaSet "wan2000" --nbParticles 500 --verbose 0
+    python3 prg/testErreur.py --N 100 --nonLinearModelName "x1_y1_gordon"  --sigmaSet "wan2000" --nbParticles 500 --verbose 0
     # pour PKF
     python3 prg/testErreur.py --N 100 --linearModelName "A_mQ_x1_y1" --verbose 0
 """
@@ -162,6 +161,20 @@ class FilterErrorAnalyzer:
                     self.logger.error("Run %d failed and was skipped: %s", i, rte)
                 nb_failed += 1
                 continue
+            for n in range(N + 1):
+                if np.mean((hist[n]["xkp1"] - hist[n]["Xkp1_update"]) ** 2) > 20:
+                    print(
+                        "n=",
+                        n,
+                        ", Erreur=",
+                        np.mean(
+                            (hist[n]["xkp1"] - hist[n]["Xkp1_update"]) ** 2,
+                        ),
+                        "Trace=",
+                        np.trace(hist[n]["PXXkp1_update"]),
+                    )
+                    print()
+                    input("ATTENTE")
 
             traces_valid.append(
                 [np.trace(hist[n]["PXXkp1_update"]) for n in range(N + 1)]
@@ -278,7 +291,7 @@ class FilterErrorAnalyzer:
 
 if __name__ == "__main__":
     (
-        FilterErrorAnalyzer(filter_name="PPF", nb_exp=200, save_dir="./data/plot")
+        FilterErrorAnalyzer(filter_name="PKF", nb_exp=200, save_dir="./data/plot")
         .parse()
         .run()
         .plot()

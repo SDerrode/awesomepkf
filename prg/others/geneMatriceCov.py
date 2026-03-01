@@ -1,6 +1,38 @@
 import numpy as np
 
-from others.utils import check_eigvals
+from others.numerics import (
+    EIG_TOL_FAIL,
+    EIG_TOL_WARN,
+)
+
+
+def check_eigvals(eigvals: np.ndarray) -> None:
+    """
+    Validate eigenvalues against positivity tolerances.
+
+    Raises an error if any eigenvalue falls below ``EIG_TOL_FAIL``.
+    Eigenvalues between ``EIG_TOL_FAIL`` and ``EIG_TOL_WARN`` are considered
+    numerical noise and are silently accepted.
+
+    Parameters
+    ----------
+    eigvals : np.ndarray
+        Sorted array of eigenvalues, shape ``(n,)``.
+
+    Raises
+    ------
+    ValueError
+        If any eigenvalue is below ``EIG_TOL_FAIL``.
+    """
+    if np.any(eigvals < EIG_TOL_FAIL):
+        raise ValueError(
+            f"Matrix is not positive semi-definite: "
+            f"negative eigenvalues = {eigvals[eigvals < EIG_TOL_FAIL]}"
+        )
+    elif np.any(eigvals < EIG_TOL_WARN):
+        print(
+            f"Near-zero eigenvalues detected (below EIG_TOL_WARN): - {eigvals[eigvals < EIG_TOL_WARN]} — likely numerical noise."
+        )
 
 
 def generate_block_matrix(

@@ -15,12 +15,7 @@ from rich import print
 # Local imports
 from .HistoryTracker import HistoryTracker
 from .SeedGenerator import SeedGenerator
-from others.utils import (
-    diagnose_covariance,
-    rich_show_fields,
-    symmetrize,
-    check_eigvals,
-)
+from others.utils import rich_show_fields
 
 from classes.ParamLinear import ParamLinear
 from classes.ParamNonLinear import ParamNonLinear
@@ -599,8 +594,6 @@ class PKF:
         Sigma22_inv: np.ndarray = np.linalg.inv(Sigma22)
         Xkp1_update: np.ndarray = mu_x0 + Sigma12 @ Sigma22_inv @ (ykp1 - mu_y0)
         PXXkp1_update: np.ndarray = Sigma11 - Sigma12 @ Sigma22_inv @ Sigma21
-
-        # Validate result covariance
         self._check_covariance(PXXkp1_update, k, name="PXXkp1_update")
 
         Xkp1_predict: np.ndarray = np.zeros((self.dim_x, 1))
@@ -614,7 +607,7 @@ class PKF:
             Skp1=self.eye_dim_y.copy(),
             Kkp1=self.zeros_dim_x_y.copy(),
             Xkp1_update=Xkp1_update.copy(),
-            PXXkp1_update=symmetrize(PXXkp1_update),
+            PXXkp1_update=PXXkp1_update,
         )
 
         self.history.record(step)
@@ -699,11 +692,9 @@ class PKF:
 
         # Joseph form
         Joseph_factor: np.ndarray = np.vstack((self.eye_dim_x, -Kkp1.T))
-        PXXkp1_update_Joseph: np.ndarray = symmetrize(
+        PXXkp1_update_Joseph: np.ndarray = (
             Joseph_factor.T @ Pkp1_predict @ Joseph_factor
         )
-
-        # Validate result covariance
         self._check_covariance(PXXkp1_update_Joseph, k, name="PXXkp1_update_Joseph")
 
         step = PKFStep(

@@ -40,6 +40,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from classes.PKF import PKF
 
+from classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
+
 __all__ = [
     "rich_show_fields",
     "save_dataframe_to_csv",
@@ -47,13 +49,7 @@ __all__ = [
     "compute_errors",
     "read_unknown_file",
     "file_data_generator",
-    "symmetrize",
-    "check_eigvals",
-    "diagnose_covariance",
-    "is_covariance",
-    "check_consistency",
     "check_equality",
-    "random_covariance",
     "name_analysis",
 ]
 
@@ -274,7 +270,11 @@ def _compute_quadratic_form(
             logger.warning(f"Step {k}: covariance contains NaN/inf — skipping.")
             continue
 
-        Pk_inv = np.linalg.pinv(Pk)
+        try:
+            Pk_inv = InvertibleMatrix(Pk).inverse()
+        except Exception as e:
+            input("ATTENTE _compute_quadratic_form")
+
         vals[k] = float((ek.T @ Pk_inv @ ek).squeeze())
 
     return vals
@@ -586,244 +586,6 @@ def file_data_generator(
             yield k, xkp1, ykp1
         else:
             yield k, None, values
-
-
-# ----------------------------------------------------------------------
-# Covariance matrix utilities
-# ----------------------------------------------------------------------
-def symmetrize(arr: np.ndarray) -> np.ndarray:
-    """
-    Return a symmetrized copy of a matrix: ``(A + A^T) / 2``.
-
-    Parameters
-    ----------
-    arr : np.ndarray
-        Square matrix, shape ``(n, n)``.
-
-    Returns
-    -------
-    np.ndarray
-        Symmetrized matrix, shape ``(n, n)``.
-    """
-    return 0.5 * (arr + arr.T)
-
-
-def check_eigvals(eigvals: np.ndarray) -> None:
-    """
-    Validate eigenvalues against positivity tolerances.
-
-    Raises an error if any eigenvalue falls below ``EIG_TOL_FAIL``.
-    Eigenvalues between ``EIG_TOL_FAIL`` and ``EIG_TOL_WARN`` are considered
-    numerical noise and are silently accepted.
-
-    Parameters
-    ----------
-    eigvals : np.ndarray
-        Sorted array of eigenvalues, shape ``(n,)``.
-
-    Raises
-    ------
-    ValueError
-        If any eigenvalue is below ``EIG_TOL_FAIL``.
-    """
-    if np.any(eigvals < EIG_TOL_FAIL):
-        raise ValueError(
-            f"Matrix is not positive semi-definite: "
-            f"negative eigenvalues = {eigvals[eigvals < EIG_TOL_FAIL]}"
-        )
-    elif np.any(eigvals < EIG_TOL_WARN):
-        logger.debug(
-            f"Near-zero eigenvalues detected (below EIG_TOL_WARN): "
-            f"{eigvals[eigvals < EIG_TOL_WARN]} — likely numerical noise."
-        )
-
-
-def diagnose_covariance(P: np.ndarray) -> tuple[bool, dict]:
-    """
-    Run a full numerical diagnostic on a candidate covariance matrix.
-
-    Checks symmetry, positive semi-definiteness (via eigenvalues),
-    condition number, and Cholesky decomposability.
-
-    Parameters
-    ----------
-    P : np.ndarray
-        Square matrix to diagnose, shape ``(n, n)``.
-
-    Returns
-    -------
-    verdict : bool
-        ``True`` if the matrix passes all checks.
-    report : dict
-        Detailed diagnostic indicators:
-
-        - ``symmetry_error``      : float      — Frobenius norm of ``P - P^T``
-        - ``is_symmetric``        : bool       — ``symmetry_error < EPS_ABS``
-        - ``eigenvalues``         : np.ndarray — sorted eigenvalues of symmetrized P
-        - ``lambda_min``          : float      — smallest eigenvalue
-        - ``lambda_max``          : float      — largest eigenvalue
-        - ``is_psd``              : bool       — ``lambda_min >= EIG_TOL_FAIL``
-        - ``condition_number``    : float      — ``lambda_max / lambda_min``, or ``inf``
-        - ``ill_conditioned``     : bool       — ``condition_number > COND_WARN``
-        - ``numerically_singular``: bool       — ``condition_number > COND_FAIL``
-        - ``cholesky_ok``         : bool       — Cholesky decomposition succeeded
-    """
-    P = np.asarray(P, dtype=FLOAT_DTYPE)
-
-    report: dict = {}
-    verdict = True
-
-    # 1) Symmetry check
-    sym_err = float(np.linalg.norm(P - P.T, ord="fro"))
-    report["symmetry_error"] = sym_err
-    report["is_symmetric"] = sym_err < EPS_ABS
-    verdict &= report["is_symmetric"]
-
-    # Symmetrize before further checks to avoid numerical artefacts
-    P_sym = symmetrize(P)
-
-    # 2) Eigenvalues — eigvalsh exploits symmetry for better stability
-    eigvals = np.linalg.eigvalsh(P_sym)
-    check_eigvals(eigvals)
-    lam_min = float(eigvals.min())
-    lam_max = float(eigvals.max())
-
-    report["eigenvalues"] = eigvals
-    report["lambda_min"] = lam_min
-    report["lambda_max"] = lam_max
-    report["is_psd"] = lam_min >= EIG_TOL_FAIL
-    verdict &= report["is_psd"]
-
-    # 3) Condition number — ratio of largest to smallest eigenvalue
-    #    If lam_min <= EIG_TOL_WARN (negative or zero), ratio is meaningless
-    # cond = lam_max / lam_min if lam_min > EIG_TOL_WARN else np.inf
-    # report["condition_number"] = cond
-    # report["ill_conditioned"] = cond > COND_WARN
-    # report["numerically_singular"] = cond > COND_FAIL
-    # verdict &= not report["numerically_singular"]
-    try:
-        cond = lam_max / lam_min if lam_min > EIG_TOL_WARN else np.inf
-        report["condition_number"] = cond
-        report["ill_conditioned"] = cond > COND_WARN
-        report["numerically_singular"] = cond > COND_FAIL
-        verdict &= not report["numerically_singular"]
-    except ZeroDivisionError:
-        cond = np.inf
-        report["condition_number"] = cond
-        report["ill_conditioned"] = False
-        report["numerically_singular"] = False
-        verdict &= not report["numerically_singular"]
-
-    # 4) Cholesky test — most reliable practical criterion for PSD
-    try:
-        np.linalg.cholesky(P_sym)
-        report["cholesky_ok"] = True
-    except np.linalg.LinAlgError:
-        report["cholesky_ok"] = False
-        verdict = False
-
-    return verdict, report
-
-
-def is_covariance(M: np.ndarray, name: str) -> None:
-    """
-    Check that a matrix is a valid covariance matrix (symmetric, PSD).
-
-    Delegates all checks to :func:`diagnose_covariance` for consistency.
-    Issues are reported via the module logger.
-
-    Parameters
-    ----------
-    M : np.ndarray
-        Matrix to validate, shape ``(n, n)``.
-    name : str
-        Name used in log messages to identify the matrix.
-    """
-    _, report = diagnose_covariance(M)
-    if not report["is_symmetric"]:
-        logger.warning(
-            f"Matrix '{name}' is not symmetric "
-            f"(Frobenius error={report['symmetry_error']:.3e})"
-        )
-    if not report["is_psd"]:
-        logger.warning(
-            f"Matrix '{name}' is not positive semi-definite "
-            f"(lambda_min={report['lambda_min']:.3e})"
-        )
-    if report.get("ill_conditioned"):
-        logger.warning(
-            f"Matrix '{name}' is ill-conditioned "
-            f"(cond={report['condition_number']:.3e})"
-        )
-    logger.debug(f"Eigenvalues of '{name}': {report['eigenvalues']}")
-
-
-def check_consistency(**kwargs: np.ndarray) -> None:
-    """
-    Check that all provided matrices are valid covariance matrices.
-
-    Delegates each check to :func:`is_covariance`.
-
-    Parameters
-    ----------
-    **kwargs : np.ndarray
-        Named matrices to validate. The key is used as the matrix name
-        in log messages.
-    """
-    for name, M in kwargs.items():
-        is_covariance(M, name)
-
-
-def random_covariance(
-    rng: np.random.Generator,
-    dim_x: int,
-    dim_y: int,
-) -> np.ndarray:
-    """
-    Generate a random block-structured covariance matrix of size
-    ``(dim_x + dim_y) x (dim_x + dim_y)``.
-
-    The matrix is constructed to satisfy the Schur complement condition:
-
-        ``Sigma11 - Sigma12 @ Sigma22^{-1} @ Sigma12^T`` is SPD.
-
-    Structure::
-
-        Sigma = [[Sigma11, Sigma12],
-                 [Sigma12^T, Sigma22]]
-
-    Parameters
-    ----------
-    rng : np.random.Generator
-        NumPy random generator (e.g. ``np.random.default_rng(seed)``).
-    dim_x : int
-        Dimension of the state block (rows/cols of ``Sigma11``).
-    dim_y : int
-        Dimension of the observation block (rows/cols of ``Sigma22``).
-
-    Returns
-    -------
-    np.ndarray
-        Symmetric positive definite matrix, shape ``(dim_x + dim_y, dim_x + dim_y)``.
-    """
-    # Bottom-right block (Sigma22) — SPD and invertible
-    A2 = rng.standard_normal((dim_y, dim_y))
-    Sigma22 = A2 @ A2.T + 1e-3 * np.eye(dim_y)
-
-    # Cross block
-    Sigma12 = rng.standard_normal((dim_x, dim_y))
-
-    # Free SPD matrix S used to construct Sigma11
-    A1 = rng.standard_normal((dim_x, dim_x))
-    S = A1 @ A1.T + 1e-3 * np.eye(dim_x)
-
-    # Sigma11 satisfying the Schur complement condition
-    Sigma22_inv: np.ndarray = np.linalg.inv(Sigma22)
-    Sigma11 = S + Sigma12 @ Sigma22_inv @ Sigma12.T
-
-    # Assembly
-    Sigma = np.block([[Sigma11, Sigma12], [Sigma12.T, Sigma22]])
-    return Sigma
 
 
 # ----------------------------------------------------------------------
