@@ -26,15 +26,8 @@ from dataclasses import is_dataclass, asdict  # Used in rich_show_fields
 from rich.table import Table
 from rich.console import Console
 from rich.text import Text
-from others.numerics import (
-    FLOAT_DTYPE,
-    EPS_ABS,
-    EPS_REL,
-    EIG_TOL_FAIL,
-    EIG_TOL_WARN,
-    COND_WARN,
-    COND_FAIL,
-)
+from others.numerics import EPS_ABS, EPS_REL
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

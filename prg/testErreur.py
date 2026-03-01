@@ -3,7 +3,7 @@
 """
 Usage:
     # pour EPKF, UPKF, PPF
-    python3 prg/testErreur.py --N 100 --nonLinearModelName "x1_y1_gordon"  --sigmaSet "wan2000" --nbParticles 500 --verbose 0
+    python3 prg/testErreur.py --N 100 --sigmaSet "wan2000" --nbParticles 500 --verbose 0 --nonLinearModelName "x1_y1_gordon"
     # pour PKF
     python3 prg/testErreur.py --N 100 --linearModelName "A_mQ_x1_y1" --verbose 0
 """
@@ -161,15 +161,17 @@ class FilterErrorAnalyzer:
                     self.logger.error("Run %d failed and was skipped: %s", i, rte)
                 nb_failed += 1
                 continue
+
             for n in range(N + 1):
-                if np.mean((hist[n]["xkp1"] - hist[n]["Xkp1_update"]) ** 2) > 20:
+                # np.sum : erreur quadratique totale sur le vecteur d'état
+                # (cohérent avec trace(P) = somme des variances par composante)
+                err_n = np.sum((hist[n]["xkp1"] - hist[n]["Xkp1_update"]) ** 2)
+                if err_n > 20:
                     print(
                         "n=",
                         n,
                         ", Erreur=",
-                        np.mean(
-                            (hist[n]["xkp1"] - hist[n]["Xkp1_update"]) ** 2,
-                        ),
+                        err_n,
                         "Trace=",
                         np.trace(hist[n]["PXXkp1_update"]),
                     )
@@ -181,7 +183,10 @@ class FilterErrorAnalyzer:
             )
             errors_valid.append(
                 [
-                    np.mean((hist[n]["xkp1"] - hist[n]["Xkp1_update"]) ** 2)
+                    # np.sum(diff²) : somme des erreurs quadratiques sur toutes
+                    # les composantes du vecteur d'état → comparable à trace(P)
+                    # (np.mean diviserait par dim, sous-estimant d'un facteur dim)
+                    np.sum((hist[n]["xkp1"] - hist[n]["Xkp1_update"]) ** 2)
                     for n in range(N + 1)
                 ]
             )
@@ -228,7 +233,7 @@ class FilterErrorAnalyzer:
         fig, ax = plt.subplots(figsize=(6, 3), facecolor=FACECOLOR)
 
         # trace(Pxx)
-        ax.plot(n, stats.tr_mean, linewidth=2.5, label=r"trace($P_{xx}$)")
+        ax.plot(n, stats.tr_mean, linewidth=2.5, label=r"trace($P^{xx}_{n \mid n}$)")
         ax.fill_between(
             n,
             stats.tr_mean - coef * stats.tr_std,
@@ -236,8 +241,14 @@ class FilterErrorAnalyzer:
             alpha=0.25,
         )
 
-        # MSE
-        ax.plot(n, stats.err_mean, linestyle="--", linewidth=2.5, label="MSE")
+        # Erreur quadratique totale
+        ax.plot(
+            n,
+            stats.err_mean,
+            linestyle="--",
+            linewidth=2.5,
+            label=r"$\left\| x_n - \hat{x}_n \right\|^2$",
+        )
         ax.fill_between(
             n,
             stats.err_mean - coef * stats.err_std,
@@ -291,7 +302,7 @@ class FilterErrorAnalyzer:
 
 if __name__ == "__main__":
     (
-        FilterErrorAnalyzer(filter_name="PKF", nb_exp=200, save_dir="./data/plot")
+        FilterErrorAnalyzer(filter_name="UPKF", nb_exp=200, save_dir="./data/plot")
         .parse()
         .run()
         .plot()

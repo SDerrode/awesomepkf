@@ -34,7 +34,7 @@ class ModelGordon(BaseModelNonLinear):
         )
         self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
         self.Pz0 = generate_block_matrix(
-            self._randMatrices.rng, self.dim_x, self.dim_y, 0.03
+            self._randMatrices.rng, self.dim_x, self.dim_y, 0.02
         )
 
     # ------------------------------------------------------------------
