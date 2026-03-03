@@ -6,6 +6,7 @@ import numpy as np
 from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.classes.SeedGenerator import SeedGenerator
 from prg.models.linear.base_model_linear import LinearAmQ
+from prg.exceptions import NumericalError
 
 __all__ = ["Model_A_mQ_x2_y2"]
 
@@ -18,7 +19,6 @@ class Model_A_mQ_x2_y2(LinearAmQ):
 
         randMatrices = SeedGenerator(5)
 
-        # Dimensions x=2, y=2
         dim_x = 2
         dim_y = 2
         dim_xy = dim_x + dim_y
@@ -52,40 +52,14 @@ class Model_A_mQ_x2_y2(LinearAmQ):
             ]
         )
         B = np.eye(A.shape[0])
-        # mQ = np.array(
-        #     [
-        #         [
-        #             0.7225554106910039,
-        #             0.3244784876140809,
-        #             0.5678943937418514,
-        #             0.1698174706649283,
-        #         ],
-        #         [
-        #             0.3244784876140808,
-        #             0.7225554106910039,
-        #             0.1698174706649283,
-        #             0.5678943937418514,
-        #         ],
-        #         [
-        #             0.5678943937418514,
-        #             0.1698174706649283,
-        #             0.957513037809648,
-        #             0.2719361147327249,
-        #         ],
-        #         [
-        #             0.1698174706649283,
-        #             0.5678943937418514,
-        #             0.2719361147327249,
-        #             0.957513037809648,
-        #         ],
-        #     ]
-        # )
 
-        # mz0 = np.zeros((dim_x + dim_y, 1))
-        # Pz0 = np.eye(dim_x + dim_y)
-
-        mQ = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.15)
-        mz0 = randMatrices.rng.standard_normal((dim_xy, 1))
-        Pz0 = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.15)
+        try:
+            mQ = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.15)
+            mz0 = randMatrices.rng.standard_normal((dim_xy, 1))
+            Pz0 = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.15)
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(
+                f"[{Model_A_mQ_x2_y2.MODEL_NAME}] Initialization failed: {e}"
+            ) from e
 
         super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, mz0=mz0, Pz0=Pz0)

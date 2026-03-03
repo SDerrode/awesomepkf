@@ -136,8 +136,17 @@ class NonLinear_EPKF(PKF):
             z_iterated[self.dim_x :] = step.ykp1
 
             # Prediction
-            Zkp1_predict = self.param.g(z_iterated, self.zeros_dim_xy_1, self.dt)
-            An, Bn = jg(z_iterated, self.zeros_dim_xy_1, self.dt)
+            try:
+                Zkp1_predict = self.param.g(z_iterated, self.zeros_dim_xy_1, self.dt)
+                An, Bn = jg(z_iterated, self.zeros_dim_xy_1, self.dt)
+            except FloatingPointError as e:
+                raise FilterError(
+                    f"Step {new_k}: unexpected error during update step."
+                ) from e
+            except (Exception, FloatingPointError) as e:
+                raise FilterError(
+                    f"Step {step.k}: unexpected error during update step."
+                ) from e
 
             # Validate Jacobian shapes — erreur de paramétrage du modèle
             if An.shape != (self.dim_xy, self.dim_xy) or Bn.shape != (

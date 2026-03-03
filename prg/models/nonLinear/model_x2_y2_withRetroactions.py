@@ -4,7 +4,7 @@
 import numpy as np
 
 from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
-from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.exceptions import NumericalError
 
 __all__ = ["ModelX2Y2_withRetroactions"]
 
@@ -20,50 +20,69 @@ class ModelX2Y2_withRetroactions(BaseModelNonLinear):
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=2, model_type="nonlinear")
 
-        Q = np.array([[0.08, 0.01], [0.01, 0.05]])
-        R = np.array([[0.1, 0.0], [0.0, 0.05]])
-        M = np.array([[0.01, 0.0], [0.0, 0.01]])
-        self.mQ = np.block([[Q, M], [M.T, R]]) / 2.0
-        self.mz0 = np.zeros((self.dim_xy, 1))
-        self.Pz0 = np.eye(self.dim_xy) / 20.0
-
-        # self.mQ = generate_block_matrix(
-        #     self._randMatrices.rng, self.dim_x, self.dim_y, 0.001
-        # )
-        # self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
-        # self.Pz0 = generate_block_matrix(
-        #     self._randMatrices.rng, self.dim_x, self.dim_y, 0.001
-        # )
+        try:
+            Q = np.array([[0.08, 0.01], [0.01, 0.05]])
+            R = np.array([[0.1, 0.0], [0.0, 0.05]])
+            M = np.array([[0.01, 0.0], [0.0, 0.01]])
+            self.mQ = np.block([[Q, M], [M.T, R]]) / 2.0
+            self.mz0 = np.zeros((self.dim_xy, 1))
+            self.Pz0 = np.eye(self.dim_xy) / 20.0
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] Initialization failed: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _gx(self, x, y, t, u, dt):
         """
         Nonlinear state function with retro-action on observation.
         """
-        x1, x2 = x.flatten()
-        y1 = y.flatten()[0]
-        t1, t2 = t.flatten()
+        try:
+            with np.errstate(all="raise"):
+                x1, x2 = x.flatten()
+                y1 = y.flatten()[0]
+                t1, t2 = t.flatten()
 
-        return np.array(
-            [[x1 + 0.1 * x2 * np.tanh(y1) + t1], [0.9 * x2 + 0.1 * np.sin(x1) + t2]]
-        )
+                return np.array(
+                    [
+                        [x1 + 0.1 * x2 * np.tanh(y1) + t1],
+                        [0.9 * x2 + 0.1 * np.sin(x1) + t2],
+                    ]
+                )
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _gx: floating point error at x={x}, y={y}, t={t}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _gx: array access error at x={x}, y={y}, t={t}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _gy(self, x, y, t, u, dt):
         """
         Nonlinear observation function with retro-action on previous observation.
         """
-        x1, x2 = x.flatten()
-        y1, y2 = y.flatten()
-        u1, u2 = u.flatten()
+        try:
+            with np.errstate(all="raise"):
+                x1, x2 = x.flatten()
+                y1, y2 = y.flatten()
+                u1, u2 = u.flatten()
 
-        # return np.array([[x1**2 - 0.3 * y2 + u1], [x2 + 0.3 * y1 + u2]])
-        return np.array([[x1 - 0.3 * y2 + u1], [x2 + 0.3 * y1 + u2]])
+                return np.array([[x1 - 0.3 * y2 + u1], [x2 + 0.3 * y1 + u2]])
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _gy: floating point error at x={x}, y={y}, u={u}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _gy: array access error at x={x}, y={y}, u={u}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
         """
-        Combined state and observation using Wojciech’s formulation.
+        Combined state and observation using Wojciech's formulation.
         """
         if __debug__:
             assert x.shape == (2, 1), f"x must be (2,1), got {x.shape}"
@@ -72,9 +91,16 @@ class ModelX2Y2_withRetroactions(BaseModelNonLinear):
             assert u.shape == (2, 1), f"u must be (2,1), got {u.shape}"
             assert isinstance(dt, (float, int)), "dt must be a float"
 
-        gx_val = self._gx(x, y, t, u, dt)
-        gy_val = self._gy(x, y, t, u, dt)
-        return np.vstack((gx_val, gy_val))
+        try:
+            gx_val = self._gx(x, y, t, u, dt)
+            gy_val = self._gy(x, y, t, u, dt)
+            return np.vstack((gx_val, gy_val))
+        except NumericalError:
+            raise
+        except ValueError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _g: shape mismatch during vstack: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _jacobiens_g(self, x, y, t, u, dt):
@@ -88,18 +114,28 @@ class ModelX2Y2_withRetroactions(BaseModelNonLinear):
             assert u.shape == (2, 1), f"u must be (2,1), got {u.shape}"
             assert isinstance(dt, (float, int)), "dt must be a float"
 
-        x1, x2 = x.flatten()
-        y1 = y.flatten()[0]
+        try:
+            with np.errstate(all="raise"):
+                x1, x2 = x.flatten()
+                y1 = y.flatten()[0]
 
-        An = np.array(
-            [
-                [1.0, 0.1 * np.tanh(y1), 0.1 * x2 * (1.0 - np.tanh(y1)), 0.0],
-                [0.1 * np.cos(x1), 0.9, 0.0, 0.0],
-                [1.0, 0.0, 0.0, -0.3],
-                [0.0, 1.0, 0.3, 0.0],
-            ]
-        )
+                An = np.array(
+                    [
+                        [1.0, 0.1 * np.tanh(y1), 0.1 * x2 * (1.0 - np.tanh(y1)), 0.0],
+                        [0.1 * np.cos(x1), 0.9, 0.0, 0.0],
+                        [1.0, 0.0, 0.0, -0.3],
+                        [0.0, 1.0, 0.3, 0.0],
+                    ]
+                )
+                Bn = np.eye(self.dim_xy)
 
-        Bn = np.eye(self.dim_xy)
+            return An, Bn
 
-        return An, Bn
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _jacobiens_g: floating point error at x={x}, y={y}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _jacobiens_g: array construction error: {e}"
+            ) from e

@@ -201,6 +201,13 @@ class BaseRunner(ABC):
             )
         except PKFError:
             raise
+        except RuntimeError as e:
+            # Cas typique : matrice de covariance Pk dégénérée (rang 0, det ≈ 0)
+            # après effondrement des particules du PPF ou divergence du filtre.
+            raise FilterError(
+                f"Error computation failed — covariance matrix may be degenerate "
+                f"(particle collapse or filter divergence). Detail: {e}"
+            ) from e
         except Exception as e:
             raise FilterError("Unexpected error during error computation.") from e
 

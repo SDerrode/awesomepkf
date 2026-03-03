@@ -5,6 +5,7 @@ import numpy as np
 
 from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
 from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.exceptions import NumericalError
 
 __all__ = ["ModelX2Y1"]
 
@@ -32,17 +33,18 @@ class ModelX2Y1(BaseModelNonLinear):
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
-        # Covariance and initial state
-        # self.mQ = np.diag([1e-4, 1e-4, 1e-4])
-        # self.mz0 = np.zeros((self.dim_xy, 1))
-        # self.Pz0 = np.eye(self.dim_xy)
-        self.mQ = generate_block_matrix(
-            self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
-        )
-        self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
-        self.Pz0 = generate_block_matrix(
-            self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
-        )
+        try:
+            self.mQ = generate_block_matrix(
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+            )
+            self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
+            self.Pz0 = generate_block_matrix(
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+            )
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] Initialization failed: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:
@@ -57,15 +59,25 @@ class ModelX2Y1(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (2,1) - next state
         """
-        x1, x2 = x.flatten()
-        t1, t2 = t.flatten()
+        try:
+            with np.errstate(all="raise"):
+                x1, x2 = x.flatten()
+                t1, t2 = t.flatten()
 
-        return np.array(
-            [
-                [x1 + 0.05 * x2 + 0.5 * np.sin(0.1 * x2) + t1],
-                [0.9 * x2 + 0.2 * np.cos(0.3 * x1) + t2],
-            ]
-        )
+                return np.array(
+                    [
+                        [x1 + 0.05 * x2 + 0.5 * np.sin(0.1 * x2) + t1],
+                        [0.9 * x2 + 0.2 * np.cos(0.3 * x1) + t2],
+                    ]
+                )
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _fx: floating point error at x={x}, t={t}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _fx: array access error at x={x}, t={t}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
@@ -80,8 +92,17 @@ class ModelX2Y1(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (1,1) - measurement
         """
-
-        return np.array([[np.sqrt(x[0, 0] ** 2 + x[1, 0] ** 2) + u[0, 0]]])
+        try:
+            with np.errstate(all="raise"):
+                return np.array([[np.sqrt(x[0, 0] ** 2 + x[1, 0] ** 2) + u[0, 0]]])
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _hx: floating point error at x={x}, u={u}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _hx: array access error at x={x}, u={u}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _g(
@@ -107,9 +128,16 @@ class ModelX2Y1(BaseModelNonLinear):
             assert u.shape == (1, 1)
             assert isinstance(dt, (float, int))
 
-        fx_val = self._fx(x, t, dt)
-        hx_val = self._hx(fx_val, u, dt)
-        return np.vstack((fx_val, hx_val))
+        try:
+            fx_val = self._fx(x, t, dt)
+            hx_val = self._hx(fx_val, u, dt)
+            return np.vstack((fx_val, hx_val))
+        except NumericalError:
+            raise
+        except ValueError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _g: shape mismatch during vstack: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _jacobiens_g(
@@ -128,30 +156,43 @@ class ModelX2Y1(BaseModelNonLinear):
             assert u.shape == (1, 1)
             assert isinstance(dt, (float, int))
 
-        x1, x2 = x.flatten()
-        t1, t2 = t.flatten()
+        try:
+            with np.errstate(all="raise"):
+                x1, x2 = x.flatten()
+                t1, t2 = t.flatten()
 
-        # Predicted state
-        A_val = x1 + 0.05 * x2 + 0.5 * np.sin(0.1 * x2) + t1
-        B_val = 0.9 * x2 + 0.2 * np.cos(0.3 * x1) + t2
-        r_val = np.sqrt(A_val**2 + B_val**2)
+                # Predicted state
+                A_val = x1 + 0.05 * x2 + 0.5 * np.sin(0.1 * x2) + t1
+                B_val = 0.9 * x2 + 0.2 * np.cos(0.3 * x1) + t2
+                r_val = np.sqrt(A_val**2 + B_val**2)
 
-        # Jacobian w.r.t state (2x2)
-        An = np.array(
-            [
-                [1.0, 0.05 * (1 + np.cos(0.1 * x2)), 0.0],
-                [-0.06 * np.sin(0.3 * x1), 0.9, 0.0],
-                [
-                    (A_val - 0.06 * np.sin(0.3 * x1)) / r_val,
-                    (0.05 * A_val * (1 + np.cos(0.1 * x2)) + 0.9 * B_val) / r_val,
-                    0.0,
-                ],
-            ]
-        )
+                An = np.array(
+                    [
+                        [1.0, 0.05 * (1 + np.cos(0.1 * x2)), 0.0],
+                        [-0.06 * np.sin(0.3 * x1), 0.9, 0.0],
+                        [
+                            (A_val - 0.06 * np.sin(0.3 * x1)) / r_val,
+                            (0.05 * A_val * (1 + np.cos(0.1 * x2)) + 0.9 * B_val)
+                            / r_val,
+                            0.0,
+                        ],
+                    ]
+                )
+                Bn = np.array(
+                    [
+                        [1.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                        [A_val / r_val, B_val / r_val, 1.0],
+                    ]
+                )
 
-        # Jacobian w.r.t noise (2x3)
-        Bn = np.array(
-            [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [A_val / r_val, B_val / r_val, 1.0]]
-        )
+            return An, Bn
 
-        return An, Bn
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _jacobiens_g: floating point error at x={x}, t={t}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _jacobiens_g: array construction error: {e}"
+            ) from e

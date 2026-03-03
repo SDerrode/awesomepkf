@@ -262,6 +262,37 @@ class NonLinear_PPF(PKF):
             * (self.dim_y * np.log(2 * np.pi) + np.linalg.slogdet(R)[1]),
         )
 
+    @staticmethod
+    def _safe_normalize_log_weights(log_weights: np.ndarray) -> np.ndarray:
+        """Normalise les log-poids de façon numériquement stable.
+
+        Gère : nan (overflow vraisemblance), tous à -inf (dégénérescence totale),
+        underflow extrême après exp.
+        """
+        # nan → -inf (overflow dans le terme quadratique)
+        nan_mask = np.isnan(log_weights)
+        if nan_mask.any():
+            log_weights = log_weights.copy()
+            log_weights[nan_mask] = -np.inf
+
+        # Dégénérescence totale : toutes les particules incompatibles → poids uniformes
+        finite_mask = np.isfinite(log_weights)
+        if not finite_mask.any():
+            return np.full(len(log_weights), 1.0 / len(log_weights))
+
+        # log-sum-exp stable : soustraction du max fini uniquement
+        max_lw = np.max(log_weights[finite_mask])
+        log_weights = np.where(finite_mask, log_weights - max_lw, -np.inf)
+
+        weights = np.exp(log_weights)
+        total = weights.sum()
+
+        # Underflow extrême après exp
+        if not np.isfinite(total) or total <= 0.0:
+            return np.full(len(log_weights), 1.0 / len(log_weights))
+
+        return weights / total
+
     def process_filter(
         self,
         N: Optional[int] = None,
@@ -386,9 +417,7 @@ class NonLinear_PPF(PKF):
                 + exponents
                 + self._cached["log_norm_const"]
             )
-            log_weights -= np.max(log_weights)
-            weights = np.exp(log_weights)
-            weights /= np.sum(weights)
+            weights = self._safe_normalize_log_weights(log_weights)
 
             if __debug__:
                 assert not np.any(
