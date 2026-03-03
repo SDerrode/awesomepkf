@@ -12,8 +12,10 @@ from typing import Generator, Optional
 import numpy as np  # Utilisé partout
 from scipy.linalg import LinAlgError  # Utilisé dans le try/except
 
-from classes.PKF import PKF  # Classe parente
-from classes.SigmaPointsSet import SigmaPointsSet  # Utilisé dans FilterConfig
+from prg.classes.PKF import PKF
+from prg.classes.SigmaPointsSet import SigmaPointsSet  # Utilisé dans FilterConfig
+
+__all__ = ["NonLinear_UPKF"]
 
 
 class NonLinear_UPKF(PKF):

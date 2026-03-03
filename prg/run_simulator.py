@@ -4,9 +4,9 @@
 import argparse
 import logging
 
-from base_classes.simulator_linear import LinearDataSimulator
-from base_classes.simulator_nonlinear import NonLinearDataSimulator
-from others.parser import addParseToParser
+from prg.base_classes.simulator_linear import LinearDataSimulator
+from prg.base_classes.simulator_nonlinear import NonLinearDataSimulator
+from prg.utils.parser import addParseToParser
 
 # =============================================================
 # Logger

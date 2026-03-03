@@ -1,21 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pathlib import Path
-import sys
-
-directory = Path(__file__)
-sys.path.append(str(directory.parent.parent))
-
 import logging
 from typing import Any
 
 import numpy as np
 
 # Non linear models
-from models.nonLinear import ModelFactoryNonLinear
+from prg.models.nonLinear import ModelFactoryNonLinear
+from prg.classes.MatrixDiagnostics import CovarianceMatrix
 
-from classes.MatrixDiagnostics import CovarianceMatrix
+__all__ = ["ParamNonLinear"]
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -161,23 +156,3 @@ class ParamNonLinear:
             print("mQ = np.array(", repr(self.mQ.tolist()), ")")
             print("mz0 = np.array(", repr(self.mz0.tolist()), ")")
             print("Pz0 = np.array(", repr(self.Pz0.tolist()), ")")
-
-
-# ----------------------------------------------------------------------
-# Main program
-# ----------------------------------------------------------------------
-if __name__ == "__main__":
-    verbose = 1
-
-    # Available non linear models:
-    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x1_y1_withRetroactions',
-    #  'x1_y1_withRetroactions_augmented', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations',
-    #  'x2_y1_withRetroactionsOfObservations_augmented', 'x2_y2_withRetroactions']
-    model = ModelFactoryNonLinear.create("x2_y1_rapport")
-    print(f"model={model}")
-    print(f"model.get_params()={model.get_params()}")
-
-    params = model.get_params().copy()
-    param = ParamNonLinear(verbose, params.pop("dim_x"), params.pop("dim_y"), **params)
-    if verbose > 0:
-        param.summary()

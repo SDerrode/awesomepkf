@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from .base_model_nonLinear import BaseModelNonLinear
 
-from others.geneMatriceCov import generate_block_matrix
-from others.numerics import EPS_REL
+from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
+from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.utils.numerics import EPS_REL
+
+__all__ = ["ModelExtSaturant"]
 
 
 class ModelExtSaturant(BaseModelNonLinear):

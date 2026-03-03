@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pathlib import Path
-import sys
-
-directory = Path(__file__)
-sys.path.append(str(directory.parent.parent.parent))
-
 import numpy as np
 
-from classes.SeedGenerator import SeedGenerator
+from prg.classes.SeedGenerator import SeedGenerator
+
+__all__ = ["BaseModelNonLinear"]
 
 
 class BaseModelNonLinear:

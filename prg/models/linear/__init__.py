@@ -4,7 +4,12 @@
 import importlib
 import pkgutil
 from pathlib import Path
-from .base_model_linear import *
+
+from prg.models.linear.base_model_linear import BaseModelLinear, LinearAmQ, LinearSigma
+
+# tous les modules sont importables
+p = Path(__file__).parent
+__all__ = [f.stem for f in p.glob("*.py") if not f.name.startswith("_")]
 
 
 class ModelFactoryLinear:

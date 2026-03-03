@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pathlib import Path
-import sys
-
-directory = Path(__file__)
-sys.path.append(str(directory.parent.parent))
-
 import logging
 from typing import Any, Union, Optional
 import warnings
@@ -14,12 +8,11 @@ import warnings
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve, solve_discrete_lyapunov
 
-# Linear models
-from models.linear import BaseModelLinear, ModelFactoryLinear
+from prg.models.linear import BaseModelLinear, ModelFactoryLinear
+from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
+from prg.utils.numerics import EPS_ABS, EPS_REL
 
-# A few utils functions that are used several fois
-from classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
-from others.numerics import EPS_ABS, EPS_REL
+__all__ = ["ParamLinear"]
 
 # ----------------------------------------------------------------------
 # Configuration du logging global

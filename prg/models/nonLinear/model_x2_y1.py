@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from typing import Callable
-from .base_model_nonLinear import BaseModelNonLinear
 
-from others.geneMatriceCov import generate_block_matrix
+from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
+from prg.models.Generate_MatrixCov import generate_block_matrix
+
+__all__ = ["ModelX2Y1"]
 
 
 class ModelX2Y1(BaseModelNonLinear):

@@ -3,9 +3,11 @@
 
 import argparse
 
-from base_classes.nonlinear_upkf_runner_simulation import BaseNonLinearUPKFRunnerSim
-from base_classes.nonlinear_upkf_runner_from_file import BaseNonLinearUPKFRunnerFromFile
-from others.parser import addParseToParser
+from prg.base_classes.nonlinear_upkf_runner_simulation import BaseNonLinearUPKFRunnerSim
+from prg.base_classes.nonlinear_upkf_runner_from_file import (
+    BaseNonLinearUPKFRunnerFromFile,
+)
+from prg.utils.parser import addParseToParser
 
 
 def parse_arguments() -> argparse.Namespace:
