@@ -16,13 +16,11 @@ from rich.table import Table
 from rich.console import Console
 from rich.pretty import Pretty
 
-from others.utils import compute_errors
-from others.plot_settings import DPI, FACECOLOR, BIG_SIZE
+from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
+from prg.utils.utils import rich_show_fields, compute_errors
+from prg.utils.numerics import EPS_ABS, EPS_REL
 
-# A few utils functions that are used several times
-from others.utils import rich_show_fields
-
-from others.numerics import EPS_ABS, EPS_REL
+__all__ = ["HistoryTracker"]
 
 # ----------------------------------------------------------------------
 # Configuration globale du logging

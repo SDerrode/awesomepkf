@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pathlib import Path
-import sys
-
-directory = Path(__file__)
-sys.path.append(str(directory.parent.parent.parent))
-
 import numpy as np
+
+from prg.classes.SeedGenerator import SeedGenerator
+
+__all__ = ["BaseModelNonLinear"]
 
 
 class BaseModelNonLinear:
@@ -41,6 +39,8 @@ class BaseModelNonLinear:
         self.mQ = None
         self.mz0 = None
         self.Pz0 = None
+
+        self._randMatrices = SeedGenerator()
 
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:

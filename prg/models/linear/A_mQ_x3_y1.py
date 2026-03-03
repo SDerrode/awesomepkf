@@ -2,9 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from .base_model_linear import (
-    LinearAmQ,
-)  # On utilise directement la sous-classe LinearAmQ
+
+
+from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.classes.SeedGenerator import SeedGenerator
+from prg.models.linear.base_model_linear import LinearAmQ
+
+__all__ = ["Model_A_mQ_x3_y1"]
 
 
 class Model_A_mQ_x3_y1(LinearAmQ):
@@ -14,9 +18,12 @@ class Model_A_mQ_x3_y1(LinearAmQ):
 
     def __init__(self) -> None:
 
+        randMatrices = SeedGenerator()
+
         # Dimensions x=3, y=1
         dim_x = 3
         dim_y = 1
+        dim_xy = dim_x + dim_y
 
         A = np.array(
             [
@@ -47,31 +54,35 @@ class Model_A_mQ_x3_y1(LinearAmQ):
             ]
         )
         B = np.eye(A.shape[0])
-        mQ = np.array(
-            [
-                [
-                    0.7164609053497941,
-                    0.24629629629629626,
-                    0.21131687242798353,
-                    0.6555555555555556,
-                ],
-                [0.24629629629629632, 0.5958333333333334, 0.14120370370370378, 0.225],
-                [
-                    0.21131687242798355,
-                    0.14120370370370378,
-                    0.6734053497942387,
-                    0.41944444444444445,
-                ],
-                [
-                    0.6555555555555556,
-                    0.22500000000000003,
-                    0.4194444444444445,
-                    0.8500000000000001,
-                ],
-            ]
-        )
+        # mQ = np.array(
+        #     [
+        #         [
+        #             0.7164609053497941,
+        #             0.24629629629629626,
+        #             0.21131687242798353,
+        #             0.6555555555555556,
+        #         ],
+        #         [0.24629629629629632, 0.5958333333333334, 0.14120370370370378, 0.225],
+        #         [
+        #             0.21131687242798355,
+        #             0.14120370370370378,
+        #             0.6734053497942387,
+        #             0.41944444444444445,
+        #         ],
+        #         [
+        #             0.6555555555555556,
+        #             0.22500000000000003,
+        #             0.4194444444444445,
+        #             0.8500000000000001,
+        #         ],
+        #     ]
+        # )
 
-        mz0 = np.zeros((dim_x + dim_y, 1))
-        Pz0 = np.eye(dim_x + dim_y)
+        # mz0 = np.zeros((dim_x + dim_y, 1))
+        # Pz0 = np.eye(dim_x + dim_y)
+
+        mQ = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.15)
+        mz0 = randMatrices.rng.standard_normal((dim_xy, 1))
+        Pz0 = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.15)
 
         super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, mz0=mz0, Pz0=Pz0)

@@ -6,17 +6,10 @@ from typing import Any
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve
 
-from pathlib import Path
-import sys
+from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
 
-directory = Path(__file__)
-sys.path.append(str(directory.parent.parent.parent))
 
-from scipy.linalg import cho_factor, cho_solve
-import numpy as np
-
-# A few utils functions that are used several times
-from others.utils import check_consistency
+__all__ = ["BaseModelLinear", "LinearAmQ", "LinearSigma"]
 
 
 class BaseModelLinear:
@@ -107,7 +100,10 @@ class LinearAmQ(BaseModelLinear):
         self.Pz0 = Pz0
 
         if __debug__ and not self.augmented:
-            check_consistency(mQ=self.mQ, Pz0=self.Pz0)
+            for arr in [self.mQ, self.Pz0]:
+                report = CovarianceMatrix(arr).check()  # single diagnostic call
+                if not report.is_valid:
+                    raise ValueError(f"Matrix  is not positive semi-definite.")
 
     def get_params(self) -> dict[str, Any]:
         return {
@@ -171,17 +167,21 @@ class LinearSigma(BaseModelLinear):
         # Calcul robuste de la matrice A via Cholesky
         c_factor, lower = cho_factor(Q1)
         self.A = Q2 @ cho_solve((c_factor, lower), np.eye(self.dim_xy))
-        # Vérification de la stabilité (valeurs propres < 1)
-        eigvals = np.linalg.eigvals(self.A)
-        if np.any(np.abs(eigvals) >= 1.0):
-            raise ValueError(f"⚠️ Une valeur propre de A a un module >= 1 : {eigvals}")
+        stab = StabilityMatrix(self.A)
+        if not stab.is_valid():
+            stab.summary()  # True si aucun FAIL
+            exit(1)
 
         # B est l'identité
         self.B = np.eye(self.A.shape[0])
 
         # Vérification optionnelle
         if __debug__:
-            check_consistency(sxx=self.sxx, syy=self.syy, Q1=Q1)
+            for arr in [self.sxx, self.syy, Q1]:
+                report = CovarianceMatrix(arr).check()  # single diagnostic call
+                if not report.is_valid:
+                    raise ValueError(f"Matrix  is not positive semi-definite.")
+            # check_consistency(sxx=self.sxx, syy=self.syy, Q1=Q1)
 
     def get_params(self) -> dict[str, Any]:
         return {

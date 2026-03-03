@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Standard library
+from __future__ import annotations
 from typing import Generator, Optional
 from dataclasses import dataclass
 import logging
@@ -12,17 +13,16 @@ from scipy.linalg import cho_factor, cho_solve, LinAlgError
 from rich import print
 
 # Local imports
-from .HistoryTracker import HistoryTracker
-from .SeedGenerator import SeedGenerator
-from others.utils import (
-    diagnose_covariance,
-    rich_show_fields,
-    symmetrize,
-    check_eigvals,
-)
-from others.numerics import EPS_ABS, COND_FAIL, EIG_TOL_WARN, EIG_TOL_FAIL
-from classes.ParamLinear import ParamLinear
-from classes.ParamNonLinear import ParamNonLinear
+from prg.classes.HistoryTracker import HistoryTracker
+from prg.classes.SeedGenerator import SeedGenerator
+from prg.classes.ParamLinear import ParamLinear
+from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.utils.utils import rich_show_fields
+
+logger = logging.getLogger(__name__)
+
+__all__ = ["PKFStep", "PKF"]
 
 
 @dataclass(slots=True, frozen=True)
@@ -33,6 +33,10 @@ class PKFStep:
     Stores both the predicted and updated state estimates, along with
     the associated covariance matrices, innovation, and Kalman gain.
     All array fields are validated on construction via :meth:`__post_init__`.
+
+    .. note::
+        This dataclass uses ``frozen=True`` — validation methods must never
+        write to any attribute, or a ``FrozenInstanceError`` will be raised.
 
     Attributes
     ----------
@@ -56,7 +60,7 @@ class PKFStep:
     Xkp1_update : np.ndarray or None
         Updated (posterior) state estimate, shape ``(dim_x, 1)``.
     PXXkp1_update : np.ndarray or None
-        Updated state covariance matrix (Joseph form), shape ``(dim_x, dim_x)``.
+        Updated state covariance matrix (maybe Joseph form), shape ``(dim_x, dim_x)``.
     """
 
     k: int
@@ -65,18 +69,27 @@ class PKFStep:
     Xkp1_predict: np.ndarray
     PXXkp1_predict: np.ndarray
 
-    # Optional fields — None at the first step
+    # Optional fields — None at the prediction-only step
     ikp1: Optional[np.ndarray] = None
     Skp1: Optional[np.ndarray] = None
     Kkp1: Optional[np.ndarray] = None
     Xkp1_update: Optional[np.ndarray] = None
     PXXkp1_update: Optional[np.ndarray] = None
 
+    # ------------------------------------------------------------------
+    # Construction validation
+    # ------------------------------------------------------------------
+
     def __post_init__(self) -> None:
         """Validate all array fields upon construction."""
         self._validate_column_vectors()
         self._validate_covariance_matrices()
+        self._validate_invertible_matrices()
         self._validate_kalman_gain()
+
+    # ------------------------------------------------------------------
+    # Private validators
+    # ------------------------------------------------------------------
 
     def _validate_column_vectors(self) -> None:
         """Check that state and observation vectors are column vectors of shape (n, 1)."""
@@ -84,38 +97,96 @@ class PKFStep:
             arr = getattr(self, name)
             if arr is not None and (arr.ndim != 2 or arr.shape[1] != 1):
                 raise ValueError(
-                    f"{name} must be a column vector of shape (n, 1), got {arr.shape}"
+                    f"{name} must be a column vector of shape (n, 1), "
+                    f"got {arr.shape} at step {self.k}."
                 )
 
     def _validate_covariance_matrices(self) -> None:
         """
         Check that covariance matrices are square, symmetric, and positive semi-definite.
 
+        Runs a full :class:`CovarianceMatrix` diagnostic once per matrix.
+        Logs a debug message on WARNING status, raises on FAIL status.
+
         Raises
         ------
         ValueError
-            If a matrix is not square, not symmetric, or has negative eigenvalues
-            below ``-EPS_ABS``.
+            If a matrix is not positive semi-definite (FAIL diagnostic).
         """
-        for name in ["PXXkp1_predict", "Skp1", "PXXkp1_update"]:
+        for name in ["PXXkp1_predict", "PXXkp1_update"]:
             arr = getattr(self, name)
             if arr is None:
                 continue
-            if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
-                raise ValueError(
-                    f"{name} must be a square matrix, got shape {arr.shape}"
+            report = CovarianceMatrix(arr).check()  # single diagnostic call
+            if not report.is_ok:
+                logger.debug(
+                    "Matrix %s is nearly singular at step %d.\n%s",
+                    name,
+                    self.k,
+                    report,
                 )
-            if not np.allclose(arr, arr.T, atol=EPS_ABS):
-                print(f"arr={arr}")
-                raise ValueError(f"{name} must be symmetric")
-            eigvals = np.linalg.eigvalsh(arr)
-            check_eigvals(eigvals)
+                if not report.is_valid:
+                    raise ValueError(
+                        f"Matrix {name} is not positive semi-definite at step {self.k}."
+                    )
+
+    def _validate_invertible_matrices(self) -> None:
+        """
+        Check that matrices expected to be invertible are indeed invertible.
+
+        Runs a full :class:`InvertibleMatrix` diagnostic once per matrix.
+        Logs a debug message on WARNING status, raises on FAIL status.
+
+        Raises
+        ------
+        ValueError
+            If a matrix is not invertible (FAIL diagnostic).
+        """
+        for name in ["Skp1"]:
+            arr = getattr(self, name)
+            if arr is None:
+                continue
+            report = InvertibleMatrix(arr).check()  # single diagnostic call
+            if not report.is_ok:
+                logger.debug(
+                    "Matrix %s is nearly singular at step %d.\n%s",
+                    name,
+                    self.k,
+                    report,
+                )
+                if not report.is_valid:
+                    raise ValueError(
+                        f"Matrix {name} is not invertible at step {self.k}."
+                    )
 
     def _validate_kalman_gain(self) -> None:
-        """Check that the Kalman gain is a 2D matrix of shape (dim_x, dim_y)."""
+        """
+        Check that the Kalman gain is a 2D matrix of shape ``(dim_x, dim_y)``.
+
+        The expected shape is inferred from ``Xkp1_predict`` (dim_x)
+        and ``ykp1`` (dim_y) to ensure cross-field consistency.
+
+        Raises
+        ------
+        ValueError
+            If ``Kkp1`` is not 2D or has an inconsistent shape.
+        """
         arr = self.Kkp1
-        if arr is not None and arr.ndim != 2:
-            raise ValueError(f"Kkp1 must be a 2D matrix, got shape {arr.shape}")
+        if arr is None:
+            return
+
+        if arr.ndim != 2:
+            raise ValueError(
+                f"Kkp1 must be a 2D matrix, got shape {arr.shape} at step {self.k}."
+            )
+
+        dim_x = self.Xkp1_predict.shape[0]
+        dim_y = self.ykp1.shape[0]
+        if arr.shape != (dim_x, dim_y):
+            raise ValueError(
+                f"Kkp1 must have shape ({dim_x}, {dim_y}), "
+                f"got {arr.shape} at step {self.k}."
+            )
 
 
 class PKF:
@@ -185,7 +256,7 @@ class PKF:
         self.dt: int = 1  # Time step — fixed to 1 throughout
 
         # Random number generator
-        self._seed_gen = SeedGenerator(sKey)
+        self.__randSimulation = SeedGenerator(sKey)
 
         # Ground truth availability — set to False if xkp1 is None at first step
         self.ground_truth: bool = True
@@ -238,6 +309,7 @@ class PKF:
     # ------------------------------------------------------------------
     # Data simulation & processing
     # ------------------------------------------------------------------
+
     def simulate_N_data(self, N: int) -> list[tuple[int, np.ndarray, np.ndarray]]:
         """
         Simulate ``N`` steps of data and return them as a list.
@@ -276,7 +348,11 @@ class PKF:
         list of tuple
             Each tuple is ``(k, x_true, y_observed, X_predict, X_update)``.
         """
-        return list(self.process_filter(N=N, data_generator=data_generator))
+        try:
+            result = self.process_filter(N=N, data_generator=data_generator)
+        except RuntimeError as rte:
+            raise
+        return list(result)
 
     @staticmethod
     def _validate_N(N: Optional[int]) -> None:
@@ -299,6 +375,7 @@ class PKF:
     # ------------------------------------------------------------------
     # Data generation
     # ------------------------------------------------------------------
+
     def _data_generation(
         self, N: Optional[int] = None
     ) -> Generator[tuple[int, np.ndarray, np.ndarray], None, None]:
@@ -326,7 +403,7 @@ class PKF:
 
         # First step — sample initial state from prior distribution
         if self.augmented:
-            Zkp1_simul[: self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(
+            Zkp1_simul[: self.dim_x, 0] = self.__randSimulation.rng.multivariate_normal(
                 mean=self.mz0[: self.dim_x, 0],
                 cov=self.Pz0[: self.dim_x, : self.dim_x],
             )
@@ -334,7 +411,7 @@ class PKF:
                 self.dim_x - self.dim_y : self.dim_x, 0
             ]
         else:
-            Zkp1_simul[:, 0] = self._seed_gen.rng.multivariate_normal(
+            Zkp1_simul[:, 0] = self.__randSimulation.rng.multivariate_normal(
                 mean=self.mz0[:, 0], cov=self.Pz0
             )
 
@@ -349,15 +426,17 @@ class PKF:
 
         while N is None or k < N:
             if self.augmented:
-                noise_z[: self.dim_x, 0] = self._seed_gen.rng.multivariate_normal(
-                    mean=zerosvector_x,
-                    cov=self.mQ[: self.dim_x, : self.dim_x],
+                noise_z[: self.dim_x, 0] = (
+                    self.__randSimulation.rng.multivariate_normal(
+                        mean=zerosvector_x,
+                        cov=self.mQ[: self.dim_x, : self.dim_x],
+                    )
                 )
                 noise_z[self.dim_x :, 0] = noise_z[
                     self.dim_x - self.dim_y : self.dim_x, 0
                 ]
             else:
-                noise_z[:, 0] = self._seed_gen.rng.multivariate_normal(
+                noise_z[:, 0] = self.__randSimulation.rng.multivariate_normal(
                     mean=zerosvector_xy, cov=self.mQ
                 )
             Zkp1_simul = self.g(Zkp1_simul, noise_z, self.dt)
@@ -368,13 +447,15 @@ class PKF:
     # ------------------------------------------------------------------
     # Covariance diagnostics
     # ------------------------------------------------------------------
-    def _test_CovMatrix(self, mat: np.ndarray, k: int) -> None:
-        """
-        Check whether a matrix is a valid covariance matrix.
 
-        Verifies symmetry and positive semi-definiteness. Skipped entirely
-        for augmented models. Issues are logged as warnings and optionally
-        displayed via ``rich_show_fields`` when ``verbose > 1``.
+    def _check_covariance(self, mat: np.ndarray, k: int, name: str = "") -> bool:
+        """
+        Check whether a matrix is a valid covariance matrix using
+        :class:`CovarianceMatrix` diagnostics.
+
+        Skipped entirely for augmented models. Logs a warning on WARNING
+        status and the full diagnostic report at DEBUG level. Raises on
+        FAIL status.
 
         Parameters
         ----------
@@ -382,50 +463,89 @@ class PKF:
             Matrix to validate, shape ``(n, n)``.
         k : int
             Current time step index, used in log messages.
+        name : str, optional
+            Name of the matrix, used in log messages.
+
+        Raises
+        ------
+        ValueError
+            If the matrix is not a valid covariance matrix (FAIL status).
         """
         if self.augmented:
-            # No check performed on augmented models
             return
 
-        verdict, report = diagnose_covariance(mat)
-
-        if not verdict:
-            eigvals = report["eigenvalues"]
-            neg_eigvals = eigvals[eigvals < EIG_TOL_FAIL]
-
-            # print(report)
-            # input("ATTENTE - report")
-
-            self.logger.warning(
-                f"Step {k}: Covariance matrix invalid. "
-                f"Symmetric: {report['is_symmetric']}, "
-                # f"Cholesky OK: {report['cholesky_ok']}, "
-                f"PSD: {report['is_psd']}, "
-                f"Ill conditioned: {report['ill_conditioned']}, "
-                f"Numerically singular: {report['numerically_singular']}, "
-                f"λ_min: {report['lambda_min']:.3e}, "
-                f"Condition number: {report['condition_number']:.3e}, "
-                f"Negative eigenvalues: {neg_eigvals}"
-            )
-
+        report = CovarianceMatrix(mat).check()
+        if not report.is_ok:
             if self.verbose > 1:
-                rich_show_fields(
-                    report,
-                    [
-                        "is_symmetric",
-                        # "cholesky_ok",
-                        "is_psd",
-                        "ill_conditioned",
-                        "numerically_singular",
-                        "lambda_min",
-                        "condition_number",
-                    ],
-                    title=f"Covariance diagnostic - Step {k}",
-                )
+                self.logger.warning("Step %d: %s — %s", k, name, report.overall_status)
+
+            if not report.is_valid:
+                try:
+                    mat[:] = CovarianceMatrix(mat).regularized()  # ré-assignemnt
+                    if self.verbose > 1:
+                        self.logger.warning(
+                            "Step %d: %s regularized successfully.", k, name
+                        )
+
+                except ValueError as e:
+                    if self.verbose > 1:
+                        self.logger.error(
+                            "Step %d: %s regularization failed — %s",
+                            step.k,
+                            name,
+                            e,
+                        )
+                    raise
+
+    def _check_invertible(self, mat: np.ndarray, k: int, name: str = "") -> bool:
+        """
+        Check whether a matrix is invertible using :class:`InvertibleMatrix`
+        diagnostics.
+
+        Logs a warning on WARNING status and the full diagnostic report at
+        DEBUG level. Raises on FAIL status.
+
+        Parameters
+        ----------
+        mat : np.ndarray
+            Matrix to validate, shape ``(n, n)``.
+        k : int
+            Current time step index, used in log messages.
+        name : str, optional
+            Name of the matrix, used in log messages.
+
+        Returns
+        -------
+        bool
+            ``True`` if the matrix is invertible (is_valid),
+            ``False`` otherwise.
+
+        Raises
+        ------
+        LinAlgError
+            If the matrix is not invertible (FAIL status).
+        """
+        report = InvertibleMatrix(mat).check()
+
+        if not report.is_ok:
+            self.logger.warning(
+                "Step %d: %s has invertibility status %s.",
+                k,
+                name,
+                report.overall_status,
+            )
+            if self.verbose > 1:
+                self.logger.debug("Step %d: %s full diagnostic:\n%s", k, name, report)
+
+            if not report.is_valid:
+                raise LinAlgError(f"Step {k}: matrix {name} is not invertible (FAIL).")
+
+        return report.is_valid
 
     # ------------------------------------------------------------------
     # First estimate
     # ------------------------------------------------------------------
+
     def _firstEstimate(
         self,
         generator: Generator[tuple[int, Optional[np.ndarray], np.ndarray], None, None],
@@ -436,7 +556,7 @@ class PKF:
         The initial state estimate is obtained via Gaussian conditioning
         of the prior ``p(x_0)`` on the first observation ``y_0``:
 
-            X_update  = mu_x + Sigma_xy @ Sigma_yy^{-1} @ (y - mu_y)
+            X_update   = mu_x + Sigma_xy @ Sigma_yy^{-1} @ (y - mu_y)
             PXX_update = Sigma_xx - Sigma_xy @ Sigma_yy^{-1} @ Sigma_yx
 
         Parameters
@@ -448,6 +568,13 @@ class PKF:
         -------
         PKFStep
             The first filter step with predicted and updated estimates.
+
+        Raises
+        ------
+        LinAlgError
+            If ``Sigma22`` (prior observation covariance) is not invertible.
+        ValueError
+            If ``PXXkp1_update`` is not a valid covariance matrix.
         """
         k, xkp1, ykp1 = next(generator)
 
@@ -458,10 +585,13 @@ class PKF:
         Sigma21 = self.Pz0[self.dim_x :, : self.dim_x]
         Sigma22 = self.Pz0[self.dim_x :, self.dim_x :]
 
+        # Validate Sigma22 before inversion
+        self._check_invertible(Sigma22, k, name="Sigma22")
+
         Sigma22_inv: np.ndarray = np.linalg.inv(Sigma22)
         Xkp1_update: np.ndarray = mu_x0 + Sigma12 @ Sigma22_inv @ (ykp1 - mu_y0)
         PXXkp1_update: np.ndarray = Sigma11 - Sigma12 @ Sigma22_inv @ Sigma21
-        self._test_CovMatrix(PXXkp1_update, k)
+        self._check_covariance(PXXkp1_update, k, name="PXXkp1_update")
 
         Xkp1_predict: np.ndarray = np.zeros((self.dim_x, 1))
         step = PKFStep(
@@ -474,17 +604,19 @@ class PKF:
             Skp1=self.eye_dim_y.copy(),
             Kkp1=self.zeros_dim_x_y.copy(),
             Xkp1_update=Xkp1_update.copy(),
-            PXXkp1_update=symmetrize(PXXkp1_update),
+            PXXkp1_update=PXXkp1_update,
         )
 
         self.history.record(step)
         if self.verbose > 1:
             rich_show_fields(step, title="First Estimate")
+
         return step
 
     # ------------------------------------------------------------------
     # Update step
     # ------------------------------------------------------------------
+
     def _nextUpdating(
         self,
         k: int,
@@ -517,7 +649,6 @@ class PKF:
             Augmented predicted covariance matrix, shape ``(dim_xy, dim_xy)``.
         store : bool, optional
             Whether to record the step in the history tracker (default ``True``).
-            Set to ``False`` during intermediate IEPKF iterations.
 
         Returns
         -------
@@ -527,9 +658,10 @@ class PKF:
         Raises
         ------
         LinAlgError
-            If Cholesky factorisation of the innovation covariance fails.
+            If the innovation covariance ``Skp1`` is not invertible or if
+            Cholesky factorisation fails.
         ValueError
-            If the innovation covariance has an unexpected shape or content.
+            If the updated covariance ``PXXkp1_update`` is not valid.
         """
         Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
         PXXkp1_predict = Pkp1_predict[: self.dim_x, : self.dim_x]
@@ -540,31 +672,27 @@ class PKF:
         ikp1: np.ndarray = ykp1 - Ykp1_predict
         Skp1: np.ndarray = PYYkp1_predict.copy()
 
-        # Regularise innovation covariance if ill-conditioned
-        condS = np.linalg.cond(Skp1)
-        if condS > COND_FAIL:
-            self.logger.warning(f"Step {k}: Skp1 ill-conditioned (cond={condS:.2e})")
-            Skp1 += EPS_ABS * self.eye_dim_y
+        # Validate innovation covariance before Cholesky solve
+        self._check_invertible(Skp1, k, name="Skp1")
 
         # Kalman gain via Cholesky solve — more stable than direct inversion
         try:
             c, low = cho_factor(Skp1)
             Kkp1: np.ndarray = PXYkp1_predict @ cho_solve((c, low), self.eye_dim_y)
-        except LinAlgError as e:
-            self.logger.error(f"Step {k}: LinAlgError in cho_factor/solve: {e}")
-            raise
-        except ValueError as e:
-            self.logger.error(f"Step {k}: ValueError in cho_factor/solve: {e}")
+        except Exception as e:
+            self.logger.error(
+                "Step %d: LinAlgError/ValueError in cho_factor/solve: %s", k, e
+            )
             raise
 
         Xkp1_update: np.ndarray = Xkp1_predict + Kkp1 @ ikp1
 
-        # Joseph form: (I - K*H) @ P @ (I - K*H)^T — preserves PSD
+        # Joseph form
         Joseph_factor: np.ndarray = np.vstack((self.eye_dim_x, -Kkp1.T))
-        PXXkp1_update_Joseph: np.ndarray = symmetrize(
+        PXXkp1_update_Joseph: np.ndarray = (
             Joseph_factor.T @ Pkp1_predict @ Joseph_factor
         )
-        self._test_CovMatrix(PXXkp1_update_Joseph, k)
+        self._check_covariance(PXXkp1_update_Joseph, k, name="PXXkp1_update_Joseph")
 
         step = PKFStep(
             k=k,

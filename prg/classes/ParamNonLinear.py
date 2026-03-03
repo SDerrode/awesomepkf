@@ -1,22 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pathlib import Path
-import sys
-
-directory = Path(__file__)
-sys.path.append(str(directory.parent.parent))
-
 import logging
 from typing import Any
 
 import numpy as np
 
 # Non linear models
-from models.nonLinear import ModelFactoryNonLinear
+from prg.models.nonLinear import ModelFactoryNonLinear
+from prg.classes.MatrixDiagnostics import CovarianceMatrix
 
-# A few utils functions that are used several times
-from others.utils import check_consistency
+__all__ = ["ParamNonLinear"]
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -74,9 +68,14 @@ class ParamNonLinear:
 
         if __debug__:
             if not self.augmented:
+                for arr in [self._mQ, self._Pz0]:
+                    report = CovarianceMatrix(arr).check()  # single diagnostic call
+                    if not report.is_valid:
+                        raise ValueError(f"Matrix  is not positive semi-definite.")
+
                 # print(f"mQ = {self._mQ}")
                 # print(f"Pz0 = {self._Pz0}")
-                check_consistency(mQ=self._mQ, Pz0=self._Pz0)
+                # check_consistency(mQ=self._mQ, Pz0=self._Pz0)
 
     # ------------------------------------------------------------------
     def __repr__(self) -> str:
@@ -122,7 +121,11 @@ class ParamNonLinear:
         self._mQ = new_Q
         if __debug__:
             if not self.augmented:
-                check_consistency(mQ=self._mQ)
+                for arr in [self._mQ]:
+                    report = CovarianceMatrix(arr).check()  # single diagnostic call
+                    if not report.is_valid:
+                        raise ValueError(f"Matrix  is not positive semi-definite.")
+                # check_consistency(mQ=self._mQ)
         logger.info("[ParamNonLinear] ✅ mQ matrix updated")
 
     # ------------------------------------------------------------------
@@ -153,23 +156,3 @@ class ParamNonLinear:
             print("mQ = np.array(", repr(self.mQ.tolist()), ")")
             print("mz0 = np.array(", repr(self.mz0.tolist()), ")")
             print("Pz0 = np.array(", repr(self.Pz0.tolist()), ")")
-
-
-# ----------------------------------------------------------------------
-# Main program
-# ----------------------------------------------------------------------
-if __name__ == "__main__":
-    verbose = 1
-
-    # Available non linear models:
-    # ['x1_y1_cubique', 'x1_y1_ext_saturant', 'x1_y1_gordon', 'x1_y1_sinus', 'x1_y1_withRetroactions',
-    #  'x1_y1_withRetroactions_augmented', 'x2_y1', 'x2_y1_rapport', 'x2_y1_withRetroactionsOfObservations',
-    #  'x2_y1_withRetroactionsOfObservations_augmented', 'x2_y2_withRetroactions']
-    model = ModelFactoryNonLinear.create("x2_y1_rapport")
-    print(f"model={model}")
-    print(f"model.get_params()={model.get_params()}")
-
-    params = model.get_params().copy()
-    param = ParamNonLinear(verbose, params.pop("dim_x"), params.pop("dim_y"), **params)
-    if verbose > 0:
-        param.summary()

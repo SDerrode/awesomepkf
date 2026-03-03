@@ -3,9 +3,11 @@
 
 import argparse
 
-from base_classes.nonlinear_epkf_runner_simulation import BaseNonLinearEPKFRunnerSim
-from base_classes.nonlinear_epkf_runner_from_file import BaseNonLinearEPKFRunnerFromFile
-from others.parser import addParseToParser
+from prg.base_classes.nonlinear_epkf_runner_simulation import BaseNonLinearEPKFRunnerSim
+from prg.base_classes.nonlinear_epkf_runner_from_file import (
+    BaseNonLinearEPKFRunnerFromFile,
+)
+from prg.utils.parser import addParseToParser
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -66,7 +68,10 @@ def main() -> None:
             save_history=args.saveHistory,
         )
 
-    runner.run()
+    try:
+        runner.run()
+    except RuntimeError as rte:
+        raise
 
 
 if __name__ == "__main__":
