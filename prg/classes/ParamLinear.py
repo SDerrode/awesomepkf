@@ -11,6 +11,7 @@ from scipy.linalg import cho_factor, cho_solve, solve_discrete_lyapunov
 from prg.models.linear import BaseModelLinear, ModelFactoryLinear
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
 from prg.utils.numerics import EPS_ABS, EPS_REL
+from prg.exceptions import CovarianceError, NumericalError, ParamError
 
 __all__ = ["ParamLinear"]
 
@@ -35,10 +36,39 @@ class ParamLinear:
     """
 
     def __init__(self, verbose: int, dim_x: int, dim_y: int, **kwargs) -> None:
+        """
+        Initialise les paramètres du filtre PKF linéaire.
+
+        Parameters
+        ----------
+        verbose : int
+            Niveau de verbosité (0, 1 ou 2).
+        dim_x : int
+            Dimension de l'état, doit être un entier strictement positif.
+        dim_y : int
+            Dimension de l'observation, doit être un entier strictement positif.
+        **kwargs
+            Paramètres du modèle (matrices A, B, mQ, mz0, Pz0, etc.).
+
+        Raises
+        ------
+        ParamError
+            Si ``dim_x``, ``dim_y`` ne sont pas des entiers strictement positifs,
+            ou si ``verbose`` n'appartient pas à ``{0, 1, 2}``.
+        ParamError
+            Si le nombre de paramètres ``kwargs`` ne correspond à aucune
+            paramétrisation connue (12 ou 14 clés).
+        CovarianceError
+            Si une matrice de covariance n'est pas définie positive
+            lors de la vérification de cohérence.
+        """
         if __debug__:
-            assert isinstance(dim_x, int) and dim_x > 0, "dim_x must be int > 0"
-            assert isinstance(dim_y, int) and dim_y > 0, "dim_y must be int > 0"
-            assert verbose in [0, 1, 2], "verbose must be 0, 1 or 2"
+            if not (isinstance(dim_x, int) and dim_x > 0):
+                raise ParamError("dim_x must be a strictly positive integer.")
+            if not (isinstance(dim_y, int) and dim_y > 0):
+                raise ParamError("dim_y must be a strictly positive integer.")
+            if verbose not in [0, 1, 2]:
+                raise ParamError("verbose must be 0, 1 or 2.")
 
         self.dim_x = dim_x
         self.dim_y = dim_y
@@ -64,19 +94,22 @@ class ParamLinear:
                 kwargs["e"],
             )
         else:
-            logger.warning(f"⚠️ Le modèle n'est pas bien paramétré : {kwargs.keys()}")
+            raise ParamError(
+                f"Le modèle n'est pas bien paramétré : {list(kwargs.keys())}. "
+                f"Attendu 12 ou 14 clés, reçu {len(kwargs.keys())}."
+            )
 
-        # Paramètre communs
+        # Paramètres communs
         self.augmented = kwargs["augmented"]
         self.g = kwargs["g"]
 
-        # Paramètres spécifiques UPKF - lorsque souhaite filtrer des données linéaire par upkf
+        # Paramètres spécifiques UPKF
         self.alpha = kwargs["alpha"]
         self.beta = kwargs["beta"]
         self.kappa = kwargs["kappa"]
         self.lambda_ = kwargs["lambda_"]
 
-        # Paramètres spécifiques EPKF - lorsque souhaite filtrer des données linéaire par epkf
+        # Paramètres spécifiques EPKF
         self.jacobiens_g = kwargs["jacobiens_g"]
 
         if __debug__:
@@ -84,7 +117,10 @@ class ParamLinear:
 
     # ------------------------------------------------------------------
     def __repr__(self) -> str:
-        return f"<ParamLinear(dim_y={self.dim_y}, dim_x={self.dim_x}, augmented={self.augmented}, verbose={self.verbose}>"
+        return (
+            f"<ParamLinear(dim_y={self.dim_y}, dim_x={self.dim_x}, "
+            f"augmented={self.augmented}, verbose={self.verbose}>"
+        )
 
     # ------------------------------------------------------------------
     # Constructeurs
@@ -97,12 +133,23 @@ class ParamLinear:
         mz0: np.ndarray,
         Pz0: np.ndarray,
     ) -> None:
+        """
+        Construit les paramètres à partir des matrices (A, B, mQ, mz0, Pz0).
 
+        Raises
+        ------
+        NumericalError
+            Si la matrice ``A`` n'est pas stable (valeurs propres hors du
+            disque unité).
+        """
         self._A = np.array(A, dtype=float)
         stab = StabilityMatrix(self._A)
         if not stab.is_valid():
-            stab.summary()  # True si aucun FAIL
-            exit(1)
+            stab.summary()
+            raise NumericalError(
+                "La matrice A n'est pas stable (valeurs propres hors du disque unité).",
+                matrix_name="A",
+            )
 
         self._B = np.array(B, dtype=float)
         self._mQ = np.array(mQ, dtype=float)
@@ -121,7 +168,15 @@ class ParamLinear:
         d: np.ndarray,
         e: np.ndarray,
     ) -> None:
+        """
+        Construit les paramètres à partir des sous-blocs de la matrice Sigma.
 
+        Raises
+        ------
+        CovarianceError
+            Si la factorisation de Cholesky de ``Q1`` échoue lors du calcul
+        de ``A`` et ``mQ``.
+        """
         self._sxx, self._syy = np.array(sxx), np.array(syy)
         self._a, self._b, self._c, self._d, self._e = map(np.array, [a, b, c, d, e])
 
@@ -142,12 +197,24 @@ class ParamLinear:
     # Update derived matrices
     # ------------------------------------------------------------------
     def _update_A_B_mQ_from_Sigma(self) -> None:
-
+        """
+        Raises
+        ------
+        CovarianceError
+            Si la factorisation de Cholesky de ``Q1`` échoue.
+        """
         self._Q1 = np.block([[self._sxx, self._b.T], [self._b, self._syy]])
         self._Q2 = np.block([[self._a, self._e], [self._d, self._c]])
         self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
 
-        c, low = cho_factor(self._Q1)
+        try:
+            c, low = cho_factor(self._Q1)
+        except Exception as e:
+            raise CovarianceError(
+                "Cholesky factorisation of Q1 failed — Q1 may not be positive definite.",
+                matrix_name="Q1",
+            ) from e
+
         self._A = self._Q2 @ cho_solve((c, low), np.eye(self.dim_xy))
         self._B = np.eye(self.dim_xy)
         self._mQ = self._Q1 - self._A @ self._Q2.T
@@ -156,12 +223,17 @@ class ParamLinear:
         self._Pz0 = self._Q1.copy()
 
     def _update_Sigma_from_A_B_mQ(self) -> None:
-
+        """
+        Raises
+        ------
+        NumericalError
+            Si l'erreur relative entre ``mQ`` et ``Q1 - A @ Q2^T`` dépasse
+            le seuil ``EPS_REL``.
+        """
         self._Q1 = solve_discrete_lyapunov(self._A, self._mQ)
         self._Q2 = self._A @ self._Q1
         self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
 
-        # Vérification cohérence
         if __debug__:
             Q_est = self._Q1 - self._A @ self._Q2.T
             diff = self._mQ - Q_est
@@ -170,8 +242,11 @@ class ParamLinear:
                 logger.warning(
                     f"⚠️ Incohérence : Q ≉ Q1 - A Q2^T (erreur relative = {rel_error:.2e})"
                 )
-                if self.verbose >= 2:
-                    logger.debug(f"Différence :\n{diff}")
+                raise NumericalError(
+                    f"Incohérence détectée : Q ≉ Q1 - A Q2^T "
+                    f"(erreur relative = {rel_error:.2e}).",
+                    matrix_name="mQ",
+                )
             else:
                 logger.debug(
                     f"♻️ Vérification OK : ||Q - (Q1 - A Q2^T)||_rel = {rel_error:.2e}"
@@ -194,22 +269,33 @@ class ParamLinear:
     # Consistency checks
     # ------------------------------------------------------------------
     def _check_consistency(self) -> None:
+        """
+        Vérifie que toutes les matrices de covariance sont définies positives.
+
+        Raises
+        ------
+        CovarianceError
+            Si l'une des matrices n'est pas définie positive semi-définie.
+        """
         if self.augmented:
-            listMatrix = [self._Q1, self._sxx, self._syy]
+            listMatrix = [("Q1", self._Q1), ("sxx", self._sxx), ("syy", self._syy)]
         else:
             listMatrix = [
-                self._Q1,
-                self._sxx,
-                self._syy,
-                self._mQ,
-                self._Sigma,
-                self._Pz0,
+                ("Q1", self._Q1),
+                ("sxx", self._sxx),
+                ("syy", self._syy),
+                ("mQ", self._mQ),
+                ("Sigma", self._Sigma),
+                ("Pz0", self._Pz0),
             ]
 
-        for arr in listMatrix:
-            report = CovarianceMatrix(arr).check()  # single diagnostic call
+        for name, arr in listMatrix:
+            report = CovarianceMatrix(arr).check()
             if not report.is_valid:
-                raise ValueError(f"Matrix  is not positive semi-definite.")
+                raise CovarianceError(
+                    f"Matrix {name!r} is not positive semi-definite.",
+                    matrix_name=name,
+                )
 
     # ------------------------------------------------------------------
     # Getters / Setters and Properties
@@ -220,6 +306,14 @@ class ParamLinear:
 
     @A.setter
     def A(self, new_A: np.ndarray) -> None:
+        """
+        Raises
+        ------
+        NumericalError
+            Si la mise à jour de Sigma à partir de A échoue.
+        CovarianceError
+            Si la vérification de cohérence échoue après la mise à jour.
+        """
         self._A = np.array(new_A, dtype=float)
         self._update_Sigma_from_A_B_mQ()
         if __debug__:
@@ -231,6 +325,14 @@ class ParamLinear:
 
     @B.setter
     def B(self, new_B: np.ndarray) -> None:
+        """
+        Raises
+        ------
+        NumericalError
+            Si la mise à jour de Sigma à partir de B échoue.
+        CovarianceError
+            Si la vérification de cohérence échoue après la mise à jour.
+        """
         self._B = np.array(new_B, dtype=float)
         self._update_Sigma_from_A_B_mQ()
         if __debug__:
@@ -242,6 +344,14 @@ class ParamLinear:
 
     @mQ.setter
     def mQ(self, new_Q: np.ndarray) -> None:
+        """
+        Raises
+        ------
+        NumericalError
+            Si la mise à jour de Sigma à partir de mQ échoue.
+        CovarianceError
+            Si la vérification de cohérence échoue après la mise à jour.
+        """
         self._mQ = np.array(new_Q, dtype=float)
         self._update_Sigma_from_A_B_mQ()
         if __debug__:

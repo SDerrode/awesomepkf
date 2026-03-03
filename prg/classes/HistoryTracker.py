@@ -19,6 +19,7 @@ from rich.pretty import Pretty
 from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
 from prg.utils.utils import rich_show_fields, compute_errors
 from prg.utils.numerics import EPS_ABS, EPS_REL
+from prg.exceptions import ParamError, NumericalError
 
 __all__ = ["HistoryTracker"]
 
@@ -61,9 +62,14 @@ class HistoryTracker:
         ----------
         verbose : int, optional
             Niveau de verbosité (0, 1, 2). Par défaut 0.
+
+        Raises
+        ------
+        ParamError
+            Si ``verbose`` n'appartient pas à ``{0, 1, 2}``.
         """
         if verbose not in (0, 1, 2):
-            raise ValueError("verbose doit être 0, 1 ou 2")
+            raise ParamError("verbose doit être 0, 1 ou 2.")
         self._history: list[dict[str, Any]] = []
         self.verbose = verbose
         self._set_log_level()
@@ -74,7 +80,7 @@ class HistoryTracker:
         if not __debug__:
             logger.setLevel(logging.ERROR)
             return
-        if self.verbose == 0 or self.verbose == 1:
+        if self.verbose in (0, 1):
             logger.setLevel(logging.CRITICAL + 1)
         elif self.verbose == 2:
             logger.setLevel(logging.INFO)
@@ -87,12 +93,17 @@ class HistoryTracker:
 
         - Si on passe une dataclass (PKFStep), elle est convertie en dict.
         - Sinon, on accepte **kwargs comme avant.
+
+        Raises
+        ------
+        TypeError
+            Si les clés de ``kwargs`` ne sont pas toutes des chaînes.
         """
         if len(args) == 1 and is_dataclass(args[0]):
             self._history.append(asdict(args[0]))
         else:
             if not all(isinstance(k, str) for k in kwargs):
-                raise TypeError("Toutes les clés doivent être des chaînes")
+                raise TypeError("Toutes les clés doivent être des chaînes.")
             self._history.append(kwargs.copy())
 
     def as_dataframe(self) -> pd.DataFrame:
@@ -107,7 +118,7 @@ class HistoryTracker:
     # ------------------------------------------------------------------
     def save_pickle(self, path: str) -> None:
         dir_path = os.path.dirname(path)
-        if dir_path:  # Si dir_path n'est pas vide
+        if dir_path:
             os.makedirs(dir_path, exist_ok=True)
         with open(path, "wb") as f:
             pickle.dump(self._history, f)
@@ -130,13 +141,20 @@ class HistoryTracker:
         -------
         HistoryTracker
             Un objet HistoryTracker contenant l'historique rechargé.
+
+        Raises
+        ------
+        FileNotFoundError
+            Si le fichier n'existe pas. — stdlib, intentionnel.
+        TypeError
+            Si le contenu du fichier n'est pas une liste. — stdlib, intentionnel.
         """
         if not os.path.exists(path):
             raise FileNotFoundError(f"Fichier introuvable : {path}")
         with open(path, "rb") as f:
             data = pickle.load(f)
         if not isinstance(data, list):
-            raise TypeError("Le fichier ne contient pas une liste d'enregistrements")
+            raise TypeError("Le fichier ne contient pas une liste d'enregistrements.")
         tracker = cls()
         tracker._history = data
         if tracker.verbose > 0:
@@ -150,9 +168,6 @@ class HistoryTracker:
         """
         Calcule et affiche des rapports d'erreurs entre différentes séries de données.
 
-        Utilise la fonction `compute_errors` (externe) pour calculer les erreurs
-        et rich.Console pour un affichage lisible.
-
         Parameters
         ----------
         ListeA, ListeB, ListeC : list[str]
@@ -160,12 +175,8 @@ class HistoryTracker:
         ListeD, ListeE : list[str] or None
             Colonnes supplémentaires pour certains filtres (ex : particulaire).
         """
-
         df = self.as_dataframe()
-
-        console = Console(
-            force_terminal=True, color_system="truecolor"
-        )  # console globale partagée
+        console = Console(force_terminal=True, color_system="truecolor")
 
         if ListeD is None or ListeE is None:
             for a, b, c in zip(ListeA, ListeB, ListeC):
@@ -220,9 +231,6 @@ class HistoryTracker:
         """
         Calcule un sigma stable à partir d'une série de variances et détecte les anomalies.
 
-        - Clamp les variances légèrement négatives à 0
-        - Signale les variances fortement négatives
-
         Parameters
         ----------
         var_series : pd.Series
@@ -234,6 +242,11 @@ class HistoryTracker:
         -------
         np.ndarray
             Tableau numpy contenant σ corrigé.
+
+        Raises
+        ------
+        NumericalError
+            Si des variances fortement négatives sont détectées.
         """
         v = var_series.values
         scale = np.nanmax(np.abs(v))
@@ -244,14 +257,16 @@ class HistoryTracker:
 
         if slightly_negative.any() and self.verbose > 0:
             logger.info(
-                f"[{col_name}] Variances légèrement négatives corrigées : {np.sum(slightly_negative)} points"
+                f"[{col_name}] Variances légèrement négatives corrigées : "
+                f"{np.sum(slightly_negative)} points"
             )
 
         if strongly_negative.any():
             idx = np.where(strongly_negative)[0][:5]
-            raise ValueError(
-                f"Variance fortement négative détectée dans {col_name} "
-                f"(indices exemples {idx}, valeurs {v[idx]})"
+            raise NumericalError(
+                f"Variance fortement négative détectée dans {col_name!r} "
+                f"(indices exemples {idx.tolist()}, valeurs {v[idx].tolist()}).",
+                matrix_name=col_name,
             )
 
         v_corrected = v.copy()
@@ -274,8 +289,6 @@ class HistoryTracker:
         """
         Trace l'évolution des états avec leurs covariances ±2σ.
 
-        Si `show=False`, la figure est sauvegardée dans `base_dir`.
-
         Parameters
         ----------
         title : str
@@ -294,23 +307,32 @@ class HistoryTracker:
             Affiche la figure si True (défaut True).
         base_dir : str, optional
             Dossier de sauvegarde si show=False.
-        **kwargs :
-            Arguments supplémentaires pour personnalisation future.
 
         Returns
         -------
         fig, axes : tuple
             Figure et axes matplotlib.
-        """
 
+        Raises
+        ------
+        ParamError
+            Si les listes ``list_param``, ``list_label``, ``list_covar``
+            n'ont pas la même longueur, ou si ``window`` est mal formé,
+            ou si une colonne est absente du DataFrame.
+        ParamError
+            Si le premier élément de la colonne n'est pas un vecteur numpy.
+        NumericalError
+            Si des variances fortement négatives sont détectées lors du
+            calcul des enveloppes ±2σ (via ``_compute_sigma_envelope``).
+        """
         if not (len(list_param) == len(list_label) == len(list_covar)):
-            raise ValueError(
-                "list_param, list_label et list_covar doivent avoir la même longueur"
+            raise ParamError(
+                "list_param, list_label et list_covar doivent avoir la même longueur."
             )
 
         for key in ("xmin", "xmax"):
             if key not in window:
-                raise KeyError(f"window doit contenir '{key}'")
+                raise ParamError(f"window doit contenir la clé '{key}'.")
 
         xmin, xmax = window["xmin"], window["xmax"]
         df = self.as_dataframe().iloc[xmin:xmax]
@@ -318,22 +340,21 @@ class HistoryTracker:
         if df.empty:
             df = self.as_dataframe()
             if df.empty:
-                raise ValueError("Aucune donnée enregistrée.")
-            xmin, xmax = 0, len(df)  # ← fenêtre mise à jour
+                raise ParamError("Aucune donnée enregistrée.")
+            xmin, xmax = 0, len(df)
 
         for p in list_param:
             if p not in df.columns:
-                raise KeyError(
-                    f"'{p}' n'est pas une colonne connue : {list(df.columns)}"
+                raise ParamError(
+                    f"'{p}' n'est pas une colonne connue : {list(df.columns)}."
                 )
 
-        # Vérifie que le premier élément est bien un vecteur
         first = df[list_param[0]].iloc[0]
         if not hasattr(first, "shape"):
-            raise TypeError(
-                f"Le premier élément de '{list_param[0]}' n'est pas un vecteur numpy"
+            raise ParamError(
+                f"Le premier élément de '{list_param[0]}' n'est pas un vecteur numpy."
             )
-        # On récupère le nombre de composantes de X
+
         nb_components = first.shape[0]
 
         df_subset = pd.DataFrame()
@@ -341,6 +362,7 @@ class HistoryTracker:
         list_labels_p = []
         list_labels_e = []
         list_has_var = []
+
         for p, e in zip(list_param, list_covar):
             has_var = e is not None
             list_has_var += [has_var] * nb_components
@@ -376,23 +398,20 @@ class HistoryTracker:
         for i, (col_p, col_e, has_var) in enumerate(
             zip(list_labels_p, list_labels_e, list_has_var)
         ):
-
             j = i % nb_components
             k = i // nb_components
             df_subset[col_p].plot(ax=axes[j], label=list_label[k], alpha=0.5)
 
             if has_var and col_e not in df_subset_var:
-                raise KeyError(f"Variance '{col_e}' absente de df_subset_var")
+                raise ParamError(f"Variance '{col_e}' absente de df_subset_var.")
 
             if has_var:
-
-                # Detection de variances très légèrement négatives (et celles qui le seraient plus que légèrement)
+                # Lève NumericalError si des variances fortement négatives sont détectées
                 sigma = self._compute_sigma_envelope(df_subset_var[col_e], col_e)
 
-                # On dessine l'enveloppe
                 y_upper = df_subset[col_p] + 2.0 * sigma
                 y_lower = df_subset[col_p] - 2.0 * sigma
-                last_line = axes[j].lines[-1]  # dernière courbe tracée
+                last_line = axes[j].lines[-1]
                 color = last_line.get_color()
                 axes[j].fill_between(
                     df_subset.index,
@@ -417,10 +436,8 @@ class HistoryTracker:
         axes[-1].set_xlim(xmin, xmax - 1)
         axes[-1].set_xlabel("n")
 
-        # Nettoyage explicite de l’axe partagé
         axes[-1].minorticks_off()
         axes[-1].xaxis.set_major_locator(mticker.MaxNLocator(nbins=5, integer=True))
-        # Optionnel mais très efficace
         fig.canvas.draw_idle()
 
         if show:

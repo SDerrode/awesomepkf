@@ -18,6 +18,13 @@ from prg.classes.SeedGenerator import SeedGenerator
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.exceptions import (
+    CovarianceError,
+    FilterError,
+    InvertibilityError,
+    ParamError,
+    StepValidationError,
+)
 from prg.utils.utils import rich_show_fields
 
 logger = logging.getLogger(__name__)
@@ -32,7 +39,6 @@ class PKFStep:
 
     Stores both the predicted and updated state estimates, along with
     the associated covariance matrices, innovation, and Kalman gain.
-    All array fields are validated on construction via :meth:`__post_init__`.
 
     .. note::
         This dataclass uses ``frozen=True`` — validation methods must never
@@ -125,9 +131,9 @@ class PKF:
         ------
         TypeError
             If ``param`` is not an instance of ``ParamLinear`` or ``ParamNonLinear``.
-        ValueError
+        ParamError
             If ``sKey`` is not a strictly positive integer or ``None``.
-        ValueError
+        ParamError
             If ``verbose`` is not in ``{0, 1, 2}``.
         """
         if not isinstance(param, (ParamLinear, ParamNonLinear)):
@@ -135,9 +141,9 @@ class PKF:
                 "param must be an instance of ParamLinear or ParamNonLinear"
             )
         if not ((isinstance(sKey, int) and sKey > 0) or sKey is None):
-            raise ValueError("sKey must be None or a strictly positive integer")
+            raise ParamError("sKey must be None or a strictly positive integer")
         if verbose not in [0, 1, 2]:
-            raise ValueError("verbose must be 0, 1 or 2")
+            raise ParamError("verbose must be 0, 1 or 2")
 
         self.param = param
         self.verbose = verbose
@@ -208,6 +214,11 @@ class PKF:
         -------
         list of tuple[int, np.ndarray, np.ndarray]
             Each tuple is ``(k, x_true, y_observed)``.
+
+        Raises
+        ------
+        ParamError
+            If ``N`` is not a strictly positive integer.
         """
         self._validate_N(N)
         return list(self._data_generation(N))
@@ -232,11 +243,18 @@ class PKF:
         -------
         list of tuple
             Each tuple is ``(k, x_true, y_observed, X_predict, X_update)``.
+
+        Raises
+        ------
+        ParamError
+            If ``N`` is invalid.
+        FilterError
+            If the filter raises an unhandled runtime error.
         """
         try:
             result = self.process_filter(N=N, data_generator=data_generator)
-        except RuntimeError as rte:
-            raise
+        except RuntimeError as e:
+            raise FilterError("Unexpected runtime error in process_filter.") from e
         return list(result)
 
     @staticmethod
@@ -251,11 +269,11 @@ class PKF:
 
         Raises
         ------
-        ValueError
+        ParamError
             If ``N`` is not a strictly positive integer or ``None``.
         """
         if not ((isinstance(N, int) and N > 0) or N is None):
-            raise ValueError("N must be None or a strictly positive integer")
+            raise ParamError("N must be None or a strictly positive integer")
 
     # ------------------------------------------------------------------
     # Data generation
@@ -333,14 +351,14 @@ class PKF:
     # Covariance diagnostics
     # ------------------------------------------------------------------
 
-    def _check_covariance(self, mat: np.ndarray, k: int, name: str = "") -> bool:
+    def _check_covariance(self, mat: np.ndarray, k: int, name: str = "") -> None:
         """
         Check whether a matrix is a valid covariance matrix using
         :class:`CovarianceMatrix` diagnostics.
 
         Skipped entirely for augmented models. Logs a warning on WARNING
-        status and the full diagnostic report at DEBUG level. Raises on
-        FAIL status.
+        status and the full diagnostic report at DEBUG level. Attempts
+        regularization on FAIL status before raising.
 
         Parameters
         ----------
@@ -353,8 +371,8 @@ class PKF:
 
         Raises
         ------
-        ValueError
-            If the matrix is not a valid covariance matrix (FAIL status).
+        CovarianceError
+            If the matrix is not a valid covariance matrix and regularization fails.
         """
         if self.param.augmented:
             return
@@ -366,21 +384,21 @@ class PKF:
 
             if not report.is_valid:
                 try:
-                    mat[:] = CovarianceMatrix(mat).regularized()  # ré-assignemnt
+                    mat[:] = CovarianceMatrix(mat).regularized()
                     if self.verbose > 1:
                         self.logger.warning(
                             "Step %d: %s regularized successfully.", k, name
                         )
-
                 except ValueError as e:
-                    if self.verbose > 1:
-                        self.logger.error(
-                            "Step %d: %s regularization failed — %s",
-                            k,
-                            name,
-                            e,
-                        )
-                    raise
+                    self.logger.error(
+                        "Step %d: %s regularization failed — %s", k, name, e
+                    )
+                    raise CovarianceError(
+                        f"Step {k}: {name} is not a valid covariance matrix "
+                        f"and could not be regularized.",
+                        matrix_name=name,
+                        step=k,
+                    ) from e
 
     def _check_invertible(self, mat: np.ndarray, k: int, name: str = "") -> bool:
         """
@@ -402,12 +420,11 @@ class PKF:
         Returns
         -------
         bool
-            ``True`` if the matrix is invertible (is_valid),
-            ``False`` otherwise.
+            ``True`` if the matrix is invertible (is_valid).
 
         Raises
         ------
-        LinAlgError
+        InvertibilityError
             If the matrix is not invertible (FAIL status).
         """
         report = InvertibleMatrix(mat).check()
@@ -423,7 +440,11 @@ class PKF:
                 self.logger.debug("Step %d: %s full diagnostic:\n%s", k, name, report)
 
             if not report.is_valid:
-                raise LinAlgError(f"Step {k}: matrix {name} is not invertible (FAIL).")
+                raise InvertibilityError(
+                    f"Step {k}: matrix {name} is not invertible (FAIL).",
+                    matrix_name=name,
+                    step=k,
+                )
 
         return report.is_valid
 
@@ -456,10 +477,12 @@ class PKF:
 
         Raises
         ------
-        LinAlgError
+        InvertibilityError
             If ``Sigma22`` (prior observation covariance) is not invertible.
-        ValueError
+        CovarianceError
             If ``PXXkp1_update`` is not a valid covariance matrix.
+        StepValidationError
+            If ``PKFStep`` construction fails due to invalid data.
         """
         k, xkp1, ykp1 = next(generator)
 
@@ -470,12 +493,14 @@ class PKF:
         Sigma21 = self.Pz0[self.dim_x :, : self.dim_x]
         Sigma22 = self.Pz0[self.dim_x :, self.dim_x :]
 
-        # Validate Sigma22 before inversion
+        # Validate Sigma22 before inversion — raises InvertibilityError on failure
         self._check_invertible(Sigma22, k, name="Sigma22")
 
         Sigma22_inv: np.ndarray = np.linalg.inv(Sigma22)
         Xkp1_update: np.ndarray = mu_x0 + Sigma12 @ Sigma22_inv @ (ykp1 - mu_y0)
         PXXkp1_update: np.ndarray = Sigma11 - Sigma12 @ Sigma22_inv @ Sigma21
+
+        # Validate updated covariance — raises CovarianceError on failure
         self._check_covariance(PXXkp1_update, k, name="PXXkp1_update")
 
         try:
@@ -492,8 +517,11 @@ class PKF:
                 PXXkp1_update=PXXkp1_update,
             )
         except (ValueError, LinAlgError) as e:
-            self.logger.error("Step %d: PKFStep validation failed — %s", k, e)
-            raise
+            self.logger.error("Step %d: PKFStep construction failed — %s", k, e)
+            raise StepValidationError(
+                f"Step {k}: PKFStep construction failed in _firstEstimate.",
+                step=k,
+            ) from e
 
         self.history.record(step)
         if self.verbose > 1:
@@ -545,11 +573,13 @@ class PKF:
 
         Raises
         ------
-        LinAlgError
-            If the innovation covariance ``Skp1`` is not invertible or if
-            Cholesky factorisation fails.
-        ValueError
-            If the updated covariance ``PXXkp1_update`` is not valid.
+        InvertibilityError
+            If the innovation covariance ``Skp1`` is not invertible.
+        CovarianceError
+            If the Cholesky factorisation fails or the updated covariance
+            ``PXXkp1_update`` is not a valid covariance matrix.
+        StepValidationError
+            If ``PKFStep`` construction fails due to invalid data.
         """
         Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
         PXXkp1_predict = Pkp1_predict[: self.dim_x, : self.dim_x]
@@ -560,26 +590,33 @@ class PKF:
         ikp1: np.ndarray = ykp1 - Ykp1_predict
         Skp1: np.ndarray = PYYkp1_predict.copy()
 
-        # Validate innovation covariance before Cholesky solve
+        # Validate innovation covariance — raises InvertibilityError on failure
         self._check_invertible(Skp1, k, name="Skp1")
 
         # Kalman gain via Cholesky solve — more stable than direct inversion
         try:
             c, low = cho_factor(Skp1)
             Kkp1: np.ndarray = PXYkp1_predict @ cho_solve((c, low), self.eye_dim_y)
-        except Exception as e:
+        except (LinAlgError, ValueError) as e:
             self.logger.error(
-                "Step %d: LinAlgError/ValueError in cho_factor/solve: %s", k, e
+                "Step %d: Cholesky factorisation failed on Skp1 — %s", k, e
             )
-            raise
+            raise CovarianceError(
+                f"Step {k}: Cholesky factorisation failed — Skp1 may not be "
+                f"positive definite.",
+                matrix_name="Skp1",
+                step=k,
+            ) from e
 
         Xkp1_update: np.ndarray = Xkp1_predict + Kkp1 @ ikp1
 
-        # Joseph form
+        # Joseph form for numerical stability
         Joseph_factor: np.ndarray = np.vstack((self.eye_dim_x, -Kkp1.T))
         PXXkp1_update_Joseph: np.ndarray = (
             Joseph_factor.T @ Pkp1_predict @ Joseph_factor
         )
+
+        # Validate updated covariance — raises CovarianceError on failure
         self._check_covariance(PXXkp1_update_Joseph, k, name="PXXkp1_update_Joseph")
 
         try:
@@ -596,8 +633,11 @@ class PKF:
                 PXXkp1_update=PXXkp1_update_Joseph.copy(),
             )
         except (ValueError, LinAlgError) as e:
-            self.logger.error("Step %d: PKFStep validation failed — %s", k, e)
-            raise
+            self.logger.error("Step %d: PKFStep construction failed — %s", k, e)
+            raise StepValidationError(
+                f"Step {k}: PKFStep construction failed in _nextUpdating.",
+                step=k,
+            ) from e
 
         if store:
             self.history.record(step)

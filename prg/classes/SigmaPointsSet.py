@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from abc import ABC, abstractmethod  # Used for the abstract base class
-from typing import Dict, Type, Optional  # Used in registry and signatures
-import numpy as np  # Used throughout
-from itertools import product  # Used in SetIto2000 for tensor product
+from abc import ABC, abstractmethod
+from typing import Dict, Type, Optional
+import numpy as np
+from itertools import product
 
-from prg.utils.numerics import EPS_ABS  # Used in _chol and weight validation
+from prg.utils.numerics import EPS_ABS
+from prg.exceptions import CovarianceError, ParamError
 
 __all__ = ["SigmaPointsSet", "SetWAN2000", "SetCPKF", "SetLERNER2002", "SetIto2000"]
 
@@ -43,12 +44,12 @@ class SigmaPointsSet(ABC):
 
         Raises
         ------
-        RuntimeError
+        ParamError
             If ``key`` is already present in the registry.
         """
         super().__init_subclass__(**kwargs)
         if key in SigmaPointsSet.registry:
-            raise RuntimeError(f"Key already registered: {key}")
+            raise ParamError(f"Sigma-point key already registered: {key!r}")
         SigmaPointsSet.registry[key] = cls
 
     def __init__(self, dim: int) -> None:
@@ -59,7 +60,14 @@ class SigmaPointsSet(ABC):
         ----------
         dim : int
             Dimension of the state (and augmented state) space.
+
+        Raises
+        ------
+        ParamError
+            If ``dim`` is not a strictly positive integer.
         """
+        if not (isinstance(dim, int) and dim > 0):
+            raise ParamError(f"dim must be a strictly positive integer, got {dim!r}.")
         self.dim: int = dim
 
     @abstractmethod
@@ -101,7 +109,7 @@ class SigmaPointsSet(ABC):
 
         Raises
         ------
-        np.linalg.LinAlgError
+        CovarianceError
             If Cholesky decomposition fails even after regularisation.
         """
         try:
@@ -109,10 +117,11 @@ class SigmaPointsSet(ABC):
         except np.linalg.LinAlgError:
             try:
                 return np.linalg.cholesky(P + EPS_ABS * np.eye(self.dim))
-            except np.linalg.LinAlgError:
-                raise np.linalg.LinAlgError(
-                    "_chol: Cholesky decomposition failed even after regularisation"
-                )
+            except np.linalg.LinAlgError as e:
+                raise CovarianceError(
+                    "Cholesky decomposition failed even after regularisation.",
+                    matrix_name="P",
+                ) from e
 
     def _normalize_weights(self, Wm: np.ndarray) -> np.ndarray:
         """
@@ -130,12 +139,12 @@ class SigmaPointsSet(ABC):
 
         Raises
         ------
-        ValueError
+        ParamError
             If the sum of ``Wm`` deviates from 1 by more than ``EPS_ABS``
             before normalization.
         """
         if not np.isclose(Wm.sum(), 1.0, atol=EPS_ABS):
-            raise ValueError(f"Wm weights do not sum to 1 (sum={Wm.sum():.6f})")
+            raise ParamError(f"Wm weights do not sum to 1 (sum={Wm.sum():.6f}).")
         return Wm / Wm.sum()
 
     @staticmethod
@@ -194,6 +203,13 @@ class SetWAN2000(SigmaPointsSet, key="wan2000"):
             State dimension.
         param : object
             Parameter object exposing ``lambda_``, ``alpha``, and ``beta``.
+
+        Raises
+        ------
+        ParamError
+            If ``dim`` is not a strictly positive integer.
+        ParamError
+            If the computed weights do not sum to 1.
         """
         super().__init__(dim)
 
@@ -226,6 +242,11 @@ class SetWAN2000(SigmaPointsSet, key="wan2000"):
         -------
         np.ndarray
             Sigma points, shape ``(2 * dim + 1, dim, 1)``.
+
+        Raises
+        ------
+        CovarianceError
+            If the Cholesky decomposition of ``P`` fails.
         """
         x = self._as_column(x)
         sqrt_P: np.ndarray = self._chol(P)
@@ -274,6 +295,13 @@ class SetCPKF(SigmaPointsSet, key="cpkf"):
             State dimension.
         param : object
             Parameter object (unused here, kept for interface consistency).
+
+        Raises
+        ------
+        ParamError
+            If ``dim`` is not a strictly positive integer.
+        ParamError
+            If the computed weights do not sum to 1.
         """
         super().__init__(dim)
 
@@ -298,6 +326,11 @@ class SetCPKF(SigmaPointsSet, key="cpkf"):
         -------
         np.ndarray
             Sigma points, shape ``(2 * dim, dim, 1)``.
+
+        Raises
+        ------
+        CovarianceError
+            If the Cholesky decomposition of ``P`` fails.
         """
         x = self._as_column(x)
         sqrt_P: np.ndarray = self._chol(P)
@@ -352,13 +385,19 @@ class SetLERNER2002(SigmaPointsSet, key="lerner2002"):
         param : object
             Parameter object exposing ``alpha`` and ``beta`` for the
             corrective term on ``Wc[0]``.
+
+        Raises
+        ------
+        ParamError
+            If ``dim`` is not a strictly positive integer.
+        ParamError
+            If the computed weights do not sum to 1.
         """
         super().__init__(dim)
 
         self.nbSigmaPoint: int = 2 * self.dim**2 + 1
 
         self.Wm: np.ndarray = np.zeros(self.nbSigmaPoint)
-        # Weight formulas from Lerner (2002)
         self.Wm[0] = (self.dim**2 - 7.0 * self.dim) / 18 + 1.0
         self.Wm[1 : 2 * self.dim + 1] = (4 - self.dim) / 18.0
         self.Wm[2 * self.dim + 1 : 2 * self.dim**2 + 1] = 1.0 / 36.0
@@ -388,6 +427,11 @@ class SetLERNER2002(SigmaPointsSet, key="lerner2002"):
         -------
         np.ndarray
             Sigma points, shape ``(2 * dim**2 + 1, dim, 1)``.
+
+        Raises
+        ------
+        CovarianceError
+            If the Cholesky decomposition of ``P`` fails.
         """
         x = self._as_column(x)
         sqrt_P: np.ndarray = self._chol(P)
@@ -402,16 +446,14 @@ class SetLERNER2002(SigmaPointsSet, key="lerner2002"):
             sigma.append(x - delta)
 
         # Cross points — pairwise sums and differences of eigenvector columns
-        # Pre-allocated buffers to avoid repeated memory allocation in the loop
         delta_plus: np.ndarray = np.empty((self.dim, 1))
         delta_minus: np.ndarray = np.empty((self.dim, 1))
 
         for i in range(self.dim):
-            col_i = sqrt_P[:, i]  # view, no copy
+            col_i = sqrt_P[:, i]
             for j in range(i + 1, self.dim):
-                col_j = sqrt_P[:, j]  # view, no copy
+                col_j = sqrt_P[:, j]
 
-                # In-place operations to avoid intermediate allocations
                 np.add(col_i, col_j, out=delta_plus[:, 0])
                 delta_plus *= self.gamma
 
@@ -470,6 +512,13 @@ class SetIto2000(SigmaPointsSet, key="ito2000"):
             exponential growth in the number of sigma points.
         param : object
             Parameter object (unused here, kept for interface consistency).
+
+        Raises
+        ------
+        ParamError
+            If ``dim`` is not a strictly positive integer.
+        ParamError
+            If the computed weights do not sum to 1.
         """
         super().__init__(dim)
 
@@ -510,6 +559,11 @@ class SetIto2000(SigmaPointsSet, key="ito2000"):
         -------
         np.ndarray
             Sigma points, shape ``(p^dim, dim, 1)``.
+
+        Raises
+        ------
+        CovarianceError
+            If the Cholesky decomposition of ``P`` fails.
         """
         x = self._as_column(x)
         sqrt_P: np.ndarray = self._chol(P)

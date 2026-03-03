@@ -7,12 +7,13 @@ Extended Pairwise Kalman filter (EPKF) implementation
 ####################################################################
 """
 
-from __future__ import annotations  # Implicit use for type annotations
-from typing import Generator, Optional, Union  # Used in signatures
-from scipy.linalg import LinAlgError  # Used in try/except
-import numpy as np  # Used throughout
+from __future__ import annotations
+from typing import Generator, Optional, Union
+from scipy.linalg import LinAlgError
+import numpy as np
 
-from prg.classes.PKF import PKF  # Parent class
+from prg.classes.PKF import PKF
+from prg.exceptions import FilterError, InvertibilityError, NumericalError, ParamError
 
 __all__ = ["NonLinear_EPKF"]
 
@@ -22,12 +23,11 @@ class NonLinear_EPKF(PKF):
     Extended Pairwise Kalman Filter (EPKF).
 
     Extends :class:`PKF` by introducing the EPKF.
-
     """
 
     def __init__(
         self,
-        param: ParamLinear | ParamNonLinear,
+        param,
         sKey: Optional[int] = None,
         verbose: int = 0,
     ) -> None:
@@ -94,15 +94,20 @@ class NonLinear_EPKF(PKF):
 
         Raises
         ------
-        ValueError
-            If ``N`` is not a strictly positive integer or ``None``.
-        ValueError
-            If a Jacobian returns a matrix with an unexpected shape.
-        LinAlgError
-            If a linear algebra error occurs during the update step
-            (e.g. non-invertible innovation covariance matrix).
+        ParamError
+            Si ``N`` n'est pas un entier strictement positif ou ``None``
+            (levée par :meth:`_validate_N` dans le parent).
+        ParamError
+            Si un Jacobien retourne une matrice de forme inattendue.
+        InvertibilityError
+            Si la matrice de covariance d'innovation ``Skp1`` n'est pas
+            inversible lors de l'étape de mise à jour.
+        NumericalError
+            Si la matrice de covariance prédite ``Pkp1_predict`` n'est pas
+            valide (levée par :meth:`_check_covariance`).
+        FilterError
+            Si une erreur inattendue survient pendant l'étape de mise à jour.
         """
-
         self._validate_N(N)
 
         generator = (
@@ -115,7 +120,7 @@ class NonLinear_EPKF(PKF):
         # --- First estimate -----------------------------------------------------------
         step = self._firstEstimate(generator)
 
-        if step.xkp1 is None:  # There is no ground truth
+        if step.xkp1 is None:
             self.ground_truth = False
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
@@ -133,30 +138,41 @@ class NonLinear_EPKF(PKF):
             # Prediction
             Zkp1_predict = self.param.g(z_iterated, self.zeros_dim_xy_1, self.dt)
             An, Bn = jg(z_iterated, self.zeros_dim_xy_1, self.dt)
+
+            # Validate Jacobian shapes — erreur de paramétrage du modèle
             if An.shape != (self.dim_xy, self.dim_xy) or Bn.shape != (
                 self.dim_xy,
                 self.dim_xy,
             ):
-                raise ValueError(
-                    f"Jacobian returned matrices of wrong shape: An={An.shape}, Bn={Bn.shape}"
+                raise ParamError(
+                    f"Jacobian returned matrices of wrong shape: "
+                    f"An={An.shape}, Bn={Bn.shape}, "
+                    f"expected ({self.dim_xy}, {self.dim_xy})."
                 )
+
             accel_xy_xy[: self.dim_x, : self.dim_x] = step.PXXkp1_update
             Pkp1_predict = An @ accel_xy_xy @ An.T + Bn @ self.param.mQ @ Bn.T
+
+            # Validate predicted covariance — lève CovarianceError si invalide
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
-            # New data is arriving ##################################
+            # Consume the next observation
             try:
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
-                return  # we stop as the data generator is stopped itself
+                return  # Data generator exhausted — arrêt normal, pas une erreur
 
-            # Updating ##############################################
+            # Update step — les exceptions custom remontent naturellement
             try:
                 step = self._nextUpdating(
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict
                 )
-            except Exception as e:
-                # self.logger.error(f"Step {new_k}: LinAlgError during update")
+            except (InvertibilityError, NumericalError):
+                # Erreurs numériques connues — on les laisse remonter telles quelles
                 raise
+            except Exception as e:
+                raise FilterError(
+                    f"Step {new_k}: unexpected error during update step."
+                ) from e
 
             yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update

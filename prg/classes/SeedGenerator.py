@@ -15,6 +15,8 @@ import logging
 from typing import Optional
 import numpy as np
 
+from prg.exceptions import ParamError
+
 __all__ = ["SeedGenerator"]
 
 # ----------------------------------------------------------------------
@@ -41,10 +43,19 @@ class SeedGenerator:
             Graine initiale (si None, une graine forte est générée via secrets).
         verbose : int
             Niveau de verbosité (0, 1 ou 2).
+
+        Raises
+        ------
+        ParamError
+            Si ``verbose`` n'appartient pas à ``{0, 1, 2}``.
+        ParamError
+            Si ``seed_key`` est fourni mais n'est pas un entier strictement positif.
         """
         if __debug__:
             if verbose not in [0, 1, 2]:
-                raise ValueError("verbose must be 0, 1 or 2")
+                raise ParamError("verbose must be 0, 1 or 2")
+            if seed_key is not None and not (isinstance(seed_key, int)):
+                raise ParamError("seed_key must be None or a strictly positive integer")
 
         self._lock: threading.Lock = threading.Lock()
         self.verbose: int = verbose
@@ -70,7 +81,7 @@ class SeedGenerator:
 
     @property
     def seed(self) -> int:
-        """Retourne la graine principale utilisée à l’initialisation."""
+        """Retourne la graine principale utilisée à l'initialisation."""
         return self._root_seed
 
     # ------------------------------------------------------------------
@@ -90,7 +101,6 @@ class SeedGenerator:
             self._rng = np.random.default_rng(new_seq)
             self._seed_seq = new_seq
 
-            # On récupère un identifiant dérivé pour traçabilité
             derived_seed: int = int(new_seq.entropy)
             if __debug__ and self.verbose > 1:
                 logger.info(f"[SeedGenerator] Nouvelle graine dérivée : {derived_seed}")
