@@ -2,9 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from .base_model_nonLinear import BaseModelNonLinear
 
-from others.numerics import EPS_REL
+from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
+from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.utils.numerics import EPS_REL
+
+__all__ = ["ModelExtSaturant"]
 
 
 class ModelExtSaturant(BaseModelNonLinear):
@@ -26,9 +29,16 @@ class ModelExtSaturant(BaseModelNonLinear):
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
 
         # Covariance and initial state
-        self.mQ = np.diag([1e-4, 1e-4])
-        self.mz0 = np.zeros((self.dim_xy, 1))
-        self.Pz0 = np.eye(self.dim_xy)
+        # self.mQ = np.diag([1e-4, 1e-4])
+        # self.mz0 = np.zeros((self.dim_xy, 1))
+        # self.Pz0 = np.eye(self.dim_xy)
+        self.mQ = generate_block_matrix(
+            self._randMatrices.rng, self.dim_x, self.dim_y, 0.01
+        )
+        self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
+        self.Pz0 = generate_block_matrix(
+            self._randMatrices.rng, self.dim_x, self.dim_y, 0.03
+        )
 
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:

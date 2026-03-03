@@ -21,7 +21,7 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
         - [Pairwise Particle Filter (PPF)](#pairwise-particle-filter-ppf)
     - [Usage Examples](#usage-examples)
         - [Simulate Linear Data and Filter with PKF](#simulate-linear-data-and-filter-with-pkf)
-        - [Simulate Non-Linear Data and Filter with EPKF, UPKF and PF](#simulate-non-linear-data-and-filter-with-epkf-upkf-and-pf)
+        - [Simulate Non-Linear Data and Filter with EPKF, UPKF and PPF](#simulate-non-linear-data-and-filter-with-epkf-upkf-and-ppf)
     - [Folders structure](#folders-structure)
 
 ---
@@ -66,7 +66,7 @@ python3 prg/run_simulator.py --N 2000 --linearModelName "A_mQ_x1_y1" --dataFileN
 python3 prg/run_linear_pkf.py --linearModelName "A_mQ_x1_y1" --dataFileName "testL.csv" --verbose 1 --saveHistory --plot
 ```
 
-### Simulate Non-Linear Data and Filter with EPKF, UPKF and PF
+### Simulate Non-Linear Data and Filter with EPKF, UPKF and PPF
 
 ```bash
 python3 prg/run_simulator.py   --N 1000 --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --verbose 1 --sKey 303 
@@ -84,38 +84,54 @@ python3 prg/run_nonlinear_ppf.py   --nonLinearModelName "x2_y1_withRetroactionsO
     tree -L 4 -I "logs|venv|*.csv|*.pkl|*.png|__pycache__|*.code-workspace|*.ipynb" > folder_strucure.md
 -->
 
-.
-├── LICENSE
-├── data
-│   ├── datafile
-│   ├── historyTracker
-│   └── plot
-├── folder_strucure.md
-├── ipynb
+<!-- meilleure commande : 
+git ls-files | tree --fromfile -F -a --dirsfirst -I "logs|venv|*.csv|*.pkl|*.png|__pycache__|*.code-workspace|*.ipynb|.vscode|.gitkeep|.DS_Store" > structure.txt
+-->
+
+<!-- PROJECT_STRUCTURE_START -->
+```text
+./
+├── data/
+│   ├── datafile/
+│   ├── historyTracker/
+│   ├── plot/
+│   └── clean_dirs.sh
+├── ipynb/
 │   └── readme.md
-├── prg
-│   ├── classes
-│   │   ├── ActiveView.py
+├── prg/
+│   ├── base_classes/
+│   │   ├── __init__.py
+│   │   ├── linear_pkf_runner_base.py
+│   │   ├── linear_pkf_runner_from_file.py
+│   │   ├── linear_pkf_runner_simulation.py
+│   │   ├── nonlinear_epkf_runner_base.py
+│   │   ├── nonlinear_epkf_runner_from_file.py
+│   │   ├── nonlinear_epkf_runner_simulation.py
+│   │   ├── nonlinear_ppf_runner_base.py
+│   │   ├── nonlinear_ppf_runner_from_file.py
+│   │   ├── nonlinear_ppf_runner_simulation.py
+│   │   ├── nonlinear_upkf_runner_base.py
+│   │   ├── nonlinear_upkf_runner_from_file.py
+│   │   ├── nonlinear_upkf_runner_simulation.py
+│   │   ├── runner_base.py
+│   │   ├── simulator_base.py
+│   │   ├── simulator_linear.py
+│   │   └── simulator_nonlinear.py
+│   ├── classes/
 │   │   ├── HistoryTracker.py
 │   │   ├── Linear_PKF.py
+│   │   ├── MatrixDiagnostics.py
 │   │   ├── NonLinear_EPKF.py
-│   │   ├── NonLinear_PF.py
-│   │   ├── NonLinear_PKF.py
+│   │   ├── NonLinear_PPF.py
 │   │   ├── NonLinear_UPKF.py
+│   │   ├── PKF.py
 │   │   ├── ParamLinear.py
 │   │   ├── ParamNonLinear.py
 │   │   ├── SeedGenerator.py
-│   │   └── SigmaPointsSet.py
-│   ├── filterEPKFdata.py
-│   ├── filterEPKFdata_fromfile.py
-│   ├── filterPFdata.py
-│   ├── filterPFdata_fromfile.py
-│   ├── filterPKFdata.py
-│   ├── filterPKFdata_fromfile.py
-│   ├── filterUPKFdata.py
-│   ├── filterUPKFdata_fromfile.py
-│   ├── models
-│   │   ├── linear
+│   │   ├── SigmaPointsSet.py
+│   │   └── __init__.py
+│   ├── models/
+│   │   ├── linear/
 │   │   │   ├── A_mQ_x1_y1.py
 │   │   │   ├── A_mQ_x1_y1_VPgreaterThan1.py
 │   │   │   ├── A_mQ_x1_y1_augmented.py
@@ -127,34 +143,43 @@ python3 prg/run_nonlinear_ppf.py   --nonLinearModelName "x2_y1_withRetroactionsO
 │   │   │   ├── __init__.py
 │   │   │   ├── base_model_linear.py
 │   │   │   └── generMatrixA_fromVP.py
-│   │   ├── nonLinear
+│   │   ├── nonLinear/
 │   │   │   ├── __init__.py
 │   │   │   ├── base_model_nonLinear.py
 │   │   │   ├── model_cubique.py
 │   │   │   ├── model_ext_saturant.py
 │   │   │   ├── model_gordon.py
 │   │   │   ├── model_sinus.py
-│   │   │   ├── model_x1_y1_withRetroaction.py
-│   │   │   ├── model_x1_y1_withRetroaction_augmented.py
+│   │   │   ├── model_x1_y1_withRetroactions.py
+│   │   │   ├── model_x1_y1_withRetroactions_augmented.py
 │   │   │   ├── model_x2_y1.py
 │   │   │   ├── model_x2_y1_rapport.py
 │   │   │   ├── model_x2_y1_withRetroactionsOfObservations.py
-│   │   │   └── model_x2_y1_withRetroactionsOfObservations_augmented.py
+│   │   │   ├── model_x2_y1_withRetroactionsOfObservations_augmented.py
+│   │   │   └── model_x2_y2_withRetroactions.py
+│   │   ├── __init__.py
 │   │   ├── testLinear.py
 │   │   └── testNonLinear.py
-│   ├── others
+│   ├── others/
+│   │   ├── __init__.py
 │   │   ├── csv_to_parquet.py
+│   │   ├── geneMatriceCov.py
+│   │   ├── numerics.py
 │   │   ├── parser.py
 │   │   ├── plot_settings.py
 │   │   └── utils.py
+│   ├── __init__.py
+│   ├── run_linear_pkf.py
+│   ├── run_nonlinear_epkf.py
+│   ├── run_nonlinear_ppf.py
+│   ├── run_nonlinear_upkf.py
 │   ├── run_simulator.py
-│   ├── run_simulator.py
-│   └── tests
-│       ├── Jacobien_TextPourChatGPT.txt
-│       ├── bash_augmentation_L.sh
-│       ├── bash_augmentation_NL.sh
-│       ├── commandes_L.sh
-│       ├── commandes_NL.sh
-│       └── run_tests.sh
-└── readme.md
+│   └── testErreur.py
+├── .gitignore
+├── LICENSE
+├── README.md
+└── requirements.txt
 
+13 directories, 76 files
+```
+<!-- PROJECT_STRUCTURE_END -->

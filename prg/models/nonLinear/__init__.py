@@ -4,7 +4,11 @@
 import importlib
 import pkgutil
 from pathlib import Path
-from .base_model_nonLinear import BaseModelNonLinear
+from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
+
+# tous les modules sont importables
+p = Path(__file__).parent
+__all__ = [f.stem for f in p.glob("*.py") if not f.name.startswith("_")]
 
 
 class ModelFactoryNonLinear:

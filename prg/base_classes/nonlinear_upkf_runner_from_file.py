@@ -5,10 +5,11 @@ import os
 import logging
 from typing import Optional
 
-from classes.NonLinear_UPKF import NonLinear_UPKF
-from others.utils import file_data_generator
+from prg.classes.NonLinear_UPKF import NonLinear_UPKF
+from prg.utils.utils import file_data_generator
+from prg.base_classes.nonlinear_upkf_runner_base import BaseNonLinearUPKFRunner
 
-from base_classes.nonlinear_upkf_runner_base import BaseNonLinearUPKFRunner
+__all__ = ["BaseNonLinearUPKFRunnerFromFile"]
 
 
 class BaseNonLinearUPKFRunnerFromFile(BaseNonLinearUPKFRunner):
@@ -40,22 +41,27 @@ class BaseNonLinearUPKFRunnerFromFile(BaseNonLinearUPKFRunner):
 
     # ==========================================================
 
-    def run(self) -> None:
+    def run(self, i: int = 0) -> None:
 
         if self.verbose > 1:
             logging.info("Starting NonLinear UPKF Runner (file mode)")
 
-        self.runner_instance.process_N_data(
-            N=None,
-            data_generator=file_data_generator(
-                self.data_filename, self.param.dim_x, self.param.dim_y, self.verbose
-            ),
-        )
+        try:
+            self.runner_instance.process_N_data(
+                N=None,
+                data_generator=file_data_generator(
+                    self.data_filename, self.param.dim_x, self.param.dim_y, self.verbose
+                ),
+            )
+        except RuntimeError as rte:
+            raise
 
         if self.save_history:
-            self._save_history("history_run_upkf_file.pkl")
+            self._save_history(f"history_run_upkf_file_{i}.pkl")
 
         self._compute_errors()
 
         if self.plot:
             self._plot_results()
+
+        return self.runner_instance.history._history.copy()

@@ -2,7 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from .base_model_nonLinear import BaseModelNonLinear
+
+from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
+from prg.models.Generate_MatrixCov import generate_block_matrix
+
+__all__ = ["ModelX2Y1_withRetroactionsOfObservations"]
 
 
 class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
@@ -16,12 +20,18 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
-        self.mQ = np.diag([1e-1, 1e-1, 5e-1])
-
-        self.mz0 = np.zeros((self.dim_xy, 1))
-        self.Pz0 = np.eye(self.dim_xy)
-
         self.a, self.b, self.c, self.d, self.e, self.f = 1.0, 0.8, 0.05, 0.9, 0.30, 0.6
+
+        # self.mQ = np.diag([1e-1, 1e-1, 5e-1])
+        # self.mz0 = np.zeros((self.dim_xy, 1))
+        # self.Pz0 = np.eye(self.dim_xy)
+        self.mQ = generate_block_matrix(
+            self._randMatrices.rng, self.dim_x, self.dim_y, 0.03
+        )
+        self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
+        self.Pz0 = generate_block_matrix(
+            self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+        )
 
     # ------------------------------------------------------------------
     def _gx(self, x, y, t, u, dt):

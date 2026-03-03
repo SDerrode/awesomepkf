@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from pathlib import Path
-import sys
-
-directory = Path(__file__)
-sys.path.append(str(directory.parent.parent))
-
 import logging
 from typing import Any, Union, Optional
 import warnings
@@ -14,12 +8,11 @@ import warnings
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve, solve_discrete_lyapunov
 
-# Linear models
-from models.linear import BaseModelLinear, ModelFactoryLinear
+from prg.models.linear import BaseModelLinear, ModelFactoryLinear
+from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
+from prg.utils.numerics import EPS_ABS, EPS_REL
 
-# A few utils functions that are used several fois
-from others.utils import check_consistency
-from others.numerics import EPS_ABS, EPS_REL
+__all__ = ["ParamLinear"]
 
 # ----------------------------------------------------------------------
 # Configuration du logging global
@@ -107,12 +100,10 @@ class ParamLinear:
     ) -> None:
 
         self._A = np.array(A, dtype=float)
-        if __debug__:
-            eigvals = np.linalg.eigvals(self._A)
-            if np.any(np.abs(eigvals) >= 1.0):
-                logger.warning(
-                    f"⚠️ Certaines valeurs propres de A ont un module >= 1 : {eigvals}"
-                )
+        stab = StabilityMatrix(self._A)
+        if not stab.is_valid():
+            stab.summary()  # True si aucun FAIL
+            exit(1)
 
         self._B = np.array(B, dtype=float)
         self._mQ = np.array(mQ, dtype=float)
@@ -205,16 +196,21 @@ class ParamLinear:
     # ------------------------------------------------------------------
     def _check_consistency(self) -> None:
         if self.augmented:
-            check_consistency(Q1=self._Q1, sxx=self._sxx, syy=self._syy)
+            listMatrix = [self._Q1, self._sxx, self._syy]
         else:
-            check_consistency(
-                Q1=self._Q1,
-                sxx=self._sxx,
-                syy=self._syy,
-                mQ=self._mQ,
-                Sigma=self._Sigma,
-                Pz0=self._Pz0,
-            )
+            listMatrix = [
+                self._Q1,
+                self._sxx,
+                self._syy,
+                self._mQ,
+                self._Sigma,
+                self._Pz0,
+            ]
+
+        for arr in listMatrix:
+            report = CovarianceMatrix(arr).check()  # single diagnostic call
+            if not report.is_valid:
+                raise ValueError(f"Matrix  is not positive semi-definite.")
 
     # ------------------------------------------------------------------
     # Getters / Setters and Properties

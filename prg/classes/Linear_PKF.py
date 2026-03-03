@@ -11,11 +11,12 @@ from __future__ import annotations  # Used for type annotations
 from typing import Generator, Optional  # Used in signatures
 import numpy as np  # Used throughout
 from scipy.linalg import LinAlgError  # Used in try/except
-from .PKF import PKF  # Parent class
-from classes.ParamLinear import ParamLinear  # Used in type hints
-from classes.ParamNonLinear import ParamNonLinear  # Used in type hints
 
-from others.utils import symmetrize
+from prg.classes.PKF import PKF  # Parent class
+from prg.classes.ParamLinear import ParamLinear  # Used in type hints
+from prg.classes.ParamNonLinear import ParamNonLinear  # Used in type hints
+
+__all__ = ["Linear_PKF"]
 
 
 class Linear_PKF(PKF):
@@ -127,24 +128,17 @@ class Linear_PKF(PKF):
             data_generator if data_generator is not None else self._data_generation()
         )
 
-        # ------------------------------------------------------------------
-        # First step
-        # ------------------------------------------------------------------
+        # --- First estimate -----------------------------------------------------------
         step = self._firstEstimate(generator)
         if step.xkp1 is None:  # There is no ground truth
             self.ground_truth = False
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
-        # ------------------------------------------------------------------
-        # Pre-allocate temporary matrices (reused at every step)
-        # ------------------------------------------------------------------
+        # --- Subsequent steps ---------------------------------------------------------
         P_augmented: np.ndarray = self.zeros_dim_xy_xy.copy()
         z_augmented: np.ndarray = self.zeros_dim_xy_1.copy()
 
-        # ------------------------------------------------------------------
-        # Main filtering loop
-        # ------------------------------------------------------------------
         while N is None or step.k < N:
 
             # Assemble augmented state vector [X_update ; y]
@@ -155,10 +149,8 @@ class Linear_PKF(PKF):
             Zkp1_predict: np.ndarray = self.g(z_augmented, self.zeros_dim_xy_1, self.dt)
             # Embed the state covariance into the augmented covariance matrix
             P_augmented[: self.dim_x, : self.dim_x] = step.PXXkp1_update
-            Pkp1_predict: np.ndarray = symmetrize(
-                self._A @ P_augmented @ self._AT + self._BmQBT
-            )
-            self._test_CovMatrix(Pkp1_predict, step.k)
+            Pkp1_predict: np.ndarray = self._A @ P_augmented @ self._AT + self._BmQBT
+            self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # Consume the next observation
             try:
@@ -175,7 +167,7 @@ class Linear_PKF(PKF):
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict
                 )
             except LinAlgError:
-                self.logger.error(f"Step {new_k}: LinAlgError during update")
+                # self.logger.error(f"Step {new_k}: LinAlgError during update")
                 raise
 
             yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
