@@ -262,8 +262,9 @@ def _compute_quadratic_form(
         try:
             Pk_inv = InvertibleMatrix(Pk).inverse()
         except Exception as e:
-            logger.error(f"Step {k}: non invetible matrix - exiting.")
-            exit(1)
+            print(f"Pk={Pk}")
+            logger.error(f"Step {k}: non invertible matrix - exiting.")
+            raise
 
         vals[k] = float((ek.T @ Pk_inv @ ek).squeeze())
 
@@ -323,27 +324,30 @@ def compute_errors(
     mae_total = float(np.mean(np.abs(errors_flat)))
     # rmse = float(np.sqrt(mse_total))  # noqa: F841 — available for callers
 
-    errors = x_true - x_hat
-
-    # Mean NEES
-    tab_Pk = np.stack(P_list, axis=0)
-    nees_all = _compute_quadratic_form(errors, tab_Pk)
-    nees_mean = float(np.nanmean(nees_all))
-
-    # Mean NIS (optional)
-    if i_list is not None:
-        tab_Sk = np.stack(S_list, axis=0)
-        nis_all = _compute_quadratic_form(i_list, tab_Sk)
-        nis_mean = float(np.nanmean(nis_all))
-    else:
-        nis_mean = "na"
-
     report = {
         "mse_total": mse_total,
         "mae_total": mae_total,
-        "nees_mean": nees_mean,
-        "nis_mean": nis_mean,
+        "nees_mean": "na",
+        "nis_mean": "na",
     }
+
+    errors = x_true - x_hat
+
+    if not model.param.augmented:
+        # Mean NEES
+        tab_Pk = np.stack(P_list, axis=0)
+        nees_all = _compute_quadratic_form(errors, tab_Pk)
+        nees_mean = float(np.nanmean(nees_all))
+        report["nees_mean"] = nees_mean
+
+        # Mean NIS (optional)
+        if i_list is not None:
+            tab_Sk = np.stack(S_list, axis=0)
+            nis_all = _compute_quadratic_form(i_list, tab_Sk)
+            nis_mean = float(np.nanmean(nis_all))
+        else:
+            nis_mean = "na"
+        report["nis_mean"] = nis_mean
 
     # Per-component MSE and MAE for augmented models
     if model.param.augmented:

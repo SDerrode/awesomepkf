@@ -44,7 +44,6 @@ class ParamLinear:
         self.dim_y = dim_y
         self.dim_xy = dim_x + dim_y
         self.verbose = verbose
-        self.augmented = None
         self._set_log_level()
 
         # Two ways to construct the object

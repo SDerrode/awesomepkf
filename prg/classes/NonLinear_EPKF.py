@@ -131,7 +131,7 @@ class NonLinear_EPKF(PKF):
             z_iterated[self.dim_x :] = step.ykp1
 
             # Prediction
-            Zkp1_predict = self.g(z_iterated, self.zeros_dim_xy_1, self.dt)
+            Zkp1_predict = self.param.g(z_iterated, self.zeros_dim_xy_1, self.dt)
             An, Bn = jg(z_iterated, self.zeros_dim_xy_1, self.dt)
             if An.shape != (self.dim_xy, self.dim_xy) or Bn.shape != (
                 self.dim_xy,
@@ -141,7 +141,7 @@ class NonLinear_EPKF(PKF):
                     f"Jacobian returned matrices of wrong shape: An={An.shape}, Bn={Bn.shape}"
                 )
             accel_xy_xy[: self.dim_x, : self.dim_x] = step.PXXkp1_update
-            Pkp1_predict = An @ accel_xy_xy @ An.T + Bn @ self.mQ @ Bn.T
+            Pkp1_predict = An @ accel_xy_xy @ An.T + Bn @ self.param.mQ @ Bn.T
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # New data is arriving ##################################

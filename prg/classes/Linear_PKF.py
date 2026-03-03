@@ -61,7 +61,7 @@ class Linear_PKF(PKF):
 
         self._A: np.ndarray = self.param.A
         self._AT: np.ndarray = self.param.A.T
-        self._BmQBT: np.ndarray = self.param.B @ self.mQ @ self.param.B.T
+        self._BmQBT: np.ndarray = self.param.B @ self.param.mQ @ self.param.B.T
 
     def process_filter(
         self,
@@ -146,7 +146,9 @@ class Linear_PKF(PKF):
             z_augmented[self.dim_x :] = step.ykp1
 
             # Prediction step
-            Zkp1_predict: np.ndarray = self.g(z_augmented, self.zeros_dim_xy_1, self.dt)
+            Zkp1_predict: np.ndarray = self.param.g(
+                z_augmented, self.zeros_dim_xy_1, self.dt
+            )
             # Embed the state covariance into the augmented covariance matrix
             P_augmented[: self.dim_x, : self.dim_x] = step.PXXkp1_update
             Pkp1_predict: np.ndarray = self._A @ P_augmented @ self._AT + self._BmQBT
