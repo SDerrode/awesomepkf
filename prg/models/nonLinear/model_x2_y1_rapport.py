@@ -5,6 +5,7 @@ import numpy as np
 
 from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
 from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.exceptions import NumericalError
 
 __all__ = ["ModelX2Y1"]
 
@@ -35,51 +36,73 @@ class ModelX2Y1(BaseModelNonLinear):
         self.alpham = 1.0
         self.betam = 0.1
         self.gammam = 0.5
-        # self.mQ = np.diag([1e-4, 1e-4, 1e-4])
-        # self.mz0 = np.zeros((self.dim_xy, 1))
-        # self.Pz0 = np.eye(self.dim_xy)
-        self.mQ = generate_block_matrix(
-            self._randMatrices.rng, self.dim_x, self.dim_y, 0.003
-        )
-        self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
-        self.Pz0 = generate_block_matrix(
-            self._randMatrices.rng, self.dim_x, self.dim_y, 0.01
-        )
+
+        try:
+            self.mQ = generate_block_matrix(
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.003
+            )
+            self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
+            self.Pz0 = generate_block_matrix(
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.01
+            )
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] Initialization failed: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:
         """State transition function f(x) with process noise."""
-
-        return np.array(
-            [
-                [x[0, 0] + dt * x[1, 0] + t[0, 0]],
-                [
-                    x[1, 0]
-                    - dt * (self.alpham * np.sin(x[0, 0]) + self.betam * x[1, 0])
-                    + t[1, 0]
-                ],
-            ]
-        )
+        try:
+            with np.errstate(all="raise"):
+                return np.array(
+                    [
+                        [x[0, 0] + dt * x[1, 0] + t[0, 0]],
+                        [
+                            x[1, 0]
+                            - dt
+                            * (self.alpham * np.sin(x[0, 0]) + self.betam * x[1, 0])
+                            + t[1, 0]
+                        ],
+                    ]
+                )
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _fx: floating point error at x={x}, t={t}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _fx: array access error at x={x}, t={t}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
         """Measurement function h(x) with observation noise."""
-
-        return np.array(
-            [
-                [
-                    x[0, 0] ** 2 / (1.0 + x[0, 0] ** 2)
-                    + self.gammam * np.sin(x[1, 0])
-                    + u[0, 0]
-                ]
-            ]
-        )
+        try:
+            with np.errstate(all="raise"):
+                return np.array(
+                    [
+                        [
+                            x[0, 0] ** 2 / (1.0 + x[0, 0] ** 2)
+                            + self.gammam * np.sin(x[1, 0])
+                            + u[0, 0]
+                        ]
+                    ]
+                )
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _hx: floating point error at x={x}, u={u}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _hx: array access error at x={x}, u={u}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _g(
         self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
     ) -> np.ndarray:
-        """Combine state and observation using Wojciech’s formulation."""
+        """Combine state and observation using Wojciech's formulation."""
         if __debug__:
             assert x.shape == (2, 1)
             assert y.shape == (1, 1)
@@ -87,9 +110,16 @@ class ModelX2Y1(BaseModelNonLinear):
             assert u.shape == (1, 1)
             assert isinstance(dt, (float, int))
 
-        fx_val = self._fx(x, t, dt)
-        hx_val = self._hx(fx_val, u, dt)
-        return np.vstack((fx_val, hx_val))
+        try:
+            fx_val = self._fx(x, t, dt)
+            hx_val = self._hx(fx_val, u, dt)
+            return np.vstack((fx_val, hx_val))
+        except NumericalError:
+            raise
+        except ValueError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _g: shape mismatch during vstack: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _jacobiens_g(
@@ -102,24 +132,36 @@ class ModelX2Y1(BaseModelNonLinear):
             assert u.shape == (1, 1)
             assert isinstance(dt, (float, int))
 
-        x1, x2 = x.flatten()
-        t1, t2 = t.flatten()
+        try:
+            with np.errstate(all="raise"):
+                x1, x2 = x.flatten()
+                t1, t2 = t.flatten()
 
-        A = x1 + dt * x2 + t1
-        B = x2 - dt * (self.alpham * np.sin(x1) + self.betam * x2) + t2
-        Z = 2 * A / (1.0 + A**2) ** 2
-        W = self.gammam * np.cos(B)
-        An = np.array(
-            [
-                [1.0, dt, 0.0],
-                [-self.alpham * dt * np.cos(x1), 1.0 - self.betam * dt, 0.0],
-                [
-                    Z - self.alpham * dt * np.cos(x1) * W,
-                    Z * dt + (1.0 - self.betam * dt) * W,
-                    0.0,
-                ],
-            ]
-        )
-        Bn = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [Z, W, 1.0]])
+                A = x1 + dt * x2 + t1
+                B = x2 - dt * (self.alpham * np.sin(x1) + self.betam * x2) + t2
+                Z = 2 * A / (1.0 + A**2) ** 2
+                W = self.gammam * np.cos(B)
 
-        return An, Bn
+                An = np.array(
+                    [
+                        [1.0, dt, 0.0],
+                        [-self.alpham * dt * np.cos(x1), 1.0 - self.betam * dt, 0.0],
+                        [
+                            Z - self.alpham * dt * np.cos(x1) * W,
+                            Z * dt + (1.0 - self.betam * dt) * W,
+                            0.0,
+                        ],
+                    ]
+                )
+                Bn = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [Z, W, 1.0]])
+
+            return An, Bn
+
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _jacobiens_g: floating point error at x={x}, t={t}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _jacobiens_g: array construction error: {e}"
+            ) from e

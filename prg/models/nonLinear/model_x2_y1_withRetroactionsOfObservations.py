@@ -5,6 +5,7 @@ import numpy as np
 
 from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
 from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.exceptions import NumericalError
 
 __all__ = ["ModelX2Y1_withRetroactionsOfObservations"]
 
@@ -22,45 +23,66 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
 
         self.a, self.b, self.c, self.d, self.e, self.f = 1.0, 0.8, 0.05, 0.9, 0.30, 0.6
 
-        # self.mQ = np.diag([1e-1, 1e-1, 5e-1])
-        # self.mz0 = np.zeros((self.dim_xy, 1))
-        # self.Pz0 = np.eye(self.dim_xy)
-        self.mQ = generate_block_matrix(
-            self._randMatrices.rng, self.dim_x, self.dim_y, 0.03
-        )
-        self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
-        self.Pz0 = generate_block_matrix(
-            self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
-        )
+        try:
+            self.mQ = generate_block_matrix(
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.03
+            )
+            self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
+            self.Pz0 = generate_block_matrix(
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+            )
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] Initialization failed: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _gx(self, x, y, t, u, dt):
         """
         Nonlinear state function with retro-action on observation.
         """
-        x1, x2 = x.flatten()
-        y1 = y.flatten()[0]
-        t1, t2 = t.flatten()
+        try:
+            with np.errstate(all="raise"):
+                x1, x2 = x.flatten()
+                y1 = y.flatten()[0]
+                t1, t2 = t.flatten()
 
-        return np.array(
-            [
-                [self.a * x1 + self.b * x2 + self.c * np.tanh(y1) + t1],
-                [self.d * x2 + self.e * np.sin(y1) + t2],
-            ]
-        )
+                return np.array(
+                    [
+                        [self.a * x1 + self.b * x2 + self.c * np.tanh(y1) + t1],
+                        [self.d * x2 + self.e * np.sin(y1) + t2],
+                    ]
+                )
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _gx: floating point error at x={x}, y={y}, t={t}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _gx: array access error at x={x}, y={y}, t={t}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _gy(self, x, y, t, u, dt):
         """
         Nonlinear observation function with retro-action on previous observation.
         """
-
-        return np.array([[x[0, 0] ** 2 + self.f * y[0, 0] + u[0, 0]]])
+        try:
+            with np.errstate(all="raise"):
+                return np.array([[x[0, 0] ** 2 + self.f * y[0, 0] + u[0, 0]]])
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _gy: floating point error at x={x}, y={y}, u={u}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _gy: array access error at x={x}, y={y}, u={u}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
         """
-        Combined state and observation using Wojciech’s formulation.
+        Combined state and observation using Wojciech's formulation.
         """
         if __debug__:
             assert x.shape == (2, 1), f"x must be (2,1), got {x.shape}"
@@ -69,9 +91,16 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
             assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
             assert isinstance(dt, (float, int)), "dt must be a float"
 
-        gx_val = self._gx(x, y, t, u, dt)
-        gy_val = self._gy(x, y, t, u, dt)
-        return np.vstack((gx_val, gy_val))
+        try:
+            gx_val = self._gx(x, y, t, u, dt)
+            gy_val = self._gy(x, y, t, u, dt)
+            return np.vstack((gx_val, gy_val))
+        except NumericalError:
+            raise
+        except ValueError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _g: shape mismatch during vstack: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _jacobiens_g(self, x, y, t, u, dt):
@@ -85,17 +114,27 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
             assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
             assert isinstance(dt, (float, int)), "dt must be a float"
 
-        x1 = x.flatten()[0]
-        y1 = y.flatten()[0]
+        try:
+            with np.errstate(all="raise"):
+                x1 = x.flatten()[0]
+                y1 = y.flatten()[0]
 
-        An = np.array(
-            [
-                [self.a, self.b, self.c * (1.0 - np.tanh(y1) ** 2)],
-                [0.0, self.d, self.e * np.cos(y1)],
-                [2.0 * x1, 0.0, self.f],
-            ]
-        )
+                An = np.array(
+                    [
+                        [self.a, self.b, self.c * (1.0 - np.tanh(y1) ** 2)],
+                        [0.0, self.d, self.e * np.cos(y1)],
+                        [2.0 * x1, 0.0, self.f],
+                    ]
+                )
+                Bn = np.eye(self.dim_xy)
 
-        Bn = np.eye(self.dim_xy)
+            return An, Bn
 
-        return An, Bn
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _jacobiens_g: floating point error at x={x}, y={y}: {e}"
+            ) from e
+        except (IndexError, ValueError) as e:
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _jacobiens_g: array construction error: {e}"
+            ) from e
