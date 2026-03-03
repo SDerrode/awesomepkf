@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
@@ -5,6 +8,7 @@ from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.models.linear import ModelFactoryLinear
 from prg.base_classes.runner_base import BaseRunner
 from prg.utils.plot_settings import WINDOW
+from prg.exceptions import PKFError
 
 __all__ = ["BaseNonLinearEPKFRunner"]
 
@@ -19,12 +23,26 @@ class BaseNonLinearEPKFRunner(BaseRunner):
         save_history=False,
         base_dir=".",
     ):
-
+        """
+        Raises
+        ------
+        ParamError
+            Si ``verbose`` est invalide ou ``model_name`` inconnu.
+        PKFError
+            Si l'instanciation de ``NonLinear_EPKF`` échoue.
+        """
         super().__init__(model_name, verbose, plot, save_history, base_dir)
 
-        self.runner_instance = NonLinear_EPKF(
-            param=self.param, sKey=self.sKey, verbose=self.verbose
-        )
+        try:
+            self.runner_instance = NonLinear_EPKF(
+                param=self.param, sKey=self.sKey, verbose=self.verbose
+            )
+        except PKFError:
+            raise
+        except Exception as e:
+            raise PKFError(
+                f"Failed to instantiate NonLinear_EPKF for model {model_name!r}."
+            ) from e
 
     def _get_model_factory(self):
         return ModelFactoryLinear, ModelFactoryNonLinear

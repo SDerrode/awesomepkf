@@ -8,6 +8,7 @@ from typing import Optional
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
 from prg.utils.utils import file_data_generator
 from prg.base_classes.nonlinear_epkf_runner_base import BaseNonLinearEPKFRunner
+from prg.exceptions import FilterError, PKFError
 
 __all__ = ["BaseNonLinearEPKFRunnerFromFile"]
 
@@ -26,7 +27,14 @@ class BaseNonLinearEPKFRunnerFromFile(BaseNonLinearEPKFRunner):
         save_history: bool = False,
         base_dir: str = ".",
     ) -> None:
-
+        """
+        Raises
+        ------
+        ParamError
+            Si ``verbose`` est invalide ou ``model_name`` inconnu.
+        PKFError
+            Si l'instanciation du filtre échoue.
+        """
         self.N = -1
         self.sKey = None
 
@@ -40,20 +48,39 @@ class BaseNonLinearEPKFRunnerFromFile(BaseNonLinearEPKFRunner):
 
     # ==========================================================
 
-    def run(self, i: int = 0) -> None:
-
+    def run(self, i: int = 0) -> list:
+        """
+        Raises
+        ------
+        FileNotFoundError
+            Si le fichier de données est introuvable.
+        FilterError
+            Si le filtrage échoue de manière inattendue.
+        PKFError
+            Si une erreur du domaine PKF remonte du filtre.
+        """
         if self.verbose > 1:
             logging.info("Starting NonLinear EPKF Runner (file mode)")
+
+        if not os.path.exists(self.data_filename):
+            raise FileNotFoundError(f"Data file not found: {self.data_filename!r}.")
 
         try:
             self.runner_instance.process_N_data(
                 N=None,
                 data_generator=file_data_generator(
-                    self.data_filename, self.param.dim_x, self.param.dim_y, self.verbose
+                    self.data_filename,
+                    self.param.dim_x,
+                    self.param.dim_y,
+                    self.verbose,
                 ),
             )
-        except RuntimeError as rte:
+        except PKFError:
             raise
+        except Exception as e:
+            raise FilterError(
+                f"Filtering failed (file mode) for model {self.model_name!r}."
+            ) from e
 
         if self.save_history:
             self._save_history(f"history_run_epkf_file_{i}.pkl")

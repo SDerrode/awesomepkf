@@ -1,10 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.NonLinear_UPKF import NonLinear_UPKF
+from prg.classes.SigmaPointsSet import SigmaPointsSet
 from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.models.linear import ModelFactoryLinear
 from prg.base_classes.runner_base import BaseRunner
 from prg.utils.plot_settings import WINDOW
+from prg.exceptions import ParamError, PKFError
 
 __all__ = ["BaseNonLinearUPKFRunner"]
 
@@ -20,6 +25,20 @@ class BaseNonLinearUPKFRunner(BaseRunner):
         save_history=False,
         base_dir=".",
     ):
+        """
+        Raises
+        ------
+        ParamError
+            Si ``verbose`` est invalide, ``model_name`` inconnu,
+            ou ``sigmaSet`` n'est pas une clé connue du registre.
+        PKFError
+            Si l'instanciation de ``NonLinear_UPKF`` échoue.
+        """
+        if sigmaSet is not None and sigmaSet not in SigmaPointsSet.registry:
+            raise ParamError(
+                f"Unknown sigma-point set: {sigmaSet!r}. "
+                f"Available: {list(SigmaPointsSet.registry.keys())}."
+            )
 
         self.sigmaSet = sigmaSet
 
@@ -27,12 +46,19 @@ class BaseNonLinearUPKFRunner(BaseRunner):
             model_name, verbose, plot, save_history, base_dir, sigmaSet=sigmaSet
         )
 
-        self.runner_instance = NonLinear_UPKF(
-            param=self.param,
-            sigmaSet=self.sigmaSet,
-            sKey=self.sKey,
-            verbose=self.verbose,
-        )
+        try:
+            self.runner_instance = NonLinear_UPKF(
+                param=self.param,
+                sigmaSet=self.sigmaSet,
+                sKey=self.sKey,
+                verbose=self.verbose,
+            )
+        except PKFError:
+            raise
+        except Exception as e:
+            raise PKFError(
+                f"Failed to instantiate NonLinear_UPKF for model {model_name!r}."
+            ) from e
 
     def _get_model_factory(self):
         return ModelFactoryLinear, ModelFactoryNonLinear
