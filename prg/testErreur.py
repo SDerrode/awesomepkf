@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Usage:
-    # pour EPKF, UPKF, PPF
-    python3 prg/testErreur.py --N 100 --sigmaSet "wan2000" --nbParticles 500 --verbose 0 --nonLinearModelName "x1_y1_gordon"
-    # pour PKF
-    python3 prg/testErreur.py --N 100 --linearModelName "A_mQ_x1_y1" --verbose 0
-"""
+
 
 import argparse
 import logging
@@ -176,7 +170,7 @@ class FilterErrorAnalyzer:
                         np.trace(hist[n]["PXXkp1_update"]),
                     )
                     print()
-                    input("ATTENTE")
+                    # input("ATTENTE")
 
             traces_valid.append(
                 [np.trace(hist[n]["PXXkp1_update"]) for n in range(N + 1)]
@@ -301,8 +295,18 @@ class FilterErrorAnalyzer:
 # ==========================================================
 
 if __name__ == "__main__":
+
+    """
+    Usage:
+        # pour EPKF, UPKF, PPF
+        python3 prg/testErreur.py --N 200 --sigmaSet "wan2000" --nbParticles 1000 --verbose 0 --nonLinearModelName "x2_y2_withRetroactions"
+        python3 prg/testErreur.py --N 200 --sigmaSet "wan2000" --nbParticles 1000 --verbose 0 --linearModelName "A_mQ_x1_y1"
+        # pour PKF
+        python3 prg/testErreur.py --N 200 --linearModelName "A_mQ_x1_y1" --verbose 0
+    """
+
     (
-        FilterErrorAnalyzer(filter_name="UPKF", nb_exp=200, save_dir="./data/plot")
+        FilterErrorAnalyzer(filter_name="PPF", nb_exp=200, save_dir="./data/plot")
         .parse()
         .run()
         .plot()

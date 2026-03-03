@@ -34,7 +34,10 @@ class ModelSinus(BaseModelNonLinear):
         self.mQ = generate_block_matrix(
             self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
         )
-        self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
+        # self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
+        self.mz0 = (
+            np.zeros((self.dim_xy, 1)) + 0.3
+        )  # le +1 est important pour lancer le filtre
         self.Pz0 = generate_block_matrix(
             self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
         )
@@ -67,7 +70,7 @@ class ModelSinus(BaseModelNonLinear):
         Returns:
             np.ndarray, shape (1,1) - measurement
         """
-        return x**2 + u
+        return np.sin(x) + u
 
     # ------------------------------------------------------------------
     def _g(
@@ -113,8 +116,11 @@ class ModelSinus(BaseModelNonLinear):
 
         # Jacobians exactly as in original code
         An = np.array(
-            [[0.8 + 0.3 * np.cos(x1), 0.0], [2.0 * A * (0.8 + 0.3 * np.cos(x1)), 0.0]]
+            [
+                [0.8 + 0.3 * np.cos(x1), 0.0],
+                [np.cos(A) * (0.8 + 0.3 * np.cos(x1)), 0.0],
+            ]
         )
-        Bn = np.array([[1.0, 0.0], [2.0 * A, 1.0]])
+        Bn = np.array([[1.0, 0.0], [np.cos(A), 1.0]])
 
         return An, Bn
