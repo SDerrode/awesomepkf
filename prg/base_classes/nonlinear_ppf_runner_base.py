@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.NonLinear_PPF import NonLinear_PPF
@@ -5,6 +8,7 @@ from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.models.linear import ModelFactoryLinear
 from prg.base_classes.runner_base import BaseRunner
 from prg.utils.plot_settings import WINDOW
+from prg.exceptions import ParamError, PKFError
 
 __all__ = ["BaseNonLinearPPFRunner"]
 
@@ -20,17 +24,40 @@ class BaseNonLinearPPFRunner(BaseRunner):
         save_history=False,
         base_dir=".",
     ):
+        """
+        Raises
+        ------
+        ParamError
+            Si ``verbose`` est invalide, ``model_name`` inconnu,
+            ou ``nbParticles`` n'est pas un entier strictement positif.
+        PKFError
+            Si l'instanciation de ``NonLinear_PPF`` échoue.
+        """
+        if nbParticles is not None and not (
+            isinstance(nbParticles, int) and nbParticles > 0
+        ):
+            raise ParamError(
+                f"nbParticles must be None or a strictly positive integer, "
+                f"got {nbParticles!r}."
+            )
 
         self.nbParticles = nbParticles
 
         super().__init__(model_name, verbose, plot, save_history, base_dir)
 
-        self.runner_instance = NonLinear_PPF(
-            param=self.param,
-            nbParticles=self.nbParticles,
-            sKey=self.sKey,
-            verbose=self.verbose,
-        )
+        try:
+            self.runner_instance = NonLinear_PPF(
+                param=self.param,
+                nbParticles=self.nbParticles,
+                sKey=self.sKey,
+                verbose=self.verbose,
+            )
+        except PKFError:
+            raise
+        except Exception as e:
+            raise PKFError(
+                f"Failed to instantiate NonLinear_PPF for model {model_name!r}."
+            ) from e
 
     def _get_model_factory(self):
         return ModelFactoryLinear, ModelFactoryNonLinear

@@ -5,6 +5,7 @@ import logging
 from typing import Optional
 
 from prg.base_classes.nonlinear_ppf_runner_base import BaseNonLinearPPFRunner
+from prg.exceptions import FilterError, ParamError, PKFError
 
 __all__ = ["BaseNonLinearPPFRunnerSim"]
 
@@ -25,6 +26,18 @@ class BaseNonLinearPPFRunnerSim(BaseNonLinearPPFRunner):
         save_history: bool,
         base_dir: str = ".",
     ) -> None:
+        """
+        Raises
+        ------
+        ParamError
+            Si ``N`` n'est pas un entier strictement positif,
+            ``verbose`` invalide, ``model_name`` inconnu,
+            ou ``nbParticles`` invalide.
+        PKFError
+            Si l'instanciation du filtre échoue.
+        """
+        if not (isinstance(N, int) and N > 0):
+            raise ParamError(f"N must be a strictly positive integer, got {N!r}.")
 
         self.N = N
         self.sKey = sKey
@@ -33,15 +46,26 @@ class BaseNonLinearPPFRunnerSim(BaseNonLinearPPFRunner):
 
     # ==========================================================
 
-    def run(self, i: int = 0) -> None:
-
+    def run(self, i: int = 0) -> list:
+        """
+        Raises
+        ------
+        FilterError
+            Si la simulation ou le filtrage échoue de manière inattendue.
+        PKFError
+            Si une erreur du domaine PKF remonte du filtre.
+        """
         if self.verbose > 1:
             logging.info("Starting NonLinear PPF Runner (simulation mode)")
 
         try:
             self.runner_instance.process_N_data(N=self.N)
-        except RuntimeError as rte:
+        except PKFError:
             raise
+        except Exception as e:
+            raise FilterError(
+                f"Filtering failed (simulation mode) for model {self.model_name!r}."
+            ) from e
 
         if self.save_history:
             self._save_history(f"history_run_ppf_simulation_{i}.pkl")

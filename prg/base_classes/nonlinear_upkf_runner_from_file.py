@@ -5,9 +5,9 @@ import os
 import logging
 from typing import Optional
 
-from prg.classes.NonLinear_UPKF import NonLinear_UPKF
 from prg.utils.utils import file_data_generator
 from prg.base_classes.nonlinear_upkf_runner_base import BaseNonLinearUPKFRunner
+from prg.exceptions import FilterError, PKFError
 
 __all__ = ["BaseNonLinearUPKFRunnerFromFile"]
 
@@ -20,14 +20,22 @@ class BaseNonLinearUPKFRunnerFromFile(BaseNonLinearUPKFRunner):
     def __init__(
         self,
         model_name: str,
-        sigmaSet: int,
+        sigmaSet: str,
         data_filename: Optional[str],
         verbose: int = 0,
         plot: bool = False,
         save_history: bool = False,
         base_dir: str = ".",
     ) -> None:
-
+        """
+        Raises
+        ------
+        ParamError
+            Si ``verbose`` invalide, ``model_name`` inconnu,
+            ou ``sigmaSet`` inconnu du registre.
+        PKFError
+            Si l'instanciation du filtre échoue.
+        """
         self.N = -1
         self.sKey = None
 
@@ -41,20 +49,39 @@ class BaseNonLinearUPKFRunnerFromFile(BaseNonLinearUPKFRunner):
 
     # ==========================================================
 
-    def run(self, i: int = 0) -> None:
-
+    def run(self, i: int = 0) -> list:
+        """
+        Raises
+        ------
+        FileNotFoundError
+            Si le fichier de données est introuvable.
+        FilterError
+            Si le filtrage échoue de manière inattendue.
+        PKFError
+            Si une erreur du domaine PKF remonte du filtre.
+        """
         if self.verbose > 1:
             logging.info("Starting NonLinear UPKF Runner (file mode)")
+
+        if not os.path.exists(self.data_filename):
+            raise FileNotFoundError(f"Data file not found: {self.data_filename!r}.")
 
         try:
             self.runner_instance.process_N_data(
                 N=None,
                 data_generator=file_data_generator(
-                    self.data_filename, self.param.dim_x, self.param.dim_y, self.verbose
+                    self.data_filename,
+                    self.param.dim_x,
+                    self.param.dim_y,
+                    self.verbose,
                 ),
             )
-        except RuntimeError as rte:
+        except PKFError:
             raise
+        except Exception as e:
+            raise FilterError(
+                f"Filtering failed (file mode) for model {self.model_name!r}."
+            ) from e
 
         if self.save_history:
             self._save_history(f"history_run_upkf_file_{i}.pkl")
