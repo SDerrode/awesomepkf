@@ -23,8 +23,15 @@ from prg.classes.SeedGenerator import SeedGenerator
 from prg.classes.PKF import PKF, PKFStep
 from prg.utils.numerics import EPS_ABS
 from prg.utils.utils import rich_show_fields
-
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.exceptions import (
+    CovarianceError,
+    FilterError,
+    InvertibilityError,
+    NumericalError,
+    ParamError,
+    StepValidationError,
+)
 
 __all__ = ["NonLinear_PPF"]
 
@@ -131,7 +138,7 @@ class NonLinear_PPF(PKF):
 
         Raises
         ------
-        ValueError
+        ParamError
             Si ``method`` n'est pas l'une des valeurs admises.
         """
         N = self.nbParticles
@@ -177,7 +184,10 @@ class NonLinear_PPF(PKF):
             indexes = np.array(indexes)
 
         else:
-            raise ValueError(f"Unknown resampling method: {method}")
+            raise ParamError(
+                f"Unknown resampling method: {method!r}. "
+                f"Expected one of: 'multinomial', 'systematic', 'stratified', 'residual'."
+            )
 
         return indexes
 
@@ -194,9 +204,9 @@ class NonLinear_PPF(PKF):
 
         Raises
         ------
-        RuntimeError
+        InvertibilityError
             Si ``R`` n'est pas inversible (diagnostic FAIL).
-        ValueError
+        CovarianceError
             Si ``P'_x`` n'est pas définie positive et que la régularisation
             de Tikhonov échoue.
         """
@@ -207,8 +217,11 @@ class NonLinear_PPF(PKF):
         # --- Inversion de R avec diagnostic complet ---
         try:
             R_inv = InvertibleMatrix(R).inverse()
-        except Exception as e:
-            input("ATTENTE _precompute")
+        except RuntimeError as e:
+            raise InvertibilityError(
+                "_precompute: R is not invertible — cannot continue.",
+                matrix_name="R",
+            ) from e
 
         # --- Complément de Schur ---
         P_prime_x_base = Q - M @ R_inv @ M.T
@@ -230,9 +243,10 @@ class NonLinear_PPF(PKF):
                     P_prime_x = cov_diag.regularized()
                     self.logger.warning("_precompute: P'_x regularized successfully.")
                 except RuntimeError as e:
-                    raise ValueError(
-                        f"_precompute: P'_x is not positive definite and "
-                        f"regularization failed — cannot continue.\n{e}"
+                    raise CovarianceError(
+                        "_precompute: P'_x is not positive definite and "
+                        "regularization failed — cannot continue.",
+                        matrix_name="P_prime_x",
                     ) from e
             else:
                 P_prime_x = cov_diag.regularized()
@@ -261,21 +275,6 @@ class NonLinear_PPF(PKF):
     ]:
         """Exécute le filtre particulaire et produit les estimées pas à pas.
 
-        À chaque pas de temps, la méthode effectue dans l'ordre :
-
-        1. **Prédiction** : moyenne et covariance empiriques des particules.
-        2. **Propagation** : application de la fonction non linéaire ``g``
-           à chaque particule pour obtenir la prédiction jointe ``(X, Y)``.
-        3. **Innovation** : écart entre l'observation reçue et la prédiction.
-        4. **Mise à jour**  :
-
-           - *Cas général* : gain de Kalman empirique, poids par
-             vraisemblance gaussienne, mise à jour stochastique.
-
-        5. **Estimation a posteriori** : moyenne et covariance pondérées
-           (forme de Joseph pour la covariance).
-        6. **Rééchantillonnage** si l'ESS passe sous le seuil.
-
         Parameters
         ----------
         N : int, optional
@@ -299,20 +298,26 @@ class NonLinear_PPF(PKF):
         Xkp1_update : np.ndarray, shape (dim_x, 1)
             Estimée a posteriori (après observation).
 
-        Notes
-        -----
-        Les assertions de débogage (``__debug__``) vérifient l'absence de
-        NaN dans les poids et les particules, ainsi que la normalisation
-        des poids.
+        Raises
+        ------
+        ParamError
+            Si ``N`` n'est pas un entier strictement positif ou ``None``.
+        InvertibilityError
+            Si ``R`` n'est pas inversible lors du précalcul.
+        CovarianceError
+            Si une matrice de covariance est invalide et non régularisable.
+        StepValidationError
+            Si la construction d'un ``PKFStep`` échoue.
+        FilterError
+            Si une erreur inattendue survient pendant le filtrage.
         """
-
         self._validate_N(N)
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()
         )
 
-        # Précalcul des constantes
+        # Précalcul des constantes — lève InvertibilityError ou CovarianceError
         self._precompute()
 
         # Initialisation des particules et des poids
@@ -328,13 +333,6 @@ class NonLinear_PPF(PKF):
         step = self._firstEstimate(generator)
         if step.xkp1 is None:
             self.ground_truth = False
-
-        # print(f"kp1={step.k}")
-        # print(step.Xkp1_predict)
-        # print(step.PXXkp1_predict)
-        # print(step.Xkp1_update)
-        # print(step.PXXkp1_update)
-        # input("ATTENTE")
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
@@ -374,37 +372,9 @@ class NonLinear_PPF(PKF):
             )
 
             # =========================
-            # PREDICTION JOINTE Z = (X, Y)
-            # =========================
-            # Zkp1_predict: np.ndarray = np.average(muxy, axis=0, weights=weights)
-            # dz = muxy - Zkp1_predict[None, :, :]
-            # Pkp1_predict: np.ndarray = np.einsum("i,ijk,ilk->jl", weights, dz, dz)
-            # self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
-
-            # # # Extraction des blocs de la covariance jointe
-            # PYYkp1_predict: np.ndarray = Pkp1_predict[self.dim_x :, self.dim_x :]
-            # PXYkp1_predict: np.ndarray = Pkp1_predict[: self.dim_x, self.dim_x :]
-
-            # =========================
             # INNOVATION
             # =========================
-            # Ykp1_predict: np.ndarray = Zkp1_predict[self.dim_x :]
-            # ikp1: np.ndarray = new_ykp1 - Ykp1_predict
             innovations: np.ndarray = new_ykp1 - muxy[:, self.dim_x :, :]
-
-            # # Cas général : R > 0
-            # Skp1 = PYYkp1_predict + self._cached["R"]
-            # # Validate innovation covariance before Cholesky solve
-            # self._check_invertible(Skp1, step.k, name="Skp1")
-
-            # try:
-            #     c, low = cho_factor(Skp1)
-            #     Kkp1: np.ndarray = PXYkp1_predict @ cho_solve((c, low), self.eye_dim_y)
-            # except Exception as e:
-            #     self.logger.error(
-            #         "Step %d: LinAlgError/ValueError in cho_factor/solve: %s", step.k, e
-            #     )
-            #     raise
 
             # Mise à jour des poids par log-vraisemblance gaussienne
             tmp = np.matmul(self._cached["R_inv"], innovations)
@@ -451,19 +421,12 @@ class NonLinear_PPF(PKF):
             PXXkp1_update = (weights[:, None] * dx).T @ dx
             self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
 
-            # Forme de Joseph — préserve la définition positive
-            # Joseph_factor = np.vstack((self.eye_dim_x, -Kkp1.T))
-            # PXXkp1_update = Joseph_factor.T @ Pkp1_predict @ Joseph_factor
-            # self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
-
             # =========================
             # RÉÉCHANTILLONNAGE
             # =========================
             ess: float = 1.0 / np.sum(weights**2)
             if ess < self.resample_threshold * self.nbParticles:
-                indexes = self.resample(
-                    weights, "multinomial"
-                )  # multinomial, systematic, stratified, residual, self.resample_method,
+                indexes = self.resample(weights, self.resample_method)
                 particles_current = particles_current[indexes]
                 weights.fill(1.0 / self.nbParticles)
 
@@ -475,25 +438,21 @@ class NonLinear_PPF(PKF):
             # =========================
             # ENREGISTREMENT
             # =========================
-            step = PKFStep(
-                k=new_k,
-                xkp1=new_xkp1.copy() if new_xkp1 is not None else None,
-                ykp1=new_ykp1.copy(),
-                Xkp1_predict=Xkp1_predict.copy(),
-                PXXkp1_predict=PXXkp1_predict.copy(),
-                # ikp1=ikp1.copy(),
-                # Skp1=Skp1.copy(),
-                # Kkp1=Kkp1.copy(),
-                Xkp1_update=Xkp1_update.copy(),
-                PXXkp1_update=PXXkp1_update.copy(),
-            )
-
-            # print(f"kp1={step.k}")
-            # print(step.Xkp1_predict)
-            # print(step.PXXkp1_predict)
-            # print(step.Xkp1_update)
-            # print(step.PXXkp1_update)
-            # input("ATTENTE")
+            try:
+                step = PKFStep(
+                    k=new_k,
+                    xkp1=new_xkp1.copy() if new_xkp1 is not None else None,
+                    ykp1=new_ykp1.copy(),
+                    Xkp1_predict=Xkp1_predict.copy(),
+                    PXXkp1_predict=PXXkp1_predict.copy(),
+                    Xkp1_update=Xkp1_update.copy(),
+                    PXXkp1_update=PXXkp1_update.copy(),
+                )
+            except (ValueError, Exception) as e:
+                raise StepValidationError(
+                    f"Step {new_k}: PKFStep construction failed in process_filter.",
+                    step=new_k,
+                ) from e
 
             self.history.record(step)
 

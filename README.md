@@ -157,13 +157,13 @@ git ls-files | tree --fromfile -F -a --dirsfirst -I "logs|venv|*.csv|*.pkl|*.png
 │   │   │   ├── model_x2_y1_withRetroactionsOfObservations.py
 │   │   │   ├── model_x2_y1_withRetroactionsOfObservations_augmented.py
 │   │   │   └── model_x2_y2_withRetroactions.py
+│   │   ├── Generate_MatrixCov.py
 │   │   ├── __init__.py
 │   │   ├── testLinear.py
 │   │   └── testNonLinear.py
-│   ├── others/
+│   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── csv_to_parquet.py
-│   │   ├── geneMatriceCov.py
 │   │   ├── numerics.py
 │   │   ├── parser.py
 │   │   ├── plot_settings.py
@@ -173,13 +173,11 @@ git ls-files | tree --fromfile -F -a --dirsfirst -I "logs|venv|*.csv|*.pkl|*.png
 │   ├── run_nonlinear_epkf.py
 │   ├── run_nonlinear_ppf.py
 │   ├── run_nonlinear_upkf.py
-│   ├── run_simulator.py
-│   └── testErreur.py
+│   └── run_simulator.py
 ├── .gitignore
 ├── LICENSE
-├── README.md
-└── requirements.txt
+└── README.md
 
-13 directories, 76 files
+13 directories, 74 files
 ```
 <!-- PROJECT_STRUCTURE_END -->
