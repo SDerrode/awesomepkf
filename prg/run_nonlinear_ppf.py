@@ -3,9 +3,11 @@
 
 import argparse
 
-from base_classes.nonlinear_ppf_runner_simulation import BaseNonLinearPPFRunnerSim
-from base_classes.nonlinear_ppf_runner_from_file import BaseNonLinearPPFRunnerFromFile
-from others.parser import addParseToParser
+from prg.base_classes.nonlinear_ppf_runner_simulation import BaseNonLinearPPFRunnerSim
+from prg.base_classes.nonlinear_ppf_runner_from_file import (
+    BaseNonLinearPPFRunnerFromFile,
+)
+from prg.utils.parser import addParseToParser
 
 
 def parse_arguments() -> argparse.Namespace:

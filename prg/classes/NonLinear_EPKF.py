@@ -12,7 +12,9 @@ from typing import Generator, Optional, Union  # Used in signatures
 from scipy.linalg import LinAlgError  # Used in try/except
 import numpy as np  # Used throughout
 
-from .PKF import PKF  # Parent class
+from prg.classes.PKF import PKF  # Parent class
+
+__all__ = ["NonLinear_EPKF"]
 
 
 class NonLinear_EPKF(PKF):

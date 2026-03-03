@@ -5,7 +5,8 @@ from abc import ABC, abstractmethod  # Used for the abstract base class
 from typing import Dict, Type, Optional  # Used in registry and signatures
 import numpy as np  # Used throughout
 from itertools import product  # Used in SetIto2000 for tensor product
-from others.numerics import EPS_ABS  # Used in _chol and weight validation
+
+from prg.utils.numerics import EPS_ABS  # Used in _chol and weight validation
 
 __all__ = ["SigmaPointsSet", "SetWAN2000", "SetCPKF", "SetLERNER2002", "SetIto2000"]
 

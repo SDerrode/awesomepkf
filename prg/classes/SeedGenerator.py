@@ -15,6 +15,8 @@ import logging
 from typing import Optional
 import numpy as np
 
+__all__ = ["SeedGenerator"]
+
 # ----------------------------------------------------------------------
 # Configuration du logging
 # ----------------------------------------------------------------------

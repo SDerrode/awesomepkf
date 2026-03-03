@@ -12,9 +12,11 @@ from typing import Generator, Optional  # Used in signatures
 import numpy as np  # Used throughout
 from scipy.linalg import LinAlgError  # Used in try/except
 
-from .PKF import PKF  # Parent class
-from classes.ParamLinear import ParamLinear  # Used in type hints
-from classes.ParamNonLinear import ParamNonLinear  # Used in type hints
+from prg.classes.PKF import PKF  # Parent class
+from prg.classes.ParamLinear import ParamLinear  # Used in type hints
+from prg.classes.ParamNonLinear import ParamNonLinear  # Used in type hints
+
+__all__ = ["Linear_PKF"]
 
 
 class Linear_PKF(PKF):

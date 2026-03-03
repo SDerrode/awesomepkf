@@ -6,16 +6,10 @@ from typing import Any
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve
 
-from pathlib import Path
-import sys
+from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
 
-directory = Path(__file__)
-sys.path.append(str(directory.parent.parent.parent))
 
-from scipy.linalg import cho_factor, cho_solve
-import numpy as np
-
-from classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
+__all__ = ["BaseModelLinear", "LinearAmQ", "LinearSigma"]
 
 
 class BaseModelLinear:

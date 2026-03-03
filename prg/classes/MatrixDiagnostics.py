@@ -24,6 +24,11 @@ from typing import Optional
 
 import numpy as np
 
+__all__ = [
+    "CovarianceMatrix",
+    "InvertibleMatrix",
+    "StabilityMatrix",
+]
 
 # ==========================================================
 # Statut

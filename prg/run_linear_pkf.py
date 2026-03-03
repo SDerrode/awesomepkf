@@ -3,9 +3,9 @@
 
 import argparse
 
-from base_classes.linear_pkf_runner_simulation import LinearPKFRunnerSim
-from base_classes.linear_pkf_runner_from_file import LinearPKFRunnerFromFile
-from others.parser import addParseToParser
+from prg.base_classes.linear_pkf_runner_simulation import LinearPKFRunnerSim
+from prg.base_classes.linear_pkf_runner_from_file import LinearPKFRunnerFromFile
+from prg.utils.parser import addParseToParser
 
 
 def parse_arguments() -> argparse.Namespace:

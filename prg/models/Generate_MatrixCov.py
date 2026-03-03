@@ -1,9 +1,6 @@
 import numpy as np
 
-from others.numerics import (
-    EIG_TOL_FAIL,
-    EIG_TOL_WARN,
-)
+from prg.utils.numerics import EIG_TOL_FAIL, EIG_TOL_WARN
 
 
 def check_eigvals(eigvals: np.ndarray) -> None:

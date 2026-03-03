@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from .base_model_linear import LinearAmQ
 
-from others.geneMatriceCov import generate_block_matrix
-from classes.SeedGenerator import SeedGenerator
+
+from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.classes.SeedGenerator import SeedGenerator
+from prg.models.linear.base_model_linear import LinearAmQ
+
+__all__ = ["Model_A_mQ_x3_y1"]
 
 
 class Model_A_mQ_x3_y1(LinearAmQ):

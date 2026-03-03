@@ -5,10 +5,11 @@ import os
 import logging
 from typing import Optional
 
-from classes.NonLinear_PPF import NonLinear_PPF
-from others.utils import file_data_generator
+from prg.classes.NonLinear_PPF import NonLinear_PPF
+from prg.utils.utils import file_data_generator
+from prg.base_classes.nonlinear_ppf_runner_base import BaseNonLinearPPFRunner
 
-from base_classes.nonlinear_ppf_runner_base import BaseNonLinearPPFRunner
+__all__ = ["BaseNonLinearPPFRunnerFromFile"]
 
 
 class BaseNonLinearPPFRunnerFromFile(BaseNonLinearPPFRunner):

@@ -2,8 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from .base_model_nonLinear import BaseModelNonLinear
-from .model_x1_y1_withRetroactions import ModelX1Y1_withRetroactions
+
+from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
+from prg.models.nonLinear.model_x1_y1_withRetroactions import ModelX1Y1_withRetroactions
+
+__all__ = ["ModelX1Y1_withRetroactions_augmented"]
 
 
 class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):

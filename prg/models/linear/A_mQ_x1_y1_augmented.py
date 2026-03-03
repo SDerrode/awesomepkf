@@ -2,11 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from .base_model_linear import (
-    LinearAmQ,
-)  # On utilise directement la sous-classe LinearAmQ
+from prg.models.linear.base_model_linear import LinearAmQ
+from prg.models.linear.A_mQ_x1_y1 import Model_A_mQ_x1_y1
 
-from .A_mQ_x1_y1 import Model_A_mQ_x1_y1
+__all__ = ["Model_A_mQ_x1_y1_augmented"]
 
 
 class Model_A_mQ_x1_y1_augmented(LinearAmQ):

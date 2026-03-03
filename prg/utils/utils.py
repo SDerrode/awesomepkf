@@ -13,27 +13,23 @@ Provides tools for:
 """
 
 from __future__ import annotations
+from typing import List, Optional, Generator
+
 import os  # Used in read_unknown_file
 import math  # Used in format_value
 import logging  # Used throughout
 import csv  # Used in read_unknown_file
 import chardet  # Used in read_unknown_file
 from pathlib import Path  # Used in save_dataframe_to_csv
-from typing import Generator  # Used in signatures
 import numpy as np
 import pandas as pd
 from dataclasses import is_dataclass, asdict  # Used in rich_show_fields
 from rich.table import Table
 from rich.console import Console
 from rich.text import Text
-from others.numerics import EPS_ABS, EPS_REL
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from classes.PKF import PKF
-
-from classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.utils.numerics import EPS_ABS, EPS_REL
+from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
 
 __all__ = [
     "rich_show_fields",
@@ -266,7 +262,8 @@ def _compute_quadratic_form(
         try:
             Pk_inv = InvertibleMatrix(Pk).inverse()
         except Exception as e:
-            input("ATTENTE _compute_quadratic_form")
+            logger.error(f"Step {k}: non invetible matrix - exiting.")
+            exit(1)
 
         vals[k] = float((ek.T @ Pk_inv @ ek).squeeze())
 
@@ -274,7 +271,7 @@ def _compute_quadratic_form(
 
 
 def compute_errors(
-    model: PKF,
+    model: "PKF",
     x_true: list[np.ndarray],
     x_hat: list[np.ndarray],
     P_list: list[np.ndarray],
