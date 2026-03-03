@@ -477,16 +477,14 @@ class PKF:
         report = CovarianceMatrix(mat).check()
         if not report.is_ok:
             if self.verbose > 1:
-                self.logger.warning(
-                    "Step %d: %s — %s", step.k, name, report.overall_status
-                )
+                self.logger.warning("Step %d: %s — %s", k, name, report.overall_status)
 
             if not report.is_valid:
                 try:
                     mat[:] = CovarianceMatrix(mat).regularized()  # ré-assignemnt
                     if self.verbose > 1:
                         self.logger.warning(
-                            "Step %d: %s regularized successfully.", step.k, name
+                            "Step %d: %s regularized successfully.", k, name
                         )
 
                 except ValueError as e:

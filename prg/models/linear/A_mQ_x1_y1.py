@@ -29,8 +29,8 @@ class Model_A_mQ_x1_y1(LinearAmQ):
         # mz0 = np.zeros((dim_xy, 1)) + 1.13
         # Pz0 = np.eye(dim_xy) + 1.14
 
-        mQ = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.15)
+        mQ = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.01)
         mz0 = randMatrices.rng.standard_normal((dim_xy, 1))
-        Pz0 = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.15)
+        Pz0 = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.05)
 
         super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, B=B, mQ=mQ, mz0=mz0, Pz0=Pz0)

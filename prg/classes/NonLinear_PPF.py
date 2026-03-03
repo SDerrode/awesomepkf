@@ -141,7 +141,6 @@ class NonLinear_PPF(PKF):
             indexes = np.searchsorted(
                 cumulative_sum, self.__randParticles.rng.random(N)
             )
-
         elif method in ["systematic", "stratified"]:
             if method == "systematic":
                 positions = (np.arange(N) + self.__randParticles.rng.random()) / N
@@ -305,6 +304,7 @@ class NonLinear_PPF(PKF):
         NaN dans les poids et les particules, ainsi que la normalisation
         des poids.
         """
+
         self._validate_N(N)
 
         generator = (
@@ -327,6 +327,13 @@ class NonLinear_PPF(PKF):
         step = self._firstEstimate(generator)
         if step.xkp1 is None:
             self.ground_truth = False
+
+        # print(f"kp1={step.k}")
+        # print(step.Xkp1_predict)
+        # print(step.PXXkp1_predict)
+        # print(step.Xkp1_update)
+        # print(step.PXXkp1_update)
+        # input("ATTENTE")
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
@@ -368,35 +375,35 @@ class NonLinear_PPF(PKF):
             # =========================
             # PREDICTION JOINTE Z = (X, Y)
             # =========================
-            Zkp1_predict: np.ndarray = np.average(muxy, axis=0, weights=weights)
-            dz = muxy - Zkp1_predict[None, :, :]
-            Pkp1_predict: np.ndarray = np.einsum("i,ijk,ilk->jl", weights, dz, dz)
-            self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
+            # Zkp1_predict: np.ndarray = np.average(muxy, axis=0, weights=weights)
+            # dz = muxy - Zkp1_predict[None, :, :]
+            # Pkp1_predict: np.ndarray = np.einsum("i,ijk,ilk->jl", weights, dz, dz)
+            # self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
-            # # Extraction des blocs de la covariance jointe
-            PYYkp1_predict: np.ndarray = Pkp1_predict[self.dim_x :, self.dim_x :]
-            PXYkp1_predict: np.ndarray = Pkp1_predict[: self.dim_x, self.dim_x :]
+            # # # Extraction des blocs de la covariance jointe
+            # PYYkp1_predict: np.ndarray = Pkp1_predict[self.dim_x :, self.dim_x :]
+            # PXYkp1_predict: np.ndarray = Pkp1_predict[: self.dim_x, self.dim_x :]
 
             # =========================
             # INNOVATION
             # =========================
-            Ykp1_predict: np.ndarray = Zkp1_predict[self.dim_x :]
-            ikp1: np.ndarray = new_ykp1 - Ykp1_predict
+            # Ykp1_predict: np.ndarray = Zkp1_predict[self.dim_x :]
+            # ikp1: np.ndarray = new_ykp1 - Ykp1_predict
             innovations: np.ndarray = new_ykp1 - muxy[:, self.dim_x :, :]
 
-            # Cas général : R > 0
-            Skp1 = PYYkp1_predict + self._cached["R"]
-            # Validate innovation covariance before Cholesky solve
-            self._check_invertible(Skp1, step.k, name="Skp1")
+            # # Cas général : R > 0
+            # Skp1 = PYYkp1_predict + self._cached["R"]
+            # # Validate innovation covariance before Cholesky solve
+            # self._check_invertible(Skp1, step.k, name="Skp1")
 
-            try:
-                c, low = cho_factor(Skp1)
-                Kkp1: np.ndarray = PXYkp1_predict @ cho_solve((c, low), self.eye_dim_y)
-            except Exception as e:
-                self.logger.error(
-                    "Step %d: LinAlgError/ValueError in cho_factor/solve: %s", step.k, e
-                )
-                raise
+            # try:
+            #     c, low = cho_factor(Skp1)
+            #     Kkp1: np.ndarray = PXYkp1_predict @ cho_solve((c, low), self.eye_dim_y)
+            # except Exception as e:
+            #     self.logger.error(
+            #         "Step %d: LinAlgError/ValueError in cho_factor/solve: %s", step.k, e
+            #     )
+            #     raise
 
             # Mise à jour des poids par log-vraisemblance gaussienne
             tmp = np.matmul(self._cached["R_inv"], innovations)
@@ -439,14 +446,14 @@ class NonLinear_PPF(PKF):
                 particles_current_temp, axis=0, weights=weights
             )[:, None]
 
-            # dx = particles_current_temp - Xkp1_update.T
-            # PXXkp1_update = (weights[:, None] * dx).T @ dx
-            # self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
+            dx = particles_current_temp - Xkp1_update.T
+            PXXkp1_update = (weights[:, None] * dx).T @ dx
+            self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
 
             # Forme de Joseph — préserve la définition positive
-            Joseph_factor = np.vstack((self.eye_dim_x, -Kkp1.T))
-            PXXkp1_update = Joseph_factor.T @ Pkp1_predict @ Joseph_factor
-            self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
+            # Joseph_factor = np.vstack((self.eye_dim_x, -Kkp1.T))
+            # PXXkp1_update = Joseph_factor.T @ Pkp1_predict @ Joseph_factor
+            # self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
 
             # =========================
             # RÉÉCHANTILLONNAGE
@@ -454,7 +461,7 @@ class NonLinear_PPF(PKF):
             ess: float = 1.0 / np.sum(weights**2)
             if ess < self.resample_threshold * self.nbParticles:
                 indexes = self.resample(
-                    weights, self.resample_method
+                    weights, "multinomial"
                 )  # multinomial, systematic, stratified, residual, self.resample_method,
                 particles_current = particles_current[indexes]
                 weights.fill(1.0 / self.nbParticles)
@@ -473,12 +480,19 @@ class NonLinear_PPF(PKF):
                 ykp1=new_ykp1.copy(),
                 Xkp1_predict=Xkp1_predict.copy(),
                 PXXkp1_predict=PXXkp1_predict.copy(),
-                ikp1=ikp1.copy(),
-                Skp1=Skp1.copy(),
-                Kkp1=Kkp1.copy(),
+                # ikp1=ikp1.copy(),
+                # Skp1=Skp1.copy(),
+                # Kkp1=Kkp1.copy(),
                 Xkp1_update=Xkp1_update.copy(),
                 PXXkp1_update=PXXkp1_update.copy(),
             )
+
+            # print(f"kp1={step.k}")
+            # print(step.Xkp1_predict)
+            # print(step.PXXkp1_predict)
+            # print(step.Xkp1_update)
+            # print(step.PXXkp1_update)
+            # input("ATTENTE")
 
             self.history.record(step)
 

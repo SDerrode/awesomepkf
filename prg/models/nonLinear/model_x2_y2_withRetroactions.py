@@ -18,20 +18,20 @@ class ModelX2Y2_withRetroactions(BaseModelNonLinear):
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=2, model_type="nonlinear")
 
-        # Q = np.array([[0.08, 0.01], [0.01, 0.05]])
-        # R = np.array([[0.1, 0.0], [0.0, 0.05]])
-        # M = np.array([[0.01, 0.0], [0.0, 0.01]])
-        # self.mQ = np.block([[Q, M], [M.T, R]]) / 2.0
-        # self.mz0 = np.zeros((self.dim_xy, 1))
-        # self.Pz0 = np.eye(self.dim_xy)
+        Q = np.array([[0.08, 0.01], [0.01, 0.05]])
+        R = np.array([[0.1, 0.0], [0.0, 0.05]])
+        M = np.array([[0.01, 0.0], [0.0, 0.01]])
+        self.mQ = np.block([[Q, M], [M.T, R]]) / 2.0
+        self.mz0 = np.zeros((self.dim_xy, 1))
+        self.Pz0 = np.eye(self.dim_xy) / 20.0
 
-        self.mQ = generate_block_matrix(
-            self._randMatrices.rng, self.dim_x, self.dim_y, 0.001
-        )
-        self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
-        self.Pz0 = generate_block_matrix(
-            self._randMatrices.rng, self.dim_x, self.dim_y, 0.001
-        )
+        # self.mQ = generate_block_matrix(
+        #     self._randMatrices.rng, self.dim_x, self.dim_y, 0.001
+        # )
+        # self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
+        # self.Pz0 = generate_block_matrix(
+        #     self._randMatrices.rng, self.dim_x, self.dim_y, 0.001
+        # )
 
     # ------------------------------------------------------------------
     def _gx(self, x, y, t, u, dt):
@@ -55,7 +55,8 @@ class ModelX2Y2_withRetroactions(BaseModelNonLinear):
         y1, y2 = y.flatten()
         u1, u2 = u.flatten()
 
-        return np.array([[x1**2 - 0.3 * y2 + u1], [x2 + 0.3 * y1 + u2]])
+        # return np.array([[x1**2 - 0.3 * y2 + u1], [x2 + 0.3 * y1 + u2]])
+        return np.array([[x1 - 0.3 * y2 + u1], [x2 + 0.3 * y1 + u2]])
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
@@ -90,10 +91,10 @@ class ModelX2Y2_withRetroactions(BaseModelNonLinear):
 
         An = np.array(
             [
-                [1, 0.1 * np.tanh(y1), 0.1 * x2 * (1 - np.tanh(y1) ** 2), 0],
-                [0.1 * np.cos(x1), 0.9, 0, 0],
-                [2 * x1, 0, 0, -0.3],
-                [0, 1, 0.3, 0],
+                [1.0, 0.1 * np.tanh(y1), 0.1 * x2 * (1.0 - np.tanh(y1)), 0.0],
+                [0.1 * np.cos(x1), 0.9, 0.0, 0.0],
+                [1.0, 0.0, 0.0, -0.3],
+                [0.0, 1.0, 0.3, 0.0],
             ]
         )
 
