@@ -26,8 +26,6 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
         # Le fait d'utiliser le modèle non augmenté garanti que l'on fait les mêmes choses
         self.mod = ModelX1Y1_withRetroactions()
 
-        print(self.mod.mQ)
-
         # (C) Sustained oscillations / limit-cycle-like: INTERESSANT
         # (a,b,c,d) = (0.99,\;1.2,\;0.9,\;1.5)
         # Expected behaviour: persistent oscillations of self.moderate amplitude; nonlinear terms drive and sustain the cycles.

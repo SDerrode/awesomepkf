@@ -200,9 +200,9 @@ class NonLinear_PPF(PKF):
             Si ``P'_x`` n'est pas définie positive et que la régularisation
             de Tikhonov échoue.
         """
-        Q = self.mQ[: self.dim_x, : self.dim_x]
-        M = self.mQ[: self.dim_x, self.dim_x :]
-        R = self.mQ[self.dim_x :, self.dim_x :]
+        Q = self.param.mQ[: self.dim_x, : self.dim_x]
+        M = self.param.mQ[: self.dim_x, self.dim_x :]
+        R = self.param.mQ[self.dim_x :, self.dim_x :]
 
         # --- Inversion de R avec diagnostic complet ---
         try:
@@ -364,7 +364,7 @@ class NonLinear_PPF(PKF):
             # =========================
             muxy: np.ndarray = np.array(
                 [
-                    self.g(
+                    self.param.g(
                         np.vstack([p, step.ykp1]),
                         self.zeros_dim_xy_1,
                         self.dt,

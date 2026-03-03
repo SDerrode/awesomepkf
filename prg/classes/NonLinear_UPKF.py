@@ -66,7 +66,6 @@ class NonLinear_UPKF(PKF):
 
         # --- First estimate -----------------------------------------------------------
         step = self._firstEstimate(generator)
-
         if step.xkp1 is None:  # There is no ground truth
             self.ground_truth = False
 
@@ -75,7 +74,7 @@ class NonLinear_UPKF(PKF):
         # --- Subsequent steps ---------------------------------------------------------
         za = np.zeros((2 * self.dim_x + self.dim_y, 1))
         Pa_base = np.zeros((2 * self.dim_x + self.dim_y, 2 * self.dim_x + self.dim_y))
-        Pa_base[self.dim_x :, self.dim_x :] = self.mQ
+        Pa_base[self.dim_x :, self.dim_x :] = self.param.mQ
         Pkp1_predict = self.zeros_dim_xy_xy.copy()
 
         while N is None or step.k < N:
@@ -91,7 +90,7 @@ class NonLinear_UPKF(PKF):
                 for s in sigma_without_y
             ]
             sigma_propag = [
-                self.g(*np.split(spoint, [self.dim_xy]), self.dt)
+                self.param.g(*np.split(spoint, [self.dim_xy]), self.dt)
                 for spoint in sigma_with_y
             ]
 
