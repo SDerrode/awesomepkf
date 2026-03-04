@@ -141,8 +141,7 @@ git ls-files | tree --fromfile -F -a --dirsfirst -I "logs|venv|*.csv|*.pkl|*.png
 │   │   │   ├── Sigma_x2_y2.py
 │   │   │   ├── Sigma_x3_y1.py
 │   │   │   ├── __init__.py
-│   │   │   ├── base_model_linear.py
-│   │   │   └── generMatrixA_fromVP.py
+│   │   │   └── base_model_linear.py
 │   │   ├── nonLinear/
 │   │   │   ├── __init__.py
 │   │   │   ├── base_model_nonLinear.py
@@ -158,9 +157,7 @@ git ls-files | tree --fromfile -F -a --dirsfirst -I "logs|venv|*.csv|*.pkl|*.png
 │   │   │   ├── model_x2_y1_withRetroactionsOfObservations_augmented.py
 │   │   │   └── model_x2_y2_withRetroactions.py
 │   │   ├── Generate_MatrixCov.py
-│   │   ├── __init__.py
-│   │   ├── testLinear.py
-│   │   └── testNonLinear.py
+│   │   └── __init__.py
 │   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── csv_to_parquet.py
@@ -169,6 +166,7 @@ git ls-files | tree --fromfile -F -a --dirsfirst -I "logs|venv|*.csv|*.pkl|*.png
 │   │   ├── plot_settings.py
 │   │   └── utils.py
 │   ├── __init__.py
+│   ├── exceptions.py
 │   ├── run_linear_pkf.py
 │   ├── run_nonlinear_epkf.py
 │   ├── run_nonlinear_ppf.py
@@ -178,6 +176,6 @@ git ls-files | tree --fromfile -F -a --dirsfirst -I "logs|venv|*.csv|*.pkl|*.png
 ├── LICENSE
 └── README.md
 
-13 directories, 74 files
+13 directories, 72 files
 ```
 <!-- PROJECT_STRUCTURE_END -->

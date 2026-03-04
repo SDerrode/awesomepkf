@@ -3,7 +3,6 @@
 
 import os
 import pickle
-import logging
 from typing import Any, Optional
 import numpy as np
 import pandas as pd
@@ -22,12 +21,6 @@ from prg.utils.numerics import EPS_ABS, EPS_REL
 from prg.exceptions import ParamError, NumericalError
 
 __all__ = ["HistoryTracker"]
-
-# ----------------------------------------------------------------------
-# Configuration globale du logging
-# ----------------------------------------------------------------------
-logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class HistoryTracker:
@@ -72,20 +65,6 @@ class HistoryTracker:
             raise ParamError("verbose doit être 0, 1 ou 2.")
         self._history: list[dict[str, Any]] = []
         self.verbose = verbose
-        self._set_log_level()
-
-    # ------------------------------------------------------------------
-    def _set_log_level(self):
-        """Ajuste le niveau du logger selon la verbosité."""
-        if not __debug__:
-            logger.setLevel(logging.ERROR)
-            return
-        if self.verbose in (0, 1):
-            logger.setLevel(logging.CRITICAL + 1)
-        elif self.verbose == 2:
-            logger.setLevel(logging.INFO)
-        else:
-            logger.setLevel(logging.DEBUG)
 
     def record(self, *args, **kwargs) -> None:
         """
@@ -122,10 +101,6 @@ class HistoryTracker:
             os.makedirs(dir_path, exist_ok=True)
         with open(path, "wb") as f:
             pickle.dump(self._history, f)
-        if self.verbose > 0:
-            logger.info(
-                f"[HistoryTracker] Sauvegardé dans '{path}' ({len(self)} enregistrements)"
-            )
 
     @classmethod
     def load_pickle(cls, path: str) -> "HistoryTracker":
@@ -157,10 +132,7 @@ class HistoryTracker:
             raise TypeError("Le fichier ne contient pas une liste d'enregistrements.")
         tracker = cls()
         tracker._history = data
-        if tracker.verbose > 0:
-            logger.info(
-                f"[HistoryTracker] Rechargé depuis '{path}' ({len(tracker)} enregistrements)"
-            )
+
         return tracker
 
     # ------------------------------------------------------------------
@@ -254,12 +226,6 @@ class HistoryTracker:
 
         slightly_negative = (v < 0) & (v >= -tol)
         strongly_negative = v < -tol
-
-        if slightly_negative.any() and self.verbose > 0:
-            logger.info(
-                f"[{col_name}] Variances légèrement négatives corrigées : "
-                f"{np.sum(slightly_negative)} points"
-            )
 
         if strongly_negative.any():
             idx = np.where(strongly_negative)[0][:5]
@@ -446,8 +412,6 @@ class HistoryTracker:
             os.makedirs(base_dir or ".", exist_ok=True)
             save_path = os.path.join(base_dir or ".", f"{basename}.png")
             fig.savefig(save_path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
-            if self.verbose > 0:
-                logger.info(f"[HistoryTracker] Graphique sauvegardé : {save_path}")
             plt.close(fig)
 
         return fig, axes
@@ -489,8 +453,6 @@ class A:
             diff = abs(new_x - self.x)
             step = SimpleStep(iter=k, x=self.x, new_x=new_x, diff=diff)
             self.history.record(step)
-            if self.verbose > 1:
-                logger.debug(f"[A] it={k} x={self.x:.4f} diff={diff:.4e}")
             yield step
             self.x = new_x
             k += 1

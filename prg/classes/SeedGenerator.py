@@ -11,19 +11,12 @@ en utilisant numpy.random.SeedSequence et secrets pour la graine initiale.
 from __future__ import annotations
 import secrets
 import threading
-import logging
 from typing import Optional
 import numpy as np
 
 from prg.exceptions import ParamError
 
 __all__ = ["SeedGenerator"]
-
-# ----------------------------------------------------------------------
-# Configuration du logging
-# ----------------------------------------------------------------------
-logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class SeedGenerator:
@@ -62,10 +55,6 @@ class SeedGenerator:
 
         if seed_key is None:
             seed_key = secrets.randbits(128)
-            if __debug__ and self.verbose > 0:
-                logger.info(
-                    f"[SeedGenerator] Graine forte générée aléatoirement ({seed_key})."
-                )
 
         self._root_seed: int = seed_key
         self._seed_seq: np.random.SeedSequence = np.random.SeedSequence(self._root_seed)
@@ -102,8 +91,6 @@ class SeedGenerator:
             self._seed_seq = new_seq
 
             derived_seed: int = int(new_seq.entropy)
-            if __debug__ and self.verbose > 1:
-                logger.info(f"[SeedGenerator] Nouvelle graine dérivée : {derived_seed}")
             return derived_seed
 
     def __repr__(self) -> str:

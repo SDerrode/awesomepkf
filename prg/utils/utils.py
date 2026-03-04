@@ -17,7 +17,6 @@ from typing import List, Optional, Generator
 
 import os  # Used in read_unknown_file
 import math  # Used in format_value
-import logging  # Used throughout
 import csv  # Used in read_unknown_file
 import chardet  # Used in read_unknown_file
 from pathlib import Path  # Used in save_dataframe_to_csv
@@ -41,12 +40,6 @@ __all__ = [
     "check_equality",
     "name_analysis",
 ]
-
-# ----------------------------------------------------------------------
-# Global logger
-# ----------------------------------------------------------------------
-logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 console = Console(force_terminal=True, color_system="truecolor")
 
@@ -155,7 +148,6 @@ def save_dataframe_to_csv(
     try:
         df.to_csv(path, encoding="utf-8", index=index, float_format="%.15f")
     except Exception as e:
-        logger.error(f"Error saving CSV: {e}")
         raise
 
 
@@ -256,7 +248,6 @@ def _compute_quadratic_form(
         Pk = cov_list[k]
 
         if not np.all(np.isfinite(Pk)):
-            logger.warning(f"Step {k}: covariance contains NaN/inf — skipping.")
             continue
 
         try:
@@ -267,7 +258,6 @@ def _compute_quadratic_form(
                 Pk_inv = np.linalg.pinv(Pk)
         except Exception as e:
             print(f"Pk={Pk}")
-            logger.error(f"Step {k}: non invertible matrix - exiting.")
             raise
 
         vals[k] = float((ek.T @ Pk_inv @ ek).squeeze())
@@ -411,9 +401,6 @@ def read_unknown_file(
             enc_info = chardet.detect(raw_data)
             encoding = enc_info["encoding"] or "utf-8"
             confidence = enc_info.get("confidence", 0)
-        if verbose > 1:
-            logger.info(f"Encoding detected: {encoding} (confidence={confidence:.2f})")
-
         if ext == ".parquet":
             return pd.read_parquet(filepath)
         if ext == ".json":
@@ -421,8 +408,6 @@ def read_unknown_file(
         if ext in (".xlsx", ".xls"):
             return pd.read_excel(filepath)
         if ext in (".csv", ".txt", ".dat", ".tsv", ""):
-            if verbose > 1:
-                logger.info(f"Reading delimited text file: {filepath}")
 
             with open(filepath, "r", encoding=encoding) as f:
                 sample_lines = [next(f, "") for _ in range(min(nrows_detect, 10))]
@@ -435,13 +420,6 @@ def read_unknown_file(
             except csv.Error:
                 sep = None
                 has_header = True
-                if verbose > 1:
-                    logger.warning(
-                        "Delimiter not detected — reading as single-column file."
-                    )
-
-            if verbose > 1:
-                logger.info(f"Delimiter: {repr(sep)} | Header: {has_header}")
 
             header = 0 if has_header else None
             if sep is None:
@@ -451,7 +429,6 @@ def read_unknown_file(
         raise ValueError(f"Unrecognised file format: {ext}")
 
     except Exception as e:
-        logger.error(f"Error reading {filepath}: {e}")
         raise
 
 
@@ -603,7 +580,7 @@ def check_equality(**kwargs: np.ndarray) -> None:
         Named matrices to compare. At least two must be provided.
     """
     if len(kwargs) < 2:
-        logger.warning("check_equality: at least 2 matrices required.")
+        print("check_equality: at least 2 matrices required.")
         return
 
     names = list(kwargs.keys())
@@ -611,7 +588,7 @@ def check_equality(**kwargs: np.ndarray) -> None:
     shapes = [m.shape for m in matrices]
 
     if len(set(shapes)) != 1:
-        logger.warning(f"Matrices have different shapes: {dict(zip(names, shapes))}")
+        print(f"Matrices have different shapes: {dict(zip(names, shapes))}")
         return
 
     ref, ref_name = matrices[0], names[0]
@@ -619,6 +596,6 @@ def check_equality(**kwargs: np.ndarray) -> None:
     for name, M in zip(names[1:], matrices[1:]):
         if not np.allclose(ref, M, atol=EPS_ABS, rtol=EPS_REL):
             diff_norm = float(np.linalg.norm(ref - M))
-            logger.warning(
+            print(
                 f"Matrices '{ref_name}' and '{name}' differ " f"(‖Δ‖={diff_norm:.3e})"
             )

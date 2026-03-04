@@ -120,8 +120,8 @@ class BaseModelNonLinear:
         if self.dim_x != 1 or self.dim_y != 1:
             return
 
-        z1 = np.linspace(-1, 1, n_points)
-        z2 = np.linspace(-1, 1, n_points)
+        z1 = np.linspace(-3, 3, n_points)
+        z2 = np.linspace(-3, 3, n_points)
         Z1, Z2 = np.meshgrid(z1, z2)
 
         Z_stack = np.stack([Z1.ravel(), Z2.ravel()], axis=1)
@@ -156,12 +156,12 @@ class BaseModelNonLinear:
 
         os.makedirs("data/plot", exist_ok=True)
 
-        fig = plt.figure(figsize=(14, 10))
+        fig = plt.figure(figsize=(10, 7))
 
         # Surface g_x
         ax1 = fig.add_subplot(2, 2, 1, projection="3d")
         ax1.plot_surface(Z1, Z2, G1)
-        ax1.set_title(r"$g_x(x,y)$")
+        ax1.set_title(r"$g_x(x,y)$", size=BIG_SIZE)
         ax1.set_xlabel(r"$x$")
         ax1.set_ylabel(r"$y$")
         ax1.view_init(30, 45)
@@ -169,7 +169,7 @@ class BaseModelNonLinear:
         # Surface g_y
         ax2 = fig.add_subplot(2, 2, 2, projection="3d")
         ax2.plot_surface(Z1, Z2, G2)
-        ax2.set_title(r"$g_y(x,y)$")
+        ax2.set_title(r"$g_y(x,y)$", size=BIG_SIZE)
         ax2.set_xlabel(r"$x$")
         ax2.set_ylabel(r"$y$")
         ax2.view_init(30, 45)
@@ -177,7 +177,7 @@ class BaseModelNonLinear:
         # Norme
         ax3 = fig.add_subplot(2, 2, 3)
         im = ax3.contourf(Z1, Z2, NormG)
-        ax3.set_title(r"$\|g(x,y)\|$")
+        ax3.set_title(r"$\|g(x,y)\|$", size=BIG_SIZE)
         ax3.set_xlabel(r"$x$")
         ax3.set_ylabel(r"$y$")
         plt.colorbar(im, ax=ax3)
@@ -190,7 +190,7 @@ class BaseModelNonLinear:
             Dz1[::quiver_stride, ::quiver_stride],
             Dz2[::quiver_stride, ::quiver_stride],
         )
-        ax4.set_title(r"$g(z) - z$")
+        ax4.set_title(r"$g(x, y) - (x, y)$", size=BIG_SIZE)
         ax4.set_xlabel(r"$x$")
         ax4.set_ylabel(r"$y$")
         ax4.set_aspect("equal")

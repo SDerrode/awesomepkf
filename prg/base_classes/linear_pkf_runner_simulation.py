@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import logging
 from typing import Optional
 
 from prg.classes.Linear_PKF import Linear_PKF
@@ -85,8 +84,6 @@ class LinearPKFRunnerSim(BaseLinearPKFRunner):
         PKFError
             Si une erreur du domaine PKF remonte du filtre.
         """
-        if self.verbose > 1:
-            logging.info("Starting Linear PKF Runner (simulation mode)")
 
         try:
             self.runner_instance.process_N_data(N=self.N)

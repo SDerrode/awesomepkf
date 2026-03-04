@@ -119,14 +119,14 @@ class BaseModelLinear:
 
         ax1 = fig.add_subplot(1, 2, 1, projection="3d")
         ax1.plot_surface(Z1, Z2, G1)
-        ax1.set_title(r"$g_x(x, y)$")
+        ax1.set_title(r"$g_x(x, y)$", size=BIG_SIZE)
         ax1.set_xlabel(r"$x$")
         ax1.set_ylabel(r"$y$")
         ax1.view_init(elev=30, azim=45)
 
         ax2 = fig.add_subplot(1, 2, 2, projection="3d")
         ax2.plot_surface(Z1, Z2, G2)
-        ax2.set_title(r"$g_y(x, y)$")
+        ax2.set_title(r"$g_y(x, y)$", size=BIG_SIZE)
         ax2.set_xlabel(r"$x$")
         ax2.set_ylabel(r"$y$")
         ax2.view_init(elev=30, azim=45)
@@ -187,12 +187,12 @@ class BaseModelLinear:
 
         os.makedirs("data/plot", exist_ok=True)
 
-        fig = plt.figure(figsize=(14, 10), facecolor=FACECOLOR)
+        fig = plt.figure(figsize=(10, 7), facecolor=FACECOLOR)
 
         # --- Surface g_x ---
         ax1 = fig.add_subplot(2, 2, 1, projection="3d")
         surf1 = ax1.plot_surface(Z1, Z2, G1)
-        ax1.set_title(r"$g_x(x,y)$")
+        ax1.set_title(r"$g_x(x,y)$", size=BIG_SIZE)
         ax1.set_xlabel(r"$x$")
         ax1.set_ylabel(r"$y$")
         ax1.view_init(30, 45)
@@ -200,7 +200,7 @@ class BaseModelLinear:
         # --- Surface g_y ---
         ax2 = fig.add_subplot(2, 2, 2, projection="3d")
         surf2 = ax2.plot_surface(Z1, Z2, G2)
-        ax2.set_title(r"$g_y(x,y)$")
+        ax2.set_title(r"$g_y(x,y)$", size=BIG_SIZE)
         ax2.set_xlabel(r"$x$")
         ax2.set_ylabel(r"$y$")
         ax2.view_init(30, 45)
@@ -208,7 +208,7 @@ class BaseModelLinear:
         # --- Norme ---
         ax3 = fig.add_subplot(2, 2, 3)
         im = ax3.contourf(Z1, Z2, NormG)
-        ax3.set_title(r"$\|g(x,y)\|$")
+        ax3.set_title(r"$\|g(x,y)\|$", size=BIG_SIZE)
         ax3.set_xlabel(r"$x$")
         ax3.set_ylabel(r"$y$")
         plt.colorbar(im, ax=ax3)
@@ -221,7 +221,7 @@ class BaseModelLinear:
             Dz1[::quiver_stride, ::quiver_stride],
             Dz2[::quiver_stride, ::quiver_stride],
         )
-        ax4.set_title(r"$g(z) - z$")
+        ax4.set_title(r"$g(x, y) - (x, y)$", size=BIG_SIZE)
         ax4.set_xlabel(r"$x$")
         ax4.set_ylabel(r"$y$")
         ax4.set_aspect("equal")

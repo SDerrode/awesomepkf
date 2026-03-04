@@ -231,17 +231,10 @@ class NonLinear_PPF(PKF):
         report = cov_diag.check()
 
         if not report.is_ok:
-            self.logger.warning("_precompute: P'_x — %s", report.overall_status)
-            if self.verbose > 1:
-                self.logger.debug("_precompute: P'_x full diagnostic:\n%s", report)
 
             if not report.is_valid:
-                self.logger.warning(
-                    "_precompute: P'_x is invalid — attempting regularization."
-                )
                 try:
                     P_prime_x = cov_diag.regularized()
-                    self.logger.warning("_precompute: P'_x regularized successfully.")
                 except RuntimeError as e:
                     raise CovarianceError(
                         "_precompute: P'_x is not positive definite and "
@@ -453,13 +446,6 @@ class NonLinear_PPF(PKF):
                 ~np.isfinite(particles_current)
                 | (np.abs(particles_current) > PARTICLE_CLIP)
             )
-            if n_clipped > 0 and self.verbose > 0:
-                self.logger.warning(
-                    "Step %d: clipping %d particle components (max abs = %.3g).",
-                    new_k,
-                    n_clipped,
-                    float(np.nanmax(np.abs(particles_current))),
-                )
             particles_current = np.clip(
                 np.where(np.isfinite(particles_current), particles_current, 0.0),
                 -PARTICLE_CLIP,

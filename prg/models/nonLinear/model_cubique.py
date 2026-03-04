@@ -39,7 +39,7 @@ class ModelCubique(BaseModelNonLinear):
 
         try:
             with np.errstate(all="raise"):
-                return 0.9 * x - 0.2 * x**3 + t
+                return 0.9 * x - 0.6 * x**3 + t
         except FloatingPointError as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] _fx: floating point error at x={x}, t={t}: {e}"
@@ -87,7 +87,7 @@ class ModelCubique(BaseModelNonLinear):
 
         try:
             with np.errstate(all="raise"):
-                dfdx = 0.9 - 0.6 * x[0, 0] ** 2
+                dfdx = 0.9 - 1.8 * x[0, 0] ** 2
 
                 An = np.array([[dfdx, 0.0], [dfdx, 0.0]])
                 Bn = np.array([[1.0, 0.0], [1.0, 1.0]])

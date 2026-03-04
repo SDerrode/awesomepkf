@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import logging
 from typing import Optional
 
 from prg.classes.Linear_PKF import Linear_PKF
@@ -88,8 +87,6 @@ class LinearPKFRunnerFromFile(BaseLinearPKFRunner):
         PKFError
             Si une erreur du domaine PKF remonte du filtre.
         """
-        if self.verbose > 1:
-            logging.info("Starting Linear PKF Runner (file mode)")
 
         if not os.path.exists(self.data_filename):
             raise FileNotFoundError(f"Data file not found: {self.data_filename!r}.")

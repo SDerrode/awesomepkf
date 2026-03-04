@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import logging
 from typing import Any, Union, Optional
 import warnings
 
@@ -15,16 +14,12 @@ from prg.exceptions import CovarianceError, NumericalError, ParamError
 
 __all__ = ["ParamLinear"]
 
-# ----------------------------------------------------------------------
-# Configuration du logging global
-# ----------------------------------------------------------------------
-logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 
 # ----------------------------------------------------------------------
 # ParamLinear class
 # ----------------------------------------------------------------------
+
+
 class ParamLinear:
     """
     Manage PKF parameters with optional debug checks.
@@ -74,7 +69,6 @@ class ParamLinear:
         self.dim_y = dim_y
         self.dim_xy = dim_x + dim_y
         self.verbose = verbose
-        self._set_log_level()
 
         # Two ways to construct the object
         if len(kwargs.keys()) == 12:  # parametrization (A, mQ, mz0, Pz0)
@@ -183,17 +177,6 @@ class ParamLinear:
         self._update_A_B_mQ_from_Sigma()
 
     # ------------------------------------------------------------------
-    # Logging
-    # ------------------------------------------------------------------
-    def _set_log_level(self) -> None:
-        if self.verbose in [0, 1]:
-            logger.setLevel(logging.CRITICAL + 1)
-        elif self.verbose == 2:
-            logger.setLevel(logging.INFO)
-        else:
-            logger.setLevel(logging.DEBUG)
-
-    # ------------------------------------------------------------------
     # Update derived matrices
     # ------------------------------------------------------------------
     def _update_A_B_mQ_from_Sigma(self) -> None:
@@ -239,17 +222,10 @@ class ParamLinear:
             diff = self._mQ - Q_est
             rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + EPS_ABS)
             if rel_error > EPS_REL:
-                logger.warning(
-                    f"⚠️ Incohérence : Q ≉ Q1 - A Q2^T (erreur relative = {rel_error:.2e})"
-                )
                 raise NumericalError(
                     f"Incohérence détectée : Q ≉ Q1 - A Q2^T "
                     f"(erreur relative = {rel_error:.2e}).",
                     matrix_name="mQ",
-                )
-            else:
-                logger.debug(
-                    f"♻️ Vérification OK : ||Q - (Q1 - A Q2^T)||_rel = {rel_error:.2e}"
                 )
 
         # Sous-blocs
