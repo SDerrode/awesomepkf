@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import logging
 from typing import Optional
 
 from prg.base_classes.nonlinear_ppf_runner_base import BaseNonLinearPPFRunner
@@ -55,8 +54,6 @@ class BaseNonLinearPPFRunnerSim(BaseNonLinearPPFRunner):
         PKFError
             Si une erreur du domaine PKF remonte du filtre.
         """
-        if self.verbose > 1:
-            logging.info("Starting NonLinear PPF Runner (simulation mode)")
 
         try:
             self.runner_instance.process_N_data(N=self.N)

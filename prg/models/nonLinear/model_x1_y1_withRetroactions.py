@@ -26,7 +26,7 @@ class ModelX1Y1_withRetroactions(BaseModelNonLinear):
             raise NumericalError(
                 f"[{self.MODEL_NAME}] Initialization failed: {e}"
             ) from e
-        self.a, self.b, self.c, self.d = 0.99, 1.2, 0.9, 1.5
+        self.a, self.b, self.c, self.d = 0.50, 30, 0.40, 40
 
     def _gx(self, x, y, t, u, dt):
         try:

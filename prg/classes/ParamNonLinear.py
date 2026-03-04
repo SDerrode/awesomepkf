@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import logging
 from typing import Any
 
 import numpy as np
@@ -11,12 +10,6 @@ from prg.classes.MatrixDiagnostics import CovarianceMatrix
 from prg.exceptions import CovarianceError, ParamError
 
 __all__ = ["ParamNonLinear"]
-
-# ----------------------------------------------------------------------
-# Configuration du logging global
-# ----------------------------------------------------------------------
-logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 # ----------------------------------------------------------------------
@@ -68,8 +61,6 @@ class ParamNonLinear:
         self.dim_xy = dim_x + dim_y
         self.verbose = verbose
 
-        self._set_log_level()
-
         self.augmented = kwargs["augmented"]
         self.g = kwargs["g"]
 
@@ -98,17 +89,6 @@ class ParamNonLinear:
             f"alpha={self.alpha}, beta={self.beta}, "
             f"kappa={self.kappa}, lambda_={self.lambda_})>"
         )
-
-    # ------------------------------------------------------------------
-    # Logging
-    # ------------------------------------------------------------------
-    def _set_log_level(self) -> None:
-        if self.verbose in [0, 1]:
-            logger.setLevel(logging.CRITICAL + 1)
-        elif self.verbose == 2:
-            logger.setLevel(logging.INFO)
-        else:
-            logger.setLevel(logging.DEBUG)
 
     # ------------------------------------------------------------------
     # Consistency checks
@@ -178,7 +158,6 @@ class ParamNonLinear:
                         "Matrix 'mQ' is not positive semi-definite after update.",
                         matrix_name="mQ",
                     )
-        logger.info("[ParamNonLinear] ✅ mQ matrix updated")
 
     # ------------------------------------------------------------------
     # Summary

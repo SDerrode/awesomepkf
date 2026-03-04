@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import logging
 from typing import Optional
 
 from prg.utils.utils import file_data_generator
@@ -60,8 +59,6 @@ class BaseNonLinearUPKFRunnerFromFile(BaseNonLinearUPKFRunner):
         PKFError
             Si une erreur du domaine PKF remonte du filtre.
         """
-        if self.verbose > 1:
-            logging.info("Starting NonLinear UPKF Runner (file mode)")
 
         if not os.path.exists(self.data_filename):
             raise FileNotFoundError(f"Data file not found: {self.data_filename!r}.")

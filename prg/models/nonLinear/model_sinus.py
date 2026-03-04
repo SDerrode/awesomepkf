@@ -30,7 +30,7 @@ class ModelSinus(BaseModelNonLinear):
     def _fx(self, x, t, dt):
         try:
             with np.errstate(all="raise"):
-                return 0.8 * x + 0.3 * np.sin(x) + t
+                return 0.05 * x + 2.0 * np.sin(x) + t
         except FloatingPointError as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] _fx: floating point error at x={x}, t={t}: {e}"
@@ -39,7 +39,7 @@ class ModelSinus(BaseModelNonLinear):
     def _hx(self, x, u, dt):
         try:
             with np.errstate(all="raise"):
-                return np.sin(x) + u
+                return 1.5 * np.sin(x) + u
         except FloatingPointError as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] _hx: floating point error at x={x}, u={u}: {e}"
@@ -72,15 +72,21 @@ class ModelSinus(BaseModelNonLinear):
             with np.errstate(all="raise"):
                 x1 = x.flatten()[0]
                 t1 = t.flatten()[0]
-                A = 0.8 * x1 + 0.3 * np.sin(x1) + t1
+                A = 0.05 * x1 + 2.0 * np.sin(x1) + t1  # scalaire, avec t
+                dfdx = 0.05 + 2.0 * np.cos(x1)  # scalaire
                 An = np.array(
                     [
-                        [0.8 + 0.3 * np.cos(x1), 0.0],
-                        [np.cos(A) * (0.8 + 0.3 * np.cos(x1)), 0.0],
+                        [dfdx, 0.0],
+                        [1.5 * np.cos(A) * dfdx, 0.0],
                     ]
                 )
-                Bn = np.array([[1.0, 0.0], [np.cos(A), 1.0]])
-            return An, Bn
+                Bn = np.array(
+                    [
+                        [1.0, 0.0],
+                        [1.5 * np.cos(A), 1.0],
+                    ]
+                )
+                return An, Bn
         except FloatingPointError as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] _jacobiens_g: floating point error at x={x}, t={t}: {e}"

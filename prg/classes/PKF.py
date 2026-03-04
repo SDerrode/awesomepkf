@@ -5,7 +5,6 @@
 from __future__ import annotations
 from typing import Generator, Optional
 from dataclasses import dataclass
-import logging
 
 # Third-party
 import numpy as np
@@ -26,8 +25,6 @@ from prg.exceptions import (
     StepValidationError,
 )
 from prg.utils.utils import rich_show_fields
-
-logger = logging.getLogger(__name__)
 
 __all__ = ["PKFStep", "PKF"]
 
@@ -175,27 +172,6 @@ class PKF:
 
         # History tracker
         self.history = HistoryTracker(self.verbose)
-
-        # Logger — level is always DEBUG on the logger itself;
-        # the handler filters according to the verbose setting.
-        self.logger = logging.getLogger(f"{self.__class__.__name__}.{id(self)}")
-        self.logger.setLevel(logging.DEBUG)
-
-        if not self.logger.handlers:
-            ch = logging.StreamHandler()
-            if verbose == 0:
-                ch.setLevel(logging.CRITICAL + 1)  # Nothing is displayed
-            elif verbose == 1:
-                ch.setLevel(logging.WARNING)  # Warnings and errors only
-            else:
-                ch.setLevel(logging.DEBUG)  # Everything is displayed
-
-            formatter = logging.Formatter(
-                fmt="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
-                datefmt="%Y-%m-%d %H:%M:%S",
-            )
-            ch.setFormatter(formatter)
-            self.logger.addHandler(ch)
 
     # ------------------------------------------------------------------
     # Data simulation & processing
@@ -379,20 +355,10 @@ class PKF:
 
         report = CovarianceMatrix(mat).check()
         if not report.is_ok:
-            if self.verbose > 1:
-                self.logger.warning("Step %d: %s — %s", k, name, report.overall_status)
-
             if not report.is_valid:
                 try:
                     mat[:] = CovarianceMatrix(mat).regularized()
-                    if self.verbose > 1:
-                        self.logger.warning(
-                            "Step %d: %s regularized successfully.", k, name
-                        )
                 except ValueError as e:
-                    self.logger.error(
-                        "Step %d: %s regularization failed — %s", k, name, e
-                    )
                     raise CovarianceError(
                         f"Step {k}: {name} is not a valid covariance matrix "
                         f"and could not be regularized.",
@@ -430,15 +396,6 @@ class PKF:
         report = InvertibleMatrix(mat).check()
 
         if not report.is_ok:
-            self.logger.warning(
-                "Step %d: %s has invertibility status %s.",
-                k,
-                name,
-                report.overall_status,
-            )
-            if self.verbose > 1:
-                self.logger.debug("Step %d: %s full diagnostic:\n%s", k, name, report)
-
             if not report.is_valid:
                 raise InvertibilityError(
                     f"Step {k}: matrix {name} is not invertible (FAIL).",
@@ -517,7 +474,6 @@ class PKF:
                 PXXkp1_update=PXXkp1_update,
             )
         except (ValueError, LinAlgError) as e:
-            self.logger.error("Step %d: PKFStep construction failed — %s", k, e)
             raise StepValidationError(
                 f"Step {k}: PKFStep construction failed in _firstEstimate.",
                 step=k,
@@ -598,9 +554,6 @@ class PKF:
             c, low = cho_factor(Skp1)
             Kkp1: np.ndarray = PXYkp1_predict @ cho_solve((c, low), self.eye_dim_y)
         except (LinAlgError, ValueError) as e:
-            self.logger.error(
-                "Step %d: Cholesky factorisation failed on Skp1 — %s", k, e
-            )
             raise CovarianceError(
                 f"Step {k}: Cholesky factorisation failed — Skp1 may not be "
                 f"positive definite.",
@@ -633,7 +586,6 @@ class PKF:
                 PXXkp1_update=PXXkp1_update_Joseph.copy(),
             )
         except (ValueError, LinAlgError) as e:
-            self.logger.error("Step %d: PKFStep construction failed — %s", k, e)
             raise StepValidationError(
                 f"Step {k}: PKFStep construction failed in _nextUpdating.",
                 step=k,

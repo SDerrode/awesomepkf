@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Type
 
@@ -19,7 +18,7 @@ __all__ = ["BaseRunner"]
 class BaseRunner(ABC):
     """
     Abstract base runner for all PKF/EPKF/PPF/UPKF workflows.
-    Factorizes logging, directories, model building, and history management.
+    Factorizes directories, model building, and history management.
     """
 
     def __init__(
@@ -66,26 +65,10 @@ class BaseRunner(ABC):
         self.base_dir = base_dir
         self._extra_args = kwargs
 
-        self._configure_logging()
         self.tracker_dir, self.datafile_dir, self.graph_dir = self._setup_directories()
 
         self.model, self.param = self._build_model()
         self.runner_instance = None  # Will be set by child (pkf, epkf, ppf, upkf)
-
-    # ==========================================================
-    # Infrastructure
-    # ==========================================================
-
-    def _configure_logging(self) -> None:
-        level = logging.WARNING
-        if self.verbose == 1:
-            level = logging.INFO
-        elif self.verbose >= 2:
-            level = logging.DEBUG
-
-        logging.basicConfig(
-            level=level, format="%(asctime)s | %(levelname)s | %(message)s"
-        )
 
     # ----------------------------------------------------------
 
@@ -167,7 +150,6 @@ class BaseRunner(ABC):
             ) from e
 
         if self.verbose > 1:
-            logging.debug(f"Model created: {model}")
             param.summary()
 
         return model, param
@@ -185,8 +167,6 @@ class BaseRunner(ABC):
         FilterError
             Si le calcul des erreurs échoue de manière inattendue.
         """
-        if self.verbose > 1:
-            logging.debug("Computing errors")
 
         try:
             ikp1_last = self.runner_instance.history.last()["ikp1"]
@@ -224,9 +204,6 @@ class BaseRunner(ABC):
         """
         filepath = os.path.join(self.tracker_dir, filename)
         self.runner_instance.history.save_pickle(filepath)
-
-        if self.verbose > 1:
-            logging.info(f"History saved to {filepath}")
 
     # ==========================================================
     # Abstract execution

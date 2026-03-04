@@ -2,20 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import logging
 
 from prg.base_classes.simulator_linear import LinearDataSimulator
 from prg.base_classes.simulator_nonlinear import NonLinearDataSimulator
 from prg.utils.parser import addParseToParser
-
-# =============================================================
-# Logger
-# =============================================================
-
-
-def setup_logging(verbose: int) -> None:
-    level = {0: logging.WARNING, 1: logging.INFO}.get(verbose, logging.DEBUG)
-    logging.basicConfig(level=level, format="[%(levelname)s] %(name)s: %(message)s")
 
 
 # =============================================================
@@ -58,7 +48,6 @@ def parse_arguments():
 
 def main() -> None:
     args = parse_arguments()
-    setup_logging(args.verbose)
 
     if args.linearModelName and args.nonLinearModelName:
         raise ValueError(

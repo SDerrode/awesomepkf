@@ -2,38 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import os
-import logging
 from abc import ABC, abstractmethod
 
 from prg.utils.utils import save_dataframe_to_csv, data_to_dataframe
 from prg.exceptions import FilterError, ParamError, PKFError
 
 __all__ = ["BaseDataSimulator"]
-
-# =============================================================
-# Logger configuration
-# =============================================================
-
-
-def setup_logger(verbose: int) -> logging.Logger:
-    logger = logging.getLogger(__name__)
-
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter("[%(levelname)s] %(message)s")
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
-    logger.propagate = False
-
-    if verbose == 0:
-        logger.setLevel(logging.WARNING)
-    elif verbose == 1:
-        logger.setLevel(logging.INFO)
-    else:
-        logger.setLevel(logging.DEBUG)
-
-    return logger
 
 
 # =============================================================
@@ -85,7 +59,6 @@ class BaseDataSimulator(ABC):
             raise ParamError("verbose must be 0, 1 or 2.")
 
         self.verbose = verbose
-        self.logger = setup_logger(verbose)
 
         self.model_name = model_name
         self.N = N
@@ -159,8 +132,6 @@ class BaseDataSimulator(ABC):
             de toute exception levée par ``create_model`` ou
             ``create_param``).
         """
-        if self.verbose > 1:
-            self.logger.debug("Creating model...")
 
         try:
             model = self.create_model()
@@ -168,9 +139,6 @@ class BaseDataSimulator(ABC):
             raise  # déjà typée — on laisse remonter telle quelle
         except Exception as e:
             raise PKFError(f"Failed to create model {self.model_name!r}.") from e
-
-        if self.verbose > 1:
-            self.logger.debug(f"Model selected: {model.MODEL_NAME}")
 
         params = model.get_params().copy()
         dim_x = params.pop("dim_x")
@@ -186,7 +154,6 @@ class BaseDataSimulator(ABC):
             ) from e
 
         if self.verbose > 1:
-            self.logger.debug("Parameter summary:")
             param.summary()
 
         return param
@@ -202,8 +169,6 @@ class BaseDataSimulator(ABC):
         OSError
             Si la sauvegarde du fichier CSV échoue (permissions, espace disque, etc.).
         """
-        if self.verbose > 1:
-            self.logger.info("Starting simulation")
 
         try:
             pkf = self.create_pkf()
@@ -213,9 +178,6 @@ class BaseDataSimulator(ABC):
             raise PKFError(
                 f"Failed to create PKF for model {self.model_name!r}."
             ) from e
-
-        if self.verbose > 1:
-            self.logger.debug(f"Simulating N={self.N} data points...")
 
         try:
             list_data = pkf.simulate_N_data(N=self.N)
@@ -238,6 +200,3 @@ class BaseDataSimulator(ABC):
 
         filepath = os.path.join(self.datafile_dir, self.data_file_name)
         save_dataframe_to_csv(df, filepath)  # OSError remonte naturellement
-
-        if self.verbose > 1:
-            self.logger.info(f"Data saved to {filepath}")
