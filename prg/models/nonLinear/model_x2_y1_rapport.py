@@ -33,17 +33,19 @@ class ModelX2Y1(BaseModelNonLinear):
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
-        self.alpham = 1.0
-        self.betam = 0.1
-        self.gammam = 0.5
+        self.alpham = 0.5  # réduit : diminue le couplage A[1,0]
+        self.betam = 0.5  # augmenté : amortit x2 plus vite
+        self.gammam = 0.5  # inchangé
+        self.kappa = 0.15  # nouveau : terme de rappel sur x1
+        self.dt_model = 0.1  # nouveau : pas de temps physique (dt PKF reste 1)
 
         try:
             self.mQ = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.003
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.1
             )
             self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
             self.Pz0 = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.01
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
             )
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
@@ -57,10 +59,14 @@ class ModelX2Y1(BaseModelNonLinear):
             with np.errstate(all="raise"):
                 return np.array(
                     [
-                        [x[0, 0] + dt * x[1, 0] + t[0, 0]],
+                        [
+                            (1.0 - self.kappa) * x[0, 0]
+                            + self.dt_model * x[1, 0]
+                            + t[0, 0]
+                        ],
                         [
                             x[1, 0]
-                            - dt
+                            - self.dt_model
                             * (self.alpham * np.sin(x[0, 0]) + self.betam * x[1, 0])
                             + t[1, 0]
                         ],
@@ -144,8 +150,12 @@ class ModelX2Y1(BaseModelNonLinear):
 
                 An = np.array(
                     [
-                        [1.0, dt, 0.0],
-                        [-self.alpham * dt * np.cos(x1), 1.0 - self.betam * dt, 0.0],
+                        [1.0 - self.kappa, self.dt_model, 0.0],
+                        [
+                            -self.alpham * self.dt_model * np.cos(x1),
+                            1.0 - self.betam * self.dt_model,
+                            0.0,
+                        ],
                         [
                             Z - self.alpham * dt * np.cos(x1) * W,
                             Z * dt + (1.0 - self.betam * dt) * W,

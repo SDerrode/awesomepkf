@@ -16,7 +16,7 @@ class ModelSinus(BaseModelNonLinear):
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
         try:
             self.mQ = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.15
             )
             self.mz0 = np.zeros((self.dim_xy, 1)) + 0.3
             self.Pz0 = generate_block_matrix(

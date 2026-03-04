@@ -140,8 +140,8 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
                     [
                         [self.a, self.b, self.c * (1.0 - np.tanh(x3) ** 2), 0.0],
                         [0, self.d, self.e * np.cos(x3), 0.0],
-                        [2 * x1, 0.0, self.f, 0.0],
-                        [2 * x1, 0.0, self.f, 0.0],
+                        [2.0 * x1 / (1.0 + x1**2) ** 2, 0.0, self.f, 0.0],
+                        [2.0 * x1 / (1.0 + x1**2) ** 2, 0.0, self.f, 0.0],
                     ]
                 )
                 Bn = np.array(

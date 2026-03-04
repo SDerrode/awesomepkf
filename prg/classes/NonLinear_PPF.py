@@ -248,8 +248,6 @@ class NonLinear_PPF(PKF):
                         "regularization failed — cannot continue.",
                         matrix_name="P_prime_x",
                     ) from e
-            else:
-                P_prime_x = cov_diag.regularized()
         else:
             P_prime_x = P_prime_x_base
 
@@ -402,6 +400,17 @@ class NonLinear_PPF(PKF):
                 ]
             )
 
+            # DEBUG — vérification muxy
+            if np.any(~np.isfinite(muxy)):
+                bad = (~np.isfinite(muxy)).any(axis=(1, 2))
+                print(
+                    f"[DEBUG] Step {new_k}: muxy NaN/Inf dans {bad.sum()}/{self.nbParticles} particules"
+                )
+                print(
+                    f"  particles_previous range: [{particles_previous.min():.3g}, {particles_previous.max():.3g}]"
+                )
+                print(f"  step.ykp1: {step.ykp1.flatten()}")
+
             # =========================
             # INNOVATION
             # =========================
@@ -437,6 +446,41 @@ class NonLinear_PPF(PKF):
             particles_current = mu_prime_x_all + np.einsum(
                 "ij,njk->nik", self._cached["L"], noise
             )
+
+            # Clipping des particules divergentes
+            PARTICLE_CLIP = 1e6  # à ajuster selon l'échelle physique du modèle
+            n_clipped = np.sum(
+                ~np.isfinite(particles_current)
+                | (np.abs(particles_current) > PARTICLE_CLIP)
+            )
+            if n_clipped > 0 and self.verbose > 0:
+                self.logger.warning(
+                    "Step %d: clipping %d particle components (max abs = %.3g).",
+                    new_k,
+                    n_clipped,
+                    float(np.nanmax(np.abs(particles_current))),
+                )
+            particles_current = np.clip(
+                np.where(np.isfinite(particles_current), particles_current, 0.0),
+                -PARTICLE_CLIP,
+                PARTICLE_CLIP,
+            )
+
+            # DEBUG — vérification particles_current
+            if np.any(~np.isfinite(particles_current)):
+                bad = (~np.isfinite(particles_current)).any(axis=(1, 2))
+                print(
+                    f"[DEBUG] Step {new_k}: particles_current NaN/Inf dans {bad.sum()}/{self.nbParticles} particules"
+                )
+                print(f"  mu_prime_x_all finite: {np.all(np.isfinite(mu_prime_x_all))}")
+                print(
+                    f"  mu_prime_x_all range:  [{np.nanmin(mu_prime_x_all):.3g}, {np.nanmax(mu_prime_x_all):.3g}]"
+                )
+                print(f"  MRinv:\n{self._cached['MRinv']}")
+                print(
+                    f"  innovations range: [{np.nanmin(innovations):.3g}, {np.nanmax(innovations):.3g}]"
+                )
+                print(f"  L (Cholesky):\n{self._cached['L']}")
 
             # =========================
             # ESTIMATION A POSTERIORI

@@ -23,10 +23,48 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
 
         self.a, self.b, self.c, self.d, self.e, self.f = 1.0, 0.8, 0.05, 0.9, 0.30, 0.6
 
+        # corrections sur le modèle car le rayon spectrale diverge
+        self.a = 0.95  # au lieu de 1.0 — système stable
+        self.b = 0.10  # le modèle est contractant car ‖A‖₂ ≈ 0.99
+        # ou bien
+        # self.a=0.7
+        # self.b=0.5
+
         try:
-            self.mQ = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.03
-            )
+
+            Q = np.array([[0.03, 0.0], [0.0, 0.03]])
+            R = np.array([[0.03]])
+            M = np.zeros(
+                (self.dim_x, self.dim_y)
+            )  # M=0 : bruits décorrélés (cas standard)
+            self.mQ = np.block([[Q, M], [M.T, R]])
+
+            # self.mQ = generate_block_matrix(
+            #     self._randMatrices.rng, self.dim_x, self.dim_y, 0.03
+            # )
+
+            # self.mQ = np.block([[Q, M], [M.T, R]])
+
+            # # DEBUG temporaire — à supprimer après diagnostic
+            # Q = self.mQ[: self.dim_x, : self.dim_x]
+            # M = self.mQ[: self.dim_x, self.dim_x :]
+            # R = self.mQ[self.dim_x :, self.dim_x :]
+            # R_inv = np.linalg.inv(R)
+            # P_prime_x = Q - M @ R_inv @ M.T
+            # A = np.array([[self.a, self.b], [0.0, self.d]])
+            # print(f"[DEBUG mQ] Q:\n{Q}")
+            # print(f"[DEBUG mQ] M:\n{M}")
+            # print(f"[DEBUG mQ] R: {R}")
+            # print(f"[DEBUG mQ] P'_x = Q - M R⁻¹ Mᵀ:\n{P_prime_x}")
+            # print(f"[DEBUG mQ] λ_min(P'_x) = {np.linalg.eigvalsh(P_prime_x).min():.4g}")
+            # print(f"[DEBUG A]  ‖A‖₂ = {np.linalg.norm(A, 2):.4g}")
+            # print(f"[DEBUG A]  valeurs propres A = {np.linalg.eigvals(A)}")
+            # # Stabilité globale : norme de la matrice de transition augmentée
+            # # avec couplage via MRinv
+            # MRinv = M @ R_inv
+            # print(f"[DEBUG mQ] MRinv:\n{MRinv}")
+            # input("ATTENTE")
+
             self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
             self.Pz0 = generate_block_matrix(
                 self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
@@ -69,7 +107,10 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
         """
         try:
             with np.errstate(all="raise"):
-                return np.array([[x[0, 0] ** 2 + self.f * y[0, 0] + u[0, 0]]])
+                # return np.array([[x[0, 0] ** 2 + self.f * y[0, 0] + u[0, 0]]])
+                return np.array(
+                    [[x[0, 0] ** 2 / (1.0 + x[0, 0] ** 2) + self.f * y[0, 0] + u[0, 0]]]
+                )
         except FloatingPointError as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] _gy: floating point error at x={x}, y={y}, u={u}: {e}"
@@ -123,7 +164,7 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
                     [
                         [self.a, self.b, self.c * (1.0 - np.tanh(y1) ** 2)],
                         [0.0, self.d, self.e * np.cos(y1)],
-                        [2.0 * x1, 0.0, self.f],
+                        [2.0 * x1 / (1.0 + x1**2) ** 2, 0.0, self.f],
                     ]
                 )
                 Bn = np.eye(self.dim_xy)
