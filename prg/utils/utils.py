@@ -260,7 +260,11 @@ def _compute_quadratic_form(
             continue
 
         try:
-            Pk_inv = InvertibleMatrix(Pk).inverse()
+            try:
+                Pk_inv = InvertibleMatrix(Pk).inverse()
+            except RuntimeError:
+                # Pk quasi-singulière (particle collapse) — pseudo-inverse de Moore-Penrose
+                Pk_inv = np.linalg.pinv(Pk)
         except Exception as e:
             print(f"Pk={Pk}")
             logger.error(f"Step {k}: non invertible matrix - exiting.")

@@ -17,6 +17,11 @@ class ModelX2Y2_withRetroactions(BaseModelNonLinear):
 
     MODEL_NAME: str = "x2_y2_withRetroactions"
 
+    # Terme de rappel sur x1 pour éviter la dérive (intégrateur pur sinon).
+    # kappa=0.10 donne un rayon spectral de 0.9998 (limite), kappa=0.15
+    # donne 0.978 — marge confortable même quand tanh(y1) → 1.
+    KAPPA: float = 0.15
+
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=2, model_type="nonlinear")
 
@@ -24,7 +29,9 @@ class ModelX2Y2_withRetroactions(BaseModelNonLinear):
             Q = np.array([[0.08, 0.01], [0.01, 0.05]])
             R = np.array([[0.1, 0.0], [0.0, 0.05]])
             M = np.array([[0.01, 0.0], [0.0, 0.01]])
-            self.mQ = np.block([[Q, M], [M.T, R]]) / 2.0
+            # Note : le /2.0 original a été retiré — Q et R sont déjà
+            # les vraies variances ; diviser par 2 sous-estimait le bruit.
+            self.mQ = np.block([[Q, M], [M.T, R]])
             self.mz0 = np.zeros((self.dim_xy, 1))
             self.Pz0 = np.eye(self.dim_xy) / 20.0
         except (ValueError, np.exceptions.AxisError) as e:
@@ -45,7 +52,9 @@ class ModelX2Y2_withRetroactions(BaseModelNonLinear):
 
                 return np.array(
                     [
-                        [x1 + 0.1 * x2 * np.tanh(y1) + t1],
+                        # (1 - KAPPA)*x1 : terme de rappel qui évite la dérive
+                        # de x1 (intégrateur pur si KAPPA=0).
+                        [(1.0 - self.KAPPA) * x1 + 0.1 * x2 * np.tanh(y1) + t1],
                         [0.9 * x2 + 0.1 * np.sin(x1) + t2],
                     ]
                 )
@@ -121,7 +130,15 @@ class ModelX2Y2_withRetroactions(BaseModelNonLinear):
 
                 An = np.array(
                     [
-                        [1.0, 0.1 * np.tanh(y1), 0.1 * x2 * (1.0 - np.tanh(y1)), 0.0],
+                        # An[0,0] = 1 - KAPPA (terme de rappel sur x1)
+                        # An[0,2] = d/dy1 [0.1*x2*tanh(y1)] = 0.1*x2*sech²(y1)
+                        #         = 0.1*x2*(1 - tanh²(y1))  ← **2 indispensable
+                        [
+                            1.0 - self.KAPPA,
+                            0.1 * np.tanh(y1),
+                            0.1 * x2 * (1.0 - np.tanh(y1) ** 2),
+                            0.0,
+                        ],
                         [0.1 * np.cos(x1), 0.9, 0.0, 0.0],
                         [1.0, 0.0, 0.0, -0.3],
                         [0.0, 1.0, 0.3, 0.0],

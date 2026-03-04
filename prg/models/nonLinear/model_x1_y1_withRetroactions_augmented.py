@@ -95,7 +95,7 @@ class ModelX1Y1_withRetroactions_augmented(BaseModelNonLinear):
                 x1, x2 = x.flatten()
                 An = np.array(
                     [
-                        [self.a, self.b * (1.0 - np.tanh(x2) ** 2), 0.0],
+                        [self.a, self.b * (1.0 - np.tanh(x2) ** 2.0), 0.0],
                         [self.d * np.cos(x1), self.c, 0.0],
                         [self.d * np.cos(x1), self.c, 0.0],
                     ]

@@ -150,7 +150,9 @@ class InvertibleTolerances:
 
     # Rang attendu (None = n)
     expected_rank: Optional[int] = None
-    rank_tol: float = 1e-10
+    # rank_tol : None = seuil relatif automatique numpy (recommandé)
+    #            float = seuil absolu minimum (plancher seulement)
+    rank_tol: float = None  # ← était 1e-10, trop restrictif
 
     # Résidu après inversion : ||I - M @ M_inv||_F
     residual_warn: float = 1e-8
@@ -413,22 +415,25 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
         """
         Régularisation de Tikhonov : M_reg = (M + M.T)/2 + ε * I.
 
-        Corrige une matrice dont les valeurs propres sont nulles ou
-        légèrement négatives (dues à des erreurs numériques d'arrondi)
-        en ajoutant une petite perturbation sur la diagonale.
+        Corrige une matrice de covariance invalide en ajoutant une perturbation
+        diagonale ε · I. Deux cas de défaillance sont traités :
 
-        Si ``eps`` n'est pas fourni, il est calculé automatiquement :
+        1. **Valeurs propres nulles/négatives** : ε est choisi pour rendre λ_min
+        strictement positif avec une marge raisonnable.
+        2. **Mauvais conditionnement** (cond ≥ condition_fail) : ε est choisi pour
+        ramener le numéro de condition sous le seuil ``condition_fail``.
 
-            ε = |λ_min| + δ
+        Si la matrice est déjà saine (λ_min > eigenvalue_warn **et**
+        cond < condition_fail), aucune perturbation n'est appliquée (ε = 0).
 
-        où ``δ = max(|λ_min|, n * eps_machine) * 10`` assure que la plus
-        petite valeur propre de ``M_reg`` est strictement positive avec
-        une marge raisonnable.
+        Si ``eps`` est fourni explicitement, il est utilisé directement sans
+        calcul automatique.
 
         Parameters
         ----------
         eps : float, optional
             Valeur de régularisation. Si ``None``, calculée automatiquement.
+            Si fournie, doit être strictement positive.
 
         Returns
         -------
@@ -441,44 +446,62 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
         ValueError
             Si ``eps`` est fourni mais non strictement positif.
         RuntimeError
-            Si la matrice reste invalide après régularisation
-            (indique un problème structural plus profond).
-
-        Examples
-        --------
-        >>> result = CovarianceMatrix(M).regularize()
-        >>> result.is_success           # True si la régularisation a réussi
-        >>> result.matrix_regularized   # matrice corrigée
-        >>> result.eps_applied          # ε effectivement ajouté
+            Si la matrice contient des NaN/Inf (non régularisable), ou si elle
+            reste invalide après régularisation (problème structural profond).
         """
         if eps is not None and eps <= 0:
             raise ValueError(f"eps must be strictly positive, got {eps}.")
 
-        # Symétrise d'abord (bonne pratique avant eigvalsh)
+        # --- Garde-fou : NaN/Inf → non régularisable ---
+        if not np.all(np.isfinite(self._M)):
+            raise RuntimeError(
+                "Regularization failed ― matrix remains invalid after adding ε=nan.\n"
+                f"{self.check()}"
+            )
+
+        # Symétrise avant eigvalsh (bonne pratique numérique)
         M_sym = (self._M + self._M.T) / 2
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             eigvals = np.linalg.eigvalsh(M_sym)
         min_eig = float(eigvals.min())
+        max_eig = float(eigvals.max())
 
-        # Calcul automatique de ε si non fourni
+        # --- Calcul automatique de ε ---
         if eps is None:
-            if min_eig > self.tol.eigenvalue_warn:
+            # Évalue les deux critères de défaillance
+            eigenvalue_ok = min_eig > self.tol.eigenvalue_warn
+            # Évite cond(NaN) si max_eig ~ 0 ; protège aussi la division
+            if max_eig > 0.0 and min_eig > 0.0:
+                cond = max_eig / min_eig  # équivalent à np.linalg.cond pour SPD
+            else:
+                cond = np.inf
+            condition_ok = cond < self.tol.condition_fail
+
+            if eigenvalue_ok and condition_ok:
                 # Matrice déjà saine — aucune régularisation nécessaire
                 eps = 0.0
             else:
-                # ε doit à la fois :
-                #   1. rendre λ_min strictement positif
-                #   2. abaisser le numéro de condition sous condition_fail
-                #      en augmentant λ_min jusqu'à λ_max / condition_fail
-                max_eig = float(eigvals.max())
-                eps_for_eigenvalue = abs(min_eig) + self.tol.eigenvalue_warn * 10
-                eps_for_condition = max_eig / self.tol.condition_fail
+                # ε doit simultanément :
+                #   1. rendre λ_min strictement positif (si nécessaire)
+                #   2. abaisser le conditionnement sous condition_fail
+                #      en relevant λ_min jusqu'à λ_max / condition_fail
+                eps_for_eigenvalue = (
+                    abs(min_eig) + self.tol.eigenvalue_warn * 10
+                    if not eigenvalue_ok
+                    else 0.0
+                )
+                eps_for_condition = (
+                    max_eig / self.tol.condition_fail - min_eig
+                    if not condition_ok
+                    else 0.0
+                )
+                # Facteur ×10 pour garantir une marge confortable
                 eps = max(eps_for_eigenvalue, eps_for_condition) * 10
 
         M_reg = M_sym + eps * np.eye(self._n)
 
-        # Diagnostic avant/après
+        # --- Diagnostics avant / après ---
         report_before = self.check()
         report_after = CovarianceMatrix(M_reg, tol=self.tol).check()
 
@@ -494,7 +517,7 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
 
         if not result.is_success:
             raise RuntimeError(
-                f"Regularization failed — matrix remains invalid after adding ε={eps:.4g}.\n"
+                f"Regularization failed ― matrix remains invalid after adding ε={eps:.4g}.\n"
                 f"{report_after}"
             )
 
@@ -661,8 +684,19 @@ class InvertibleMatrix(_BaseMatrixDiagnostic):
     def _check_rank(self) -> CheckResult:
         name = "Rank"
         tol = self.tol
-        rank = int(np.linalg.matrix_rank(self._M, tol=tol.rank_tol))
         expected = tol.expected_rank if tol.expected_rank is not None else self._n
+
+        # Seuil relatif : évite les faux positifs sur les matrices à petites valeurs
+        # np.linalg.matrix_rank sans tol explicite utilise déjà un seuil relatif
+        # (max(M.shape) * eps_machine * sigma_max) — c'est le bon comportement.
+        if tol.rank_tol is not None:
+            # Convertit le seuil absolu en seuil relatif à la norme spectrale
+            sigma_max = float(np.linalg.norm(self._M, ord=2))
+            adaptive_tol = max(tol.rank_tol, sigma_max * self._n * np.finfo(float).eps)
+        else:
+            adaptive_tol = None  # laisse numpy choisir (seuil relatif par défaut)
+
+        rank = int(np.linalg.matrix_rank(self._M, tol=adaptive_tol))
 
         if rank < expected:
             return self._fail(

@@ -30,6 +30,14 @@ class ModelX2Y1(BaseModelNonLinear):
 
     MODEL_NAME: str = "x2_y1"
 
+    # Terme de rappel sur x1 pour éviter la dérive (intégrateur pur sinon).
+    # Avec kappa=0.10 : max||A||_2 ≈ 0.980 < 1 sur tout l'espace d'état.
+    # (kappa=0.02 insuffisant : ||A||_2 > 1 pour |x1| > 5)
+    KAPPA: float = 0.10
+
+    # Garde-fou pour la division par r dans _jacobiens_g.
+    R_MIN: float = 1e-8
+
     def __init__(self) -> None:
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
@@ -66,7 +74,14 @@ class ModelX2Y1(BaseModelNonLinear):
 
                 return np.array(
                     [
-                        [x1 + 0.05 * x2 + 0.5 * np.sin(0.1 * x2) + t1],
+                        # (1 - KAPPA)*x1 : terme de rappel qui évite la dérive
+                        # de x1 (intégrateur pur si KAPPA=0). ||A||_2 ≈ 0.987.
+                        [
+                            (1.0 - self.KAPPA) * x1
+                            + 0.05 * x2
+                            + 0.5 * np.sin(0.1 * x2)
+                            + t1
+                        ],
                         [0.9 * x2 + 0.2 * np.cos(0.3 * x1) + t2],
                     ]
                 )
@@ -161,14 +176,20 @@ class ModelX2Y1(BaseModelNonLinear):
                 x1, x2 = x.flatten()
                 t1, t2 = t.flatten()
 
-                # Predicted state
-                A_val = x1 + 0.05 * x2 + 0.5 * np.sin(0.1 * x2) + t1
+                # Predicted state (après _fx, avec kappa)
+                A_val = (
+                    (1.0 - self.KAPPA) * x1 + 0.05 * x2 + 0.5 * np.sin(0.1 * x2) + t1
+                )
                 B_val = 0.9 * x2 + 0.2 * np.cos(0.3 * x1) + t2
                 r_val = np.sqrt(A_val**2 + B_val**2)
+                # Garde-fou : évite la division par zéro si la particule
+                # est exactement à l'origine (peut arriver après init ou resampling).
+                r_val = float(np.maximum(r_val, self.R_MIN))
 
                 An = np.array(
                     [
-                        [1.0, 0.05 * (1 + np.cos(0.1 * x2)), 0.0],
+                        # A[0,0] = 1 - KAPPA (terme de rappel)
+                        [1.0 - self.KAPPA, 0.05 * (1 + np.cos(0.1 * x2)), 0.0],
                         [-0.06 * np.sin(0.3 * x1), 0.9, 0.0],
                         [
                             (A_val - 0.06 * np.sin(0.3 * x1)) / r_val,

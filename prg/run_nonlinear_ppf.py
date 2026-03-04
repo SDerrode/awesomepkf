@@ -82,6 +82,9 @@ def main() -> None:
         sys.exit(1)
     except FilterError as e:
         print(f"[ERREUR FILTRE] {e}", file=sys.stderr)
+        import traceback
+
+        traceback.print_exc()
         sys.exit(1)
     except PKFError as e:
         print(f"[ERREUR PKF] {e}", file=sys.stderr)

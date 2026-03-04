@@ -71,7 +71,8 @@ class BaseModelLinear:
 
     def jacobiens_g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
         """Cette méthode doit renvoyer An et Bn. Uniquement nécessaire pour que EPKF puisse traiter aussi des données linéaires"""
-
+        # print(self.A, self.B)
+        # input("ATTENTE")
         return self.A, self.B
 
     # ------------------------------------------------------------------

@@ -30,9 +30,11 @@ class ModelGordon(BaseModelNonLinear):
 
         try:
             self.mQ = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.03
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.20
             )
-            self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
+            self.mz0 = self._randMatrices.rng.uniform(-1, 1, size=self.dim_xy).reshape(
+                -1, 1
+            )  # standard_normal((self.dim_xy, 1))
             self.Pz0 = generate_block_matrix(
                 self._randMatrices.rng, self.dim_x, self.dim_y, 0.02
             )
