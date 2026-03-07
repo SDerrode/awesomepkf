@@ -139,22 +139,34 @@ class NonLinear_UPKF(PKF):
             Pa[: self.dim_x, : self.dim_x] = step.PXXkp1_update
 
             sigma_without_y = self.sigma_point_set_obj._sigma_point(za, Pa)
-            sigma_with_y = [
-                np.concatenate([s[: self.dim_x], step.ykp1, s[self.dim_x :]], axis=0)
-                for s in sigma_without_y
-            ]
-            sigma_propag = [
-                self.param.g(*np.split(spoint, [self.dim_xy]), self.dt)
-                for spoint in sigma_with_y
-            ]
+
+            # Vectorisation : stack (n_sigma, 2*dim_x + dim_y, 1)
+            sigma_stack = np.array(sigma_without_y)  # (n_sigma, 2*dim_x+dim_y, 1)
+            n_sigma = sigma_stack.shape[0]
+            ykp1_tiled = np.tile(step.ykp1, (n_sigma, 1, 1))  # (n_sigma, dim_y, 1)
+
+            # Insertion de ykp1 entre les dim_x premiers et le reste (bruit process)
+            sigma_with_y = np.concatenate(
+                [
+                    sigma_stack[:, : self.dim_x, :],  # (n_sigma, dim_x, 1)
+                    ykp1_tiled,  # (n_sigma, dim_y, 1)
+                    sigma_stack[:, self.dim_x :, :],  # (n_sigma, dim_x, 1)
+                ],
+                axis=1,
+            )  # (n_sigma, dim_xy + dim_x, 1)
+
+            # Appel vectorisé à g — un seul appel batch au lieu de n_sigma appels scalaires
+            z_batch, noise_batch = np.split(sigma_with_y, [self.dim_xy], axis=1)
+            sigma_propag = self.param.g(
+                z_batch, noise_batch, self.dt
+            )  # (n_sigma, dim_xy, 1)
 
             # Prediction
             Zkp1_predict = np.sum(
                 self.sigma_point_set_obj.Wm[:, None, None] * sigma_propag, axis=0
             )
 
-            Pkp1_predict.fill(0.0)
-            diffs = np.array(sigma_propag) - Zkp1_predict  # (n, dim, 1)
+            diffs = sigma_propag - Zkp1_predict  # (n_sigma, dim_xy, 1)
             Pkp1_predict = np.einsum(
                 "i,ijk,ilk->jl", self.sigma_point_set_obj.Wc, diffs, diffs
             )
@@ -174,7 +186,6 @@ class NonLinear_UPKF(PKF):
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict
                 )
             except (InvertibilityError, NumericalError):
-                # Erreurs numériques connues — on les laisse remonter telles quelles
                 raise
             except Exception as e:
                 raise FilterError(
