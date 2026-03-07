@@ -73,7 +73,7 @@ class NonLinear_EPKF(PKF):
 
             - ``k``          : int         — time step index
             - ``x_true``     : np.ndarray  — ground truth state, shape ``(dim_x, 1)``;
-                               may be ``None`` if no ground truth is available
+                            may be ``None`` if no ground truth is available
             - ``y_observed`` : np.ndarray  — observation vector, shape ``(dim_y, 1)``
 
             If ``None``, the internal generator is used.
@@ -128,6 +128,7 @@ class NonLinear_EPKF(PKF):
         # --- Subsequent steps ---------------------------------------------------------
         accel_xy_xy: np.ndarray = self.zeros_dim_xy_xy.copy()
         z_iterated: np.ndarray = np.zeros((self.dim_xy, 1))
+        expected_shape = (self.dim_xy, self.dim_xy)
 
         while N is None or step.k < N:
 
@@ -139,25 +140,25 @@ class NonLinear_EPKF(PKF):
             try:
                 Zkp1_predict = self.param.g(z_iterated, self.zeros_dim_xy_1, self.dt)
                 An, Bn = jg(z_iterated, self.zeros_dim_xy_1, self.dt)
-            except FloatingPointError as e:
+            except Exception as e:
                 raise FilterError(
-                    f"Step {new_k}: unexpected error during update step."
-                ) from e
-            except (Exception, FloatingPointError) as e:
-                raise FilterError(
-                    f"Step {step.k}: unexpected error during update step."
+                    f"Step {step.k}: unexpected error during prediction step."
                 ) from e
 
             # Validate Jacobian shapes — erreur de paramétrage du modèle
-            if An.shape != (self.dim_xy, self.dim_xy) or Bn.shape != (
-                self.dim_xy,
-                self.dim_xy,
-            ):
-                raise ParamError(
-                    f"Jacobian returned matrices of wrong shape: "
-                    f"An={An.shape}, Bn={Bn.shape}, "
-                    f"expected ({self.dim_xy}, {self.dim_xy})."
-                )
+            if An.ndim == 2:
+                if An.shape != expected_shape or Bn.shape != expected_shape:
+                    raise ParamError(
+                        f"Jacobian returned matrices of wrong shape: "
+                        f"An={An.shape}, Bn={Bn.shape}, expected {expected_shape}."
+                    )
+            else:
+                if An.shape[1:] != expected_shape or Bn.shape[1:] != expected_shape:
+                    raise ParamError(
+                        f"Jacobian returned matrices of wrong shape: "
+                        f"An={An.shape}, Bn={Bn.shape}, "
+                        f"expected (N, {self.dim_xy}, {self.dim_xy})."
+                    )
 
             accel_xy_xy[: self.dim_x, : self.dim_x] = step.PXXkp1_update
             Pkp1_predict = An @ accel_xy_xy @ An.T + Bn @ self.param.mQ @ Bn.T
@@ -177,7 +178,6 @@ class NonLinear_EPKF(PKF):
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict
                 )
             except (InvertibilityError, NumericalError):
-                # Erreurs numériques connues — on les laisse remonter telles quelles
                 raise
             except Exception as e:
                 raise FilterError(
