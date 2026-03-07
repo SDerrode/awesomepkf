@@ -4,11 +4,12 @@
 from __future__ import annotations
 import os
 import matplotlib.pyplot as plt
-from typing import Any
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve, LinAlgError
 
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
+from prg.classes.SeedGenerator import SeedGenerator
+from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.exceptions import NumericalError
 from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
 
@@ -19,23 +20,12 @@ class BaseModelLinear:
     """
     Base class for linear models.
 
-    Cette classe fournit une structure commune pour des modèles linéaires à deux paramétrisations possibles :
-      1. 'linear_AmQ' : dynamique x_{n+1} = A x_n + bruit, avec covariance Q
+    Deux paramétrisations possibles :
+      1. 'linear_AmQ' : dynamique z_{n+1} = A z_n + B noise, avec covariance Q
       2. 'linear_Sigma' : paramétrisation via variances sxx, syy et coefficients a, b, c, d, e
-
-    Attributes
-    ----------
-    dim_x : int
-        Dimension de l'état x.
-    dim_y : int
-        Dimension de l'observation y.
-    dim_xy : int
-        Somme des dimensions dim_x + dim_y.
-    model_type : str
-        Type de modèle : 'linear_AmQ' ou 'linear_Sigma'.
     """
 
-    def __init__(self, dim_x: int, dim_y: int, model_type: str, augmented=False):
+    def __init__(self, dim_x, dim_y, model_type, augmented=False):
         if not isinstance(dim_x, int) or dim_x <= 0:
             raise ValueError("dim_x doit être un entier positif")
         if not isinstance(dim_y, int) or dim_y <= 0:
@@ -49,7 +39,7 @@ class BaseModelLinear:
         self.model_type = model_type
         self.augmented = augmented
 
-        # UPKF specific parameters - in case where we want to filter linear data with UPKF
+        # UPKF specific parameters
         self.alpha = 0.25
         self.beta = 2.0
         self.kappa = 0.0
@@ -71,7 +61,6 @@ class BaseModelLinear:
             if z.ndim == 2:
                 return self.A @ z + self.B @ noise_z
             else:
-                # A : (dim_xy, dim_xy), z : (N, dim_xy, 1) → einsum pour broadcaster
                 return np.einsum("ij,njk->nik", self.A, z) + np.einsum(
                     "ij,njk->nik", self.B, noise_z
                 )
@@ -102,41 +91,29 @@ class BaseModelLinear:
         return f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y}, type={self.model_type})"
 
     # ------------------------------------------------------------------
-    def plot_g(self, n_points: int = 200) -> None:
-
+    def plot_g(self, n_points=200):
         if self.dim_x != 1 or self.dim_y != 1:
             return
-
-        import os
-        import numpy as np
-        import matplotlib.pyplot as plt
 
         z1 = np.linspace(-1, 1, n_points)
         z2 = np.linspace(-1, 1, n_points)
         Z1, Z2 = np.meshgrid(z1, z2)
-
         Z_stack = np.stack([Z1.ravel(), Z2.ravel()], axis=1)
-
         noise = np.zeros((2, 1))
-        dt = 1.0
-
         G = np.zeros_like(Z_stack)
 
         with np.errstate(all="raise"):
             for k in range(Z_stack.shape[0]):
                 z = Z_stack[k].reshape(2, 1)
-                g_val = self.g(z, noise, dt)
-
+                g_val = self.g(z, noise, 1.0)
                 if not np.isfinite(g_val).all():
                     raise FloatingPointError("Non-finite value encountered in g")
-
                 G[k, :] = g_val.ravel()
 
         G1 = G[:, 0].reshape(n_points, n_points)
         G2 = G[:, 1].reshape(n_points, n_points)
 
         os.makedirs("data/plot", exist_ok=True)
-
         fig = plt.figure(figsize=(9, 4), facecolor=FACECOLOR)
 
         ax1 = fig.add_subplot(1, 2, 1, projection="3d")
@@ -153,81 +130,60 @@ class BaseModelLinear:
         ax2.set_ylabel(r"$y$")
         ax2.view_init(elev=30, azim=45)
 
-        # Normalisation échelle pour éviter distorsion visuelle
         for ax in (ax1, ax2):
             ax.set_box_aspect((1, 1, 0.8))
 
         model_name = getattr(self, "MODEL_NAME", self.__class__.__name__)
-        filename = f"data/plot/function_g_{model_name}.png"
-        plt.savefig(filename, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
+        plt.savefig(
+            f"data/plot/function_g_{model_name}.png",
+            dpi=DPI,
+            bbox_inches="tight",
+            facecolor=FACECOLOR,
+        )
         plt.close(fig)
 
-    def plot_g_dynamic(self, n_points: int = 150, quiver_stride: int = 10) -> None:
-        """
-        Plot g(z, noise=0, dt=1) over [-1,1]^2.
-        Only available for dim_x=1 and dim_y=1.
-        Saves figure into data/plot/.
-        """
-
+    def plot_g_dynamic(self, n_points=150, quiver_stride=10):
         if self.dim_x != 1 or self.dim_y != 1:
             return
-
-        import os
-        import numpy as np
-        import matplotlib.pyplot as plt
 
         z1 = np.linspace(-1, 1, n_points)
         z2 = np.linspace(-1, 1, n_points)
         Z1, Z2 = np.meshgrid(z1, z2)
-
         Z_stack = np.stack([Z1.ravel(), Z2.ravel()], axis=1)
-
         noise = np.zeros((2, 1))
-        dt = 1.0
-
         G = np.zeros_like(Z_stack)
 
         with np.errstate(all="raise"):
             for k in range(Z_stack.shape[0]):
                 z = Z_stack[k].reshape(2, 1)
-                g_val = self.g(z, noise, dt)
-
+                g_val = self.g(z, noise, 1.0)
                 if not np.isfinite(g_val).all():
                     raise FloatingPointError("Non-finite value in g")
-
                 G[k, :] = g_val.ravel()
 
         G1 = G[:, 0].reshape(n_points, n_points)
         G2 = G[:, 1].reshape(n_points, n_points)
-
-        # Norme
         NormG = np.sqrt(G1**2 + G2**2)
-
-        # Champ dynamique : g(z) - z
         Dz1 = G1 - Z1
         Dz2 = G2 - Z2
 
         os.makedirs("data/plot", exist_ok=True)
-
         fig = plt.figure(figsize=(10, 7), facecolor=FACECOLOR)
 
-        # --- Surface g_x ---
         ax1 = fig.add_subplot(2, 2, 1, projection="3d")
-        surf1 = ax1.plot_surface(Z1, Z2, G1)
+        ax1.plot_surface(Z1, Z2, G1)
         ax1.set_title(r"$g_x(x,y)$", size=BIG_SIZE)
         ax1.set_xlabel(r"$x$")
         ax1.set_ylabel(r"$y$")
         ax1.view_init(30, 45)
 
-        # --- Surface g_y ---
         ax2 = fig.add_subplot(2, 2, 2, projection="3d")
-        surf2 = ax2.plot_surface(Z1, Z2, G2)
+        ax2.plot_surface(Z1, Z2, G2)
         ax2.set_title(r"$g_y(x,y)$", size=BIG_SIZE)
         ax2.set_xlabel(r"$x$")
         ax2.set_ylabel(r"$y$")
         ax2.view_init(30, 45)
 
-        # --- Norme ---
         ax3 = fig.add_subplot(2, 2, 3)
         im = ax3.contourf(Z1, Z2, NormG)
         ax3.set_title(r"$\|g(x,y)\|$", size=BIG_SIZE)
@@ -235,7 +191,6 @@ class BaseModelLinear:
         ax3.set_ylabel(r"$y$")
         plt.colorbar(im, ax=ax3)
 
-        # --- Champ dynamique ---
         ax4 = fig.add_subplot(2, 2, 4)
         ax4.quiver(
             Z1[::quiver_stride, ::quiver_stride],
@@ -249,8 +204,12 @@ class BaseModelLinear:
         ax4.set_aspect("equal")
 
         model_name = getattr(self, "MODEL_NAME", self.__class__.__name__)
-        filename = f"data/plot/function_g_dynamic_{model_name}.png"
-        plt.savefig(filename, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
+        plt.savefig(
+            f"data/plot/function_g_dynamic_{model_name}.png",
+            dpi=DPI,
+            bbox_inches="tight",
+            facecolor=FACECOLOR,
+        )
         plt.close(fig)
 
 
@@ -260,25 +219,15 @@ class BaseModelLinear:
 class LinearAmQ(BaseModelLinear):
     """
     Modèle linéaire avec matrice de transition A et covariance Q.
+    B est l'identité par défaut si non fourni.
     """
 
-    def __init__(
-        self,
-        dim_x: int,
-        dim_y: int,
-        A: np.ndarray,
-        B: np.ndarray,
-        mQ: np.ndarray,
-        mz0: np.ndarray,
-        Pz0: np.ndarray,
-        augmented=False,
-    ):
-
+    def __init__(self, dim_x, dim_y, A, mQ, mz0, Pz0, B=None, augmented=False):
         super().__init__(dim_x, dim_y, model_type="linear_AmQ", augmented=augmented)
 
         try:
             self.A = A
-            self.B = B
+            self.B = B if B is not None else np.eye(A.shape[0])
             self.mQ = mQ
             self.mz0 = mz0
             self.Pz0 = Pz0
@@ -291,24 +240,36 @@ class LinearAmQ(BaseModelLinear):
             for arr in [self.mQ, self.Pz0]:
                 report = CovarianceMatrix(arr).check()
                 if not report.is_valid:
-                    raise ValueError(f"Matrix is not positive semi-definite.")
+                    raise ValueError("Matrix is not positive semi-definite.")
 
-    def get_params(self) -> dict[str, Any]:
+    @staticmethod
+    def _init_random_params(dim_x, dim_y, val_max, seed=None):
+        """Génère mQ, mz0, Pz0 de façon standard via SeedGenerator."""
+        rng = SeedGenerator(seed).rng
+        try:
+            mQ = generate_block_matrix(rng, dim_x, dim_y, val_max)
+            mz0 = rng.standard_normal((dim_x + dim_y, 1))
+            Pz0 = generate_block_matrix(rng, dim_x, dim_y, val_max)
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(f"_init_random_params failed: {e}") from e
+        return mQ, mz0, Pz0
+
+    def get_params(self):
         return {
             "dim_x": self.dim_x,
             "dim_y": self.dim_y,
             "augmented": self.augmented,
             "g": self.g,
-            "jacobiens_g": self.jacobiens_g,  # pour EPKF
+            "jacobiens_g": self.jacobiens_g,
             "A": self.A,
             "B": self.B,
             "mQ": self.mQ,
             "mz0": self.mz0,
             "Pz0": self.Pz0,
-            "alpha": self.alpha,  # pour UPKF
-            "beta": self.beta,  # pour UPKF
-            "kappa": self.kappa,  # pour UPKF
-            "lambda_": self.lambda_,  # pour UPKF
+            "alpha": self.alpha,
+            "beta": self.beta,
+            "kappa": self.kappa,
+            "lambda_": self.lambda_,
         }
 
 
@@ -320,20 +281,7 @@ class LinearSigma(BaseModelLinear):
     Modèle linéaire avec variances sxx, syy et coefficients a, b, c, d, e.
     """
 
-    def __init__(
-        self,
-        dim_x: int,
-        dim_y: int,
-        sxx: float,
-        syy: float,
-        a: float,
-        b: float,
-        c: float,
-        d: float,
-        e: float,
-        augmented=False,
-    ):
-
+    def __init__(self, dim_x, dim_y, sxx, syy, a, b, c, d, e, augmented=False):
         super().__init__(dim_x, dim_y, model_type="linear_Sigma", augmented=augmented)
 
         self.sxx = sxx
@@ -347,9 +295,7 @@ class LinearSigma(BaseModelLinear):
         self._initSigma()
 
     def _initSigma(self):
-
         try:
-            # Construction des matrices Q1 et Q2
             Q1 = np.block([[self.sxx, self.b.T], [self.b, self.syy]])
             Q2 = np.block([[self.a, self.e], [self.d, self.c]])
         except (ValueError, np.exceptions.AxisError) as e:
@@ -358,7 +304,6 @@ class LinearSigma(BaseModelLinear):
             ) from e
 
         try:
-            # Calcul robuste de la matrice A via Cholesky
             c_factor, lower = cho_factor(Q1)
             self.A = Q2 @ cho_solve((c_factor, lower), np.eye(self.dim_xy))
         except LinAlgError as e:
@@ -376,22 +321,21 @@ class LinearSigma(BaseModelLinear):
             stab.summary()
             exit(1)
 
-        # B est l'identité
         self.B = np.eye(self.A.shape[0])
 
         if __debug__:
             for arr in [self.sxx, self.syy, Q1]:
                 report = CovarianceMatrix(arr).check()
                 if not report.is_valid:
-                    raise ValueError(f"Matrix is not positive semi-definite.")
+                    raise ValueError("Matrix is not positive semi-definite.")
 
-    def get_params(self) -> dict[str, Any]:
+    def get_params(self):
         return {
             "dim_x": self.dim_x,
             "dim_y": self.dim_y,
             "augmented": self.augmented,
             "g": self.g,
-            "jacobiens_g": self.jacobiens_g,  # pour EPKF
+            "jacobiens_g": self.jacobiens_g,
             "sxx": self.sxx,
             "syy": self.syy,
             "a": self.a,
@@ -399,8 +343,8 @@ class LinearSigma(BaseModelLinear):
             "c": self.c,
             "d": self.d,
             "e": self.e,
-            "alpha": self.alpha,  # pour UPKF
-            "beta": self.beta,  # pour UPKF
-            "kappa": self.kappa,  # pour UPKF
-            "lambda_": self.lambda_,  # pour UPKF
+            "alpha": self.alpha,
+            "beta": self.beta,
+            "kappa": self.kappa,
+            "lambda_": self.lambda_,
         }
