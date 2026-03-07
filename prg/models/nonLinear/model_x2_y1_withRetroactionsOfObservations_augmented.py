@@ -60,25 +60,33 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
 
     # ------------------------------------------------------------------
     def _fx(self, x, t, dt):
-        """
-        Nonlinear state function with retro-action on observation.
-        """
+        if __debug__:
+            if x.ndim == 2:
+                assert all(a.shape == (self.dim_x, 1) for a in (x, t))
+            else:
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_x, 1) for a in (x, t)
+                )
+                assert x.shape[0] == t.shape[0]
+
         try:
-            ax = self.mod._gx(
-                x[: self.dim_x - self.dim_y],
-                x[self.dim_x - self.dim_y :],
-                t[: self.dim_x - self.dim_y],
-                t[self.dim_x - self.dim_y :],
-                dt,
-            )
-            ay = self.mod._gy(
-                x[: self.dim_x - self.dim_y],
-                x[self.dim_x - self.dim_y :],
-                t[: self.dim_x - self.dim_y],
-                t[self.dim_x - self.dim_y :],
-                dt,
-            )
-            return np.block([[ax], [ay]])
+            split = self.dim_x - self.dim_y
+
+            if x.ndim == 2:
+                xA, xB = x[:split], x[split:]
+                tA, tB = t[:split], t[split:]
+            else:
+                xA, xB = x[:, :split], x[:, split:]
+                tA, tB = t[:, :split], t[:, split:]
+
+            ax = self.mod._gx(xA, xB, tA, tB, dt)
+            ay = self.mod._gy(xA, xB, tA, tB, dt)
+
+            if x.ndim == 2:
+                return np.block([[ax], [ay]])
+            else:
+                return np.concatenate((ax, ay), axis=1)
+
         except NumericalError:
             raise
         except (ValueError, IndexError) as e:
@@ -88,70 +96,116 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelNonLinear):
 
     # ------------------------------------------------------------------
     def _hx(self, x, u, dt):
-        """
-        Nonlinear observation function with retro-action on previous observation.
-        Le bruit $u$ est nul dans cette formulation.
-        """
+        if __debug__:
+            if x.ndim == 2:
+                assert x.shape == (self.dim_x, 1)
+            else:
+                assert x.ndim == 3 and x.shape[1:] == (self.dim_x, 1)
+
         try:
-            return x[-1].reshape(-1, 1)
+            if x.ndim == 2:
+                return x[-1].reshape(-1, 1)
+            else:
+                return x[:, -1:, :]  # (N, 1, 1)
         except (IndexError, ValueError) as e:
             raise NumericalError(f"[{self.MODEL_NAME}] _hx: error at x={x}: {e}") from e
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
-        """
-        Combined state and observation using Wojciech's formulation.
-        """
         if __debug__:
-            assert x.shape == (3, 1), f"x must be (3,1), got {x.shape}"
-            assert y.shape == (1, 1), f"y must be (1,1), got {y.shape}"
-            assert t.shape == (3, 1), f"t must be (3,1), got {t.shape}"
-            assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
-            assert isinstance(dt, (float, int)), "dt must be a float"
+            assert isinstance(dt, (float, int))
+            if x.ndim == 2:
+                assert all(a.shape == (self.dim_x, 1) for a in (x, t))
+                assert all(a.shape == (self.dim_y, 1) for a in (y, u))
+            else:
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_x, 1) for a in (x, t)
+                )
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_y, 1) for a in (y, u)
+                )
+                assert x.shape[0] == y.shape[0] == t.shape[0] == u.shape[0]
 
         try:
             fx_val = self._fx(x, t, dt)
             hx_val = self._hx(fx_val, u, dt)
-            return np.vstack((fx_val, hx_val))
+            if x.ndim == 2:
+                return np.vstack((fx_val, hx_val))
+            else:
+                return np.concatenate((fx_val, hx_val), axis=1)
         except NumericalError:
             raise
         except ValueError as e:
             raise NumericalError(
-                f"[{self.MODEL_NAME}] _g: shape mismatch during vstack: {e}"
+                f"[{self.MODEL_NAME}] _g: shape mismatch during stack: {e}"
             ) from e
 
     # ------------------------------------------------------------------
     def _jacobiens_g(self, x, y, t, u, dt):
-        """
-        Jacobians of combined state and observation function.
-        """
         if __debug__:
-            assert x.shape == (3, 1), f"x must be (3,1), got {x.shape}"
-            assert y.shape == (1, 1), f"y must be (1,1), got {y.shape}"
-            assert t.shape == (3, 1), f"t must be (3,1), got {t.shape}"
-            assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
-            assert isinstance(dt, (float, int)), "dt must be a float"
+            assert isinstance(dt, (float, int))
+            if x.ndim == 2:
+                assert all(a.shape == (self.dim_x, 1) for a in (x, t))
+                assert all(a.shape == (self.dim_y, 1) for a in (y, u))
+            else:
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_x, 1) for a in (x, t)
+                )
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_y, 1) for a in (y, u)
+                )
+                assert x.shape[0] == y.shape[0] == t.shape[0] == u.shape[0]
 
         try:
             with np.errstate(all="raise"):
-                x1, x2, x3 = x.flatten()
+                if x.ndim == 2:
+                    x1, x2, x3 = x[0, 0], x[1, 0], x[2, 0]
+                    d1 = 2.0 * x1 / (1.0 + x1**2) ** 2  # facteur commun lignes 2 et 3
 
-                An = np.array(
-                    [
-                        [self.a, self.b, self.c * (1.0 - np.tanh(x3) ** 2), 0.0],
-                        [0, self.d, self.e * np.cos(x3), 0.0],
-                        [2.0 * x1 / (1.0 + x1**2) ** 2, 0.0, self.f, 0.0],
-                        [2.0 * x1 / (1.0 + x1**2) ** 2, 0.0, self.f, 0.0],
-                    ]
-                )
-                Bn = np.array(
-                    [
-                        [1.0, 0.0, 0.0, 0.0],
-                        [0.0, 1.0, 0.0, 0.0],
-                        [0.0, 0.0, 1.0, 0.0],
-                        [0.0, 0.0, 1.0, 0.0],
-                    ]
-                )
+                    An = np.array(
+                        [
+                            [self.a, self.b, self.c * (1.0 - np.tanh(x3) ** 2), 0.0],
+                            [0.0, self.d, self.e * np.cos(x3), 0.0],
+                            [d1, 0.0, self.f, 0.0],
+                            [d1, 0.0, self.f, 0.0],
+                        ]
+                    )
+                    Bn = np.array(
+                        [
+                            [1.0, 0.0, 0.0, 0.0],
+                            [0.0, 1.0, 0.0, 0.0],
+                            [0.0, 0.0, 1.0, 0.0],
+                            [0.0, 0.0, 1.0, 0.0],
+                        ]
+                    )
+
+                else:
+                    N = x.shape[0]
+                    x1, x2, x3 = x[:, 0, 0], x[:, 1, 0], x[:, 2, 0]
+                    d1 = 2.0 * x1 / (1.0 + x1**2) ** 2  # (N,)
+
+                    An = np.zeros((N, 4, 4))
+                    An[:, 0, 0] = self.a
+                    An[:, 0, 1] = self.b
+                    An[:, 0, 2] = self.c * (1.0 - np.tanh(x3) ** 2)
+                    An[:, 1, 1] = self.d
+                    An[:, 1, 2] = self.e * np.cos(x3)
+                    An[:, 2, 0] = d1
+                    An[:, 2, 2] = self.f
+                    An[:, 3, 0] = d1
+                    An[:, 3, 2] = self.f
+
+                    Bn = np.tile(
+                        np.array(
+                            [
+                                [1.0, 0.0, 0.0, 0.0],
+                                [0.0, 1.0, 0.0, 0.0],
+                                [0.0, 0.0, 1.0, 0.0],
+                                [0.0, 0.0, 1.0, 0.0],
+                            ]
+                        ),
+                        (N, 1, 1),
+                    )
 
             return An, Bn
 

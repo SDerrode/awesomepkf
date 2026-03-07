@@ -43,18 +43,14 @@ class ModelExtSaturant(BaseModelNonLinear):
             ) from e
 
     # ------------------------------------------------------------------
-    def _fx(self, x: np.ndarray, t: np.ndarray, dt: float) -> np.ndarray:
-        """
-        State transition function with additive noise and saturation.
+    def _fx(self, x, t, dt):
+        if __debug__:
+            if x.ndim == 2:
+                assert all(a.shape == (1, 1) for a in (x, t))
+            else:
+                assert all(a.ndim == 3 and a.shape[1:] == (1, 1) for a in (x, t))
+                assert x.shape[0] == t.shape[0]
 
-        Args:
-            x : np.ndarray, shape (1,1) - current state
-            t : np.ndarray, shape (1,1) - process noise
-            dt: float - timestep
-
-        Returns:
-            np.ndarray, shape (1,1) - next state
-        """
         try:
             with np.errstate(all="raise"):
                 return 0.5 * x + 2.0 * (1.0 - np.exp(-0.1 * x)) + t
@@ -64,18 +60,14 @@ class ModelExtSaturant(BaseModelNonLinear):
             ) from e
 
     # ------------------------------------------------------------------
-    def _hx(self, x: np.ndarray, u: np.ndarray, dt: float) -> np.ndarray:
-        """
-        Measurement function with logarithmic observation and additive noise.
+    def _hx(self, x, u, dt):
+        if __debug__:
+            if x.ndim == 2:
+                assert all(a.shape == (1, 1) for a in (x, u))
+            else:
+                assert all(a.ndim == 3 and a.shape[1:] == (1, 1) for a in (x, u))
+                assert x.shape[0] == u.shape[0]
 
-        Args:
-            x : np.ndarray, shape (1,1) - predicted state
-            u : np.ndarray, shape (1,1) - observation noise
-            dt: float - timestep
-
-        Returns:
-            np.ndarray, shape (1,1) - measurement
-        """
         try:
             with np.errstate(all="raise"):
                 return np.log(1.0 + np.maximum(np.abs(x), EPS_REL)) + u
@@ -85,75 +77,61 @@ class ModelExtSaturant(BaseModelNonLinear):
             ) from e
 
     # ------------------------------------------------------------------
-    def _g(
-        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
-    ) -> np.ndarray:
-        """
-        Combine state and observation using Wojciech's formulation.
-
-        Args:
-            x : np.ndarray, shape (1,1) - current state
-            y : np.ndarray, shape (1,1) - current observation
-            t : np.ndarray, shape (1,1) - process noise
-            u : np.ndarray, shape (1,1) - observation noise
-            dt: float - timestep
-
-        Returns:
-            np.ndarray, shape (2,1) - combined state + observation
-        """
+    def _g(self, x, y, t, u, dt):
         if __debug__:
-            assert x.shape == (1, 1)
-            assert y.shape == (1, 1)
-            assert t.shape == (1, 1)
-            assert u.shape == (1, 1)
+            if x.ndim == 2:
+                assert all(a.shape == (1, 1) for a in (x, y, t, u))
+            else:
+                assert all(a.ndim == 3 and a.shape[1:] == (1, 1) for a in (x, y, t, u))
+                assert x.shape[0] == y.shape[0] == t.shape[0] == u.shape[0]
 
         try:
             fx_val = self._fx(x, t, dt)
             hx_val = self._hx(fx_val, u, dt)
-            return np.vstack((fx_val, hx_val))
+            if x.ndim == 2:
+                return np.vstack((fx_val, hx_val))
+            else:
+                return np.concatenate((fx_val, hx_val), axis=1)
         except NumericalError:
             raise
         except ValueError as e:
             raise NumericalError(
-                f"[{self.MODEL_NAME}] _g: shape mismatch during vstack: {e}"
+                f"[{self.MODEL_NAME}] _g: shape mismatch during stack: {e}"
             ) from e
 
     # ------------------------------------------------------------------
-    def _jacobiens_g(
-        self, x: np.ndarray, y: np.ndarray, t: np.ndarray, u: np.ndarray, dt: float
-    ):
-        """
-        Compute Jacobians of g w.r.t state and noise.
-
-        Returns:
-            Tuple[np.ndarray, np.ndarray] : (dg/dz, dg/dnoise)
-        """
+    def _jacobiens_g(self, x, y, t, u, dt):
         if __debug__:
-            assert x.shape == (1, 1)
-            assert y.shape == (1, 1)
-            assert t.shape == (1, 1)
-            assert u.shape == (1, 1)
+            if x.ndim == 2:
+                assert all(a.shape == (1, 1) for a in (x, t))
+            else:
+                assert all(a.ndim == 3 and a.shape[1:] == (1, 1) for a in (x, t))
+                assert x.shape[0] == t.shape[0]
 
         try:
             with np.errstate(all="raise"):
-                x1 = x.flatten()[0]
-                t1 = t.flatten()[0]
+                if x.ndim == 2:
+                    x0 = x[0, 0]
+                    t0 = t[0, 0]
+                else:
+                    x0 = x[:, 0, 0]  # (N,)
+                    t0 = t[:, 0, 0]  # (N,)
 
-                # État intermédiaire
-                A = 0.5 * x1 + 2.0 * (1.0 - np.exp(-0.1 * x1)) + t1
+                A = 0.5 * x0 + 2.0 * (1.0 - np.exp(-0.1 * x0)) + t0
+                dA = 0.5 + 0.2 * np.exp(-0.1 * x0)
+                sA = np.sign(A) / (1.0 + np.abs(A))
 
-                An = np.array(
-                    [
-                        [0.5 + 0.2 * np.exp(-0.1 * x1), 0.0],
-                        [
-                            np.sign(A)
-                            * (0.5 + 0.2 * np.exp(-0.1 * x1))
-                            / (1.0 + np.abs(A)),
-                            0.0,
-                        ],
-                    ]
-                )
-                Bn = np.array([[1.0, 0.0], [np.sign(A) / (1.0 + np.abs(A)), 1.0]])
+                if x.ndim == 2:
+                    An = np.array([[dA, 0.0], [sA * dA, 0.0]])
+                    Bn = np.array([[1.0, 0.0], [sA, 1.0]])
+                else:
+                    N = x.shape[0]
+                    An = np.zeros((N, 2, 2))
+                    An[:, 0, 0] = dA
+                    An[:, 1, 0] = sA * dA
+
+                    Bn = np.tile(np.array([[1.0, 0.0], [0.0, 1.0]]), (N, 1, 1))
+                    Bn[:, 1, 0] = sA
 
             return An, Bn
 

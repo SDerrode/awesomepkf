@@ -380,18 +380,33 @@ class NonLinear_PPF(PKF):
                 return
 
             # =========================
-            # PROPAGATION via g
+            # PROPAGATION via g (données scalaires)
             # =========================
-            muxy: np.ndarray = np.array(
-                [
-                    self.param.g(
-                        np.vstack([p, step.ykp1]),
-                        self.zeros_dim_xy_1,
-                        self.dt,
-                    )
-                    for p in particles_previous
-                ]
-            )
+            # muxy: np.ndarray = np.array(
+            #     [
+            #         self.param.g(
+            #             np.vstack([p, step.ykp1]),
+            #             self.zeros_dim_xy_1,
+            #             self.dt,
+            #         )
+            #         for p in particles_previous
+            #     ]
+            # )
+
+            # =========================
+            # PROPAGATION via g (vectorisée)
+            # =========================
+            # particles_previous : (nbParticles, dim_x, 1)
+            # step.ykp1 : (dim_y, 1)  →  à répliquer pour former z : (nbParticles, dim_xy, 1)
+            ykp1_tiled = np.tile(step.ykp1, (self.nbParticles, 1, 1))  # (N, dim_y, 1)
+            z_all = np.concatenate(
+                [particles_previous, ykp1_tiled], axis=1
+            )  # (N, dim_xy, 1)
+            zeros_tiled = np.tile(
+                self.zeros_dim_xy_1, (self.nbParticles, 1, 1)
+            )  # (N, dim_xy, 1)
+
+            muxy = self.param.g(z_all, zeros_tiled, self.dt)  # (N, dim_xy, 1)
 
             # DEBUG — vérification muxy
             if np.any(~np.isfinite(muxy)):
