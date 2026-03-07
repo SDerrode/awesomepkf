@@ -76,21 +76,38 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
 
     # ------------------------------------------------------------------
     def _gx(self, x, y, t, u, dt):
-        """
-        Nonlinear state function with retro-action on observation.
-        """
+        if __debug__:
+            if x.ndim == 2:
+                assert all(a.shape == (self.dim_x, 1) for a in (x, t))
+                assert y.shape == (self.dim_y, 1)
+            else:
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_x, 1) for a in (x, t)
+                )
+                assert y.ndim == 3 and y.shape[1:] == (self.dim_y, 1)
+                assert x.shape[0] == y.shape[0] == t.shape[0]
+
         try:
             with np.errstate(all="raise"):
-                x1, x2 = x.flatten()
-                y1 = y.flatten()[0]
-                t1, t2 = t.flatten()
+                if x.ndim == 2:
+                    x1, x2 = x[0, 0], x[1, 0]
+                    y1 = y[0, 0]
+                    t1, t2 = t[0, 0], t[1, 0]
+                    return np.array(
+                        [
+                            [self.a * x1 + self.b * x2 + self.c * np.tanh(y1) + t1],
+                            [self.d * x2 + self.e * np.sin(y1) + t2],
+                        ]
+                    )
+                else:
+                    x1, x2 = x[:, 0, 0], x[:, 1, 0]
+                    y1 = y[:, 0, 0]
+                    t1, t2 = t[:, 0, 0], t[:, 1, 0]
+                    out = np.empty_like(x)
+                    out[:, 0, 0] = self.a * x1 + self.b * x2 + self.c * np.tanh(y1) + t1
+                    out[:, 1, 0] = self.d * x2 + self.e * np.sin(y1) + t2
+                    return out
 
-                return np.array(
-                    [
-                        [self.a * x1 + self.b * x2 + self.c * np.tanh(y1) + t1],
-                        [self.d * x2 + self.e * np.sin(y1) + t2],
-                    ]
-                )
         except FloatingPointError as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] _gx: floating point error at x={x}, y={y}, t={t}: {e}"
@@ -102,15 +119,32 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
 
     # ------------------------------------------------------------------
     def _gy(self, x, y, t, u, dt):
-        """
-        Nonlinear observation function with retro-action on previous observation.
-        """
+        if __debug__:
+            if x.ndim == 2:
+                assert x.shape == (self.dim_x, 1)
+                assert all(a.shape == (self.dim_y, 1) for a in (y, u))
+            else:
+                assert x.ndim == 3 and x.shape[1:] == (self.dim_x, 1)
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_y, 1) for a in (y, u)
+                )
+                assert x.shape[0] == y.shape[0] == u.shape[0]
+
         try:
             with np.errstate(all="raise"):
-                # return np.array([[x[0, 0] ** 2 + self.f * y[0, 0] + u[0, 0]]])
-                return np.array(
-                    [[x[0, 0] ** 2 / (1.0 + x[0, 0] ** 2) + self.f * y[0, 0] + u[0, 0]]]
-                )
+                if x.ndim == 2:
+                    x1 = x[0, 0]
+                    return np.array(
+                        [[x1**2 / (1.0 + x1**2) + self.f * y[0, 0] + u[0, 0]]]
+                    )
+                else:
+                    x1 = x[:, 0, 0]
+                    out = np.empty((x.shape[0], self.dim_y, 1))
+                    out[:, 0, 0] = (
+                        x1**2 / (1.0 + x1**2) + self.f * y[:, 0, 0] + u[:, 0, 0]
+                    )
+                    return out
+
         except FloatingPointError as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] _gy: floating point error at x={x}, y={y}, u={u}: {e}"
@@ -122,52 +156,80 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelNonLinear):
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
-        """
-        Combined state and observation using Wojciech's formulation.
-        """
         if __debug__:
-            assert x.shape == (2, 1), f"x must be (2,1), got {x.shape}"
-            assert y.shape == (1, 1), f"y must be (1,1), got {y.shape}"
-            assert t.shape == (2, 1), f"t must be (2,1), got {t.shape}"
-            assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
-            assert isinstance(dt, (float, int)), "dt must be a float"
+            assert isinstance(dt, (float, int))
+            if x.ndim == 2:
+                assert all(a.shape == (self.dim_x, 1) for a in (x, t))
+                assert all(a.shape == (self.dim_y, 1) for a in (y, u))
+            else:
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_x, 1) for a in (x, t)
+                )
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_y, 1) for a in (y, u)
+                )
+                assert x.shape[0] == y.shape[0] == t.shape[0] == u.shape[0]
 
         try:
             gx_val = self._gx(x, y, t, u, dt)
             gy_val = self._gy(x, y, t, u, dt)
-            return np.vstack((gx_val, gy_val))
+            if x.ndim == 2:
+                return np.vstack((gx_val, gy_val))
+            else:
+                return np.concatenate((gx_val, gy_val), axis=1)
         except NumericalError:
             raise
         except ValueError as e:
             raise NumericalError(
-                f"[{self.MODEL_NAME}] _g: shape mismatch during vstack: {e}"
+                f"[{self.MODEL_NAME}] _g: shape mismatch during stack: {e}"
             ) from e
 
     # ------------------------------------------------------------------
     def _jacobiens_g(self, x, y, t, u, dt):
-        """
-        Jacobians of combined state and observation function.
-        """
         if __debug__:
-            assert x.shape == (2, 1), f"x must be (2,1), got {x.shape}"
-            assert y.shape == (1, 1), f"y must be (1,1), got {y.shape}"
-            assert t.shape == (2, 1), f"t must be (2,1), got {t.shape}"
-            assert u.shape == (1, 1), f"u must be (1,1), got {u.shape}"
-            assert isinstance(dt, (float, int)), "dt must be a float"
+            assert isinstance(dt, (float, int))
+            if x.ndim == 2:
+                assert all(a.shape == (self.dim_x, 1) for a in (x, t))
+                assert all(a.shape == (self.dim_y, 1) for a in (y, u))
+            else:
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_x, 1) for a in (x, t)
+                )
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_y, 1) for a in (y, u)
+                )
+                assert x.shape[0] == y.shape[0] == t.shape[0] == u.shape[0]
 
         try:
             with np.errstate(all="raise"):
-                x1 = x.flatten()[0]
-                y1 = y.flatten()[0]
+                if x.ndim == 2:
+                    x1 = x[0, 0]
+                    y1 = y[0, 0]
 
-                An = np.array(
-                    [
-                        [self.a, self.b, self.c * (1.0 - np.tanh(y1) ** 2)],
-                        [0.0, self.d, self.e * np.cos(y1)],
-                        [2.0 * x1 / (1.0 + x1**2) ** 2, 0.0, self.f],
-                    ]
-                )
-                Bn = np.eye(self.dim_xy)
+                    An = np.array(
+                        [
+                            [self.a, self.b, self.c * (1.0 - np.tanh(y1) ** 2)],
+                            [0.0, self.d, self.e * np.cos(y1)],
+                            [2.0 * x1 / (1.0 + x1**2) ** 2, 0.0, self.f],
+                        ]
+                    )
+                    Bn = np.eye(self.dim_xy)
+
+                else:
+                    N = x.shape[0]
+                    x1 = x[:, 0, 0]
+                    y1 = y[:, 0, 0]
+
+                    An = np.zeros((N, 3, 3))
+                    An[:, 0, 0] = self.a
+                    An[:, 0, 1] = self.b
+                    An[:, 0, 2] = self.c * (1.0 - np.tanh(y1) ** 2)
+                    An[:, 1, 1] = self.d
+                    An[:, 1, 2] = self.e * np.cos(y1)
+                    An[:, 2, 0] = 2.0 * x1 / (1.0 + x1**2) ** 2
+                    An[:, 2, 2] = self.f
+
+                    Bn = np.tile(np.eye(self.dim_xy), (N, 1, 1))
 
             return An, Bn
 

@@ -49,15 +49,22 @@ class BaseModelNonLinear:
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
         if __debug__:
-            assert z.shape == (self.dim_xy, 1)
-            assert noise_z.shape == (self.dim_xy, 1)
+            if z.ndim == 2:
+                assert all(a.shape == (self.dim_xy, 1) for a in (z, noise_z))
+            else:
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_xy, 1)
+                    for a in (z, noise_z)
+                )
+                assert z.shape[0] == noise_z.shape[0]
 
         try:
-            x, y = np.split(z, [self.dim_x])
-            nx, ny = np.split(noise_z, [self.dim_x])
+            axis = 1 if z.ndim == 3 else 0
+            x, y = np.split(z, [self.dim_x], axis=axis)
+            nx, ny = np.split(noise_z, [self.dim_x], axis=axis)
             return self._g(x, y, nx, ny, dt)
         except NumericalError:
-            raise  # déjà enrichie par la sous-classe
+            raise
         except ValueError as e:
             raise NumericalError(
                 f"[{self.__class__.__name__}] g: erreur de split/shape: {e}"
@@ -65,12 +72,19 @@ class BaseModelNonLinear:
 
     def jacobiens_g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
         if __debug__:
-            assert z.shape == (self.dim_xy, 1)
-            assert noise_z.shape == (self.dim_xy, 1)
+            if z.ndim == 2:
+                assert all(a.shape == (self.dim_xy, 1) for a in (z, noise_z))
+            else:
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_xy, 1)
+                    for a in (z, noise_z)
+                )
+                assert z.shape[0] == noise_z.shape[0]
 
         try:
-            x, y = np.split(z, [self.dim_x])
-            nx, ny = np.split(noise_z, [self.dim_x])
+            axis = 1 if z.ndim == 3 else 0
+            x, y = np.split(z, [self.dim_x], axis=axis)
+            nx, ny = np.split(noise_z, [self.dim_x], axis=axis)
             return self._jacobiens_g(x, y, nx, ny, dt)
         except NumericalError:
             raise
