@@ -56,24 +56,46 @@ class BaseModelLinear:
         self.lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
 
     # ------------------------------------------------------------------
-    def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
-        """Compute z_{n+1} = A @ z + B @ noise. z et noise_z sont de shape (dim_xy, 1)."""
+    def g(self, z, noise_z, dt):
         if __debug__:
-            assert z.shape == (self.dim_xy, 1)
-            assert noise_z.shape == (self.dim_xy, 1)
+            if z.ndim == 2:
+                assert all(a.shape == (self.dim_xy, 1) for a in (z, noise_z))
+            else:
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_xy, 1)
+                    for a in (z, noise_z)
+                )
+                assert z.shape[0] == noise_z.shape[0]
 
         try:
-            return self.A @ z + self.B @ noise_z
+            if z.ndim == 2:
+                return self.A @ z + self.B @ noise_z
+            else:
+                # A : (dim_xy, dim_xy), z : (N, dim_xy, 1) → einsum pour broadcaster
+                return np.einsum("ij,njk->nik", self.A, z) + np.einsum(
+                    "ij,njk->nik", self.B, noise_z
+                )
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{self.__class__.__name__}] g: matrix multiplication error: {e}"
             ) from e
 
-    def jacobiens_g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
-        """Cette méthode doit renvoyer An et Bn. Uniquement nécessaire pour que EPKF puisse traiter aussi des données linéaires"""
-        # print(self.A, self.B)
-        # input("ATTENTE")
-        return self.A, self.B
+    def jacobiens_g(self, z, noise_z, dt):
+        if __debug__:
+            if z.ndim == 2:
+                assert all(a.shape == (self.dim_xy, 1) for a in (z, noise_z))
+            else:
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_xy, 1)
+                    for a in (z, noise_z)
+                )
+                assert z.shape[0] == noise_z.shape[0]
+
+        if z.ndim == 2:
+            return self.A, self.B
+        else:
+            N = z.shape[0]
+            return np.tile(self.A, (N, 1, 1)), np.tile(self.B, (N, 1, 1))
 
     # ------------------------------------------------------------------
     def __repr__(self):

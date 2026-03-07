@@ -29,7 +29,7 @@ class Model_A_mQ_x1_y1(LinearAmQ):
         B = np.eye(A.shape[0])
 
         try:
-            mQ = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.01)
+            mQ = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.05)
             mz0 = randMatrices.rng.standard_normal((dim_xy, 1))
             Pz0 = generate_block_matrix(randMatrices.rng, dim_x, dim_y, 0.05)
         except (ValueError, np.exceptions.AxisError) as e:
