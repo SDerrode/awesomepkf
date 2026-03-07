@@ -13,9 +13,7 @@ class Model_A_mQ_x1_y1_augmented(LinearAmQ):
 
     MODEL_NAME = "A_mQ_x1_y1_augmented"
 
-    def __init__(self) -> None:
-
-        # NumericalError remonte naturellement si __init__ du modèle non augmenté échoue
+    def __init__(self):
         mod = Model_A_mQ_x1_y1()
 
         try:
@@ -31,9 +29,17 @@ class Model_A_mQ_x1_y1_augmented(LinearAmQ):
             Dn = np.zeros((dim_y, dim_y))
 
             A = np.block(
-                [[Fn, np.zeros((dim_xy, dim_y))], [Hn @ Fn, np.zeros((1, dim_y))]]
+                [
+                    [Fn, np.zeros((dim_xy, dim_y))],
+                    [Hn @ Fn, np.zeros((1, dim_y))],
+                ]
             )
-            B = np.block([[Cn, np.zeros((dim_xy, dim_y))], [Hn @ Cn, Dn]])
+            B = np.block(
+                [
+                    [Cn, np.zeros((dim_xy, dim_y))],
+                    [Hn @ Cn, Dn],
+                ]
+            )
 
             mQ = np.zeros((dim_xy + dim_y, dim_xy + dim_y))
             mQ[0:dim_xy, 0:dim_xy] = Cov
