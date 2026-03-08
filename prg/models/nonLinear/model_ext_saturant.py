@@ -33,7 +33,8 @@ class ModelExtSaturant(BaseModelFxHx):
             ) from e
 
     # ------------------------------------------------------------------
-    def symbolic_model(self, x, t, u):
+    def symbolic_model(self, sx, st, su):
+        x, t, u = sx[0], st[0], su[0]
         sfx = 0.5 * x + 2.0 * (1 - sp.exp(-0.1 * x)) + t
         shx = sp.log(1 + sp.Max(sp.Abs(x), EPS_REL)) + u
         return sp.Matrix([[sfx]]), sp.Matrix([[shx]])

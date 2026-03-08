@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
+import sympy as sp
+
 from prg.models.nonLinear.base_model_gxgy import BaseModelGxGy
 from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.exceptions import NumericalError
@@ -15,11 +17,17 @@ class ModelX1Y1_withRetroactions(BaseModelGxGy):
     def __init__(self):
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
         try:
-            self.mQ  = generate_block_matrix(self._randMatrices.rng, self.dim_x, self.dim_y, 0.05)
+            self.mQ = generate_block_matrix(
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+            )
             self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
-            self.Pz0 = generate_block_matrix(self._randMatrices.rng, self.dim_x, self.dim_y, 0.05)
+            self.Pz0 = generate_block_matrix(
+                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+            )
         except (ValueError, np.exceptions.AxisError) as e:
-            raise NumericalError(f"[{self.MODEL_NAME}] Initialization failed: {e}") from e
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] Initialization failed: {e}"
+            ) from e
         self.a, self.b, self.c, self.d = 0.50, 30, 0.40, 40
 
     # ------------------------------------------------------------------
@@ -34,7 +42,9 @@ class ModelX1Y1_withRetroactions(BaseModelGxGy):
             with np.errstate(all="raise"):
                 return self.a * x + self.b * np.tanh(y) + t
         except FloatingPointError as e:
-            raise NumericalError(f"[{self.MODEL_NAME}] _gx: floating point error at x={x}, y={y}: {e}") from e
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _gx: floating point error at x={x}, y={y}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _gy(self, x, y, t, u, dt):
@@ -48,7 +58,9 @@ class ModelX1Y1_withRetroactions(BaseModelGxGy):
             with np.errstate(all="raise"):
                 return self.c * y + self.d * np.sin(x) + u
         except FloatingPointError as e:
-            raise NumericalError(f"[{self.MODEL_NAME}] _gy: floating point error at x={x}, y={y}: {e}") from e
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _gy: floating point error at x={x}, y={y}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def _jacobiens_g(self, x, y, t, u, dt):
@@ -62,21 +74,27 @@ class ModelX1Y1_withRetroactions(BaseModelGxGy):
         try:
             with np.errstate(all="raise"):
                 if x.ndim == 2:
-                    An = np.array([
-                        [self.a, self.b / np.cosh(y[0, 0])**2],
-                        [self.d * np.cos(x[0, 0]), self.c],
-                    ])
+                    An = np.array(
+                        [
+                            [self.a, self.b / np.cosh(y[0, 0]) ** 2],
+                            [self.d * np.cos(x[0, 0]), self.c],
+                        ]
+                    )
                     Bn = np.eye(self.dim_xy)
                 else:
-                    N  = x.shape[0]
+                    N = x.shape[0]
                     An = np.zeros((N, 2, 2))
                     An[:, 0, 0] = self.a
-                    An[:, 0, 1] = self.b / np.cosh(y[:, 0, 0])**2
+                    An[:, 0, 1] = self.b / np.cosh(y[:, 0, 0]) ** 2
                     An[:, 1, 0] = self.d * np.cos(x[:, 0, 0])
                     An[:, 1, 1] = self.c
                     Bn = np.tile(np.eye(self.dim_xy), (N, 1, 1))
             return An, Bn
         except FloatingPointError as e:
-            raise NumericalError(f"[{self.MODEL_NAME}] _jacobiens_g: floating point error at x={x}, y={y}: {e}") from e
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _jacobiens_g: floating point error at x={x}, y={y}: {e}"
+            ) from e
         except (IndexError, ValueError) as e:
-            raise NumericalError(f"[{self.MODEL_NAME}] _jacobiens_g: array construction error: {e}") from e
+            raise NumericalError(
+                f"[{self.MODEL_NAME}] _jacobiens_g: array construction error: {e}"
+            ) from e
