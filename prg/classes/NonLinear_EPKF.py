@@ -115,14 +115,13 @@ class NonLinear_EPKF(PKF):
         )
 
         # --- First estimate -----------------------------------------------------------
-        # print("  process_filter")
+
         step = self._firstEstimate(generator)
 
         if step.xkp1 is None:
             self.ground_truth = False
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
-        # print("  process_filter")
 
         # --- Subsequent steps ---------------------------------------------------------
         accel_xy_xy: np.ndarray = self.zeros_dim_xy_xy.copy()
@@ -130,8 +129,6 @@ class NonLinear_EPKF(PKF):
         expected_shape = (self.dim_xy, self.dim_xy)
 
         while N is None or step.k < N:
-
-            # print("    step.k=", step.k)
 
             # here ykp1 still gives the previous : it is yk indeed!
             z_iterated[: self.dim_x] = step.Xkp1_update

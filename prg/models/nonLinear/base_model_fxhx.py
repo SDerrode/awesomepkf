@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from abc import ABC, abstractmethod
+
 import numpy as np
 import sympy as sp
 
@@ -10,7 +12,7 @@ from prg.exceptions import NumericalError
 __all__ = ["BaseModelFxHx"]
 
 
-class BaseModelFxHx(BaseModelNonLinear):
+class BaseModelFxHx(BaseModelNonLinear, ABC):
     """
     Classe mère pour les modèles définis symboliquement via symbolic_model().
 
@@ -49,9 +51,41 @@ class BaseModelFxHx(BaseModelNonLinear):
             return sfx, shx
     """
 
+    # ------------------------------------------------------------------
+    @abstractmethod
+    def symbolic_model(self, sx, st, su):
+        """
+        À implémenter dans la sous-classe.
+
+        Paramètres
+        ----------
+        sx : sp.Matrix(dim_x, 1)  — symboles d'état        x0 .. x_{dim_x-1}
+        st : sp.Matrix(dim_x, 1)  — symboles bruit d'état  t0 .. t_{dim_x-1}
+        su : sp.Matrix(dim_y, 1)  — symboles bruit obs.    u0 .. u_{dim_y-1}
+
+        Retourne
+        --------
+        sfx : sp.Matrix(dim_x, 1) — transition  f(x, t)
+        shx : sp.Matrix(dim_y, 1) — observation h(x, u)
+        """
+
+    # ------------------------------------------------------------------
     def __init__(self, dim_x=1, dim_y=1, model_type="nonlinear", augmented=False):
         super().__init__(dim_x, dim_y, model_type, augmented)
         self._build_symbolic_model()
+
+    # ------------------------------------------------------------------
+    def _args_fx(self, x, t, i=None):
+        """Construit le tuple d'arguments (x, t) pour lambdify."""
+        if i is None:
+            return tuple(x[:, 0]) + tuple(t[:, 0])
+        return tuple(x[i, :, 0]) + tuple(t[i, :, 0])
+
+    def _args_hx(self, x, u, i=None):
+        """Construit le tuple d'arguments (x, u) pour lambdify."""
+        if i is None:
+            return tuple(x[:, 0]) + tuple(u[:, 0])
+        return tuple(x[i, :, 0]) + tuple(u[i, :, 0])
 
     # ------------------------------------------------------------------
     def _build_symbolic_model(self):
@@ -63,7 +97,14 @@ class BaseModelFxHx(BaseModelNonLinear):
         self._su = sp.Matrix([sp.Symbol(f"u{i}", real=True) for i in range(ny)])
 
         # Modèle fourni par la sous-classe
-        self._sfx, self._shx = self.symbolic_model(self._sx, self._st, self._su)
+        try:
+            self._sfx, self._shx = self.symbolic_model(self._sx, self._st, self._su)
+        except Exception as e:
+            raise RuntimeError(
+                f"[{self.__class__.__name__}] symbolic_model() failed — "
+                f"check parameter initialization order and SymPy expressions.\n"
+                f"Cause: {type(e).__name__}: {e}"
+            ) from e
 
         # Validation des shapes
         if not isinstance(self._sfx, sp.Matrix) or self._sfx.shape != (nx, 1):
@@ -86,11 +127,14 @@ class BaseModelFxHx(BaseModelNonLinear):
         st_t = tuple(self._st)
         su_t = tuple(self._su)
 
-        # Compilation NumPy
-        self._fx_num = sp.lambdify(sx_t + st_t, self._sfx, "numpy")
-        self._hx_num = sp.lambdify(sx_t + su_t, self._shx, "numpy")
-        self._A_num = sp.lambdify(sx_t, self._sA, "numpy")
-        self._H_num = sp.lambdify(sx_t, self._sH, "numpy")
+        # Compilation NumPy.
+        # Note : si une expression est constante (ex. H = [0,1] pour hx = x[-1]),
+        # lambdify retourne un ndarray au lieu d'un callable.
+        # On normalise via _wrap_lambdify pour garantir un callable dans tous les cas.
+        self._fx_num = self._wrap_lambdify(sp.lambdify(sx_t + st_t, self._sfx, "numpy"))
+        self._hx_num = self._wrap_lambdify(sp.lambdify(sx_t + su_t, self._shx, "numpy"))
+        self._A_num = self._wrap_lambdify(sp.lambdify(sx_t, self._sA, "numpy"))
+        self._H_num = self._wrap_lambdify(sp.lambdify(sx_t, self._sH, "numpy"))
 
     # ------------------------------------------------------------------
     # Évaluations numériques internes
@@ -102,18 +146,27 @@ class BaseModelFxHx(BaseModelNonLinear):
           x, t : (dim_x, 1)       → retourne (dim_x, 1)
           x, t : (N, dim_x, 1)   → retourne (N, dim_x, 1)
         """
-        if x.ndim == 2:
-            args = tuple(x[:, 0]) + tuple(t[:, 0])
-            return np.array(self._fx_num(*args), dtype=float).reshape(self.dim_x, 1)
-        else:
-            N = x.shape[0]
-            out = np.empty((N, self.dim_x, 1))
-            for i in range(N):
-                args = tuple(x[i, :, 0]) + tuple(t[i, :, 0])
-                out[i] = np.array(self._fx_num(*args), dtype=float).reshape(
-                    self.dim_x, 1
-                )
-            return out
+        try:
+            with np.errstate(all="raise"):
+                if x.ndim == 2:
+                    return np.array(
+                        self._fx_num(*self._args_fx(x, t)), dtype=float
+                    ).reshape(self.dim_x, 1)
+                N = x.shape[0]
+                out = np.empty((N, self.dim_x, 1))
+                for i in range(N):
+                    out[i] = np.array(
+                        self._fx_num(*self._args_fx(x, t, i)), dtype=float
+                    ).reshape(self.dim_x, 1)
+                return out
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_fx: erreur numérique à x={x}, t={t}: {e}"
+            ) from e
+        except (ValueError, IndexError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_fx: erreur de shape à x={x}, t={t}: {e}"
+            ) from e
 
     def _eval_hx(self, x, u):
         """
@@ -121,18 +174,27 @@ class BaseModelFxHx(BaseModelNonLinear):
           x : (dim_x, 1),  u : (dim_y, 1)     → retourne (dim_y, 1)
           x : (N, dim_x, 1), u : (N, dim_y, 1) → retourne (N, dim_y, 1)
         """
-        if x.ndim == 2:
-            args = tuple(x[:, 0]) + tuple(u[:, 0])
-            return np.array(self._hx_num(*args), dtype=float).reshape(self.dim_y, 1)
-        else:
-            N = x.shape[0]
-            out = np.empty((N, self.dim_y, 1))
-            for i in range(N):
-                args = tuple(x[i, :, 0]) + tuple(u[i, :, 0])
-                out[i] = np.array(self._hx_num(*args), dtype=float).reshape(
-                    self.dim_y, 1
-                )
-            return out
+        try:
+            with np.errstate(all="raise"):
+                if x.ndim == 2:
+                    return np.array(
+                        self._hx_num(*self._args_hx(x, u)), dtype=float
+                    ).reshape(self.dim_y, 1)
+                N = x.shape[0]
+                out = np.empty((N, self.dim_y, 1))
+                for i in range(N):
+                    out[i] = np.array(
+                        self._hx_num(*self._args_hx(x, u, i)), dtype=float
+                    ).reshape(self.dim_y, 1)
+                return out
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_hx: erreur numérique à x={x}, u={u}: {e}"
+            ) from e
+        except (ValueError, IndexError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_hx: erreur de shape à x={x}, u={u}: {e}"
+            ) from e
 
     def _eval_A(self, x):
         """
@@ -140,20 +202,27 @@ class BaseModelFxHx(BaseModelNonLinear):
           x : (dim_x, 1)     → retourne (dim_x, dim_x)
           x : (N, dim_x, 1)  → retourne (N, dim_x, dim_x)
         """
-        if x.ndim == 2:
-            args = tuple(x[:, 0])
-            return np.array(self._A_num(*args), dtype=float).reshape(
-                self.dim_x, self.dim_x
-            )
-        else:
-            N = x.shape[0]
-            out = np.empty((N, self.dim_x, self.dim_x))
-            for i in range(N):
-                args = tuple(x[i, :, 0])
-                out[i] = np.array(self._A_num(*args), dtype=float).reshape(
-                    self.dim_x, self.dim_x
-                )
-            return out
+        try:
+            with np.errstate(all="raise"):
+                if x.ndim == 2:
+                    return np.array(self._A_num(*tuple(x[:, 0])), dtype=float).reshape(
+                        self.dim_x, self.dim_x
+                    )
+                N = x.shape[0]
+                out = np.empty((N, self.dim_x, self.dim_x))
+                for i in range(N):
+                    out[i] = np.array(
+                        self._A_num(*tuple(x[i, :, 0])), dtype=float
+                    ).reshape(self.dim_x, self.dim_x)
+                return out
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_A: erreur numérique à x={x}: {e}"
+            ) from e
+        except (ValueError, IndexError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_A: erreur de shape à x={x}: {e}"
+            ) from e
 
     def _eval_H(self, x):
         """
@@ -161,20 +230,27 @@ class BaseModelFxHx(BaseModelNonLinear):
           x : (dim_x, 1)     → retourne (dim_y, dim_x)
           x : (N, dim_x, 1)  → retourne (N, dim_y, dim_x)
         """
-        if x.ndim == 2:
-            args = tuple(x[:, 0])
-            return np.array(self._H_num(*args), dtype=float).reshape(
-                self.dim_y, self.dim_x
-            )
-        else:
-            N = x.shape[0]
-            out = np.empty((N, self.dim_y, self.dim_x))
-            for i in range(N):
-                args = tuple(x[i, :, 0])
-                out[i] = np.array(self._H_num(*args), dtype=float).reshape(
-                    self.dim_y, self.dim_x
-                )
-            return out
+        try:
+            with np.errstate(all="raise"):
+                if x.ndim == 2:
+                    return np.array(self._H_num(*tuple(x[:, 0])), dtype=float).reshape(
+                        self.dim_y, self.dim_x
+                    )
+                N = x.shape[0]
+                out = np.empty((N, self.dim_y, self.dim_x))
+                for i in range(N):
+                    out[i] = np.array(
+                        self._H_num(*tuple(x[i, :, 0])), dtype=float
+                    ).reshape(self.dim_y, self.dim_x)
+                return out
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_H: erreur numérique à x={x}: {e}"
+            ) from e
+        except (ValueError, IndexError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_H: erreur de shape à x={x}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     # Interfaces _fx / _hx appelées par _g
@@ -195,52 +271,47 @@ class BaseModelFxHx(BaseModelNonLinear):
         Structure par blocs (nz = dim_x + dim_y) :
 
             An = dg/dz    = [ df/dx              0     ]
-                            [ dh/dx @ df/dx       0     ]
+                            [ dh/dx @ df/dx       0    ]
 
             Bn = dg/dnoise = [ I_nx        0      ]
                              [ dh/dx       I_ny   ]
 
         dh/dx est évalué en f(x, t) (règle de la chaîne).
         """
-        try:
-            with np.errstate(all="raise"):
-                nx, ny, nz = self.dim_x, self.dim_y, self.dim_xy
+        # Les _eval_* catchent FloatingPointError → NumericalError en amont.
+        # On se contente de laisser remonter NumericalError sans l'intercepter.
+        nx, ny, nz = self.dim_x, self.dim_y, self.dim_xy
 
-                if x.ndim == 2:
-                    fx_val = self._eval_fx(x, t)  # (nx, 1)
-                    dfdx = self._eval_A(x)  # (nx, nx)
-                    dhdx = self._eval_H(fx_val)  # (ny, nx) évalué en f(x)
+        if x.ndim == 2:
+            fx_val = self._eval_fx(x, t)  # (nx, 1)
+            dfdx = self._eval_A(x)  # (nx, nx)
+            dhdx = self._eval_H(fx_val)  # (ny, nx) évalué en f(x)
 
-                    An = np.zeros((nz, nz))
-                    An[:nx, :nx] = dfdx
-                    An[nx:, :nx] = dhdx @ dfdx  # règle de la chaîne
+            An = np.zeros((nz, nz))
+            An[:nx, :nx] = dfdx
+            An[nx:, :nx] = dhdx @ dfdx  # règle de la chaîne
 
-                    Bn = np.zeros((nz, nz))
-                    Bn[:nx, :nx] = np.eye(nx)
-                    Bn[nx:, :nx] = dhdx
-                    Bn[nx:, nx:] = np.eye(ny)
+            Bn = np.zeros((nz, nz))
+            Bn[:nx, :nx] = np.eye(nx)
+            Bn[nx:, :nx] = dhdx
+            Bn[nx:, nx:] = np.eye(ny)
 
-                else:
-                    N = x.shape[0]
-                    fx_val = self._eval_fx(x, t)  # (N, nx, 1)
-                    dfdx = self._eval_A(x)  # (N, nx, nx)
-                    dhdx = self._eval_H(fx_val)  # (N, ny, nx)
+        else:
+            N = x.shape[0]
+            fx_val = self._eval_fx(x, t)  # (N, nx, 1)
+            dfdx = self._eval_A(x)  # (N, nx, nx)
+            dhdx = self._eval_H(fx_val)  # (N, ny, nx)
 
-                    An = np.zeros((N, nz, nz))
-                    An[:, :nx, :nx] = dfdx
-                    An[:, nx:, :nx] = np.einsum("nij,njk->nik", dhdx, dfdx)
+            An = np.zeros((N, nz, nz))
+            An[:, :nx, :nx] = dfdx
+            An[:, nx:, :nx] = np.einsum("nij,njk->nik", dhdx, dfdx)
 
-                    Bn = np.zeros((N, nz, nz))
-                    Bn[:, :nx, :nx] = np.tile(np.eye(nx), (N, 1, 1))
-                    Bn[:, nx:, :nx] = dhdx
-                    Bn[:, nx:, nx:] = np.tile(np.eye(ny), (N, 1, 1))
+            Bn = np.zeros((N, nz, nz))
+            Bn[:, :nx, :nx] = np.tile(np.eye(nx), (N, 1, 1))
+            Bn[:, nx:, :nx] = dhdx
+            Bn[:, nx:, nx:] = np.tile(np.eye(ny), (N, 1, 1))
 
-                return An, Bn
-
-        except FloatingPointError as e:
-            raise NumericalError(
-                f"[{self.__class__.__name__}] _jacobiens_g: erreur numérique: {e}"
-            ) from e
+        return An, Bn
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):

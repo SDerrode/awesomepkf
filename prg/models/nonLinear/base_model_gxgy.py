@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from abc import ABC, abstractmethod
+
 import numpy as np
 import sympy as sp
 
@@ -10,7 +12,7 @@ from prg.exceptions import NumericalError
 __all__ = ["BaseModelGxGy"]
 
 
-class BaseModelGxGy(BaseModelNonLinear):
+class BaseModelGxGy(BaseModelNonLinear, ABC):
     """
     Classe mère pour les modèles définis symboliquement via symbolic_model().
 
@@ -46,27 +48,29 @@ class BaseModelGxGy(BaseModelNonLinear):
         Bn = d[gx; gy] / d[t; u]   (dim_xy, dim_xy)
     """
 
+    # ------------------------------------------------------------------
+    @abstractmethod
+    def symbolic_model(self, sx, sy, st, su):
+        """
+        À implémenter dans la sous-classe.
+
+        Paramètres
+        ----------
+        sx : sp.Matrix(dim_x, 1)  — symboles d'état        x0 .. x_{dim_x-1}
+        sy : sp.Matrix(dim_y, 1)  — symboles d'observation y0 .. y_{dim_y-1}
+        st : sp.Matrix(dim_x, 1)  — symboles bruit d'état  t0 .. t_{dim_x-1}
+        su : sp.Matrix(dim_y, 1)  — symboles bruit obs.    u0 .. u_{dim_y-1}
+
+        Retourne
+        --------
+        sgx : sp.Matrix(dim_x, 1) — transition  gx(x, y, t, u)
+        sgy : sp.Matrix(dim_y, 1) — observation gy(x, y, t, u)
+        """
+
+    # ------------------------------------------------------------------
     def __init__(self, dim_x=1, dim_y=1, model_type="nonlinear", augmented=False):
         super().__init__(dim_x, dim_y, model_type, augmented)
         self._build_symbolic_model()
-
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _wrap_lambdify(f):
-        """
-        Garantit que le résultat de lambdify est toujours un callable.
-
-        Quand une expression SymPy est constante (aucun symbole libre,
-        ex. Bn = I pour un bruit additif), lambdify génère une fonction
-        qui retourne directement un ndarray — et non un callable acceptant
-        des arguments. Ce wrapper détecte ce cas et retourne une lambda
-        qui ignore ses arguments et renvoie toujours la valeur constante.
-        """
-        if callable(f):
-            return f
-        # f est un ndarray constant
-        constant = np.array(f, dtype=float)
-        return lambda *args: constant
 
     # ------------------------------------------------------------------
     def _build_symbolic_model(self):
@@ -79,9 +83,16 @@ class BaseModelGxGy(BaseModelNonLinear):
         self._su = sp.Matrix([sp.Symbol(f"u{i}", real=True) for i in range(ny)])
 
         # Modèle fourni par la sous-classe
-        self._sgx, self._sgy = self.symbolic_model(
-            self._sx, self._sy, self._st, self._su
-        )
+        try:
+            self._sgx, self._sgy = self.symbolic_model(
+                self._sx, self._sy, self._st, self._su
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"[{self.__class__.__name__}] symbolic_model() failed — "
+                f"check parameter initialization order and SymPy expressions.\n"
+                f"Cause: {type(e).__name__}: {e}"
+            ) from e
 
         # Validation des shapes
         if not isinstance(self._sgx, sp.Matrix) or self._sgx.shape != (nx, 1):
@@ -137,17 +148,27 @@ class BaseModelGxGy(BaseModelNonLinear):
           2D  : x(dim_x,1), y(dim_y,1), ...  → (dim_x, 1)
           3D  : x(N,dim_x,1), ...             → (N, dim_x, 1)
         """
-        if x.ndim == 2:
-            return np.array(self._gx_num(*self._args(x, y, t, u)), dtype=float).reshape(
-                self.dim_x, 1
-            )
-        N = x.shape[0]
-        out = np.empty((N, self.dim_x, 1))
-        for i in range(N):
-            out[i] = np.array(
-                self._gx_num(*self._args(x, y, t, u, i)), dtype=float
-            ).reshape(self.dim_x, 1)
-        return out
+        try:
+            with np.errstate(all="raise"):
+                if x.ndim == 2:
+                    return np.array(
+                        self._gx_num(*self._args(x, y, t, u)), dtype=float
+                    ).reshape(self.dim_x, 1)
+                N = x.shape[0]
+                out = np.empty((N, self.dim_x, 1))
+                for i in range(N):
+                    out[i] = np.array(
+                        self._gx_num(*self._args(x, y, t, u, i)), dtype=float
+                    ).reshape(self.dim_x, 1)
+                return out
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_gx: erreur numérique à x={x}, y={y}: {e}"
+            ) from e
+        except (ValueError, IndexError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_gx: erreur de shape à x={x}, y={y}: {e}"
+            ) from e
 
     def _eval_gy(self, x, y, t, u):
         """
@@ -155,17 +176,27 @@ class BaseModelGxGy(BaseModelNonLinear):
           2D  : → (dim_y, 1)
           3D  : → (N, dim_y, 1)
         """
-        if x.ndim == 2:
-            return np.array(self._gy_num(*self._args(x, y, t, u)), dtype=float).reshape(
-                self.dim_y, 1
-            )
-        N = x.shape[0]
-        out = np.empty((N, self.dim_y, 1))
-        for i in range(N):
-            out[i] = np.array(
-                self._gy_num(*self._args(x, y, t, u, i)), dtype=float
-            ).reshape(self.dim_y, 1)
-        return out
+        try:
+            with np.errstate(all="raise"):
+                if x.ndim == 2:
+                    return np.array(
+                        self._gy_num(*self._args(x, y, t, u)), dtype=float
+                    ).reshape(self.dim_y, 1)
+                N = x.shape[0]
+                out = np.empty((N, self.dim_y, 1))
+                for i in range(N):
+                    out[i] = np.array(
+                        self._gy_num(*self._args(x, y, t, u, i)), dtype=float
+                    ).reshape(self.dim_y, 1)
+                return out
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_gy: erreur numérique à x={x}, y={y}: {e}"
+            ) from e
+        except (ValueError, IndexError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_gy: erreur de shape à x={x}, y={y}: {e}"
+            ) from e
 
     def _eval_An(self, x, y, t, u):
         """
@@ -173,18 +204,28 @@ class BaseModelGxGy(BaseModelNonLinear):
           2D  : → (dim_xy, dim_xy)
           3D  : → (N, dim_xy, dim_xy)
         """
-        nz = self.dim_xy
-        if x.ndim == 2:
-            return np.array(self._An_num(*self._args(x, y, t, u)), dtype=float).reshape(
-                nz, nz
-            )
-        N = x.shape[0]
-        out = np.empty((N, nz, nz))
-        for i in range(N):
-            out[i] = np.array(
-                self._An_num(*self._args(x, y, t, u, i)), dtype=float
-            ).reshape(nz, nz)
-        return out
+        try:
+            with np.errstate(all="raise"):
+                nz = self.dim_xy
+                if x.ndim == 2:
+                    return np.array(
+                        self._An_num(*self._args(x, y, t, u)), dtype=float
+                    ).reshape(nz, nz)
+                N = x.shape[0]
+                out = np.empty((N, nz, nz))
+                for i in range(N):
+                    out[i] = np.array(
+                        self._An_num(*self._args(x, y, t, u, i)), dtype=float
+                    ).reshape(nz, nz)
+                return out
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_An: erreur numérique à x={x}, y={y}: {e}"
+            ) from e
+        except (ValueError, IndexError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_An: erreur de shape à x={x}, y={y}: {e}"
+            ) from e
 
     def _eval_Bn(self, x, y, t, u):
         """
@@ -192,18 +233,28 @@ class BaseModelGxGy(BaseModelNonLinear):
           2D  : → (dim_xy, dim_xy)
           3D  : → (N, dim_xy, dim_xy)
         """
-        nz = self.dim_xy
-        if x.ndim == 2:
-            return np.array(self._Bn_num(*self._args(x, y, t, u)), dtype=float).reshape(
-                nz, nz
-            )
-        N = x.shape[0]
-        out = np.empty((N, nz, nz))
-        for i in range(N):
-            out[i] = np.array(
-                self._Bn_num(*self._args(x, y, t, u, i)), dtype=float
-            ).reshape(nz, nz)
-        return out
+        try:
+            with np.errstate(all="raise"):
+                nz = self.dim_xy
+                if x.ndim == 2:
+                    return np.array(
+                        self._Bn_num(*self._args(x, y, t, u)), dtype=float
+                    ).reshape(nz, nz)
+                N = x.shape[0]
+                out = np.empty((N, nz, nz))
+                for i in range(N):
+                    out[i] = np.array(
+                        self._Bn_num(*self._args(x, y, t, u, i)), dtype=float
+                    ).reshape(nz, nz)
+                return out
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_Bn: erreur numérique à x={x}, y={y}: {e}"
+            ) from e
+        except (ValueError, IndexError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _eval_Bn: erreur de shape à x={x}, y={y}: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     # Interfaces appelées par _g et jacobiens_g (BaseModelNonLinear)
@@ -224,15 +275,11 @@ class BaseModelGxGy(BaseModelNonLinear):
 
         Pas de chain rule : gx et gy sont évaluées au même point (x, y).
         """
-        try:
-            with np.errstate(all="raise"):
-                An = self._eval_An(x, y, t, u)
-                Bn = self._eval_Bn(x, y, t, u)
-            return An, Bn
-        except FloatingPointError as e:
-            raise NumericalError(
-                f"[{self.__class__.__name__}] _jacobiens_g: erreur numérique: {e}"
-            ) from e
+        # Les _eval_* catchent FloatingPointError → NumericalError en amont.
+        # On se contente de laisser remonter NumericalError sans l'intercepter.
+        An = self._eval_An(x, y, t, u)
+        Bn = self._eval_Bn(x, y, t, u)
+        return An, Bn
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
