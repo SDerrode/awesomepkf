@@ -24,6 +24,8 @@ class BaseModelNonLinear:
     def __init__(
         self, dim_x: int, dim_y: int, model_type: str = "nonlinear", augmented=False
     ):
+        # print("BaseModelNonLinear - __init__")
+
         assert isinstance(dim_x, int) and dim_x > 0, "dim_x doit être un entier positif"
         assert isinstance(dim_y, int) and dim_y > 0, "dim_y doit être un entier positif"
 
@@ -48,6 +50,9 @@ class BaseModelNonLinear:
 
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
+
+        # print("BaseModelNonLinear - g 1")
+
         if __debug__:
             if z.ndim == 2:
                 assert all(a.shape == (self.dim_xy, 1) for a in (z, noise_z))
@@ -59,9 +64,13 @@ class BaseModelNonLinear:
                 assert z.shape[0] == noise_z.shape[0]
 
         try:
+
             axis = 1 if z.ndim == 3 else 0
             x, y = np.split(z, [self.dim_x], axis=axis)
             nx, ny = np.split(noise_z, [self.dim_x], axis=axis)
+            # print("BaseModelNonLinear - g 2")
+            # print(x, y, nx, ny, dt)
+            # print(self._g(x, y, nx, ny, dt))
             return self._g(x, y, nx, ny, dt)
         except NumericalError:
             raise
@@ -69,6 +78,7 @@ class BaseModelNonLinear:
             raise NumericalError(
                 f"[{self.__class__.__name__}] g: erreur de split/shape: {e}"
             ) from e
+        # print("BaseModelNonLinear - g 3")
 
     def jacobiens_g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
         if __debug__:
@@ -82,6 +92,7 @@ class BaseModelNonLinear:
                 assert z.shape[0] == noise_z.shape[0]
 
         try:
+            # print("BaseModelNonLinear - jacobiens_g")
             axis = 1 if z.ndim == 3 else 0
             x, y = np.split(z, [self.dim_x], axis=axis)
             nx, ny = np.split(noise_z, [self.dim_x], axis=axis)

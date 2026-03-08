@@ -245,6 +245,7 @@ class LinearAmQ(BaseModelLinear):
     @staticmethod
     def _init_random_params(dim_x, dim_y, val_max, seed=None):
         """Génère mQ, mz0, Pz0 de façon standard via SeedGenerator."""
+        seed = 9
         rng = SeedGenerator(seed).rng
         try:
             mQ = generate_block_matrix(rng, dim_x, dim_y, val_max)

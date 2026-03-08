@@ -33,6 +33,13 @@ from prg.exceptions import (
     StepValidationError,
 )
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+logger = logging.getLogger(__name__)
+
 __all__ = ["NonLinear_PPF"]
 
 
@@ -105,7 +112,7 @@ class NonLinear_PPF(PKF):
         self.resample_method = resample_method
 
         # Random number generator
-        self.__randParticles = SeedGenerator(9)
+        self.__randParticles = SeedGenerator()
 
         # Dictionnaire des constantes précalculées
         self._cached: dict = {}
@@ -230,17 +237,8 @@ class NonLinear_PPF(PKF):
         cov_diag = CovarianceMatrix(P_prime_x_base)
         report = cov_diag.check()
 
-        if not report.is_ok:
-
-            if not report.is_valid:
-                try:
-                    P_prime_x = cov_diag.regularized()
-                except RuntimeError as e:
-                    raise CovarianceError(
-                        "_precompute: P'_x is not positive definite and "
-                        "regularization failed — cannot continue.",
-                        matrix_name="P_prime_x",
-                    ) from e
+        if not report.is_ok and not report.is_valid:
+            P_prime_x = cov_diag.regularized()
         else:
             P_prime_x = P_prime_x_base
 
@@ -260,15 +258,22 @@ class NonLinear_PPF(PKF):
         Gère : nan (overflow vraisemblance), tous à -inf (dégénérescence totale),
         underflow extrême après exp.
         """
+
         # nan → -inf (overflow dans le terme quadratique)
         nan_mask = np.isnan(log_weights)
         if nan_mask.any():
+            logger.warning(
+                f"Je rentre dans _safe_normalize_log_weights(...) - if nan_mask.any()"
+            )
             log_weights = log_weights.copy()
             log_weights[nan_mask] = -np.inf
 
         # Dégénérescence totale : toutes les particules incompatibles → poids uniformes
         finite_mask = np.isfinite(log_weights)
         if not finite_mask.any():
+            logger.warning(
+                f"Je rentre dans _safe_normalize_log_weights(...) - if not finite_mask.any()"
+            )
             return np.full(len(log_weights), 1.0 / len(log_weights))
 
         # log-sum-exp stable : soustraction du max fini uniquement
@@ -280,6 +285,9 @@ class NonLinear_PPF(PKF):
 
         # Underflow extrême après exp
         if not np.isfinite(total) or total <= 0.0:
+            logger.warning(
+                f"Je rentre dans _safe_normalize_log_weights(...) - if not np.isfinite(total) or total <= 0.0"
+            )
             return np.full(len(log_weights), 1.0 / len(log_weights))
 
         return weights / total
@@ -494,6 +502,15 @@ class NonLinear_PPF(PKF):
             dx = particles_current_temp - Xkp1_update.T
             PXXkp1_update = (weights[:, None] * dx).T @ dx
             self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
+
+            ess_before_resample = 1.0 / np.sum(weights**2)
+            max_innovation = np.abs(innovations).max()
+            logger.debug(
+                f"Step {new_k}: ESS={ess_before_resample:.1f}/{self.nbParticles}, "
+                f"n_clipped={n_clipped}, "
+                f"max_innov={max_innovation:.3g}, "
+                f"Xupdate={Xkp1_update.flatten()}"
+            )
 
             # =========================
             # RÉÉCHANTILLONNAGE

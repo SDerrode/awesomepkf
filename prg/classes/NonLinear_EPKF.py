@@ -114,16 +114,15 @@ class NonLinear_EPKF(PKF):
             data_generator if data_generator is not None else self._data_generation()
         )
 
-        # Short-cut to the Jacobian function
-        jg = self.param.jacobiens_g
-
         # --- First estimate -----------------------------------------------------------
+        # print("  process_filter")
         step = self._firstEstimate(generator)
 
         if step.xkp1 is None:
             self.ground_truth = False
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
+        # print("  process_filter")
 
         # --- Subsequent steps ---------------------------------------------------------
         accel_xy_xy: np.ndarray = self.zeros_dim_xy_xy.copy()
@@ -132,14 +131,22 @@ class NonLinear_EPKF(PKF):
 
         while N is None or step.k < N:
 
+            # print("    step.k=", step.k)
+
             # here ykp1 still gives the previous : it is yk indeed!
             z_iterated[: self.dim_x] = step.Xkp1_update
             z_iterated[self.dim_x :] = step.ykp1
 
             # Prediction
             try:
+                # input("ATTENTE 1")
                 Zkp1_predict = self.param.g(z_iterated, self.zeros_dim_xy_1, self.dt)
-                An, Bn = jg(z_iterated, self.zeros_dim_xy_1, self.dt)
+                # input("ATTENTE 2")
+                An, Bn = self.param.jacobiens_g(
+                    z_iterated, self.zeros_dim_xy_1, self.dt
+                )
+                # input("ATTENTE 3")
+
             except Exception as e:
                 raise FilterError(
                     f"Step {step.k}: unexpected error during prediction step."

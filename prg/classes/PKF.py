@@ -441,6 +441,9 @@ class PKF:
         StepValidationError
             If ``PKFStep`` construction fails due to invalid data.
         """
+
+        # print("PKF - _firstEstimate")
+
         k, xkp1, ykp1 = next(generator)
 
         # Gaussian conditioning on the first observation
