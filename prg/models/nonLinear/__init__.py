@@ -50,7 +50,9 @@ class ModelFactoryNonLinear:
                 module = importlib.import_module(full_module_name)
             except Exception as e:
                 raise RuntimeError(
-                    f"Failed to import module '{full_module_name}'"
+                    f"Failed to import module '{full_module_name}': "
+                    f"{type(e).__name__}: {e}\n"
+                    f"{''.join(traceback.format_exc())}"
                 ) from e
 
             # recherche des classes dans le module

@@ -53,7 +53,6 @@ class BaseNonLinearEPKFRunnerSim(BaseNonLinearEPKFRunner):
         PKFError
             Si une erreur du domaine PKF remonte du filtre.
         """
-        # print("BaseNonLinearEPKFRunnerSim - run")
         try:
             self.runner_instance.process_N_data(N=self.N)
         except PKFError:
@@ -62,7 +61,6 @@ class BaseNonLinearEPKFRunnerSim(BaseNonLinearEPKFRunner):
             raise FilterError(
                 f"Filtering failed (simulation mode) for model {self.model_name!r}."
             ) from e
-        # print("BaseNonLinearEPKFRunnerSim - run 2")
 
         if self.save_history:
             self._save_history(f"history_run_epkf_simulation_{i}.pkl")
