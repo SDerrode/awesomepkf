@@ -19,7 +19,7 @@ class ModelX2Y1Rapport(BaseModelFxHx):
 
     System dynamics:
         f(x) = [
-            (1 - kappa)*x1 + dt_model*x2 + t1,
+            (1 - kappa_m)*x1 + dt_model*x2 + t1,
             x2 - dt_model*(alpha*sin(x1) + beta*x2) + t2
         ]
 
@@ -34,7 +34,7 @@ class ModelX2Y1Rapport(BaseModelFxHx):
         self.alpham = 0.5
         self.betam = 0.5
         self.gammam = 0.5
-        self.kappa = 0.15
+        self.kappa_m = 0.15
         self.dt_model = 0.1
 
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
@@ -57,7 +57,7 @@ class ModelX2Y1Rapport(BaseModelFxHx):
         t1, t2 = st[0], st[1]
         u = su[0]
 
-        sfx1 = (1 - self.kappa) * x1 + self.dt_model * x2 + t1
+        sfx1 = (1 - self.kappa_m) * x1 + self.dt_model * x2 + t1
         sfx2 = x2 - self.dt_model * (self.alpham * sp.sin(x1) + self.betam * x2) + t2
         shx = x1**2 / (1 + x1**2) + self.gammam * sp.sin(x2) + u
 
@@ -75,12 +75,12 @@ class ModelX2Y1Rapport(BaseModelFxHx):
     #         with np.errstate(all="raise"):
     #             if x.ndim == 2:
     #                 return np.array([
-    #                     [(1.0 - self.kappa) * x[0, 0] + self.dt_model * x[1, 0] + t[0, 0]],
+    #                     [(1.0 - self.kappa_m) * x[0, 0] + self.dt_model * x[1, 0] + t[0, 0]],
     #                     [x[1, 0] - self.dt_model * (self.alpham * np.sin(x[0, 0]) + self.betam * x[1, 0]) + t[1, 0]],
     #                 ])
     #             else:
     #                 out = np.empty_like(x)
-    #                 out[:, 0, 0] = (1.0 - self.kappa) * x[:, 0, 0] + self.dt_model * x[:, 1, 0] + t[:, 0, 0]
+    #                 out[:, 0, 0] = (1.0 - self.kappa_m) * x[:, 0, 0] + self.dt_model * x[:, 1, 0] + t[:, 0, 0]
     #                 out[:, 1, 0] = x[:, 1, 0] - self.dt_model * (self.alpham * np.sin(x[:, 0, 0]) + self.betam * x[:, 1, 0]) + t[:, 1, 0]
     #                 return out
     #     except FloatingPointError as e:
@@ -132,7 +132,7 @@ class ModelX2Y1Rapport(BaseModelFxHx):
     #                 Z = 2 * A / (1.0 + A**2)**2
     #                 W = self.gammam * np.cos(B)
     #                 An = np.array([
-    #                     [1.0 - self.kappa,                           self.dt_model,                    0.0],
+    #                     [1.0 - self.kappa_m,                           self.dt_model,                    0.0],
     #                     [-self.alpham * self.dt_model * np.cos(x1),  1.0 - self.betam * self.dt_model, 0.0],
     #                     [Z - self.alpham * dt * np.cos(x1) * W,      Z * dt + (1.0 - self.betam * dt) * W, 0.0],
     #                 ])
@@ -146,7 +146,7 @@ class ModelX2Y1Rapport(BaseModelFxHx):
     #                 Z = 2 * A / (1.0 + A**2)**2
     #                 W = self.gammam * np.cos(B)
     #                 An = np.zeros((N, 3, 3))
-    #                 An[:, 0, 0] = 1.0 - self.kappa
+    #                 An[:, 0, 0] = 1.0 - self.kappa_m
     #                 An[:, 0, 1] = self.dt_model
     #                 An[:, 1, 0] = -self.alpham * self.dt_model * np.cos(x1)
     #                 An[:, 1, 1] = 1.0 - self.betam * self.dt_model
