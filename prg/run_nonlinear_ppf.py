@@ -11,6 +11,19 @@ from prg.base_classes.nonlinear_ppf_runner_from_file import (
 from prg.utils.parser import addParseToParser
 from prg.exceptions import NumericalError, FilterError, PKFError, ParamError
 
+import logging
+
+
+def setup_logging(verbose: int):
+    level = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}.get(
+        verbose, logging.DEBUG
+    )
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Run NonLinear PPF")
@@ -53,6 +66,8 @@ def parse_arguments():
 
 def main() -> None:
     args, model_name = parse_arguments()
+
+    setup_logging(args.verbose)
 
     try:
         if args.dataFileName is not None:
