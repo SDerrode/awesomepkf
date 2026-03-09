@@ -10,14 +10,12 @@ Arborescence
 ------------
 PKFError
 ├── ParamError
-└── NumericalError
+├── NumericalError
 │   ├── CovarianceError
 │   └── InvertibilityError
 └── FilterError
     └── StepValidationError
 """
-
-from __future__ import annotations
 
 __all__ = [
     "PKFError",
@@ -28,6 +26,26 @@ __all__ = [
     "FilterError",
     "StepValidationError",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Mixin : attribut step partagé
+# ---------------------------------------------------------------------------
+
+
+class _StepMixin:
+    """
+    Mixin interne apportant l'attribut ``step`` à une exception.
+
+    Évite la duplication de logique entre ``NumericalError`` et
+    ``StepValidationError``.  Non exporté (préfixe ``_``).
+    """
+
+    step: int  # déclaré ici pour les outils d'analyse statique
+
+    def _step_repr(self) -> str:
+        """Retourne la partie step du repr, factorisée."""
+        return f"step={self.step}"
 
 
 # ---------------------------------------------------------------------------
@@ -44,7 +62,9 @@ class PKFError(Exception):
     """
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.args[0]!r})"
+        # FIX : self.args peut être vide si levée sans message → fallback sur ""
+        msg = self.args[0] if self.args else ""
+        return f"{self.__class__.__name__}({msg!r})"
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +86,7 @@ class ParamError(PKFError):
 # ---------------------------------------------------------------------------
 
 
-class NumericalError(PKFError):
+class NumericalError(_StepMixin, PKFError):
     """
     Erreur numérique générique.
 
@@ -92,8 +112,10 @@ class NumericalError(PKFError):
 
     Examples
     --------
-    >>> raise CovarianceError("not PSD", matrix_name="PXX", step=42)
-    >>> except NumericalError as e:
+
+    >>> try:
+    ...     raise CovarianceError("not PSD", matrix_name="PXX", step=42)
+    ... except NumericalError as e:
     ...     print(e.step, e.matrix_name)
     42 PXX
     """
@@ -102,6 +124,14 @@ class NumericalError(PKFError):
         super().__init__(message)
         self.matrix_name = matrix_name
         self.step = step
+
+    def __str__(self) -> str:
+        parts = [self.args[0] if self.args else ""]
+        if self.step != -1:
+            parts.append(f"step={self.step}")
+        if self.matrix_name:
+            parts.append(f"matrix={self.matrix_name!r}")
+        return " | ".join(parts)
 
     def __repr__(self) -> str:
         return (
@@ -144,7 +174,7 @@ class FilterError(PKFError):
     """
 
 
-class StepValidationError(FilterError):
+class StepValidationError(_StepMixin, FilterError):
     """
     Échec de la construction d'un ``PKFStep``.
 
@@ -167,6 +197,12 @@ class StepValidationError(FilterError):
     def __init__(self, message: str, step: int = -1) -> None:
         super().__init__(message)
         self.step = step
+
+    def __str__(self) -> str:
+        parts = [self.args[0] if self.args else ""]
+        if self.step != -1:
+            parts.append(f"step={self.step}")
+        return " | ".join(parts)
 
     def __repr__(self) -> str:
         return (

@@ -7,7 +7,7 @@ from typing import Optional
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
 from prg.utils.utils import file_data_generator
 from prg.base_classes.nonlinear_epkf_runner_base import BaseNonLinearEPKFRunner
-from prg.exceptions import FilterError, PKFError
+from prg.utils.exceptions import FilterError, PKFError
 
 __all__ = ["BaseNonLinearEPKFRunnerFromFile"]
 

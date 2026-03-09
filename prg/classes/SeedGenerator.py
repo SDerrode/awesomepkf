@@ -14,7 +14,7 @@ import threading
 from typing import Optional
 import numpy as np
 
-from prg.exceptions import ParamError
+from prg.utils.exceptions import ParamError
 
 __all__ = ["SeedGenerator"]
 

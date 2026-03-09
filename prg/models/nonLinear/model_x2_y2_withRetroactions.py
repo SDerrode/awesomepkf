@@ -5,7 +5,7 @@ import numpy as np
 import sympy as sp
 
 from prg.models.nonLinear.base_model_gxgy import BaseModelGxGy
-from prg.exceptions import NumericalError
+from prg.utils.exceptions import NumericalError
 
 __all__ = ["ModelX2Y2_withRetroactions"]
 

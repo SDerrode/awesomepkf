@@ -8,8 +8,8 @@ from prg.base_classes.nonlinear_ppf_runner_simulation import BaseNonLinearPPFRun
 from prg.base_classes.nonlinear_ppf_runner_from_file import (
     BaseNonLinearPPFRunnerFromFile,
 )
-from prg.utils.parser import addParseToParser
-from prg.exceptions import NumericalError, FilterError, PKFError, ParamError
+from prg.utils.parser import add_arguments
+from prg.utils.exceptions import NumericalError, FilterError, PKFError, ParamError
 
 import logging
 
@@ -28,7 +28,7 @@ def setup_logging(verbose: int):
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Run NonLinear PPF")
 
-    addParseToParser(
+    add_arguments(
         parser,
         [
             "nonLinearModelName",

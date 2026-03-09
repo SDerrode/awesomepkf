@@ -5,7 +5,7 @@ import argparse
 
 from prg.base_classes.simulator_linear import LinearDataSimulator
 from prg.base_classes.simulator_nonlinear import NonLinearDataSimulator
-from prg.utils.parser import addParseToParser
+from prg.utils.parser import add_arguments
 
 
 # =============================================================
@@ -16,7 +16,7 @@ from prg.utils.parser import addParseToParser
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Simulate linear or non-linear data")
 
-    addParseToParser(
+    add_arguments(
         parser,
         [
             "linearModelName",

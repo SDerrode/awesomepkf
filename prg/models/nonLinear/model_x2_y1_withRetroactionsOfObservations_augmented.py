@@ -10,7 +10,7 @@ from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
 from prg.models.nonLinear.model_x2_y1_withRetroactionsOfObservations import (
     ModelX2Y1_withRetroactionsOfObservations,
 )
-from prg.exceptions import NumericalError
+from prg.utils.exceptions import NumericalError
 
 
 __all__ = ["ModelX2Y1_withRetroactionsOfObservations_augmented"]

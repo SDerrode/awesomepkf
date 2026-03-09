@@ -7,7 +7,7 @@ import numpy as np
 
 from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.classes.MatrixDiagnostics import CovarianceMatrix
-from prg.exceptions import CovarianceError, ParamError
+from prg.utils.exceptions import CovarianceError, ParamError
 
 __all__ = ["ParamNonLinear"]
 

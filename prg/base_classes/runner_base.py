@@ -5,7 +5,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Type
 
-from prg.exceptions import FilterError, ParamError, PKFError
+from prg.utils.exceptions import FilterError, ParamError, PKFError
 
 __all__ = ["BaseRunner"]
 

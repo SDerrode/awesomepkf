@@ -7,7 +7,7 @@ import numpy as np
 import sympy as sp
 
 from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
-from prg.exceptions import NumericalError
+from prg.utils.exceptions import NumericalError
 
 __all__ = ["BaseModelFxHx"]
 

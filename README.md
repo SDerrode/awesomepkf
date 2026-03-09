@@ -1,4 +1,3 @@
-
 # AwesomePKF
 
 This repository contains a set of programs illustrating the **Pairwise Kalman Filter (PKF)**, a generalization of the classical Kalman Filter, extended to non-linear models. It includes several variants of non-linear filters:
@@ -41,19 +40,19 @@ Each filter has two types of programs:
 
 ### Pairwise Kalman Filter (PKF)
 
-- **run_linear_pkf.py** – filter linear data either from simulated data or from a previously saved file e.g., generated with `run_simulator.py`)  
+- **run_linear_pkf.py** – filter linear data either from simulated data or from a previously saved file (e.g., generated with `run_simulator.py`)  
 
 ### Extended Pairwise Kalman Filter (EPKF)
 
-- **run_nonlinear_epkf.py** – filter non-linear data either from simulated data or from a previously saved file e.g., generated with `run_simulator.py`)  
+- **run_nonlinear_epkf.py** – filter non-linear data either from simulated data or from a previously saved file (e.g., generated with `run_simulator.py`)  
 
 ### Unscented Pairwise Kalman Filter (UPKF)
 
-- **run_nonlinear_upkf.py** – filter non-linear data either from simulated data or from a previously saved file e.g., generated with `run_simulator.py`)  
+- **run_nonlinear_upkf.py** – filter non-linear data either from simulated data or from a previously saved file (e.g., generated with `run_simulator.py`)  
 
 ### Pairwise Particle Filter (PPF)
 
-- **run_nonlinear_ppf.py** – filter non-linear data either from simulated data or from a previously saved file e.g., generated with `run_simulator.py`)  
+- **run_nonlinear_ppf.py** – filter non-linear data either from simulated data or from a previously saved file (e.g., generated with `run_simulator.py`)  
 
 ---
 
@@ -69,24 +68,16 @@ python3 prg/run_linear_pkf.py --linearModelName "A_mQ_x1_y1" --dataFileName "tes
 ### Simulate Non-Linear Data and Filter with EPKF, UPKF and PPF
 
 ```bash
-python3 prg/run_simulator.py   --N 1000 --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --verbose 1 --sKey 303 
+python3 prg/run_simulator.py   --N 1000 --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --verbose 1 --sKey 303
 
-python3 prg/run_nonlinear_epkf.py --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --ell 1              --verbose 1 --saveHistory --plot
-python3 prg/run_nonlinear_upkf.py --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --sigmaSet "wan2000" --verbose 1 --saveHistory --plot
-python3 prg/run_nonlinear_ppf.py   --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --nbParticles 300    --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_epkf.py --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv"                       --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_upkf.py --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --sigmaSet "wan2000"   --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --nbParticles 300       --verbose 1 --saveHistory --plot
 ```
 
 ---
 
 ## Folders structure
-
-<!-- commande : 
-    tree -L 4 -I "logs|venv|*.csv|*.pkl|*.png|__pycache__|*.code-workspace|*.ipynb" > folder_strucure.md
--->
-
-<!-- meilleure commande : 
-git ls-files | tree --fromfile -F -a --dirsfirst -I "logs|venv|*.csv|*.pkl|*.png|__pycache__|*.code-workspace|*.ipynb|.vscode|.gitkeep|.DS_Store" > structure.txt
--->
 
 <!-- PROJECT_STRUCTURE_START -->
 ```text
@@ -144,6 +135,8 @@ git ls-files | tree --fromfile -F -a --dirsfirst -I "logs|venv|*.csv|*.pkl|*.png
 │   │   │   └── base_model_linear.py
 │   │   ├── nonLinear/
 │   │   │   ├── __init__.py
+│   │   │   ├── base_model_fxhx.py
+│   │   │   ├── base_model_gxgy.py
 │   │   │   ├── base_model_nonLinear.py
 │   │   │   ├── model_cubique.py
 │   │   │   ├── model_ext_saturant.py
@@ -176,6 +169,6 @@ git ls-files | tree --fromfile -F -a --dirsfirst -I "logs|venv|*.csv|*.pkl|*.png
 ├── LICENSE
 └── README.md
 
-13 directories, 72 files
+13 directories, 75 files
 ```
 <!-- PROJECT_STRUCTURE_END -->

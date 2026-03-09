@@ -5,7 +5,7 @@ import os
 from abc import ABC, abstractmethod
 
 from prg.utils.utils import save_dataframe_to_csv, data_to_dataframe
-from prg.exceptions import FilterError, ParamError, PKFError
+from prg.utils.exceptions import FilterError, ParamError, PKFError
 
 __all__ = ["BaseDataSimulator"]
 

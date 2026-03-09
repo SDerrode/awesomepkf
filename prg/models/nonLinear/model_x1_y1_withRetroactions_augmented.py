@@ -6,7 +6,7 @@ import sympy as sp
 
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
 from prg.models.nonLinear.model_x1_y1_withRetroactions import ModelX1Y1_withRetroactions
-from prg.exceptions import NumericalError
+from prg.utils.exceptions import NumericalError
 
 __all__ = ["ModelX1Y1_withRetroactions_augmented"]
 
