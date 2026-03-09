@@ -10,7 +10,7 @@ from scipy.linalg import cho_factor, cho_solve, solve_discrete_lyapunov
 from prg.models.linear import BaseModelLinear, ModelFactoryLinear
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
 from prg.utils.numerics import EPS_ABS, EPS_REL
-from prg.exceptions import CovarianceError, NumericalError, ParamError
+from prg.utils.exceptions import CovarianceError, NumericalError, ParamError
 
 __all__ = ["ParamLinear"]
 

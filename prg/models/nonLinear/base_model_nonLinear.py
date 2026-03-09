@@ -6,7 +6,7 @@ import os
 import matplotlib.pyplot as plt
 
 from prg.classes.SeedGenerator import SeedGenerator
-from prg.exceptions import NumericalError
+from prg.utils.exceptions import NumericalError
 from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
 
 __all__ = ["BaseModelNonLinear", "NumericalError"]  # ré-exporté pour commodité

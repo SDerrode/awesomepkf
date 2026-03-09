@@ -4,7 +4,7 @@
 import numpy as np
 from prg.models.linear.base_model_linear import LinearAmQ
 from prg.models.linear.A_mQ_x1_y1 import Model_A_mQ_x1_y1
-from prg.exceptions import NumericalError
+from prg.utils.exceptions import NumericalError
 
 __all__ = ["Model_A_mQ_x1_y1_augmented"]
 

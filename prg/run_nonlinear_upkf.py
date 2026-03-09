@@ -8,14 +8,14 @@ from prg.base_classes.nonlinear_upkf_runner_simulation import BaseNonLinearUPKFR
 from prg.base_classes.nonlinear_upkf_runner_from_file import (
     BaseNonLinearUPKFRunnerFromFile,
 )
-from prg.utils.parser import addParseToParser
-from prg.exceptions import NumericalError, FilterError, PKFError, ParamError
+from prg.utils.parser import add_arguments
+from prg.utils.exceptions import NumericalError, FilterError, PKFError, ParamError
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Run NonLinear UPKF")
 
-    addParseToParser(
+    add_arguments(
         parser,
         [
             "nonLinearModelName",

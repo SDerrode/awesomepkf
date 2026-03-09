@@ -6,7 +6,7 @@ import sympy as sp
 
 from prg.models.nonLinear.base_model_gxgy import BaseModelGxGy
 from prg.models.Generate_MatrixCov import generate_block_matrix
-from prg.exceptions import NumericalError
+from prg.utils.exceptions import NumericalError
 
 __all__ = ["ModelX2Y1_withRetroactionsOfObservations"]
 

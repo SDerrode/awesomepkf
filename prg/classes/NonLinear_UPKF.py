@@ -14,7 +14,12 @@ from scipy.linalg import LinAlgError
 
 from prg.classes.PKF import PKF
 from prg.classes.SigmaPointsSet import SigmaPointsSet
-from prg.exceptions import FilterError, InvertibilityError, NumericalError, ParamError
+from prg.utils.exceptions import (
+    FilterError,
+    InvertibilityError,
+    NumericalError,
+    ParamError,
+)
 
 __all__ = ["NonLinear_UPKF"]
 

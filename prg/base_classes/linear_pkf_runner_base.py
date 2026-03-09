@@ -8,7 +8,7 @@ from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.models.linear import ModelFactoryLinear
 from prg.base_classes.runner_base import BaseRunner
 from prg.utils.plot_settings import WINDOW
-from prg.exceptions import PKFError
+from prg.utils.exceptions import PKFError
 
 __all__ = ["BaseLinearPKFRunner"]
 

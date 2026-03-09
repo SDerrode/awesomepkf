@@ -13,7 +13,10 @@ Provides tools for:
 """
 
 from __future__ import annotations
-from typing import List, Optional, Generator
+from typing import (
+    Any,
+    Generator,
+)  # FIX : Any ajouté (était utilisé non importé) ; List/Optional supprimés (legacy)
 
 import os  # Used in read_unknown_file
 import math  # Used in format_value
@@ -41,14 +44,17 @@ __all__ = [
     "name_analysis",
 ]
 
-console = Console(force_terminal=True, color_system="truecolor")
+# FIX : force_terminal=True supprimé — évite les séquences ANSI parasites dans les logs fichier/pipe
+import sys as _sys
+
+console = Console(color_system="truecolor" if _sys.stdout.isatty() else None)
 
 
 # ----------------------------------------------------------------------
 # Rich display
 # ----------------------------------------------------------------------
 def rich_show_fields(
-    d: dict | Any,  # from typing import Any
+    d: dict | Any,
     fields: list[str] | None = None,
     title: str = "Data selection",
     decimals: int = 4,
@@ -145,10 +151,8 @@ def save_dataframe_to_csv(
     """
     path = Path(filepath)
     path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        df.to_csv(path, encoding="utf-8", index=index, float_format="%.15f")
-    except Exception as e:
-        raise
+    # FIX : try/except avec raise nu supprimé (n'ajoutait rien)
+    df.to_csv(path, encoding="utf-8", index=index, float_format="%.15f")
 
 
 def data_to_dataframe(
@@ -251,14 +255,10 @@ def _compute_quadratic_form(
             continue
 
         try:
-            try:
-                Pk_inv = InvertibleMatrix(Pk).inverse()
-            except RuntimeError:
-                # Pk quasi-singulière (particle collapse) — pseudo-inverse de Moore-Penrose
-                Pk_inv = np.linalg.pinv(Pk)
-        except Exception as e:
-            print(f"Pk={Pk}")
-            raise
+            Pk_inv = InvertibleMatrix(Pk).inverse()
+        except RuntimeError:
+            # Pk quasi-singulière (particle collapse) — pseudo-inverse de Moore-Penrose
+            Pk_inv = np.linalg.pinv(Pk)
 
         vals[k] = float((ek.T @ Pk_inv @ ek).squeeze())
 
@@ -312,8 +312,11 @@ def compute_errors(
     x_true = np.hstack(x_true).T
     x_hat = np.hstack(x_hat).T
 
-    # Global metrics over all components and steps
-    errors_flat = np.concatenate(x_true) - np.concatenate(x_hat)
+    errors = x_true - x_hat
+
+    # FIX : errors_flat = errors.flatten() (l'original utilisait np.concatenate sur un 2D
+    #        après hstack().T, ce qui aplatissait ligne par ligne de façon incohérente)
+    errors_flat = errors.flatten()
     mse_total = float(np.mean(errors_flat**2))
     mae_total = float(np.mean(np.abs(errors_flat)))
     # rmse = float(np.sqrt(mse_total))  # noqa: F841 — available for callers
@@ -325,7 +328,7 @@ def compute_errors(
         "nis_mean": "na",
     }
 
-    errors = x_true - x_hat
+    # FIX : errors déjà calculé plus haut — ligne dupliquée supprimée
 
     if not model.param.augmented:
         # Mean NEES
@@ -335,7 +338,10 @@ def compute_errors(
         report["nees_mean"] = nees_mean
 
         # Mean NIS (optional)
+        # FIX : S_list validé explicitement — crash TypeError si None avec i_list fourni
         if i_list is not None:
+            if S_list is None:
+                raise ValueError("S_list must be provided when i_list is not None.")
             tab_Sk = np.stack(S_list, axis=0)
             nis_all = _compute_quadratic_form(i_list, tab_Sk)
             nis_mean = float(np.nanmean(nis_all))
@@ -394,42 +400,40 @@ def read_unknown_file(
     Exception
         Any I/O or parsing error is logged and re-raised.
     """
-    ext = os.path.splitext(filepath)[1].lower()
-    try:
-        with open(filepath, "rb") as f:
-            raw_data = f.read(50_000)
-            enc_info = chardet.detect(raw_data)
-            encoding = enc_info["encoding"] or "utf-8"
-            confidence = enc_info.get("confidence", 0)
-        if ext == ".parquet":
-            return pd.read_parquet(filepath)
-        if ext == ".json":
-            return pd.read_json(filepath, encoding=encoding)
-        if ext in (".xlsx", ".xls"):
-            return pd.read_excel(filepath)
-        if ext in (".csv", ".txt", ".dat", ".tsv", ""):
+    # FIX : Path.suffix utilisé à la place de os.path.splitext (pathlib déjà importé)
+    ext = Path(filepath).suffix.lower()
+    # FIX : try/except avec raise nu supprimé (n'ajoutait rien)
+    with open(filepath, "rb") as f:
+        raw_data = f.read(50_000)
+        enc_info = chardet.detect(raw_data)
+        encoding = enc_info["encoding"] or "utf-8"
+        confidence = enc_info.get("confidence", 0)
+    if ext == ".parquet":
+        return pd.read_parquet(filepath)
+    if ext == ".json":
+        return pd.read_json(filepath, encoding=encoding)
+    if ext in (".xlsx", ".xls"):
+        return pd.read_excel(filepath)
+    if ext in (".csv", ".txt", ".dat", ".tsv", ""):
 
-            with open(filepath, "r", encoding=encoding) as f:
-                sample_lines = [next(f, "") for _ in range(min(nrows_detect, 10))]
-            sample = "".join(sample_lines)
+        with open(filepath, "r", encoding=encoding) as f:
+            sample_lines = [next(f, "") for _ in range(min(nrows_detect, 10))]
+        sample = "".join(sample_lines)
 
-            try:
-                dialect = csv.Sniffer().sniff(sample, delimiters=",;\t| ")
-                sep = dialect.delimiter
-                has_header = csv.Sniffer().has_header(sample)
-            except csv.Error:
-                sep = None
-                has_header = True
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t| ")
+            sep = dialect.delimiter
+            has_header = csv.Sniffer().has_header(sample)
+        except csv.Error:
+            sep = None
+            has_header = True
 
-            header = 0 if has_header else None
-            if sep is None:
-                return pd.read_csv(filepath, header=header, encoding=encoding)
-            return pd.read_csv(filepath, sep=sep, header=header, encoding=encoding)
+        header = 0 if has_header else None
+        if sep is None:
+            return pd.read_csv(filepath, header=header, encoding=encoding)
+        return pd.read_csv(filepath, sep=sep, header=header, encoding=encoding)
 
-        raise ValueError(f"Unrecognised file format: {ext}")
-
-    except Exception as e:
-        raise
+    raise ValueError(f"Unrecognised file format: {ext}")
 
 
 def name_analysis(listStr: list[str]) -> dict:
@@ -566,6 +570,9 @@ def file_data_generator(
 # ----------------------------------------------------------------------
 # Matrix equality check
 # ----------------------------------------------------------------------
+import warnings as _warnings
+
+
 def check_equality(**kwargs: np.ndarray) -> None:
     """
     Check that all provided matrices are numerically equal.
@@ -580,7 +587,10 @@ def check_equality(**kwargs: np.ndarray) -> None:
         Named matrices to compare. At least two must be provided.
     """
     if len(kwargs) < 2:
-        print("check_equality: at least 2 matrices required.")
+        # FIX : warnings.warn au lieu de print (signale l'anomalie à l'appelant)
+        _warnings.warn(
+            "check_equality: at least 2 matrices required.", UserWarning, stacklevel=2
+        )
         return
 
     names = list(kwargs.keys())
@@ -588,7 +598,11 @@ def check_equality(**kwargs: np.ndarray) -> None:
     shapes = [m.shape for m in matrices]
 
     if len(set(shapes)) != 1:
-        print(f"Matrices have different shapes: {dict(zip(names, shapes))}")
+        _warnings.warn(
+            f"Matrices have different shapes: {dict(zip(names, shapes))}",
+            UserWarning,
+            stacklevel=2,
+        )
         return
 
     ref, ref_name = matrices[0], names[0]
@@ -596,6 +610,8 @@ def check_equality(**kwargs: np.ndarray) -> None:
     for name, M in zip(names[1:], matrices[1:]):
         if not np.allclose(ref, M, atol=EPS_ABS, rtol=EPS_REL):
             diff_norm = float(np.linalg.norm(ref - M))
-            print(
-                f"Matrices '{ref_name}' and '{name}' differ " f"(‖Δ‖={diff_norm:.3e})"
+            _warnings.warn(
+                f"Matrices '{ref_name}' and '{name}' differ (‖Δ‖={diff_norm:.3e})",
+                UserWarning,
+                stacklevel=2,
             )

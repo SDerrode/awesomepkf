@@ -24,7 +24,7 @@ from prg.classes.PKF import PKF, PKFStep
 from prg.utils.numerics import EPS_ABS
 from prg.utils.utils import rich_show_fields
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
-from prg.exceptions import (
+from prg.utils.exceptions import (
     CovarianceError,
     FilterError,
     InvertibilityError,

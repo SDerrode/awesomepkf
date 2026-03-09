@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import warnings
 
 
 def int_ge_1(value: str) -> int:
+    """Convertit *value* en ``int`` et vérifie qu'il est ≥ 1."""
     try:
         ivalue = int(value)
     except ValueError:
-        raise argparse.ArgumentTypeError(f"{value} n'est pas un entier valide")
+        raise argparse.ArgumentTypeError(f"{value!r} n'est pas un entier valide")
 
     if ivalue < 1:
         raise argparse.ArgumentTypeError(f"{value} doit être un entier ≥ 1")
@@ -16,110 +18,131 @@ def int_ge_1(value: str) -> int:
     return ivalue
 
 
-def addParseToParser(parser, listOptions):
-    """
-    Ajoute des arguments à un ArgumentParser.
+# ---------------------------------------------------------------------------
+# Configuration des options optionnelles
+# ---------------------------------------------------------------------------
 
-    :param parser: argparse.ArgumentParser
-    :param listOptions: liste de chaînes, options optionnelles à ajouter
+_OPTION_CONFIG: dict = {
+    "N": {
+        "type": int_ge_1,
+        "default": None,
+        "help": "Nombre d'échantillons à traiter (default: None)",
+    },
+    "nbParticles": {
+        "type": int_ge_1,
+        "default": 300,
+        "help": "Nombre de particules à utiliser (default: 300)",
+    },
+    "sKey": {
+        "type": int,
+        "default": None,
+        "help": "Graine du générateur aléatoire (default: None)",
+    },
+    "linearModelName": {
+        "choices": [
+            "A_mQ_x1_y1",
+            "A_mQ_x1_y1_augmented",
+            "A_mQ_x2_y2",
+            "A_mQ_x3_y1",
+            "Sigma_x1_y1",
+            "Sigma_x2_y2",
+            "Sigma_x3_y1",
+        ],
+        "default": None,
+        "help": "Modèle linéaire à utiliser (default: None)",
+    },
+    "sigmaSet": {
+        "choices": ["wan2000", "cpkf", "lerner2002", "ito2000"],
+        "default": "wan2000",
+        "help": "Ensemble de sigma points pour UPKF (default: wan2000)",
+    },
+    "nonLinearModelName": {
+        "choices": [
+            "x1_y1_cubique",
+            "x1_y1_ext_saturant",
+            "x1_y1_gordon",
+            "x1_y1_sinus",
+            "x1_y1_withRetroactions",
+            "x1_y1_withRetroactions_augmented",
+            "x2_y1",
+            "x2_y1_rapport",
+            "x2_y1_withRetroactionsOfObservations",
+            "x2_y1_withRetroactionsOfObservations_augmented",
+            "x2_y2_withRetroactions",
+        ],
+        "default": None,
+        "help": "Modèle non-linéaire à utiliser (default: None)",
+    },
+    "dataFileName": {
+        "type": str,
+        "default": None,
+        "help": "Chemin du fichier de trajectoires (default: None)",
+    },
+    "withoutX": {
+        "action": "store_true",
+        "help": "Ne pas sauvegarder l'état vrai X (default: False)",
+    },
+    "filter": {
+        "choices": ["EPKF", "UPKF", "PPF"],
+        "default": None,
+        "help": "Type de filtre à utiliser (default: None)",
+    },
+}
+
+
+# ---------------------------------------------------------------------------
+# API publique
+# ---------------------------------------------------------------------------
+
+
+def add_arguments(parser: argparse.ArgumentParser, list_options: list[str]) -> None:
+    """
+    Ajoute des arguments à un ``ArgumentParser``.
+
+    Parameters
+    ----------
+    parser : argparse.ArgumentParser
+        Le parseur à enrichir.
+    list_options : list[str]
+        Noms des options optionnelles à ajouter (clés de ``_OPTION_CONFIG``).
+
+    Raises
+    ------
+    None — les clés inconnues émettent un ``UserWarning`` au lieu d'être
+    ignorées silencieusement.
     """
 
-    # =========================
-    # Options toujours disponibles
-    # =========================
+    # --- Options toujours disponibles ---
     parser.add_argument(
         "--verbose",
         type=int,
         choices=range(0, 3),
         default=0,
-        dest="verbose",
-        help="Set the verbose level (0=quiet, 2=maximum, default=0)",
+        help="Niveau de verbosité (0=silencieux, 2=maximum, default=0)",
     )
     parser.add_argument(
         "--plot",
         action="store_true",
-        dest="plot",
-        help="Plot and signals on disk (default: True if not specified)",
+        help="Affiche et sauvegarde les signaux sur disque (default: False)",  # FIX : était "True if not specified" → inversé
     )
-
     parser.add_argument(
         "--saveHistory",
         action="store_true",
-        dest="saveHistory",
-        help="Save parameters trace on disk (default: False if not specified)",
+        help="Sauvegarde la trace des paramètres sur disque (default: False)",
     )
 
-    # =========================
-    # Options optionnelles configurables
-    # =========================
-    option_config = {
-        "N": {
-            "type": int,
-            "default": None,
-            "help": "Set the number of samples to process (default: None)",
-        },
-        "nbParticles": {
-            "type": int,
-            "default": 300,
-            "help": "Set the number of particles to deal with (default: 300)",
-        },
-        "sKey": {
-            "type": int,
-            "default": None,
-            "help": "Set the random generator seed (default: None)",
-        },
-        "linearModelName": {
-            "choices": [
-                "A_mQ_x1_y1",
-                "A_mQ_x1_y1_VPgreaterThan1",
-                "A_mQ_x1_y1_augmented",
-                "A_mQ_x2_y2",
-                "A_mQ_x3_y1",
-                "Sigma_x1_y1",
-                "Sigma_x2_y2",
-                "Sigma_x3_y1",
-            ],
-            "default": None,
-            "help": "Linear model to process data (default: None)",
-        },
-        "sigmaSet": {
-            "choices": ["wan2000", "cpkf", "lerner2002", "ito2000"],
-            "default": "wan2000",
-            "help": "Sigma set points to use with UPKF (default: wan2000)",
-        },
-        "nonLinearModelName": {
-            "choices": [
-                "x1_y1_cubique",
-                "x1_y1_ext_saturant",
-                "x1_y1_gordon",
-                "x1_y1_sinus",
-                "x1_y1_withRetroactions",
-                "x1_y1_withRetroactions_augmented",
-                "x2_y1",
-                "x2_y1_rapport",
-                "x2_y1_withRetroactionsOfObservations",
-                "x2_y1_withRetroactionsOfObservations_augmented",
-                "x2_y2_withRetroactions",
-            ],
-            "default": None,
-            "help": "Non linear model to process data (default: None)",
-        },
-        "dataFileName": {
-            "type": str,
-            "default": None,
-            "help": "Full path where trajectories are stored (default: None)",
-        },
-        "withoutX": {
-            "action": "store_true",
-            "default": False,
-            "help": "Save true X or not (default: False)",
-        },
-    }
+    # --- Options optionnelles configurables ---
+    for opt in list_options:
+        if opt not in _OPTION_CONFIG:
+            # FIX : option inconnue → avertissement explicite au lieu d'ignorer silencieusement
+            warnings.warn(
+                f"add_arguments : option inconnue {opt!r} ignorée "
+                f"(options disponibles : {list(_OPTION_CONFIG)})",
+                UserWarning,
+                stacklevel=2,
+            )
+            continue
 
-    # Ajouter dynamiquement les options demandées
-    for opt in listOptions:
-        if opt in option_config:
-            kwargs = option_config[opt].copy()
-            # Définir le nom de destination
-            kwargs["dest"] = opt
-            parser.add_argument(f"--{opt}", **kwargs)
+        kwargs = _OPTION_CONFIG[opt].copy()
+        # FIX : dest=opt supprimé — argparse le déduit automatiquement depuis --opt
+        parser.add_argument(f"--{opt}", **kwargs)

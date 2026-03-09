@@ -5,12 +5,13 @@ from __future__ import annotations
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import sympy as sp
 from scipy.linalg import cho_factor, cho_solve, LinAlgError
 
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
 from prg.classes.SeedGenerator import SeedGenerator
 from prg.models.Generate_MatrixCov import generate_block_matrix
-from prg.exceptions import NumericalError
+from prg.utils.exceptions import NumericalError
 from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
 
 __all__ = ["BaseModelLinear", "LinearAmQ", "LinearSigma"]
@@ -80,137 +81,368 @@ class BaseModelLinear:
                 )
                 assert z.shape[0] == noise_z.shape[0]
 
-        if z.ndim == 2:
-            return self.A, self.B
-        else:
+        try:
+            if z.ndim == 2:
+                return self.A, self.B
             N = z.shape[0]
             return np.tile(self.A, (N, 1, 1)), np.tile(self.B, (N, 1, 1))
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] jacobiens_g: erreur de shape: {e}"
+            ) from e
 
     # ------------------------------------------------------------------
     def __repr__(self):
         return f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y}, type={self.model_type})"
 
     # ------------------------------------------------------------------
+    # Représentation symbolique
+    # ------------------------------------------------------------------
+
+    def _build_symbolic_model(self) -> None:
+        """
+        Construit la représentation SymPy de A et B.
+
+        Appelée à la fin de LinearAmQ.__init__ et LinearSigma._initSigma(),
+        une fois self.A et self.B numériquement disponibles.
+
+        Tente de simplifier les entrées flottantes en fractions exactes
+        (tolérance 1e-4) pour un rendu LaTeX plus lisible. Repli sur les
+        valeurs numériques brutes en cas d'échec.
+        """
+
+        def _to_sp(M: np.ndarray) -> sp.Matrix:
+            def _simplify(x: float) -> sp.Expr:
+                try:
+                    return sp.nsimplify(x, rational=True, tolerance=1e-4)
+                except Exception:
+                    return sp.Float(x)
+
+            return sp.Matrix(
+                M.shape[0], M.shape[1], [_simplify(float(v)) for v in M.ravel()]
+            )
+
+        try:
+            self._sA = _to_sp(self.A)
+            self._sB = _to_sp(self.B)
+        except Exception as e:
+            raise RuntimeError(
+                f"[{self.__class__.__name__}] _build_symbolic_model() failed — "
+                f"vérifier que self.A et self.B sont des ndarray valides.\n"
+                f"Cause: {type(e).__name__}: {e}"
+            ) from e
+
+    def latex_model(self) -> str:
+        """
+        Retourne la représentation LaTeX du modèle état-espace :
+
+            z_{k+1} = A z_k + B n_k
+
+        avec A et B formatés par SymPy (fractions exactes si possible).
+        """
+        if not hasattr(self, "_sA"):
+            raise RuntimeError(
+                f"[{self.__class__.__name__}] _build_symbolic_model() non appelée — "
+                "vérifier l'ordre d'initialisation."
+            )
+        try:
+            return (
+                r"\begin{align}" + "\n"
+                r"z_{k+1} &= A\,z_k + B\,n_k \\" + "\n"
+                r"A &= " + sp.latex(self._sA) + r" \\" + "\n"
+                r"B &= " + sp.latex(self._sB) + "\n"
+                r"\end{align}"
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"[{self.__class__.__name__}] latex_model: échec du rendu LaTeX.\n"
+                f"Cause: {type(e).__name__}: {e}"
+            ) from e
+
+    # ------------------------------------------------------------------
+    # Helpers communs aux méthodes de visualisation
+    # ------------------------------------------------------------------
+
+    def _make_grid(
+        self,
+        n_points: int,
+        z_range: tuple[float, float] = (-1.0, 1.0),
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Construit une grille régulière 2D. Retourne Z1, Z2, Z_stack."""
+        z = np.linspace(*z_range, n_points)
+        Z1, Z2 = np.meshgrid(z, z)
+        Z_stack = np.stack([Z1.ravel(), Z2.ravel()], axis=1)
+        return Z1, Z2, Z_stack
+
+    @staticmethod
+    def _heatmap_ax(
+        ax: plt.Axes,
+        M: np.ndarray,
+        title: str,
+        annotate: bool = True,
+        fmt: str = ".3f",
+    ) -> None:
+        """
+        Trace un heatmap annoté d'une matrice numérique sur un axe existant.
+
+        Paramètres
+        ----------
+        annotate : affiche la valeur numérique dans chaque cellule.
+        fmt      : format d'affichage des valeurs.
+        """
+        vmax = np.abs(M).max() or 1.0
+        im = ax.imshow(M, cmap="RdBu_r", vmin=-vmax, vmax=vmax, aspect="auto")
+        plt.colorbar(im, ax=ax)
+        ax.set_title(title, size=BIG_SIZE)
+        ax.set_xticks(range(M.shape[1]))
+        ax.set_yticks(range(M.shape[0]))
+        ax.set_xticklabels([f"$z_{{{j}}}$" for j in range(M.shape[1])])
+        ax.set_yticklabels([f"$z_{{{i}}}^+$" for i in range(M.shape[0])])
+        if annotate:
+            for i in range(M.shape[0]):
+                for j in range(M.shape[1]):
+                    ax.text(
+                        j,
+                        i,
+                        format(M[i, j], fmt),
+                        ha="center",
+                        va="center",
+                        fontsize=8,
+                        color="white" if abs(M[i, j]) > 0.6 * vmax else "black",
+                    )
+
+    # ------------------------------------------------------------------
+    def plot_jacobian(self) -> None:
+        """
+        Visualise les matrices A et B du modèle linéaire et la position
+        des valeurs propres de A dans le plan complexe.
+
+        Disponible pour toute dimension.
+        Sauvegarde la figure dans data/plot/.
+
+        Sous-figures  (2 lignes × 2 colonnes)
+        -------------
+        (1,1) Heatmap annotée de A — matrice de transition
+        (1,2) Heatmap annotée de B — matrice de bruit
+        (2,1) Valeurs propres de A dans le plan complexe
+              • cercle unité en pointillés
+              • points stables (|λ| < 1) en bleu, instables en rouge
+        (2,2) Tableau récapitulatif : rayon spectral, stabilité,
+              liste des valeurs propres et de leurs modules
+        """
+        try:
+            eigvals = np.linalg.eigvals(self.A)
+        except np.linalg.LinAlgError as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] plot_jacobian: "
+                f"calcul des valeurs propres impossible: {e}"
+            ) from e
+        rho = np.max(np.abs(eigvals))
+        is_stable = rho < 1.0
+
+        os.makedirs("data/plot", exist_ok=True)
+        model_name = getattr(self, "MODEL_NAME", self.__class__.__name__)
+        fig, axes = plt.subplots(2, 2, figsize=(13, 10))
+
+        # ── (1,1) Heatmap A ──────────────────────────────────────────
+        self._heatmap_ax(axes[0, 0], self.A, r"Matrice de transition $A$")
+
+        # ── (1,2) Heatmap B ──────────────────────────────────────────
+        self._heatmap_ax(axes[0, 1], self.B, r"Matrice de bruit $B$")
+
+        # ── (2,1) Valeurs propres ─────────────────────────────────────
+        ax = axes[1, 0]
+        theta = np.linspace(0, 2 * np.pi, 300)
+        ax.plot(np.cos(theta), np.sin(theta), "k--", lw=1.0, label="cercle unité")
+        ax.axhline(0, color="gray", lw=0.5)
+        ax.axvline(0, color="gray", lw=0.5)
+        for k, lam in enumerate(eigvals):
+            color = "#1f77b4" if abs(lam) < 1.0 else "#d62728"
+            ax.scatter(lam.real, lam.imag, s=80, color=color, zorder=5)
+            ax.annotate(
+                rf"$\lambda_{{{k}}}$",
+                (lam.real, lam.imag),
+                textcoords="offset points",
+                xytext=(6, 4),
+                fontsize=9,
+            )
+        ax.set_title(r"Valeurs propres de $A$", size=BIG_SIZE)
+        ax.set_xlabel(r"$\mathrm{Re}(\lambda)$")
+        ax.set_ylabel(r"$\mathrm{Im}(\lambda)$")
+        ax.set_aspect("equal")
+        margin = max(0.3, rho * 0.2)
+        ax.set_xlim(-rho - margin, rho + margin)
+        ax.set_ylim(-rho - margin, rho + margin)
+        ax.legend(fontsize=8)
+
+        # ── (2,2) Tableau récapitulatif ───────────────────────────────
+        ax = axes[1, 1]
+        ax.axis("off")
+        stab_color = "#1f77b4" if is_stable else "#d62728"
+        stab_text = "✓ Stable" if is_stable else "✗ Instable"
+        lines = [
+            rf"$\rho(A) = {rho:.6f}$",
+            rf"Stabilité : {stab_text}",
+            "",
+            r"Valeurs propres $\lambda_k$ :",
+        ]
+        for k, lam in enumerate(eigvals):
+            mod = abs(lam)
+            sign = "●" if mod < 1.0 else "●"
+            c = "#1f77b4" if mod < 1.0 else "#d62728"
+            lines.append(
+                rf"  $\lambda_{{{k}}}$ = {lam.real:+.4f} {'+' if lam.imag >= 0 else ''}{lam.imag:.4f}j"
+                rf"   $|\lambda_{{{k}}}|$ = {mod:.4f}"
+            )
+        text = "\n".join(lines)
+        ax.text(
+            0.05,
+            0.95,
+            text,
+            transform=ax.transAxes,
+            va="top",
+            ha="left",
+            fontsize=10,
+            family="monospace",
+            color=stab_color,
+        )
+
+        fig.suptitle(
+            rf"{model_name} — $A_n = A$ (constante)",
+            fontsize=BIG_SIZE + 2,
+            fontweight="bold",
+        )
+        plt.tight_layout()
+        path = f"data/plot/jacobian_{model_name}.png"
+        try:
+            plt.savefig(path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
+        except OSError as e:
+            raise OSError(
+                f"[{self.__class__.__name__}] plot_jacobian: "
+                f"impossible d'écrire '{path}': {e}"
+            ) from e
+        finally:
+            plt.close(fig)
+
+    # ------------------------------------------------------------------
     def plot_g(self, n_points=200):
         if self.dim_x != 1 or self.dim_y != 1:
             return
 
-        z1 = np.linspace(-1, 1, n_points)
-        z2 = np.linspace(-1, 1, n_points)
-        Z1, Z2 = np.meshgrid(z1, z2)
-        Z_stack = np.stack([Z1.ravel(), Z2.ravel()], axis=1)
-        noise = np.zeros((2, 1))
+        Z1, Z2, Z_stack = self._make_grid(n_points, (-1.0, 1.0))
+        noise = np.zeros((self.dim_xy, 1))
         G = np.zeros_like(Z_stack)
-
-        with np.errstate(all="raise"):
+        try:
             for k in range(Z_stack.shape[0]):
-                z = Z_stack[k].reshape(2, 1)
-                g_val = self.g(z, noise, 1.0)
-                if not np.isfinite(g_val).all():
-                    raise FloatingPointError("Non-finite value encountered in g")
-                G[k, :] = g_val.ravel()
+                G[k] = self.g(Z_stack[k].reshape(2, 1), noise, 1.0).ravel()
+        except NumericalError:
+            raise
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] plot_g: erreur lors de l'évaluation de g: {e}"
+            ) from e
 
         G1 = G[:, 0].reshape(n_points, n_points)
         G2 = G[:, 1].reshape(n_points, n_points)
 
         os.makedirs("data/plot", exist_ok=True)
+        model_name = getattr(self, "MODEL_NAME", self.__class__.__name__)
         fig = plt.figure(figsize=(9, 4), facecolor=FACECOLOR)
 
         ax1 = fig.add_subplot(1, 2, 1, projection="3d")
-        ax1.plot_surface(Z1, Z2, G1)
+        ax1.plot_surface(Z1, Z2, G1, cmap="viridis")
         ax1.set_title(r"$g_x(x, y)$", size=BIG_SIZE)
         ax1.set_xlabel(r"$x$")
         ax1.set_ylabel(r"$y$")
         ax1.view_init(elev=30, azim=45)
+        ax1.set_box_aspect((1, 1, 0.8))
 
         ax2 = fig.add_subplot(1, 2, 2, projection="3d")
-        ax2.plot_surface(Z1, Z2, G2)
+        ax2.plot_surface(Z1, Z2, G2, cmap="viridis")
         ax2.set_title(r"$g_y(x, y)$", size=BIG_SIZE)
         ax2.set_xlabel(r"$x$")
         ax2.set_ylabel(r"$y$")
         ax2.view_init(elev=30, azim=45)
+        ax2.set_box_aspect((1, 1, 0.8))
 
-        for ax in (ax1, ax2):
-            ax.set_box_aspect((1, 1, 0.8))
-
-        model_name = getattr(self, "MODEL_NAME", self.__class__.__name__)
-        plt.savefig(
-            f"data/plot/function_g_{model_name}.png",
-            dpi=DPI,
-            bbox_inches="tight",
-            facecolor=FACECOLOR,
-        )
-        plt.close(fig)
+        fig.suptitle(model_name, fontsize=BIG_SIZE + 2, fontweight="bold")
+        plt.tight_layout()
+        path = f"data/plot/function_g_{model_name}.png"
+        try:
+            plt.savefig(path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
+        except OSError as e:
+            raise OSError(
+                f"[{self.__class__.__name__}] plot_g: impossible d'écrire '{path}': {e}"
+            ) from e
+        finally:
+            plt.close(fig)
 
     def plot_g_dynamic(self, n_points=150, quiver_stride=10):
         if self.dim_x != 1 or self.dim_y != 1:
             return
 
-        z1 = np.linspace(-1, 1, n_points)
-        z2 = np.linspace(-1, 1, n_points)
-        Z1, Z2 = np.meshgrid(z1, z2)
-        Z_stack = np.stack([Z1.ravel(), Z2.ravel()], axis=1)
-        noise = np.zeros((2, 1))
+        Z1, Z2, Z_stack = self._make_grid(n_points, (-1.0, 1.0))
+        noise = np.zeros((self.dim_xy, 1))
         G = np.zeros_like(Z_stack)
-
-        with np.errstate(all="raise"):
+        try:
             for k in range(Z_stack.shape[0]):
-                z = Z_stack[k].reshape(2, 1)
-                g_val = self.g(z, noise, 1.0)
-                if not np.isfinite(g_val).all():
-                    raise FloatingPointError("Non-finite value in g")
-                G[k, :] = g_val.ravel()
+                G[k] = self.g(Z_stack[k].reshape(2, 1), noise, 1.0).ravel()
+        except NumericalError:
+            raise
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] plot_g_dynamic: erreur lors de l'évaluation de g: {e}"
+            ) from e
 
         G1 = G[:, 0].reshape(n_points, n_points)
         G2 = G[:, 1].reshape(n_points, n_points)
         NormG = np.sqrt(G1**2 + G2**2)
-        Dz1 = G1 - Z1
-        Dz2 = G2 - Z2
+        Dz1, Dz2 = G1 - Z1, G2 - Z2
 
         os.makedirs("data/plot", exist_ok=True)
-        fig = plt.figure(figsize=(10, 7), facecolor=FACECOLOR)
+        model_name = getattr(self, "MODEL_NAME", self.__class__.__name__)
+        fig = plt.figure(figsize=(12, 8), facecolor=FACECOLOR)
 
         ax1 = fig.add_subplot(2, 2, 1, projection="3d")
-        ax1.plot_surface(Z1, Z2, G1)
+        ax1.plot_surface(Z1, Z2, G1, cmap="viridis")
         ax1.set_title(r"$g_x(x,y)$", size=BIG_SIZE)
         ax1.set_xlabel(r"$x$")
         ax1.set_ylabel(r"$y$")
         ax1.view_init(30, 45)
 
         ax2 = fig.add_subplot(2, 2, 2, projection="3d")
-        ax2.plot_surface(Z1, Z2, G2)
+        ax2.plot_surface(Z1, Z2, G2, cmap="viridis")
         ax2.set_title(r"$g_y(x,y)$", size=BIG_SIZE)
         ax2.set_xlabel(r"$x$")
         ax2.set_ylabel(r"$y$")
         ax2.view_init(30, 45)
 
         ax3 = fig.add_subplot(2, 2, 3)
-        im = ax3.contourf(Z1, Z2, NormG)
+        im = ax3.contourf(Z1, Z2, NormG, levels=20, cmap="plasma")
         ax3.set_title(r"$\|g(x,y)\|$", size=BIG_SIZE)
         ax3.set_xlabel(r"$x$")
         ax3.set_ylabel(r"$y$")
         plt.colorbar(im, ax=ax3)
 
         ax4 = fig.add_subplot(2, 2, 4)
-        ax4.quiver(
-            Z1[::quiver_stride, ::quiver_stride],
-            Z2[::quiver_stride, ::quiver_stride],
-            Dz1[::quiver_stride, ::quiver_stride],
-            Dz2[::quiver_stride, ::quiver_stride],
-        )
-        ax4.set_title(r"$g(x, y) - (x, y)$", size=BIG_SIZE)
+        s = quiver_stride
+        ax4.quiver(Z1[::s, ::s], Z2[::s, ::s], Dz1[::s, ::s], Dz2[::s, ::s])
+        ax4.set_title(r"$g(x,y) - (x,y)$", size=BIG_SIZE)
         ax4.set_xlabel(r"$x$")
         ax4.set_ylabel(r"$y$")
         ax4.set_aspect("equal")
 
-        model_name = getattr(self, "MODEL_NAME", self.__class__.__name__)
-        plt.savefig(
-            f"data/plot/function_g_dynamic_{model_name}.png",
-            dpi=DPI,
-            bbox_inches="tight",
-            facecolor=FACECOLOR,
-        )
-        plt.close(fig)
+        fig.suptitle(model_name, fontsize=BIG_SIZE + 2, fontweight="bold")
+        plt.tight_layout()
+        path = f"data/plot/function_g_dynamic_{model_name}.png"
+        try:
+            plt.savefig(path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
+        except OSError as e:
+            raise OSError(
+                f"[{self.__class__.__name__}] plot_g_dynamic: impossible d'écrire '{path}': {e}"
+            ) from e
+        finally:
+            plt.close(fig)
 
 
 # ----------------------------------------------------------
@@ -241,6 +473,8 @@ class LinearAmQ(BaseModelLinear):
                 report = CovarianceMatrix(arr).check()
                 if not report.is_valid:
                     raise ValueError("Matrix is not positive semi-definite.")
+
+        self._build_symbolic_model()
 
     @staticmethod
     def _init_random_params(dim_x, dim_y, val_max, seed=None):
@@ -320,7 +554,11 @@ class LinearSigma(BaseModelLinear):
         stab = StabilityMatrix(self.A)
         if not stab.is_valid():
             stab.summary()
-            exit(1)
+            raise ValueError(
+                f"[{self.__class__.__name__}] _initSigma: "
+                f"la matrice A calculée n'est pas stable (rayon spectral ≥ 1). "
+                f"Vérifier les paramètres sxx, syy, a, b, c, d, e."
+            )
 
         self.B = np.eye(self.A.shape[0])
 
@@ -329,6 +567,8 @@ class LinearSigma(BaseModelLinear):
                 report = CovarianceMatrix(arr).check()
                 if not report.is_valid:
                     raise ValueError("Matrix is not positive semi-definite.")
+
+        self._build_symbolic_model()
 
     def get_params(self):
         return {

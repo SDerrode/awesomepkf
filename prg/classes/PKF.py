@@ -17,7 +17,7 @@ from prg.classes.SeedGenerator import SeedGenerator
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
-from prg.exceptions import (
+from prg.utils.exceptions import (
     CovarianceError,
     FilterError,
     InvertibilityError,

@@ -3,7 +3,7 @@
 
 import numpy as np
 from prg.models.linear.base_model_linear import LinearSigma
-from prg.exceptions import NumericalError
+from prg.utils.exceptions import NumericalError
 
 __all__ = ["Model_Sigma_x2_y2"]
 

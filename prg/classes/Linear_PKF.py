@@ -15,7 +15,7 @@ from scipy.linalg import LinAlgError
 from prg.classes.PKF import PKF
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
-from prg.exceptions import FilterError, InvertibilityError, NumericalError
+from prg.utils.exceptions import FilterError, InvertibilityError, NumericalError
 
 __all__ = ["Linear_PKF"]
 

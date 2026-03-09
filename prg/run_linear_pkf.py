@@ -6,14 +6,14 @@ import sys
 
 from prg.base_classes.linear_pkf_runner_simulation import LinearPKFRunnerSim
 from prg.base_classes.linear_pkf_runner_from_file import LinearPKFRunnerFromFile
-from prg.utils.parser import addParseToParser
-from prg.exceptions import NumericalError, FilterError, PKFError, ParamError
+from prg.utils.parser import add_arguments
+from prg.utils.exceptions import NumericalError, FilterError, PKFError, ParamError
 
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Linear PKF")
 
-    addParseToParser(parser, ["linearModelName", "N", "sKey", "dataFileName"])
+    add_arguments(parser, ["linearModelName", "N", "sKey", "dataFileName"])
 
     args = parser.parse_args()
 

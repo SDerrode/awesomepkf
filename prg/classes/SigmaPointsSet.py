@@ -7,7 +7,7 @@ import numpy as np
 from itertools import product
 
 from prg.utils.numerics import EPS_ABS
-from prg.exceptions import CovarianceError, ParamError
+from prg.utils.exceptions import CovarianceError, ParamError
 
 __all__ = ["SigmaPointsSet", "SetWAN2000", "SetCPKF", "SetLERNER2002", "SetIto2000"]
 

@@ -4,7 +4,7 @@
 from typing import Optional
 
 from prg.base_classes.nonlinear_epkf_runner_base import BaseNonLinearEPKFRunner
-from prg.exceptions import FilterError, ParamError, PKFError
+from prg.utils.exceptions import FilterError, ParamError, PKFError
 
 __all__ = ["BaseNonLinearEPKFRunnerSim"]
 

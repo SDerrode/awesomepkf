@@ -18,7 +18,7 @@ from rich.pretty import Pretty
 from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
 from prg.utils.utils import rich_show_fields, compute_errors
 from prg.utils.numerics import EPS_ABS, EPS_REL
-from prg.exceptions import ParamError, NumericalError
+from prg.utils.exceptions import ParamError, NumericalError
 
 __all__ = ["HistoryTracker"]
 
