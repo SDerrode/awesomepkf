@@ -8,10 +8,10 @@ from prg.models.nonLinear.base_model_gxgy import BaseModelGxGy
 from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.utils.exceptions import NumericalError
 
-__all__ = ["ModelX2Y1_withRetroactionsOfObservations"]
+__all__ = ["ModelX2Y1_Retroactions"]
 
 
-class ModelX2Y1_withRetroactionsOfObservations(BaseModelGxGy):
+class ModelX2Y1_Retroactions(BaseModelGxGy):
     """
     Nonlinear model with full retroaction (dim_x=2, dim_y=1).
 
@@ -31,7 +31,7 @@ class ModelX2Y1_withRetroactionsOfObservations(BaseModelGxGy):
         Bn = dg/dn = I_3
     """
 
-    MODEL_NAME: str = "x2_y1_withRetroactionsOfObservations"
+    MODEL_NAME: str = "x2_y1_Retroactions"
 
     def __init__(self):
         # ← paramètres AVANT super().__init__() qui appelle _build_symbolic_model()

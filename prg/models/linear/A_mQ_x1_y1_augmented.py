@@ -59,5 +59,13 @@ class Model_A_mQ_x1_y1_augmented(LinearAmQ):
             ) from e
 
         super().__init__(
-            dim_x=dim_xy, dim_y=dim_y, A=A, B=B, mQ=mQ, mz0=mz0, Pz0=Pz0, augmented=True
+            dim_x=dim_xy,
+            dim_y=dim_y,
+            A=A,
+            B=B,
+            mQ=mQ,
+            mz0=mz0,
+            Pz0=Pz0,
+            augmented=True,
+            pairwiseModel=False,
         )

@@ -7,10 +7,10 @@ import sympy as sp
 from prg.models.nonLinear.base_model_gxgy import BaseModelGxGy
 from prg.utils.exceptions import NumericalError
 
-__all__ = ["ModelX2Y2_withRetroactions"]
+__all__ = ["ModelX2Y2_Retroactions"]
 
 
-class ModelX2Y2_withRetroactions(BaseModelGxGy):
+class ModelX2Y2_Retroactions(BaseModelGxGy):
     """
     Nonlinear model with full retroaction (dim_x=2, dim_y=2).
 
@@ -32,7 +32,7 @@ class ModelX2Y2_withRetroactions(BaseModelGxGy):
         Bn = dg/dn = I_4
     """
 
-    MODEL_NAME: str = "x2_y2_withRetroactions"
+    MODEL_NAME: str = "x2_y2_Retroactions"
     KAPPA: float = 0.15
 
     def __init__(self):

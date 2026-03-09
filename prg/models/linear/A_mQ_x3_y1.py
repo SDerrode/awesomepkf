@@ -42,4 +42,12 @@ class Model_A_mQ_x3_y1(LinearAmQ):
             ]
         )
         mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.15)
-        super().__init__(dim_x=dim_x, dim_y=dim_y, A=A, mQ=mQ, mz0=mz0, Pz0=Pz0)
+        super().__init__(
+            dim_x=dim_x,
+            dim_y=dim_y,
+            A=A,
+            mQ=mQ,
+            mz0=mz0,
+            Pz0=Pz0,
+            pairwiseModel=True,
+        )
