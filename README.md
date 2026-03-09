@@ -124,7 +124,6 @@ python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "x2_y1_withRetroactionsOf
 │   ├── models/
 │   │   ├── linear/
 │   │   │   ├── A_mQ_x1_y1.py
-│   │   │   ├── A_mQ_x1_y1_VPgreaterThan1.py
 │   │   │   ├── A_mQ_x1_y1_augmented.py
 │   │   │   ├── A_mQ_x2_y2.py
 │   │   │   ├── A_mQ_x3_y1.py
@@ -154,12 +153,12 @@ python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "x2_y1_withRetroactionsOf
 │   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── csv_to_parquet.py
+│   │   ├── exceptions.py
 │   │   ├── numerics.py
 │   │   ├── parser.py
 │   │   ├── plot_settings.py
 │   │   └── utils.py
 │   ├── __init__.py
-│   ├── exceptions.py
 │   ├── run_linear_pkf.py
 │   ├── run_nonlinear_epkf.py
 │   ├── run_nonlinear_ppf.py
@@ -167,8 +166,9 @@ python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "x2_y1_withRetroactionsOf
 │   └── run_simulator.py
 ├── .gitignore
 ├── LICENSE
-└── README.md
+├── README.md
+└── update_readme_structure.sh
 
-13 directories, 75 files
+13 directories, 74 files
 ```
 <!-- PROJECT_STRUCTURE_END -->

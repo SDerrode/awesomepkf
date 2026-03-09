@@ -37,5 +37,14 @@ class Model_Sigma_x2_y2(LinearSigma):
 
         # NumericalError (Cholesky, bloc) remonte naturellement depuis LinearSigma._initSigma()
         super().__init__(
-            dim_x=dim_x, dim_y=dim_y, sxx=sxx, syy=syy, a=a, b=b, c=c, d=d, e=e
+            dim_x=dim_x,
+            dim_y=dim_y,
+            sxx=sxx,
+            syy=syy,
+            a=a,
+            b=b,
+            c=c,
+            d=d,
+            e=e,
+            pairwiseModel=True,
         )

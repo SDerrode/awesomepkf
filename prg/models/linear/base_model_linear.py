@@ -26,7 +26,7 @@ class BaseModelLinear:
       2. 'linear_Sigma' : paramétrisation via variances sxx, syy et coefficients a, b, c, d, e
     """
 
-    def __init__(self, dim_x, dim_y, model_type, augmented=False):
+    def __init__(self, dim_x, dim_y, model_type, augmented=False, pairwiseModel=True):
         if not isinstance(dim_x, int) or dim_x <= 0:
             raise ValueError("dim_x doit être un entier positif")
         if not isinstance(dim_y, int) or dim_y <= 0:
@@ -39,6 +39,7 @@ class BaseModelLinear:
         self.dim_xy = dim_x + dim_y
         self.model_type = model_type
         self.augmented = augmented
+        self.pairwiseModel = pairwiseModel
 
         # UPKF specific parameters
         self.alpha = 0.25
@@ -454,8 +455,16 @@ class LinearAmQ(BaseModelLinear):
     B est l'identité par défaut si non fourni.
     """
 
-    def __init__(self, dim_x, dim_y, A, mQ, mz0, Pz0, B=None, augmented=False):
-        super().__init__(dim_x, dim_y, model_type="linear_AmQ", augmented=augmented)
+    def __init__(
+        self, dim_x, dim_y, A, mQ, mz0, Pz0, B=None, augmented=False, pairwiseModel=True
+    ):
+        super().__init__(
+            dim_x,
+            dim_y,
+            model_type="linear_AmQ",
+            augmented=augmented,
+            pairwiseModel=pairwiseModel,
+        )
 
         try:
             self.A = A
@@ -516,8 +525,16 @@ class LinearSigma(BaseModelLinear):
     Modèle linéaire avec variances sxx, syy et coefficients a, b, c, d, e.
     """
 
-    def __init__(self, dim_x, dim_y, sxx, syy, a, b, c, d, e, augmented=False):
-        super().__init__(dim_x, dim_y, model_type="linear_Sigma", augmented=augmented)
+    def __init__(
+        self, dim_x, dim_y, sxx, syy, a, b, c, d, e, augmented=False, pairwiseModel=True
+    ):
+        super().__init__(
+            dim_x,
+            dim_y,
+            model_type="linear_Sigma",
+            augmented=augmented,
+            pairwiseModel=pairwiseModel,
+        )
 
         self.sxx = sxx
         self.syy = syy

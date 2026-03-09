@@ -73,6 +73,7 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
     def __init__(self, dim_x=1, dim_y=1, model_type="nonlinear", augmented=False):
         super().__init__(dim_x, dim_y, model_type, augmented)
         self._build_symbolic_model()
+        self.pairwiseModel = False
 
     # ------------------------------------------------------------------
     def _args_fx(self, x, t, i=None):

@@ -7,18 +7,18 @@ import sympy as sp
 
 import numpy as np
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
-from prg.models.nonLinear.model_x2_y1_withRetroactionsOfObservations import (
-    ModelX2Y1_withRetroactionsOfObservations,
+from prg.models.nonLinear.model_x2_y1_Retroactions import (
+    ModelX2Y1_Retroactions,
 )
 from prg.utils.exceptions import NumericalError
 
 
-__all__ = ["ModelX2Y1_withRetroactionsOfObservations_augmented"]
+__all__ = ["ModelX2Y1_Retroactions_augmented"]
 
 
-class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelFxHx):
+class ModelX2Y1_Retroactions_augmented(BaseModelFxHx):
     """
-    Version augmentée de ModelX2Y1_withRetroactionsOfObservations (BaseModelFxHx).
+    Version augmentée de ModelX2Y1_Retroactions (BaseModelFxHx).
 
     État augmenté : x_aug = [x1, x2, x3] où x3 = observation précédente (y_prev).
     dim_x = 3, dim_y = 1, augmented = True.  split = dim_x - dim_y = 2.
@@ -46,13 +46,13 @@ class ModelX2Y1_withRetroactionsOfObservations_augmented(BaseModelFxHx):
               [H,      0]]
     """
 
-    MODEL_NAME: str = "x2_y1_withRetroactionsOfObservations_augmented"
+    MODEL_NAME: str = "x2_y1_Retroactions_augmented"
 
     def __init__(self):
         # ← self.mod et ses paramètres AVANT super() :
         #   symbolic_model() est appelé depuis _build_symbolic_model()
         #   à l'intérieur de super().__init__().
-        self.mod = ModelX2Y1_withRetroactionsOfObservations()
+        self.mod = ModelX2Y1_Retroactions()
         self.a, self.b, self.c, self.d, self.e, self.f = (
             self.mod.a,
             self.mod.b,

@@ -8,10 +8,10 @@ from prg.models.nonLinear.base_model_gxgy import BaseModelGxGy
 from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.utils.exceptions import NumericalError
 
-__all__ = ["ModelX1Y1_withRetroactions"]
+__all__ = ["ModelX1Y1_Retroactions"]
 
 
-class ModelX1Y1_withRetroactions(BaseModelGxGy):
+class ModelX1Y1_Retroactions(BaseModelGxGy):
     """
     Nonlinear model with full retroaction (dim_x=1, dim_y=1).
 
@@ -29,24 +29,28 @@ class ModelX1Y1_withRetroactions(BaseModelGxGy):
         Bn = dg/dn = I_2
     """
 
-    MODEL_NAME: str = "x1_y1_withRetroactions"
+    MODEL_NAME: str = "x1_y1_Retroactions"
 
     def __init__(self):
-        # ← paramètres AVANT super().__init__() qui appelle _build_symbolic_model()
+        # paramètres AVANT super().__init__()
         self.a = 0.50
-        self.b = 30
+        self.b = 3
         self.c = 0.40
-        self.d = 40
+        self.d = 2
+        # self.a = 0.99
+        # self.b = 1.2
+        # self.c = 0.9
+        # self.d = 1.5
 
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
 
         try:
             self.mQ = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+                self._randMatrices.rng, self.dim_x, self.dim_y, 1.5
             )
             self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
             self.Pz0 = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+                self._randMatrices.rng, self.dim_x, self.dim_y, 1.5
             )
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
@@ -58,6 +62,6 @@ class ModelX1Y1_withRetroactions(BaseModelGxGy):
         x, y, t, u = sx[0], sy[0], st[0], su[0]
 
         sgx = sp.Matrix([self.a * x + self.b * sp.tanh(y) + t])
-        sgy = sp.Matrix([self.c * y + self.d * sp.sin(x) + u])
+        sgy = sp.Matrix([self.c * y + self.d * sp.sin(x / 20.0) + u])
 
         return sgx, sgy

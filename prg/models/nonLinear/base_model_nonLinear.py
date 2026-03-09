@@ -45,6 +45,8 @@ class BaseModelNonLinear:
         self.mz0 = None
         self.Pz0 = None
 
+        self.pairwiseModel = None  # renseigné par l'un des 2 classes filles
+
         self._randMatrices = SeedGenerator(9)
 
     # ------------------------------------------------------------------
