@@ -64,6 +64,8 @@ class ParamNonLinear:
         self.augmented = kwargs["augmented"]
         self.pairwiseModel = kwargs["pairwiseModel"]
         self.g = kwargs["g"]
+        self.f = kwargs["f"]
+        self.h = kwargs["h"]
 
         self._mQ = np.array(kwargs["mQ"], dtype=float)
         self._mz0 = np.array(kwargs["mz0"], dtype=float)
@@ -87,8 +89,11 @@ class ParamNonLinear:
         return (
             f"<ParamNonLinear(dim_y={self.dim_y}, dim_x={self.dim_x}, "
             f"augmented={self.augmented}, verbose={self.verbose}, "
+            f"pairwiseModel={self.pairwiseModel}, verbose={self.verbose}, "
             f"alpha={self.alpha}, beta={self.beta}, "
-            f"kappa={self.kappa}, lambda_={self.lambda_})>"
+            f"kappa={self.kappa}, lambda_={self.lambda_}, "
+            f"g={self.g}, f={self.f}, h={self.h}"
+            ")>"
         )
 
     # ------------------------------------------------------------------

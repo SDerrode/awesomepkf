@@ -24,6 +24,10 @@ class ModelGordon(BaseModelFxHx):
             self.mQ = generate_block_matrix(
                 self._randMatrices.rng, self.dim_x, self.dim_y, 0.10
             )
+            # self.mQ = np.diag(np.diag(self.mQ))
+            # print(f"self.mQ={self.mQ}")
+            # input("ATTENTE")
+
             self.mz0 = self._randMatrices.rng.uniform(-1, 1, size=self.dim_xy).reshape(
                 -1, 1
             )

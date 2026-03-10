@@ -14,7 +14,9 @@ class Model_A_mQ_x1_y1_classic(LinearAmQ):
     def __init__(self):
         dim_x, dim_y = 1, 1
         A = np.array([[0.95, 0.0], [0.2, 0.0]])
-        mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.15)
+        mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.05)
+        # mQ = np.diag(np.diag(mQ))  # bruit non corrélé
+
         super().__init__(
             dim_x=dim_x,
             dim_y=dim_y,
