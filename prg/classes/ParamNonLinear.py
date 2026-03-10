@@ -62,6 +62,7 @@ class ParamNonLinear:
         self.verbose = verbose
 
         self.augmented = kwargs["augmented"]
+        self.pairwiseModel = kwargs["pairwiseModel"]
         self.g = kwargs["g"]
 
         self._mQ = np.array(kwargs["mQ"], dtype=float)

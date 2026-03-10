@@ -83,6 +83,7 @@ class NonLinear_UKF(PKF):
         sKey: Optional[int] = None,
         verbose: int = 0,
     ) -> None:
+
         super().__init__(param, sKey, verbose)
 
         try:
@@ -91,6 +92,11 @@ class NonLinear_UKF(PKF):
             raise ParamError(
                 f"Jeu de sigma-points inconnu : {sigmaSet!r}. "
                 f"Disponibles : {list(SigmaPointsSet.registry.keys())}."
+            )
+
+        if self.param.pairwiseModel == True:
+            raise PKFError(
+                f"Failed to process a pairwise model {model_name!r} with UKF."
             )
 
         # Jeu de sigma-points pour l'étape de prédiction (espace d'état dim_x)
@@ -102,12 +108,8 @@ class NonLinear_UKF(PKF):
         # Extraction de Q_x et R une seule fois — évite les découpages en boucle.
         # mQ peut être (dim_xy, dim_xy) si le param est partagé avec l'UPKF.
         raw_Q = self.param.mQ
-        self._Q_x: np.ndarray = (
-            raw_Q[: self.dim_x, : self.dim_x]
-            if raw_Q.shape[0] == self.dim_xy
-            else raw_Q
-        )
-        self._R: np.ndarray = self.param.mR  # (dim_y, dim_y)
+        self._Q_x: np.ndarray = raw_Q[: self.dim_x, : self.dim_x]
+        self._R: np.ndarray = raw_Q[self.dim_x :, self.dim_x :]
 
     # ------------------------------------------------------------------
     # Équations du modèle — vectorisées sur l'axe batch des sigma-points
@@ -202,6 +204,8 @@ class NonLinear_UKF(PKF):
         FilterError
             Si une erreur inattendue survient pendant la mise à jour.
         """
+
+        input("  ATTENTE - process_filter")
         self._validate_N(N)
 
         generator = (
@@ -235,13 +239,19 @@ class NonLinear_UKF(PKF):
             sigma_pred = np.array(sigma_pred_list)  # (n_sigma, dim_x, 1)
             n_sigma = sigma_pred.shape[0]
 
+            input("  ATTENTE - process_filter aaa")
+
             # Propagation vectorisée par f  →  f(σ_i)
             sigma_f = self._fx(sigma_pred, step.k, self.dt)  # (n_sigma, dim_x, 1)
+
+            input("  ATTENTE - process_filter aaa")
 
             # Moyenne prédite  x_pred = Σ Wm_i · f(σ_i)
             x_pred: np.ndarray = np.sum(
                 self.sigma_pred_set.Wm[:, None, None] * sigma_f, axis=0
             )  # (dim_x, 1)
+
+            input("  ATTENTE - process_filter bbb")
 
             # Covariance prédite  P_xx_pred = Σ Wc_i · δf_i δf_iᵀ  +  Q
             diffs_f = sigma_f - x_pred  # (n_sigma, dim_x, 1)
@@ -252,6 +262,8 @@ class NonLinear_UKF(PKF):
 
             # Validation — lève NumericalError si invalide
             self._check_covariance(P_xx_pred, step.k, name="P_xx_pred")
+
+            input("  ATTENTE - process_filter cccc")
 
             # ================================================================
             # ÉTAPE DE MISE À JOUR (sigma-points sur l'état prédit)
@@ -268,6 +280,8 @@ class NonLinear_UKF(PKF):
             # Propagation vectorisée par h  →  h(σ_i)
             sigma_h = self._hx(sigma_upd, zeros_u, self.dt)  # (n_sigma, dim_y, 1)
 
+            input("  ATTENTE - process_filter dddd")
+
             # Observation prédite  y_pred = Σ Wm_i · h(σ_i)
             y_pred: np.ndarray = np.sum(
                 self.sigma_upd_set.Wm[:, None, None] * sigma_h, axis=0
@@ -279,6 +293,8 @@ class NonLinear_UKF(PKF):
                 np.einsum("i,ijk,ilk->jl", self.sigma_upd_set.Wc, diffs_h, diffs_h)
                 + self._R
             )  # (dim_y, dim_y)
+
+            input("  ATTENTE - process_filter eeee")
 
             # Covariance croisée  P_xy = Σ Wc_i · δx_i δh_iᵀ
             diffs_x = sigma_upd - x_pred  # (n_sigma, dim_x, 1)
@@ -304,11 +320,15 @@ class NonLinear_UKF(PKF):
             Pkp1_predict[self.dim_x :, : self.dim_x] = P_xy.T
             Pkp1_predict[self.dim_x :, self.dim_x :] = P_yy
 
+            input("  ATTENTE - process_filter fffff")
+
             # Consommation de la prochaine observation
             try:
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
                 return  # générateur épuisé — arrêt normal, pas une erreur
+
+            input("  ATTENTE - process_filter gggg")
 
             # Mise à jour de Kalman — les exceptions custom remontent naturellement
             try:
@@ -321,5 +341,7 @@ class NonLinear_UKF(PKF):
                 raise FilterError(
                     f"Step {new_k}: unexpected error during update step."
                 ) from e
+
+            input("  ATTENTE - process_filter hhhhh")
 
             yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update

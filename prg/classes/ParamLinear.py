@@ -71,12 +71,12 @@ class ParamLinear:
         self.verbose = verbose
 
         # Two ways to construct the object
-        if len(kwargs.keys()) == 12:  # parametrization (A, mQ, mz0, Pz0)
+        if len(kwargs.keys()) == 13:  # parametrization (A, mQ, mz0, Pz0)
             self.constructorFrom_AB_mQ(
                 kwargs["A"], kwargs["B"], kwargs["mQ"], kwargs["mz0"], kwargs["Pz0"]
             )
         elif (
-            len(kwargs.keys()) == 14
+            len(kwargs.keys()) == 15
         ):  # parametrization (sxx, syy, a, b, c, d, e) --> Sigma
             self.constructorFrom_Sigma(
                 kwargs["sxx"],
@@ -95,6 +95,7 @@ class ParamLinear:
 
         # Paramètres communs
         self.augmented = kwargs["augmented"]
+        self.pairwiseModel = kwargs["pairwiseModel"]
         self.g = kwargs["g"]
 
         # Paramètres spécifiques UPKF

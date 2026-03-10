@@ -55,6 +55,7 @@ class BaseRunner(ABC):
         PKFError
             Si la construction du modèle ou des paramètres échoue.
         """
+
         if verbose not in (0, 1, 2):
             raise ParamError("verbose must be 0, 1 or 2.")
 
@@ -68,7 +69,7 @@ class BaseRunner(ABC):
         self.tracker_dir, self.datafile_dir, self.graph_dir = self._setup_directories()
 
         self.model, self.param = self._build_model()
-        self.runner_instance = None  # Will be set by child (pkf, epkf, ppf, upkf)
+        self.runner_instance = None  # Will be set by child (pkf, epkf, ppf, upkf, ukf)
 
     # ----------------------------------------------------------
 
