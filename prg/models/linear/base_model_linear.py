@@ -71,6 +71,68 @@ class BaseModelLinear:
                 f"[{self.__class__.__name__}] g: matrix multiplication error: {e}"
             ) from e
 
+    def _fx(self, x, noise_x, dt):
+        """
+        Évalue la transition f(x, noise_x) = A_xx @ x + B_xx @ noise_x.
+
+        x, noise_x : (dim_x, 1)       → retourne (dim_x, 1)
+        x, noise_x : (N, dim_x, 1)    → retourne (N, dim_x, 1)
+        """
+        if __debug__:
+            if x.ndim == 2:
+                assert all(a.shape == (self.dim_x, 1) for a in (x, noise_x))
+            else:
+                assert all(
+                    a.ndim == 3 and a.shape[1:] == (self.dim_x, 1) for a in (x, noise_x)
+                )
+                assert x.shape[0] == noise_x.shape[0]
+
+        A_xx = self.A[: self.dim_x, : self.dim_x]  # (dim_x, dim_x)
+        B_xx = self.B[: self.dim_x, : self.dim_x]  # (dim_x, dim_x)
+
+        try:
+            if x.ndim == 2:
+                return A_xx @ x + B_xx @ noise_x
+            else:
+                return np.einsum("ij,njk->nik", A_xx, x) + np.einsum(
+                    "ij,njk->nik", B_xx, noise_x
+                )
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _fx: matrix multiplication error: {e}"
+            ) from e
+
+    def _hx(self, x, noise_y, dt):
+        """
+        h(x, noise_y) = A_yx @ x + B_yy @ noise_y
+
+        x, noise_y : (dim_x, 1)       → retourne (dim_y, 1)
+        x, noise_y : (N, dim_x, 1)    → retourne (N, dim_y, 1)
+        """
+        if __debug__:
+            if x.ndim == 2:
+                assert x.shape == (self.dim_x, 1)
+                assert noise_y.shape == (self.dim_y, 1)
+            else:
+                assert x.ndim == 3 and x.shape[1:] == (self.dim_x, 1)
+                assert noise_y.ndim == 3 and noise_y.shape[1:] == (self.dim_y, 1)
+                assert x.shape[0] == noise_y.shape[0]
+
+        A_yx = self.A[self.dim_x :, : self.dim_x]  # (dim_y, dim_x) ← le bon bloc
+        B_yy = self.B[self.dim_x :, self.dim_x :]  # (dim_y, dim_y)
+
+        try:
+            if x.ndim == 2:
+                return A_yx @ x + B_yy @ noise_y
+            else:
+                return np.einsum("ij,njk->nik", A_yx, x) + np.einsum(
+                    "ij,njk->nik", B_yy, noise_y
+                )
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] _hx: matrix multiplication error: {e}"
+            ) from e
+
     def jacobiens_g(self, z, noise_z, dt):
         if __debug__:
             if z.ndim == 2:
@@ -454,6 +516,8 @@ class LinearAmQ(BaseModelLinear):
             "augmented": self.augmented,
             "pairwiseModel": self.pairwiseModel,
             "g": self.g,
+            "f": getattr(self, "_fx", None),
+            "h": getattr(self, "_hx", None),
             "jacobiens_g": self.jacobiens_g,
             "A": self.A,
             "B": self.B,
@@ -544,6 +608,8 @@ class LinearSigma(BaseModelLinear):
             "augmented": self.augmented,
             "pairwiseModel": self.pairwiseModel,
             "g": self.g,
+            "f": getattr(self, "_fx", None),
+            "h": getattr(self, "_hx", None),
             "jacobiens_g": self.jacobiens_g,
             "sxx": self.sxx,
             "syy": self.syy,

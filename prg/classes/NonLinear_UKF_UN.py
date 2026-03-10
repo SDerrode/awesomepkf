@@ -13,8 +13,6 @@ Différences par rapport à l'UPKF :
       * ``sigma_pred_set``  (dim = dim_x) pour l'étape de prédiction,
       * ``sigma_upd_set``   (dim = dim_x) pour l'étape de mise à jour.
   - Q et R sont injectés de façon **additive** (UKF non-augmenté).
-  - La corrélation croisée M = E[t·uᵀ] est prise en compte dans
-    P_xy et P_yy (correction au premier ordre via la jacobienne H).
   - ``_fx`` et ``_hx`` encapsulent respectivement l'équation d'état
     et l'équation d'observation ; les deux sont vectorisées sur
     l'axe des sigma-points (batch axis 0).
@@ -51,7 +49,6 @@ class NonLinear_UKF(PKF):
        propagation par :meth:`_fx`, covariance prédite augmentée de Q.
     2. **Mise à jour** — sigma-points sur l'état prédit ``(x_pred, P_xx_pred)``,
        propagation par :meth:`_hx`, covariance d'innovation augmentée de R,
-       correction de corrélation croisée M via la jacobienne H,
        calcul du gain via :meth:`PKF._nextUpdating`.
 
     Parameters
@@ -59,18 +56,9 @@ class NonLinear_UKF(PKF):
     param : ParamLinear | ParamNonLinear
         Paramètres du modèle.  Doit exposer :
 
-        * ``mQ`` — matrice de covariance complète du bruit, shape ``(dim_xy, dim_xy)`` :
-
-          .. code-block:: text
-
-              mQ = [ Q   M  ]
-                   [ M^T R  ]
-
-          avec ``Q = E[t·tᵀ]``, ``R = E[u·uᵀ]``, ``M = E[t·uᵀ]``.
-
+        * ``mQ`` — covariance du bruit de processus,  shape ``(dim_xy, dim_xy)``
         * ``f(x, t, dt)`` — fonction de transition vectorisée ;
-        * ``h(x, u, dt)`` — fonction d'observation vectorisée ;
-        * ``jacobiens_g(z, noise_z, dt)`` — jacobiennes de g, dont on extrait dh/dx.
+        * ``h(x, u, dt)`` — fonction d'observation vectorisée.
 
     sigmaSet : str
         Clé du jeu de sigma-points dans ``SigmaPointsSet.registry``.
@@ -83,8 +71,6 @@ class NonLinear_UKF(PKF):
     ------
     ParamError
         Si ``sigmaSet`` n'est pas une clé connue du registre.
-    FilterError
-        Si ``param.pairwiseModel`` est ``True``.
     """
 
     def __init__(
@@ -106,7 +92,9 @@ class NonLinear_UKF(PKF):
             )
 
         if self.param.pairwiseModel == True:
-            raise FilterError(f"Failed to process a pairwise model with UKF.")
+            raise FilterError(
+                f"Failed to process a pairwise model {model_name!r} with UKF."
+            )
 
         # Jeu de sigma-points pour l'étape de prédiction (espace d'état dim_x)
         self.sigma_pred_set = cls(dim=self.dim_x, param=self.param)
@@ -114,14 +102,10 @@ class NonLinear_UKF(PKF):
         # Jeu de sigma-points pour l'étape de mise à jour (espace d'état dim_x)
         self.sigma_upd_set = cls(dim=self.dim_x, param=self.param)
 
-        # Extraction des blocs de mQ une seule fois — évite les découpages en boucle.
-        #
-        #   mQ = [ Q_x   M  ]
-        #        [ M^T   R  ]
-        #
+        # Extraction de Q_x et R une seule fois — évite les découpages en boucle.
         self._Q_x: np.ndarray = self.param.mQ[: self.dim_x, : self.dim_x]
         self._R: np.ndarray = self.param.mQ[self.dim_x :, self.dim_x :]
-        self._M: np.ndarray = self.param.mQ[: self.dim_x, self.dim_x :]
+        # self._M: np.ndarray = self.param.mQ[: self.dim_x, self.dim_x :]
 
     # ------------------------------------------------------------------
     # Boucle principale du filtre
@@ -238,7 +222,7 @@ class NonLinear_UKF(PKF):
             if zeros_y is None:
                 zeros_y = np.zeros((n_sigma, self.dim_y, 1))
 
-            # Propagation vectorisée par h — bruit nul (additif : R ajouté sur P_yy)
+            # Propagation vectorisée par h  →  h(σ_i)
             sigma_h = self.param.h(sigma_upd, zeros_y, self.dt)  # (n_sigma, dim_y, 1)
 
             # Observation prédite  y_pred = Σ Wm_i · h(σ_i)
@@ -246,36 +230,18 @@ class NonLinear_UKF(PKF):
                 self.sigma_upd_set.Wm[:, None, None] * sigma_h, axis=0
             )  # (dim_y, 1)
 
-            # Jacobienne H = dh/dx évaluée en x_pred — nécessaire pour la correction M.
-            # jacobiens_g attend (z, noise_z, dt) avec z de shape (dim_xy, 1).
-            # Bn[dim_x:, :dim_x] = dh/dx (cf. _jacobiens_g dans base_model_fxhx).
-            z_pred_aug = np.concatenate(
-                [x_pred, np.zeros((self.dim_y, 1))], axis=0
-            )  # (dim_xy, 1)
-            _, Bn = self.param.jacobiens_g(
-                z_pred_aug, np.zeros((self.dim_xy, 1)), self.dt
-            )
-            H_pred: np.ndarray = Bn[self.dim_x :, : self.dim_x]  # (dim_y, dim_x)
-
-            # Covariance d'innovation
-            #   P_yy = Σ Wc_i · δh_i δh_iᵀ  +  R  +  H·M + Mᵀ·Hᵀ
-            # Le terme H·M + Mᵀ·Hᵀ (symétrique) assure que P_yy est cohérente
-            # avec P_xy lorsque E[t·uᵀ] = M ≠ 0 (règle de la chaîne sur h∘f).
-            # Quand M = 0, le terme disparaît → comportement identique au cas non corrélé.
+            # Covariance d'innovation  P_yy = Σ Wc_i · δh_i δh_iᵀ  +  R
             diffs_h = sigma_h - y_pred  # (n_sigma, dim_y, 1)
             P_yy: np.ndarray = (
                 np.einsum("i,ijk,ilk->jl", self.sigma_upd_set.Wc, diffs_h, diffs_h)
                 + self._R
-                + H_pred @ self._M
-                + self._M.T @ H_pred.T
             )  # (dim_y, dim_y)
 
-            # Covariance croisée
-            #   P_xy = Σ Wc_i · δx_i δh_iᵀ  +  M
+            # Covariance croisée  P_xy = Σ Wc_i · δx_i δh_iᵀ
             diffs_x = sigma_upd - x_pred  # (n_sigma, dim_x, 1)
-            P_xy: np.ndarray = (
-                np.einsum("i,ijk,ilk->jl", self.sigma_upd_set.Wc, diffs_x, diffs_h)
-                + self._M
+            # Dans process_filter — covariance croisée corrigée :
+            P_xy: np.ndarray = np.einsum(
+                "i,ijk,ilk->jl", self.sigma_upd_set.Wc, diffs_x, diffs_h
             )  # (dim_x, dim_y)
 
             # ================================================================

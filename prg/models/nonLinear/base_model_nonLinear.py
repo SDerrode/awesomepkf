@@ -140,6 +140,8 @@ class BaseModelNonLinear:
             "augmented": self.augmented,
             "pairwiseModel": self.pairwiseModel,
             "g": self.g,
+            "f": getattr(self, "_fx", None),
+            "h": getattr(self, "_hx", None),
             "jacobiens_g": self.jacobiens_g,  # pour EPKF
             "alpha": self.alpha,  # pour UPKF
             "beta": self.beta,  # pour UPKF

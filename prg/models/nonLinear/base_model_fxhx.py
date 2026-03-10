@@ -144,22 +144,36 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
     def _eval_fx(self, x, t):
         """
         Évalue f(x, t) numériquement.
-          x, t : (dim_x, 1)       → retourne (dim_x, 1)
-          x, t : (N, dim_x, 1)   → retourne (N, dim_x, 1)
+        x : (dim_x, 1)     t : (dim_x, 1) ou scalaire  → retourne (dim_x, 1)
+        x : (N, dim_x, 1)  t : (N, dim_x, 1) ou scalaire → retourne (N, dim_x, 1)
         """
         try:
             with np.errstate(all="raise"):
                 if x.ndim == 2:
+                    # Normalise t → (dim_x, 1)
+                    t_norm = (
+                        np.full((self.dim_x, 1), t)
+                        if np.ndim(t) == 0
+                        else np.asarray(t)
+                    )
                     return np.array(
-                        self._fx_num(*self._args_fx(x, t)), dtype=float
+                        self._fx_num(*self._args_fx(x, t_norm)), dtype=float
                     ).reshape(self.dim_x, 1)
+
                 N = x.shape[0]
+                # Normalise t → (N, dim_x, 1)
+                if np.ndim(t) == 0:
+                    t_norm = np.full((N, self.dim_x, 1), t)
+                else:
+                    t_norm = np.broadcast_to(np.asarray(t), (N, self.dim_x, 1))
+
                 out = np.empty((N, self.dim_x, 1))
                 for i in range(N):
                     out[i] = np.array(
-                        self._fx_num(*self._args_fx(x, t, i)), dtype=float
+                        self._fx_num(*self._args_fx(x, t_norm, i)), dtype=float
                     ).reshape(self.dim_x, 1)
                 return out
+
         except FloatingPointError as e:
             raise NumericalError(
                 f"[{self.__class__.__name__}] _eval_fx: erreur numérique à x={x}, t={t}: {e}"
@@ -172,22 +186,34 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
     def _eval_hx(self, x, u):
         """
         Évalue h(x, u) numériquement.
-          x : (dim_x, 1),  u : (dim_y, 1)     → retourne (dim_y, 1)
-          x : (N, dim_x, 1), u : (N, dim_y, 1) → retourne (N, dim_y, 1)
+        x : (dim_x, 1),    u : (dim_y, 1) ou scalaire   → retourne (dim_y, 1)
+        x : (N, dim_x, 1), u : (N, dim_y, 1) ou scalaire → retourne (N, dim_y, 1)
         """
         try:
             with np.errstate(all="raise"):
                 if x.ndim == 2:
+                    u_norm = (
+                        np.full((self.dim_y, 1), u)
+                        if np.ndim(u) == 0
+                        else np.asarray(u)
+                    )
                     return np.array(
-                        self._hx_num(*self._args_hx(x, u)), dtype=float
+                        self._hx_num(*self._args_hx(x, u_norm)), dtype=float
                     ).reshape(self.dim_y, 1)
+
                 N = x.shape[0]
+                if np.ndim(u) == 0:
+                    u_norm = np.full((N, self.dim_y, 1), u)
+                else:
+                    u_norm = np.broadcast_to(np.asarray(u), (N, self.dim_y, 1))
+
                 out = np.empty((N, self.dim_y, 1))
                 for i in range(N):
                     out[i] = np.array(
-                        self._hx_num(*self._args_hx(x, u, i)), dtype=float
+                        self._hx_num(*self._args_hx(x, u_norm, i)), dtype=float
                     ).reshape(self.dim_y, 1)
                 return out
+
         except FloatingPointError as e:
             raise NumericalError(
                 f"[{self.__class__.__name__}] _eval_hx: erreur numérique à x={x}, u={u}: {e}"
