@@ -57,9 +57,7 @@ class BaseNonLinearUKFRunnerSim(BaseNonLinearUKFRunner):
         """
 
         try:
-            input("ATTENTE run")
             self.runner_instance.process_N_data(N=self.N)
-            input("ATTENTE run apres")
         except PKFError:
             raise
         except Exception as e:

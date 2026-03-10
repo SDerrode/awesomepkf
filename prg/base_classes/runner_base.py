@@ -135,7 +135,6 @@ class BaseRunner(ABC):
         except PKFError:
             raise
         except Exception as e:
-            input("ATTENTE")
             raise PKFError(f"Failed to create model {self.model_name!r}.") from e
 
         params = model.get_params().copy()

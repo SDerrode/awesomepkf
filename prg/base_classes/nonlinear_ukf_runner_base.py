@@ -58,7 +58,7 @@ class BaseNonLinearUKFRunner(BaseRunner):
             raise
         except Exception as e:
             raise PKFError(
-                f"Failed to instantiate NonLinear_UKF for model {model_name!r}."
+                f"Failed to instantiate NonLinear_UKF for model {model_name!r}. It should be 'classic', not 'pairwise'!"
             ) from e
 
     def _get_model_factory(self):

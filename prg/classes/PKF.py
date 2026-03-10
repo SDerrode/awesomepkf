@@ -229,9 +229,7 @@ class PKF:
             If the filter raises an unhandled runtime error.
         """
         try:
-            input("ATTENTE - process_N_data")
             result = self.process_filter(N=N, data_generator=data_generator)
-            input("ATTENTE - process_N_data fin")
 
         except RuntimeError as e:
             raise FilterError("Unexpected runtime error in process_filter.") from e
