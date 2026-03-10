@@ -138,6 +138,7 @@ class BaseModelNonLinear:
             "dim_x": self.dim_x,
             "dim_y": self.dim_y,
             "augmented": self.augmented,
+            "pairwiseModel": self.pairwiseModel,
             "g": self.g,
             "jacobiens_g": self.jacobiens_g,  # pour EPKF
             "alpha": self.alpha,  # pour UPKF
