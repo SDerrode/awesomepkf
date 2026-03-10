@@ -41,6 +41,7 @@ _OPTION_CONFIG: dict = {
     "linearModelName": {
         "choices": [
             "A_mQ_x1_y1",
+            "A_mQ_x1_y1_classic",
             "A_mQ_x1_y1_augmented",
             "A_mQ_x2_y2",
             "A_mQ_x3_y1",
