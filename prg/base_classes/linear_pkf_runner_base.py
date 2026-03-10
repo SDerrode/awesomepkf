@@ -39,7 +39,7 @@ class BaseLinearPKFRunner(BaseRunner):
             raise
         except Exception as e:
             raise PKFError(
-                f"Failed to instantiate Linear_PKF for model {model_name!r}."
+                f"Failed to instantiate Linear_PKF for model {model_name!r}"
             ) from e
 
     def _get_model_factory(self):

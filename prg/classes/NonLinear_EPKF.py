@@ -141,13 +141,10 @@ class NonLinear_EPKF(PKF):
 
             # Prediction
             try:
-                # input("ATTENTE 1")
                 Zkp1_predict = self.param.g(z_iterated, self.zeros_dim_xy_1, self.dt)
-                # input("ATTENTE 2")
                 An, Bn = self.param.jacobiens_g(
                     z_iterated, self.zeros_dim_xy_1, self.dt
                 )
-                # input("ATTENTE 3")
 
             except Exception as e:
                 raise FilterError(

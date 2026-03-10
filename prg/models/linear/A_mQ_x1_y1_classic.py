@@ -22,5 +22,5 @@ class Model_A_mQ_x1_y1_classic(LinearAmQ):
             mQ=mQ,
             mz0=mz0,
             Pz0=Pz0,
-            pairwiseModel=True,
+            pairwiseModel=False,
         )

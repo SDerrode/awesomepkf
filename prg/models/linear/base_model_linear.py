@@ -326,57 +326,6 @@ class BaseModelLinear:
             plt.close(fig)
 
     # ------------------------------------------------------------------
-    def plot_g(self, n_points=200):
-        if self.dim_x != 1 or self.dim_y != 1:
-            return
-
-        Z1, Z2, Z_stack = self._make_grid(n_points, (-1.0, 1.0))
-        noise = np.zeros((self.dim_xy, 1))
-        G = np.zeros_like(Z_stack)
-        try:
-            for k in range(Z_stack.shape[0]):
-                G[k] = self.g(Z_stack[k].reshape(2, 1), noise, 1.0).ravel()
-        except NumericalError:
-            raise
-        except (ValueError, np.exceptions.AxisError) as e:
-            raise NumericalError(
-                f"[{self.__class__.__name__}] plot_g: erreur lors de l'évaluation de g: {e}"
-            ) from e
-
-        G1 = G[:, 0].reshape(n_points, n_points)
-        G2 = G[:, 1].reshape(n_points, n_points)
-
-        os.makedirs("data/plot", exist_ok=True)
-        model_name = getattr(self, "MODEL_NAME", self.__class__.__name__)
-        fig = plt.figure(figsize=(9, 4), facecolor=FACECOLOR)
-
-        ax1 = fig.add_subplot(1, 2, 1, projection="3d")
-        ax1.plot_surface(Z1, Z2, G1, cmap="viridis")
-        ax1.set_title(r"$g_x(x, y)$", size=BIG_SIZE)
-        ax1.set_xlabel(r"$x$")
-        ax1.set_ylabel(r"$y$")
-        ax1.view_init(elev=30, azim=45)
-        ax1.set_box_aspect((1, 1, 0.8))
-
-        ax2 = fig.add_subplot(1, 2, 2, projection="3d")
-        ax2.plot_surface(Z1, Z2, G2, cmap="viridis")
-        ax2.set_title(r"$g_y(x, y)$", size=BIG_SIZE)
-        ax2.set_xlabel(r"$x$")
-        ax2.set_ylabel(r"$y$")
-        ax2.view_init(elev=30, azim=45)
-        ax2.set_box_aspect((1, 1, 0.8))
-
-        fig.suptitle(model_name, fontsize=BIG_SIZE + 2, fontweight="bold")
-        plt.tight_layout()
-        path = f"data/plot/function_g_{model_name}.png"
-        try:
-            plt.savefig(path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
-        except OSError as e:
-            raise OSError(
-                f"[{self.__class__.__name__}] plot_g: impossible d'écrire '{path}': {e}"
-            ) from e
-        finally:
-            plt.close(fig)
 
     def plot_g_dynamic(self, n_points=150, quiver_stride=10):
         if self.dim_x != 1 or self.dim_y != 1:
