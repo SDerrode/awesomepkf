@@ -59,14 +59,14 @@ _OPTION_CONFIG: dict = {
     },
     "nonLinearModelName": {
         "choices": [
-            "model_x1_y1_Cubique_pairwise",
+            "model_x1_y1_Cubique_classic",
             "model_x1_y1_ExpSaturant_classic",
-            "model_x1_y1_Gordon_pairwise",
-            "model_x1_y1_Sinus_pairwise",
+            "model_x1_y1_Gordon_classic",
+            "model_x1_y1_Sinus_classic",
             "model_x1_y1_pairwise",
             "model_x1_y1_augmented",
             "model_x2_y1_pairwise",
-            "model_x2_y1_Rapport_pairwise",
+            "model_x2_y1_Rapport_classic",
             "model_x2_y1_pairwise",
             "model_x2_y1_augmented",
             "model_x2_y2_pairwise",

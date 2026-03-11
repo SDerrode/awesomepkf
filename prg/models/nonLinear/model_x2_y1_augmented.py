@@ -7,9 +7,7 @@ import sympy as sp
 
 import numpy as np
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
-from prg.models.nonLinear.model_x2_y1_pairwise import (
-    ModelX2Y1_Retroactions,
-)
+from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
 from prg.utils.exceptions import NumericalError
 
 
@@ -46,13 +44,11 @@ class Model_x2_y1_augmented(BaseModelFxHx):
               [H,      0]]
     """
 
-    MODEL_NAME: str = "Model_x2_y1_augmented"
-
     def __init__(self):
         # ← self.mod et ses paramètres AVANT super() :
         #   symbolic_model() est appelé depuis _build_symbolic_model()
         #   à l'intérieur de super().__init__().
-        self.mod = ModelX2Y1_Retroactions()
+        self.mod = Model_x2_y1_pairwise()
         self.a, self.b, self.c, self.d, self.e, self.f = (
             self.mod.a,
             self.mod.b,

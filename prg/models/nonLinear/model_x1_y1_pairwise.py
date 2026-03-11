@@ -29,8 +29,6 @@ class Model_x1_y1_pairwise(BaseModelGxGy):
         Bn = dg/dn = I_2
     """
 
-    MODEL_NAME: str = "Model_x1_y1_pairwise"
-
     def __init__(self):
         # paramètres AVANT super().__init__()
         self.a = 0.50

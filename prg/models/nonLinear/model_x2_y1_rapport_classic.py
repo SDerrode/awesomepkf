@@ -27,8 +27,6 @@ class Model_x2_y1_Rapport_classic(BaseModelFxHx):
         h(x) = x1^2/(1 + x1^2) + gamma*sin(x2) + u
     """
 
-    MODEL_NAME: str = "Model_x2_y1_Rapport_classic"
-
     def __init__(self):
         # ← paramètres AVANT super().__init__() qui appelle _build_symbolic_model()
         self.alpham = 0.5

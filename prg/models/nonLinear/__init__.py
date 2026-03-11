@@ -4,6 +4,7 @@
 import importlib
 import inspect
 import pkgutil
+import traceback
 from pathlib import Path
 
 from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
@@ -68,11 +69,11 @@ class ModelFactoryNonLinear:
                 if obj is BaseModelNonLinear:
                     continue
 
-                model_name = getattr(
-                    obj, "MODEL_NAME", obj.__name__.lower().replace("model", "")
-                )
+                # ignorer les classes abstraites (intermédiaires non instanciables)
+                if inspect.isabstract(obj):
+                    continue
 
-                cls._registry[model_name] = obj
+                cls._registry[obj.MODEL_NAME] = obj
 
     @classmethod
     def create(cls, name):

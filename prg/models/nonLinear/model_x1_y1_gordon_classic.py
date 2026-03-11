@@ -13,8 +13,6 @@ __all__ = ["Model_x1_y1_Gordon_classic"]
 
 class Model_x1_y1_Gordon_classic(BaseModelFxHx):
 
-    MODEL_NAME: str = "Model_x1_y1_Gordon_classic"
-
     def __init__(self, dt=1.0):
         self._dt = (
             dt  # ← stocker AVANT super().__init__ qui appelle _build_symbolic_model

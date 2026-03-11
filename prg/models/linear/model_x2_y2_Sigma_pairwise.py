@@ -15,8 +15,6 @@ class Model_x2_y2_Sigma_pairwise(LinearSigma):
     Paramétrisation : sxx, syy, a, b, c, d, e
     """
 
-    MODEL_NAME = "Model_x2_y2_Sigma_pairwise"
-
     def __init__(self) -> None:
 
         dim_x = 2

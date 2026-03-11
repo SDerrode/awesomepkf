@@ -3,7 +3,7 @@
 
 import numpy as np
 from prg.models.linear.base_model_linear import LinearAmQ
-from prg.models.linear.model_x1_y1_AQ_pairwise import model_x1_y1_AQ_pairwise
+from prg.models.linear.model_x1_y1_AQ_pairwise import Model_x1_y1_AQ_pairwise
 from prg.utils.exceptions import NumericalError
 
 __all__ = ["Model_x1_y1_AQ_augmented"]
@@ -11,10 +11,8 @@ __all__ = ["Model_x1_y1_AQ_augmented"]
 
 class Model_x1_y1_AQ_augmented(LinearAmQ):
 
-    MODEL_NAME = "Model_x1_y1_AQ_augmented"
-
     def __init__(self):
-        mod = model_x1_y1_AQ_pairwise()
+        mod = Model_x1_y1_AQ_pairwise()
 
         try:
             dim_x = mod.dim_x

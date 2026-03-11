@@ -31,8 +31,6 @@ class Model_x2_y1_pairwise(BaseModelGxGy):
         Bn = dg/dn = I_3
     """
 
-    MODEL_NAME: str = "Model_x2_y1_pairwise"
-
     def __init__(self):
         # ← paramètres AVANT super().__init__() qui appelle _build_symbolic_model()
         self.a = 0.95
