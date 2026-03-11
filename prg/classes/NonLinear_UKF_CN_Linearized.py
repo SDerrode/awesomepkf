@@ -105,7 +105,7 @@ class NonLinear_UKF(PKF):
                 f"Disponibles : {list(SigmaPointsSet.registry.keys())}."
             )
 
-        if self.param.pairwiseModel == True:
+        if self.param.pairwiseModel:
             raise FilterError(f"Failed to process a pairwise model with UKF.")
 
         # Jeu de sigma-points pour l'étape de prédiction (espace d'état dim_x)
@@ -172,6 +172,7 @@ class NonLinear_UKF(PKF):
         """
 
         self._validate_N(N)
+        self.history.clear()
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()
