@@ -25,41 +25,41 @@ __all__ = ["HistoryTracker"]
 
 class HistoryTracker:
     """
-    Enregistre et visualise l'évolution de grandeurs au fil des itérations.
+    Records and visualises the evolution of quantities over iterations.
 
-    Cette classe est utile pour suivre des variables dans des simulations, filtres
-    (Kalman, particulaire, etc.) ou tout algorithme itératif. Elle permet de :
+    This class is useful for tracking variables in simulations, filters
+    (Kalman, particle, etc.) or any iterative algorithm. It allows:
 
-    - Enregistrer des grandeurs à chaque itération via `record()`.
-    - Transformer l'historique en pandas DataFrame pour analyse.
-    - Calculer et afficher des erreurs via `compute_errors()`.
-    - Tracer les variables avec covariances et enveloppes ±2σ via `plot()`.
-    - Sauvegarder/recharger l'historique via pickle.
+    - Recording quantities at each iteration via `record()`.
+    - Converting the history to a pandas DataFrame for analysis.
+    - Computing and displaying errors via `compute_errors()`.
+    - Plotting variables with covariances and ±2σ envelopes via `plot()`.
+    - Saving/reloading the history via pickle.
 
-    Attributs
+    Attributes
     ----------
     _history : list[dict[str, Any]]
-        Liste des enregistrements effectués via `record()`.
+        List of records made via `record()`.
     verbose : int
-        Niveau de verbosité :
-        0 = avertissements uniquement
-        1 = informations principales
-        2 = debug détaillé
+        Verbosity level:
+        0 = warnings only
+        1 = main information
+        2 = detailed debug
     """
 
     def __init__(self, verbose: int = 0):
         """
-        Initialise un HistoryTracker vide.
+        Initialises an empty HistoryTracker.
 
         Parameters
         ----------
         verbose : int, optional
-            Niveau de verbosité (0, 1, 2). Par défaut 0.
+            Verbosity level (0, 1, 2). Default 0.
 
         Raises
         ------
         ParamError
-            Si ``verbose`` n'appartient pas à ``{0, 1, 2}``.
+            If ``verbose`` does not belong to ``{0, 1, 2}``.
         """
         if verbose not in (0, 1, 2):
             raise ParamError("verbose doit être 0, 1 ou 2.")
@@ -68,21 +68,21 @@ class HistoryTracker:
 
     def record(self, *args, **kwargs) -> None:
         """
-        Enregistre l'état courant.
+        Records the current state.
 
-        - Si on passe une dataclass (PKFStep), elle est convertie en dict.
-        - Sinon, on accepte **kwargs comme avant.
+        - If a dataclass (PKFStep) is passed, it is converted to a dict.
+        - Otherwise, **kwargs are accepted as before.
 
         Raises
         ------
         TypeError
-            Si les clés de ``kwargs`` ne sont pas toutes des chaînes.
+            If the keys of ``kwargs`` are not all strings.
         """
         if len(args) == 1 and is_dataclass(args[0]):
             self._history.append(asdict(args[0]))
         else:
             if not all(isinstance(k, str) for k in kwargs):
-                raise TypeError("Toutes les clés doivent être des chaînes.")
+                raise TypeError("All keys must be strings.")
             self._history.append(kwargs.copy())
 
     def as_dataframe(self) -> pd.DataFrame:
@@ -105,31 +105,31 @@ class HistoryTracker:
     @classmethod
     def load_pickle(cls, path: str) -> "HistoryTracker":
         """
-        Recharge un HistoryTracker à partir d'un fichier pickle.
+        Reloads a HistoryTracker from a pickle file.
 
         Parameters
         ----------
         path : str
-            Chemin du fichier pickle.
+            Path to the pickle file.
 
         Returns
         -------
         HistoryTracker
-            Un objet HistoryTracker contenant l'historique rechargé.
+            A HistoryTracker object containing the reloaded history.
 
         Raises
         ------
         FileNotFoundError
-            Si le fichier n'existe pas. — stdlib, intentionnel.
+            If the file does not exist. — stdlib, intentional.
         TypeError
-            Si le contenu du fichier n'est pas une liste. — stdlib, intentionnel.
+            If the file content is not a list. — stdlib, intentional.
         """
         if not os.path.exists(path):
-            raise FileNotFoundError(f"Fichier introuvable : {path}")
+            raise FileNotFoundError(f"File not found: {path}")
         with open(path, "rb") as f:
             data = pickle.load(f)
         if not isinstance(data, list):
-            raise TypeError("Le fichier ne contient pas une liste d'enregistrements.")
+            raise TypeError("The file does not contain a list of records.")
         tracker = cls()
         tracker._history = data
 
@@ -138,14 +138,14 @@ class HistoryTracker:
     # ------------------------------------------------------------------
     def compute_errors(self, model, ListeA, ListeB, ListeC, ListeD=None, ListeE=None):
         """
-        Calcule et affiche des rapports d'erreurs entre différentes séries de données.
+        Computes and displays error reports between different data series.
 
         Parameters
         ----------
         ListeA, ListeB, ListeC : list[str]
-            Noms des colonnes à comparer.
+            Names of the columns to compare.
         ListeD, ListeE : list[str] or None
-            Colonnes supplémentaires pour certains filtres (ex : particulaire).
+            Additional columns for certain filters (e.g. particle).
         """
         df = self.as_dataframe()
         console = Console(force_terminal=True, color_system="truecolor")
@@ -201,24 +201,24 @@ class HistoryTracker:
         self, var_series: pd.Series, col_name: str
     ) -> np.ndarray:
         """
-        Calcule un sigma stable à partir d'une série de variances et détecte les anomalies.
+        Computes a stable sigma from a variance series and detects anomalies.
 
         Parameters
         ----------
         var_series : pd.Series
-            Série pandas contenant les covariances diagonales.
+            Pandas series containing diagonal covariances.
         col_name : str
-            Nom de la variable (pour les messages d'erreur/log).
+            Variable name (for error/log messages).
 
         Returns
         -------
         np.ndarray
-            Tableau numpy contenant σ corrigé.
+            Numpy array containing corrected σ.
 
         Raises
         ------
         NumericalError
-            Si des variances fortement négatives sont détectées.
+            If strongly negative variances are detected.
         """
         v = var_series.values
         scale = np.nanmax(np.abs(v))
@@ -230,8 +230,8 @@ class HistoryTracker:
         if strongly_negative.any():
             idx = np.where(strongly_negative)[0][:5]
             raise NumericalError(
-                f"Variance fortement négative détectée dans {col_name!r} "
-                f"(indices exemples {idx.tolist()}, valeurs {v[idx].tolist()}).",
+                f"Strongly negative variance detected in {col_name!r} "
+                f"(example indices {idx.tolist()}, values {v[idx].tolist()}).",
                 matrix_name=col_name,
             )
 
@@ -253,52 +253,52 @@ class HistoryTracker:
         **kwargs,
     ):
         """
-        Trace l'évolution des états avec leurs covariances ±2σ.
+        Plots the evolution of states with their ±2σ covariance envelopes.
 
         Parameters
         ----------
         title : str
-            Titre global de la figure.
+            Global figure title.
         list_param : list[str]
-            Noms des colonnes à tracer.
+            Names of columns to plot.
         list_label : list[str]
-            Labels pour la légende.
+            Labels for the legend.
         list_covar : list[str or None]
-            Colonnes contenant la covariance associée (ou None).
+            Columns containing the associated covariance (or None).
         window : dict
-            Fenêtre temporelle à tracer, avec clés 'xmin' et 'xmax'.
+            Time window to plot, with keys 'xmin' and 'xmax'.
         basename : str, optional
-            Nom du fichier si sauvegarde (par défaut "plot").
+            File name if saving (default "plot").
         show : bool, optional
-            Affiche la figure si True (défaut True).
+            Displays the figure if True (default True).
         base_dir : str, optional
-            Dossier de sauvegarde si show=False.
+            Save directory if show=False.
 
         Returns
         -------
         fig, axes : tuple
-            Figure et axes matplotlib.
+            Matplotlib figure and axes.
 
         Raises
         ------
         ParamError
-            Si les listes ``list_param``, ``list_label``, ``list_covar``
-            n'ont pas la même longueur, ou si ``window`` est mal formé,
-            ou si une colonne est absente du DataFrame.
+            If the lists ``list_param``, ``list_label``, ``list_covar``
+            do not have the same length, or if ``window`` is malformed,
+            or if a column is absent from the DataFrame.
         ParamError
-            Si le premier élément de la colonne n'est pas un vecteur numpy.
+            If the first element of the column is not a numpy vector.
         NumericalError
-            Si des variances fortement négatives sont détectées lors du
-            calcul des enveloppes ±2σ (via ``_compute_sigma_envelope``).
+            If strongly negative variances are detected during the
+            computation of ±2σ envelopes (via ``_compute_sigma_envelope``).
         """
         if not (len(list_param) == len(list_label) == len(list_covar)):
             raise ParamError(
-                "list_param, list_label et list_covar doivent avoir la même longueur."
+                "list_param, list_label and list_covar must have the same length."
             )
 
         for key in ("xmin", "xmax"):
             if key not in window:
-                raise ParamError(f"window doit contenir la clé '{key}'.")
+                raise ParamError(f"window must contain the key '{key}'.")
 
         xmin, xmax = window["xmin"], window["xmax"]
         df = self.as_dataframe().iloc[xmin:xmax]
@@ -306,19 +306,19 @@ class HistoryTracker:
         if df.empty:
             df = self.as_dataframe()
             if df.empty:
-                raise ParamError("Aucune donnée enregistrée.")
+                raise ParamError("No data recorded.")
             xmin, xmax = 0, len(df)
 
         for p in list_param:
             if p not in df.columns:
                 raise ParamError(
-                    f"'{p}' n'est pas une colonne connue : {list(df.columns)}."
+                    f"'{p}' is not a known column: {list(df.columns)}."
                 )
 
         first = df[list_param[0]].iloc[0]
         if not hasattr(first, "shape"):
             raise ParamError(
-                f"Le premier élément de '{list_param[0]}' n'est pas un vecteur numpy."
+                f"The first element of '{list_param[0]}' is not a numpy vector."
             )
 
         nb_components = first.shape[0]
@@ -369,10 +369,10 @@ class HistoryTracker:
             df_subset[col_p].plot(ax=axes[j], label=list_label[k], alpha=0.5)
 
             if has_var and col_e not in df_subset_var:
-                raise ParamError(f"Variance '{col_e}' absente de df_subset_var.")
+                raise ParamError(f"Variance '{col_e}' absent from df_subset_var.")
 
             if has_var:
-                # Lève NumericalError si des variances fortement négatives sont détectées
+                # Raises NumericalError if strongly negative variances are detected
                 sigma = self._compute_sigma_envelope(df_subset_var[col_e], col_e)
 
                 y_upper = df_subset[col_p] + 2.0 * sigma
@@ -436,11 +436,11 @@ class SimpleStep:
 
 
 class A:
-    """Classe jouet pour illustrer l'usage de HistoryTracker."""
+    """Toy class to illustrate the usage of HistoryTracker."""
 
     def __init__(self, x0: float = 1.0, verbose: int = 1):
-        assert isinstance(x0, (int, float)), "x0 doit être un nombre"
-        assert verbose in [0, 1, 2], "verbose doit être 0, 1 ou 2"
+        assert isinstance(x0, (int, float)), "x0 must be a number"
+        assert verbose in [0, 1, 2], "verbose must be 0, 1 or 2"
 
         self.x = float(x0)
         self.verbose = verbose
@@ -458,8 +458,8 @@ class A:
             k += 1
 
     def iterate_list(self, n: int):
-        """Retourne la liste complète des itérations."""
-        assert isinstance(n, int) and n > 0, "n doit être un entier positif"
+        """Returns the complete list of iterations."""
+        assert isinstance(n, int) and n > 0, "n must be a positive integer"
         return list(self.iterate_gen(n))
 
 
@@ -476,7 +476,7 @@ if __name__ == "__main__":
         print(step)
 
     a.history.plot(
-        title="Évolution de x",
+        title="Evolution of x",
         list_param=["x"],
         list_label=["x"],
         list_covar=[None],
