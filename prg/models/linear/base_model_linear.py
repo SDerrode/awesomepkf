@@ -197,25 +197,86 @@ class BaseModelLinear:
 
     def latex_model(self) -> str:
         """
-        Retourne la représentation LaTeX du modèle état-espace :
+        Retourne la représentation LaTeX du modèle état-espace linéaire :
 
-            z_{k+1} = A z_k + B n_k
+            z_k = A z_{k-1} + B v_k,   v = (v^x, v^y) ~ N(0, Q)
 
-        avec A et B formatés par SymPy (fractions exactes si possible).
+        Conventions typographiques :
+          - scalaire (dim=1)   : italique simple  x, y
+          - vecteur  (dim>1)   : gras minuscule   \\mathbf{x}, ...
+          - bruit               : v^x (état), v^y (observation)
+          - matrices A, B, Q   : gras majuscule
         """
+        import re
+
         if not hasattr(self, "_sA"):
             raise RuntimeError(
                 f"[{self.__class__.__name__}] _build_symbolic_model() non appelée — "
                 "vérifier l'ordre d'initialisation."
             )
-        try:
-            return (
-                r"\begin{align}" + "\n"
-                r"z_{k+1} &= A\,z_k + B\,n_k \\" + "\n"
-                r"A &= " + sp.latex(self._sA) + r" \\" + "\n"
-                r"B &= " + sp.latex(self._sB) + "\n"
-                r"\end{align}"
+
+        nx, ny = self.dim_x, self.dim_y
+        bold_x = nx > 1
+        bold_y = ny > 1
+
+        # ------------------------------------------------------------------
+        # Noms LaTeX
+        # ------------------------------------------------------------------
+        x_n = r"\mathbf{x}" if bold_x else "x"
+        y_n = r"\mathbf{y}" if bold_y else "y"
+        z_n = r"\mathbf{z}"
+        vx_n = r"\mathbf{v}^x" if bold_x else "v^x"
+        vy_n = r"\mathbf{v}^y" if bold_y else "v^y"
+        v_n = r"\mathbf{v}"
+        A_n = r"\mathbf{A}"
+        B_n = r"\mathbf{B}"
+        Q_n = r"\mathcal{Q}"
+
+        # ------------------------------------------------------------------
+        # mQ formaté à 2 décimales
+        # ------------------------------------------------------------------
+        def _np_to_sp(M: np.ndarray) -> sp.Matrix:
+            return sp.Matrix(
+                M.shape[0],
+                M.shape[1],
+                [sp.Float(round(float(v), 2)) for v in M.ravel()],
             )
+
+        mQ_sp = _np_to_sp(self.mQ)
+
+        def _fix_latex(s: str) -> str:
+            """1.0 \\cdot 10^{-k}  →  10^{-k}"""
+            return re.sub(r"1\.0\s*\\cdot\s*", "", s)
+
+        # ------------------------------------------------------------------
+        # Rendu de A et B : scalaire sans pmatrix, matrice avec
+        # ------------------------------------------------------------------
+        def _lat_mat(mat: sp.Matrix) -> str:
+            if mat.shape == (1, 1):
+                return sp.latex(mat[0, 0])
+            return sp.latex(mat)
+
+        try:
+            lines = [
+                r"\begin{align}",
+                # ── Dynamique globale
+                rf"  {z_n}_k &= {A_n}\,{z_n}_{{k-1}} + {B_n}\,{v_n}_k \\[6pt]",
+                # ── Décomposition par blocs
+                rf"  \begin{{pmatrix}} {x_n}_k \\ {y_n}_k \end{{pmatrix}}"
+                rf" &= {A_n} \begin{{pmatrix}} {x_n}_{{k-1}} \\ {y_n}_{{k-1}} \end{{pmatrix}}"
+                rf" + {B_n} \begin{{pmatrix}} {vx_n} \\ {vy_n} \end{{pmatrix}} \\[6pt]",
+                # ── Distribution du bruit
+                rf"  {v_n} = ({vx_n},\,{vy_n})"
+                rf" &\sim \mathcal{{N}}\!\left(0,\; {Q_n}\right), \qquad"
+                rf" {Q_n} = {sp.latex(mQ_sp)} \\[12pt]",
+                # ── Matrice A
+                rf"  {A_n} &= {_lat_mat(self._sA)} \\[6pt]",
+                # ── Matrice B
+                rf"  {B_n} &= {_lat_mat(self._sB)}",
+                r"\end{align}",
+            ]
+            return _fix_latex("\n".join(lines))
+
         except Exception as e:
             raise RuntimeError(
                 f"[{self.__class__.__name__}] latex_model: échec du rendu LaTeX.\n"

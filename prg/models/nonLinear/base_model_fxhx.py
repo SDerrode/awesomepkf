@@ -370,18 +370,149 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
                 f"[{self.__class__.__name__}] _g: shape mismatch during stack: {e}"
             ) from e
 
-    # ------------------------------------------------------------------
-    def latex_model(self):
-        return rf"""
-            \begin{{align}}
-            x_{{k+1}} &= {sp.latex(self._sfx)} \\
-            y_k       &= {sp.latex(self._shx)}
-            \end{{align}}
+    def latex_model(self) -> str:
+        """
+        Retourne une représentation LaTeX du modèle état-espace non linéaire f/h.
 
-            Jacobians:
+        Conventions typographiques :
+          - scalaire (dim=1)        : italique simple  x, y
+          - vecteur  (dim>1)        : gras minuscule   \\mathbf{x}, ...
+          - bruit                   : v^x (état), v^y (observation)
+          - matrices jacobiennes    : gras majuscule   \\mathbf{A}, \\mathbf{H}
+          - bruit gaussien          : v = (v^x, v^y) ~ N(0, Q)
+        """
+        nx, ny = self.dim_x, self.dim_y
+        bold_x = nx > 1
+        bold_y = ny > 1
 
-            \begin{{align}}
-            \frac{{\partial f}}{{\partial x}} &= {sp.latex(self._sA)} \\
-            \frac{{\partial h}}{{\partial x}} &= {sp.latex(self._sH)}
-            \end{{align}}
-            """
+        # ------------------------------------------------------------------
+        # Noms LaTeX pour le bruit
+        # ------------------------------------------------------------------
+        def _vx_name(i: int) -> str:
+            return "v^x" if nx == 1 else rf"v^x_{i}"
+
+        def _vy_name(i: int) -> str:
+            return "v^y" if ny == 1 else rf"v^y_{i}"
+
+        vx_names = [_vx_name(i) for i in range(nx)]
+        vy_names = [_vy_name(i) for i in range(ny)]
+
+        # ------------------------------------------------------------------
+        # Dictionnaire de substitution sym → symbole LaTeX propre
+        # ------------------------------------------------------------------
+        def _sub_dict(syms, base: str, bold: bool, names=None) -> dict:
+            subs = {}
+            for i, s in enumerate(syms):
+                if names is not None:
+                    latex_name = names[i]
+                elif len(syms) == 1:
+                    latex_name = rf"\mathbf{{{base}}}" if bold else base
+                else:
+                    latex_name = rf"\mathbf{{{base}}}_{i}" if bold else rf"{base}_{i}"
+                subs[s] = sp.Symbol(latex_name, real=True)
+            return subs
+
+        subs = {}
+        subs.update(_sub_dict(list(self._sx), "x", bold=bold_x))
+        subs.update(_sub_dict(list(self._st), "t", bold=False, names=vx_names))
+        subs.update(_sub_dict(list(self._su), "u", bold=False, names=vy_names))
+
+        def _apply(mat: sp.Matrix) -> sp.Matrix:
+            return sp.Matrix(mat.shape[0], mat.shape[1], [e.subs(subs) for e in mat])
+
+        sfx_s = _apply(self._sfx)
+
+        # Pour h : substituer les x par y dans l'expression (h est évaluée en f(x)=y_{k})
+        subs_xy = {}
+        subs_xy.update(_sub_dict(list(self._sx), "y", bold=bold_y))
+        subs_xy.update(_sub_dict(list(self._st), "t", bold=False, names=vx_names))
+        subs_xy.update(_sub_dict(list(self._su), "u", bold=False, names=vy_names))
+
+        def _apply_xy(mat: sp.Matrix) -> sp.Matrix:
+            return sp.Matrix(mat.shape[0], mat.shape[1], [e.subs(subs_xy) for e in mat])
+
+        shx_s = _apply_xy(self._shx)
+        sA_s = _apply(self._sA)
+        sH_s = _apply(self._sH)
+
+        # ------------------------------------------------------------------
+        # Noms des membres gauches
+        # ------------------------------------------------------------------
+        x_n = r"\mathbf{x}" if bold_x else "x"
+        y_n = r"\mathbf{y}" if bold_y else "y"
+        vx_n = r"\mathbf{v}^x" if bold_x else "v^x"
+        vy_n = r"\mathbf{v}^y" if bold_y else "v^y"
+        v_n = r"\mathbf{v}"
+        A_n = r"\mathbf{A}"
+        H_n = r"\mathbf{H}"
+        Q_n = r"\mathcal{Q}"
+
+        # ------------------------------------------------------------------
+        # Formatage de mQ (2 décimales)
+        # ------------------------------------------------------------------
+        def _np_to_sp(M: np.ndarray) -> sp.Matrix:
+            return sp.Matrix(
+                M.shape[0],
+                M.shape[1],
+                [sp.Float(round(float(v), 2)) for v in M.ravel()],
+            )
+
+        mQ_sp = _np_to_sp(self.mQ)
+
+        # ------------------------------------------------------------------
+        # Rendu LaTeX avec bruit forcé en dernier
+        # Contourne le tri canonique de sp.Add en isolant la partie déterministe.
+        # ------------------------------------------------------------------
+        import re
+
+        def _fix_latex(s: str) -> str:
+            """1.0 \\cdot 10^{-k}  →  10^{-k}  (avec ou sans espace autour de \\cdot)"""
+            return re.sub(r"1\.0\s*\\cdot\s*", "", s)
+
+        def _reorder_noise_last(expr: sp.Expr) -> str:
+            zero_subs = {sp.Symbol(n, real=True): 0 for n in vx_names + vy_names}
+            det = expr.subs(zero_subs)
+            noise = sp.expand(expr - det)
+            if noise == 0:
+                return sp.latex(det)
+            if det == 0:
+                return sp.latex(noise)
+            noise_lat = sp.latex(noise)
+            sep = " " if noise_lat.startswith("-") else " + "
+            return sp.latex(det) + sep + noise_lat
+
+        def _lat(mat: sp.Matrix) -> str:
+            if mat.shape == (1, 1):
+                return _reorder_noise_last(mat[0, 0])
+            parts = [_reorder_noise_last(e) for e in mat]
+            rows = r" \\ ".join(parts)
+            return rf"\begin{{pmatrix}} {rows} \end{{pmatrix}}"
+
+        def _lat_jac(mat: sp.Matrix) -> str:
+            """Rendu des jacobiennes : scalaire sans pmatrix, matrice avec."""
+            if mat.shape == (1, 1):
+                return sp.latex(mat[0, 0])
+            return sp.latex(mat)
+
+        # ------------------------------------------------------------------
+        # Assemblage
+        # ------------------------------------------------------------------
+        lines = [
+            r"\begin{align}",
+            # ── Transition
+            rf"  f\!\left({x_n},\,{vx_n}\right)" rf" &= {_lat(sfx_s)} \\[6pt]",
+            # ── Observation  (h évaluée en y = f(x))
+            rf"  h\!\left({y_n},\,{vy_n}\right)" rf" &= {_lat(shx_s)} \\[6pt]",
+            # ── Distribution du bruit
+            rf"  {v_n} = ({vx_n},\,{vy_n})"
+            rf" &\sim \mathcal{{N}}\!\left(0,\; {Q_n}\right), \qquad"
+            rf" {Q_n} = {sp.latex(mQ_sp)} \\[12pt]",
+            # ── Jacobienne de transition (dfrac + pas de pmatrix si scalaire)
+            rf"  \dfrac{{\partial\, f}}{{\partial\, {x_n}}}"
+            rf" &= {_lat_jac(sA_s)} \\[10pt]",
+            # ── Jacobienne d'observation
+            rf"  \dfrac{{\partial\, h}}{{\partial\, {y_n}}}" rf" &= {_lat_jac(sH_s)}",
+            r"\end{align}",
+        ]
+
+        return _fix_latex("\n".join(lines))
