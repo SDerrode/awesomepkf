@@ -313,17 +313,150 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
             ) from e
 
     # ------------------------------------------------------------------
-    def latex_model(self):
-        return rf"""
-            \begin{{align}}
-            x_{{k+1}} &= {sp.latex(self._sgx)} \\
-            y_k       &= {sp.latex(self._sgy)}
-            \end{{align}}
+    def latex_model(self) -> str:
+        """
+        Retourne une représentation LaTeX du modèle état-espace non linéaire.
 
-            Jacobians:
+        Conventions typographiques :
+          - scalaire (dim=1)        : italique simple  x, y
+          - vecteur  (dim>1)        : gras minuscule   \\mathbf{x}, ...
+          - bruit                   : v^x (état), v^y (observation)
+          - matrices jacobiennes    : gras majuscule   \\mathbf{A}_n, \\mathbf{B}_n
+          - bruit gaussien          : (v^x, v^y) ~ N(0, Q)
+        """
+        nx, ny = self.dim_x, self.dim_y
 
-            \begin{{align}}
-            \frac{{\partial g}}{{\partial z}} &= {sp.latex(self._sAn)} \\
-            \frac{{\partial g}}{{\partial n}} &= {sp.latex(self._sBn)}
-            \end{{align}}
+        # ------------------------------------------------------------------
+        # Noms LaTeX pour le bruit : v^x_i / v^y_i (ou v^x / v^y si dim=1)
+        # ------------------------------------------------------------------
+        def _vx_name(i: int) -> str:
+            return "v^x" if nx == 1 else rf"v^x_{i}"
+
+        def _vy_name(i: int) -> str:
+            return "v^y" if ny == 1 else rf"v^y_{i}"
+
+        # ------------------------------------------------------------------
+        # Construction du dictionnaire de substitution sym → LaTeX symbol
+        # dim=1 : x0 → x,  t0 → v^x  (scalaire, pas d'indice)
+        # dim>1 : x0 → x_0, t0 → v^x_0, ... avec gras si vecteur
+        # ------------------------------------------------------------------
+        def _sub_dict(syms, base: str, bold: bool, names=None) -> dict:
+            subs = {}
+            for i, s in enumerate(syms):
+                if names is not None:
+                    latex_name = names[i]
+                elif len(syms) == 1:
+                    latex_name = rf"\mathbf{{{base}}}" if bold else base
+                else:
+                    latex_name = rf"\mathbf{{{base}}}_{i}" if bold else rf"{base}_{i}"
+                subs[s] = sp.Symbol(latex_name, real=True)
+            return subs
+
+        bold_x = nx > 1
+        bold_y = ny > 1
+
+        vx_names = [_vx_name(i) for i in range(nx)]
+        vy_names = [_vy_name(i) for i in range(ny)]
+
+        subs = {}
+        subs.update(_sub_dict(list(self._sx), "x", bold=bold_x))
+        subs.update(_sub_dict(list(self._sy), "y", bold=bold_y))
+        subs.update(_sub_dict(list(self._st), "t", bold=False, names=vx_names))
+        subs.update(_sub_dict(list(self._su), "u", bold=False, names=vy_names))
+
+        def _apply(mat: sp.Matrix) -> sp.Matrix:
+            return sp.Matrix(mat.shape[0], mat.shape[1], [e.subs(subs) for e in mat])
+
+        sgx_s = _apply(self._sgx)
+        sgy_s = _apply(self._sgy)
+        sAn_s = _apply(self._sAn)
+        sBn_s = _apply(self._sBn)
+
+        # ------------------------------------------------------------------
+        # Noms des membres gauches
+        # ------------------------------------------------------------------
+        x_n = r"\mathbf{x}" if bold_x else "x"
+        y_n = r"\mathbf{y}" if bold_y else "y"
+        vx_n = r"\mathbf{v}^x" if bold_x else "v^x"
+        vy_n = r"\mathbf{v}^y" if bold_y else "v^y"
+        z_n = r"\mathbf{z}"
+        v_n = r"\mathbf{v}"
+        An_n = r"\mathbf{A}_n"
+        Bn_n = r"\mathbf{B}_n"
+        Q_n = r"\mathcal{Q}"
+
+        # ------------------------------------------------------------------
+        # Formatage de mQ (2 décimales)
+        # ------------------------------------------------------------------
+        def _np_to_sp(M: np.ndarray) -> sp.Matrix:
+            return sp.Matrix(
+                M.shape[0],
+                M.shape[1],
+                [sp.Float(round(float(v), 2)) for v in M.ravel()],
+            )
+
+        mQ_sp = _np_to_sp(self.mQ)
+
+        # ------------------------------------------------------------------
+        # Rendu de gx / gy : scalaire sans crochets, vecteur avec ()
+        # On réordonne pour mettre le bruit en dernier via sp.Add.
+        # ------------------------------------------------------------------
+        import re
+
+        def _fix_latex(s: str) -> str:
+            """1.0 \\cdot 10^{-k}  →  10^{-k}  (avec ou sans espace autour de \\cdot)"""
+            return re.sub(r"1\.0\s*\\cdot\s*", "", s)
+
+        def _reorder_noise_last(expr: sp.Expr) -> str:
             """
+            Rend une expression LaTeX avec les termes de bruit forcés à la fin.
+            Contourne le tri canonique de sp.Add en substituant noise=0
+            pour extraire la partie déterministe, puis concatène manuellement.
+            """
+            zero_subs = {sp.Symbol(n, real=True): 0 for n in vx_names + vy_names}
+            det = expr.subs(zero_subs)  # partie déterministe
+            noise = sp.expand(expr - det)  # contribution du bruit
+
+            if noise == 0:
+                return sp.latex(det)
+            if det == 0:
+                return sp.latex(noise)
+
+            noise_lat = sp.latex(noise)
+            # Si le terme bruit commence par '-', pas besoin du '+'
+            sep = " " if noise_lat.startswith("-") else " + "
+            return sp.latex(det) + sep + noise_lat
+
+        def _lat(mat: sp.Matrix) -> str:
+            if mat.shape == (1, 1):
+                return _reorder_noise_last(mat[0, 0])
+            parts = [_reorder_noise_last(e) for e in mat]
+            # Rendu manuel en colonne avec parenthèses
+            rows = r" \\ ".join(parts)
+            return rf"\begin{{pmatrix}} {rows} \end{{pmatrix}}"
+
+        # ------------------------------------------------------------------
+        # Assemblage
+        # ------------------------------------------------------------------
+        lines = [
+            r"\begin{align}",
+            # ── Dynamique
+            rf"  g_x\!\left({x_n},\,{y_n},\,{vx_n}\right)"
+            rf" &= {_lat(sgx_s)} \\[6pt]",
+            # ── Observation
+            rf"  g_y\!\left({x_n},\,{y_n},\,{vy_n}\right)"
+            rf" &= {_lat(sgy_s)} \\[6pt]",
+            # ── Distribution du bruit (juste après les équations)
+            rf"  {v_n} = ({vx_n},\,{vy_n})"
+            rf" &\sim \mathcal{{N}}\!\left(0,\; {Q_n}\right), \qquad"
+            rf" {Q_n} = {sp.latex(mQ_sp)} \\[12pt]",
+            # ── Jacobienne d'état
+            rf"  {An_n} &= \frac{{\partial\, g}}{{\partial\, {z_n}}}"
+            rf" = {sp.latex(sAn_s)} \\[6pt]",
+            # ── Jacobienne de bruit
+            rf"  {Bn_n} &= \frac{{\partial\, g}}{{\partial\, {v_n}}}"
+            rf" = {sp.latex(sBn_s)}",
+            r"\end{align}",
+        ]
+
+        return _fix_latex("\n".join(lines))

@@ -68,11 +68,11 @@ python3 prg/run_linear_pkf.py --linearModelName "A_mQ_x1_y1" --dataFileName "tes
 ### Simulate Non-Linear Data and Filter with EPKF, UPKF and PPF
 
 ```bash
-python3 prg/run_simulator.py   --N 1000 --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --verbose 1 --sKey 303
+python3 prg/run_simulator.py   --N 1000 --nonLinearModelName "x2_y1_Retroactions" --dataFileName "testNL.csv" --verbose 1 --sKey 303
 
-python3 prg/run_nonlinear_epkf.py --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv"                       --verbose 1 --saveHistory --plot
-python3 prg/run_nonlinear_upkf.py --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --sigmaSet "wan2000"   --verbose 1 --saveHistory --plot
-python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "x2_y1_withRetroactionsOfObservations" --dataFileName "testNL.csv" --nbParticles 300       --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_epkf.py --nonLinearModelName "x2_y1_Retroactions" --dataFileName "testNL.csv"                       --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_upkf.py --nonLinearModelName "x2_y1_Retroactions" --dataFileName "testNL.csv" --sigmaSet "wan2000"   --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "x2_y1_Retroactions" --dataFileName "testNL.csv" --nbParticles 300       --verbose 1 --saveHistory --plot
 ```
 
 ---
@@ -118,6 +118,8 @@ python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "x2_y1_withRetroactionsOf
 │   │   ├── NonLinear_EPKF.py
 │   │   ├── NonLinear_PPF.py
 │   │   ├── NonLinear_UKF.py
+│   │   ├── NonLinear_UKF_CN_Linearized.py
+│   │   ├── NonLinear_UKF_UN.py
 │   │   ├── NonLinear_UPKF.py
 │   │   ├── PKF.py
 │   │   ├── ParamLinear.py
@@ -175,6 +177,6 @@ python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "x2_y1_withRetroactionsOf
 ├── README.md
 └── update_readme_structure.sh
 
-13 directories, 80 files
+13 directories, 82 files
 ```
 <!-- PROJECT_STRUCTURE_END -->
