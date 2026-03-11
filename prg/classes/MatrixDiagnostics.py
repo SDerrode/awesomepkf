@@ -3,16 +3,16 @@
 """
 matrix_diagnostics.py
 =====================
-Diagnostic complet pour deux types de matrices :
-    - CovarianceMatrix  : matrice de covariance (symétrique définie positive)
-    - InvertibleMatrix  : matrice inversible quelconque
+Complete diagnostic for two matrix types:
+    - CovarianceMatrix  : covariance matrix (symmetric positive definite)
+    - InvertibleMatrix  : arbitrary invertible matrix
 
-Chaque classe expose :
-    - check()    → diagnostic complet, retourne un DiagnosticReport
-    - summary()  → affiche le rapport en console
+Each class exposes:
+    - check()    → complete diagnostic, returns a DiagnosticReport
+    - summary()  → prints the report to the console
 
-InvertibleMatrix expose en plus :
-    - inverse()  → retourne l'inverse (après vérification)
+InvertibleMatrix additionally exposes:
+    - inverse()  → returns the inverse (after verification)
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ class Status(Enum):
 
 
 # ==========================================================
-# Résultat d'un test individuel
+# Result of an individual test
 # ==========================================================
 
 
@@ -68,7 +68,7 @@ class CheckResult:
 
 
 # ==========================================================
-# Rapport complet
+# Full report
 # ==========================================================
 
 
@@ -89,12 +89,12 @@ class DiagnosticReport:
 
     @property
     def is_ok(self) -> bool:
-        """True uniquement si tous les checks sont OK (aucun warning, aucun fail)."""
+        """True only if all checks are OK (no warnings, no failures)."""
         return self.overall_status == Status.OK
 
     @property
     def is_valid(self) -> bool:
-        """True si aucun check n'est FAIL (warnings tolérés)."""
+        """True if no check is FAIL (warnings tolerated)."""
         return self.overall_status != Status.FAIL
 
     def __str__(self) -> str:
@@ -112,23 +112,23 @@ class DiagnosticReport:
 
 
 # ==========================================================
-# Seuils de tolérance
+# Tolerance thresholds
 # ==========================================================
 
 
 @dataclass
 class CovarianceTolerances:
-    """Seuils pour une matrice de covariance."""
+    """Thresholds for a covariance matrix."""
 
-    # Symétrie  : max|M - M^T| / max|M|
+    # Symmetry: max|M - M^T| / max|M|
     symmetry_warn: float = 1e-8
     symmetry_fail: float = 1e-5
 
-    # Valeurs propres minimales
-    eigenvalue_warn: float = 1e-10  # quasi-singulière
-    eigenvalue_fail: float = 0.0  # valeur propre négative ou nulle
+    # Minimum eigenvalues
+    eigenvalue_warn: float = 1e-10  # near-singular
+    eigenvalue_fail: float = 0.0  # negative or zero eigenvalue
 
-    # Numéro de condition
+    # Condition number
     condition_warn: float = 1e6
     condition_fail: float = 1e12
 
@@ -138,9 +138,9 @@ class CovarianceTolerances:
 
 @dataclass
 class InvertibleTolerances:
-    """Seuils pour une matrice inversible quelconque."""
+    """Thresholds for an arbitrary invertible matrix."""
 
-    # Numéro de condition (rcond)
+    # Condition number (rcond)
     condition_warn: float = 1e6
     condition_fail: float = 1e12
 
@@ -148,38 +148,38 @@ class InvertibleTolerances:
     det_warn: float = 1e-10
     det_fail: float = 1e-15
 
-    # Rang attendu (None = n)
+    # Expected rank (None = n)
     expected_rank: Optional[int] = None
-    # rank_tol : None = seuil relatif automatique numpy (recommandé)
-    #            float = seuil absolu minimum (plancher seulement)
-    rank_tol: float = None  # ← était 1e-10, trop restrictif
+    # rank_tol : None = automatic relative threshold from numpy (recommended)
+    #            float = minimum absolute threshold (floor only)
+    rank_tol: float = None  # ← was 1e-10, too restrictive
 
-    # Résidu après inversion : ||I - M @ M_inv||_F
+    # Residual after inversion: ||I - M @ M_inv||_F
     residual_warn: float = 1e-8
     residual_fail: float = 1e-5
 
 
 @dataclass
 class StabilityTolerances:
-    """Seuils pour une matrice de stabilité (valeurs propres dans [0, 1])."""
+    """Thresholds for a stability matrix (eigenvalues in [0, 1])."""
 
-    # Valeur propre strictement négative
+    # Strictly negative eigenvalue
     eigenvalue_min: float = 0.0
 
-    # Valeur propre strictement supérieure à 1
+    # Eigenvalue strictly larger than 1
     eigenvalue_max: float = 1.0
 
-    # Marge de tolérance numérique autour des bornes
-    # (évite les faux positifs dus aux erreurs d'arrondi)
+    # Numerical tolerance margin around bounds
+    # (avoids false positives due to rounding errors)
     tol_boundary: float = 1e-10
 
-    # Valeur propre proche de 1 (quasi-instable, warning)
+    # Eigenvalue close to 1 (near-unstable, warning)
     near_unit_warn: float = 0.99
 
-    # Valeur propre proche de 0 (quasi-nulle, warning)
+    # Eigenvalue close to 0 (near-zero, warning)
     near_zero_warn: float = 1e-8
 
-    # Rayon spectral cible (avertit si proche de 1)
+    # Target spectral radius (warns if close to 1)
     spectral_radius_warn: float = 0.99
 
 
@@ -189,7 +189,7 @@ class StabilityTolerances:
 
 
 class _BaseMatrixDiagnostic:
-    """Classe abstraite commune."""
+    """Common abstract base class."""
 
     def __init__(self, matrix: np.ndarray):
         M = np.asarray(matrix, dtype=float)
@@ -238,11 +238,11 @@ class _BaseMatrixDiagnostic:
         raise NotImplementedError
 
     def is_ok(self) -> bool:
-        """True uniquement si tous les checks sont OK (aucun warning, aucun fail)."""
+        """True only if all checks are OK (no warnings, no failures)."""
         return self.check().is_ok
 
     def is_valid(self) -> bool:
-        """True si aucun check n'est FAIL (warnings tolérés)."""
+        """True if no check is FAIL (warnings tolerated)."""
         return self.check().is_valid
 
     def summary(self) -> None:
@@ -256,10 +256,10 @@ class _BaseMatrixDiagnostic:
 
 class CovarianceMatrix(_BaseMatrixDiagnostic):
     """
-    Diagnostic pour une matrice de covariance.
+    Diagnostic for a covariance matrix.
 
-    Vérifie : NaN/Inf, symétrie, diagonale positive,
-              valeurs propres, numéro de condition.
+    Checks: NaN/Inf, symmetry, positive diagonal,
+            eigenvalues, condition number.
     """
 
     def __init__(
@@ -283,27 +283,27 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
         c = self._check_nan_inf()
         report.checks.append(c)
         if c.status == Status.FAIL:
-            return report  # inutile de continuer
+            return report  # no point in continuing
 
         # 2 — Shape
         report.checks.append(self._check_shape())
 
-        # 3 — Symétrie
+        # 3 — Symmetry
         report.checks.append(self._check_symmetry())
 
         # 4 — Diagonale positive
         report.checks.append(self._check_diagonal())
 
-        # 5 — Valeurs propres
+        # 5 — Eigenvalues
         report.checks.append(self._check_eigenvalues())
 
-        # 6 — Numéro de condition
+        # 6 — Condition number
         report.checks.append(self._check_condition())
 
         return report
 
     # -------------------------------------------------------
-    # Checks spécifiques
+    # Specific checks
     # -------------------------------------------------------
 
     def _check_symmetry(self) -> CheckResult:
@@ -413,53 +413,53 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
 
     def regularize(self, eps: float | None = None) -> "RegularizationResult":
         """
-        Régularisation de Tikhonov : M_reg = (M + M.T)/2 + ε * I.
+        Tikhonov regularisation: M_reg = (M + M.T)/2 + ε * I.
 
-        Corrige une matrice de covariance invalide en ajoutant une perturbation
-        diagonale ε · I. Deux cas de défaillance sont traités :
+        Corrects an invalid covariance matrix by adding a diagonal perturbation
+        ε · I. Two failure cases are handled:
 
-        1. **Valeurs propres nulles/négatives** : ε est choisi pour rendre λ_min
-        strictement positif avec une marge raisonnable.
-        2. **Mauvais conditionnement** (cond ≥ condition_fail) : ε est choisi pour
-        ramener le numéro de condition sous le seuil ``condition_fail``.
+        1. **Zero/negative eigenvalues**: ε is chosen to make λ_min
+        strictly positive with a reasonable margin.
+        2. **Poor conditioning** (cond ≥ condition_fail): ε is chosen to
+        bring the condition number below the ``condition_fail`` threshold.
 
-        Si la matrice est déjà saine (λ_min > eigenvalue_warn **et**
-        cond < condition_fail), aucune perturbation n'est appliquée (ε = 0).
+        If the matrix is already healthy (λ_min > eigenvalue_warn **and**
+        cond < condition_fail), no perturbation is applied (ε = 0).
 
-        Si ``eps`` est fourni explicitement, il est utilisé directement sans
-        calcul automatique.
+        If ``eps`` is provided explicitly, it is used directly without
+        automatic computation.
 
         Parameters
         ----------
         eps : float, optional
-            Valeur de régularisation. Si ``None``, calculée automatiquement.
-            Si fournie, doit être strictement positive.
+            Regularisation value. If ``None``, computed automatically.
+            If provided, must be strictly positive.
 
         Returns
         -------
         RegularizationResult
-            Contient la matrice régularisée, la valeur ``eps`` utilisée,
-            et les rapports de diagnostic avant/après.
+            Contains the regularised matrix, the ``eps`` value used,
+            and the before/after diagnostic reports.
 
         Raises
         ------
         ValueError
-            Si ``eps`` est fourni mais non strictement positif.
+            If ``eps`` is provided but not strictly positive.
         RuntimeError
-            Si la matrice contient des NaN/Inf (non régularisable), ou si elle
-            reste invalide après régularisation (problème structural profond).
+            If the matrix contains NaN/Inf (not regularisable), or if it
+            remains invalid after regularisation (deep structural problem).
         """
         if eps is not None and eps <= 0:
             raise ValueError(f"eps must be strictly positive, got {eps}.")
 
-        # --- Garde-fou : NaN/Inf → non régularisable ---
+        # --- Guard: NaN/Inf → not regularisable ---
         if not np.all(np.isfinite(self._M)):
             raise RuntimeError(
                 "Regularization failed ― matrix remains invalid after adding ε=nan.\n"
                 f"{self.check()}"
             )
 
-        # Symétrise avant eigvalsh (bonne pratique numérique)
+        # Symmetrise before eigvalsh (good numerical practice)
         M_sym = (self._M + self._M.T) / 2
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -467,25 +467,25 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
         min_eig = float(eigvals.min())
         max_eig = float(eigvals.max())
 
-        # --- Calcul automatique de ε ---
+        # --- Automatic computation of ε ---
         if eps is None:
-            # Évalue les deux critères de défaillance
+            # Evaluates both failure criteria
             eigenvalue_ok = min_eig > self.tol.eigenvalue_warn
-            # Évite cond(NaN) si max_eig ~ 0 ; protège aussi la division
+            # Avoids cond(NaN) if max_eig ~ 0; also protects division
             if max_eig > 0.0 and min_eig > 0.0:
-                cond = max_eig / min_eig  # équivalent à np.linalg.cond pour SPD
+                cond = max_eig / min_eig  # equivalent to np.linalg.cond for SPD
             else:
                 cond = np.inf
             condition_ok = cond < self.tol.condition_fail
 
             if eigenvalue_ok and condition_ok:
-                # Matrice déjà saine — aucune régularisation nécessaire
+                # Matrix already healthy — no regularisation needed
                 eps = 0.0
             else:
-                # ε doit simultanément :
-                #   1. rendre λ_min strictement positif (si nécessaire)
-                #   2. abaisser le conditionnement sous condition_fail
-                #      en relevant λ_min jusqu'à λ_max / condition_fail
+                # ε must simultaneously:
+                #   1. make λ_min strictly positive (if needed)
+                #   2. lower the conditioning below condition_fail
+                #      by raising λ_min up to λ_max / condition_fail
                 eps_for_eigenvalue = (
                     abs(min_eig) + self.tol.eigenvalue_warn * 10
                     if not eigenvalue_ok
@@ -501,7 +501,7 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
 
         M_reg = M_sym + eps * np.eye(self._n)
 
-        # --- Diagnostics avant / après ---
+        # --- Before / after diagnostics ---
         report_before = self.check()
         report_after = CovarianceMatrix(M_reg, tol=self.tol).check()
 
@@ -525,49 +525,49 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
 
     def regularized(self, eps: float | None = None) -> np.ndarray:
         """
-        Raccourci vers :meth:`regularize` — retourne directement la matrice corrigée.
+        Shortcut to :meth:`regularize` — returns the corrected matrix directly.
 
         Parameters
         ----------
         eps : float, optional
-            Valeur de régularisation. Si ``None``, calculée automatiquement.
+            Regularisation value. If ``None``, computed automatically.
 
         Returns
         -------
         np.ndarray
-            Matrice régularisée ``(M + Mᵀ)/2 + ε * I``.
-            Si la matrice est déjà saine (``is_ok``), retourne une copie
-            symétrisée sans modification (ε = 0).
+            Regularised matrix ``(M + Mᵀ)/2 + ε * I``.
+            If the matrix is already healthy (``is_ok``), returns a
+            symmetrised copy without modification (ε = 0).
         """
         return self.regularize(eps=eps).matrix_regularized
 
 
 # ==========================================================
-# Résultat de régularisation
+# Regularisation result
 # ==========================================================
 
 
 @dataclass
 class RegularizationResult:
     """
-    Résultat d'une régularisation de Tikhonov sur une matrice de covariance.
+    Regularisation result of a Tikhonov regularisation on a covariance matrix.
 
     Attributes
     ----------
     matrix_original : np.ndarray
-        Matrice originale avant régularisation.
+        Original matrix before regularisation.
     matrix_regularized : np.ndarray
-        Matrice après régularisation : ``(M + M.T)/2 + ε * I``.
+        Matrix after regularisation: ``(M + M.T)/2 + ε * I``.
     eps_applied : float
-        Valeur de ε effectivement ajoutée sur la diagonale.
+        Value of ε actually added to the diagonal.
     min_eigenvalue_before : float
-        Plus petite valeur propre avant régularisation.
+        Smallest eigenvalue before regularisation.
     min_eigenvalue_after : float
-        Plus petite valeur propre après régularisation.
+        Smallest eigenvalue after regularisation.
     report_before : DiagnosticReport
-        Rapport de diagnostic avant régularisation.
+        Diagnostic report before regularisation.
     report_after : DiagnosticReport
-        Rapport de diagnostic après régularisation.
+        Diagnostic report after regularisation.
     """
 
     matrix_original: np.ndarray
@@ -580,7 +580,7 @@ class RegularizationResult:
 
     @property
     def is_success(self) -> bool:
-        """True si la matrice régularisée passe le diagnostic (is_valid)."""
+        """True if the regularised matrix passes the diagnostic (is_valid)."""
         return self.report_after.is_valid
 
     def __str__(self) -> str:
@@ -604,11 +604,11 @@ class RegularizationResult:
 
 class InvertibleMatrix(_BaseMatrixDiagnostic):
     """
-    Diagnostic pour une matrice inversible quelconque.
+    Diagnostic for an arbitrary invertible matrix.
 
-    Vérifie : NaN/Inf, rang, déterminant, numéro de condition,
-              résidu post-inversion.
-    Expose inverse() qui retourne l'inverse après vérification.
+    Checks: NaN/Inf, rank, determinant, condition number,
+            post-inversion residual.
+    Exposes inverse() which returns the inverse after verification.
     """
 
     def __init__(
@@ -638,16 +638,16 @@ class InvertibleMatrix(_BaseMatrixDiagnostic):
         # 2 — Shape
         report.checks.append(self._check_shape())
 
-        # 3 — Rang
+        # 3 — Rank
         report.checks.append(self._check_rank())
 
-        # 4 — Déterminant
+        # 4 — Determinant
         report.checks.append(self._check_determinant())
 
-        # 5 — Numéro de condition
+        # 5 — Condition number
         report.checks.append(self._check_condition())
 
-        # 6 — Résidu (calcule et met en cache l'inverse)
+        # 6 — Residual (computes and caches the inverse)
         report.checks.append(self._check_residual())
 
         return report
@@ -656,9 +656,9 @@ class InvertibleMatrix(_BaseMatrixDiagnostic):
 
     def inverse(self) -> np.ndarray:
         """
-        Retourne l'inverse de la matrice.
-        Lance un diagnostic complet au préalable.
-        Lève une RuntimeError si la matrice est FAIL.
+        Returns the inverse of the matrix.
+        Runs a complete diagnostic beforehand.
+        Raises RuntimeError if the matrix is FAIL.
         """
         report = self.check()
 
@@ -678,7 +678,7 @@ class InvertibleMatrix(_BaseMatrixDiagnostic):
         return self._inverse_cache
 
     # -------------------------------------------------------
-    # Checks spécifiques
+    # Specific checks
     # -------------------------------------------------------
 
     def _check_rank(self) -> CheckResult:
@@ -686,15 +686,15 @@ class InvertibleMatrix(_BaseMatrixDiagnostic):
         tol = self.tol
         expected = tol.expected_rank if tol.expected_rank is not None else self._n
 
-        # Seuil relatif : évite les faux positifs sur les matrices à petites valeurs
-        # np.linalg.matrix_rank sans tol explicite utilise déjà un seuil relatif
-        # (max(M.shape) * eps_machine * sigma_max) — c'est le bon comportement.
+        # Relative threshold: avoids false positives on matrices with small values
+        # np.linalg.matrix_rank without explicit tol already uses a relative threshold
+        # (max(M.shape) * eps_machine * sigma_max) — this is the correct behaviour.
         if tol.rank_tol is not None:
-            # Convertit le seuil absolu en seuil relatif à la norme spectrale
+            # Convert the absolute threshold to a threshold relative to the spectral norm
             sigma_max = float(np.linalg.norm(self._M, ord=2))
             adaptive_tol = max(tol.rank_tol, sigma_max * self._n * np.finfo(float).eps)
         else:
-            adaptive_tol = None  # laisse numpy choisir (seuil relatif par défaut)
+            adaptive_tol = None  # let numpy choose (default relative threshold)
 
         rank = int(np.linalg.matrix_rank(self._M, tol=adaptive_tol))
 
@@ -805,36 +805,36 @@ class InvertibleMatrix(_BaseMatrixDiagnostic):
 
 
 # ==========================================================
-# Matrice de stabilité
+# Stability matrix
 # ==========================================================
 
 
 class StabilityMatrix(_BaseMatrixDiagnostic):
     """
-    Diagnostic de stabilité pour une matrice carrée.
+    Stability diagnostic for a square matrix.
 
-    Vérifie que toutes les valeurs propres (en module pour les valeurs
-    propres complexes) sont comprises entre 0 et 1 inclus :
+    Checks that all eigenvalues (in modulus for complex eigenvalues)
+    lie between 0 and 1 inclusive:
 
         ∀ λ ∈ spec(M) : 0 ≤ |λ| ≤ 1
 
-    Cela correspond à la condition de stabilité (asymptotique) d'un
-    système dynamique discret  x_{t+1} = M · x_t.
+    This corresponds to the (asymptotic) stability condition of a
+    discrete dynamical system  x_{t+1} = M · x_t.
 
-    Checks effectués :
+    Checks performed:
         1. NaN / Inf
-        2. Shape (matrice carrée)
-        3. Valeurs propres dans [0, 1]  — FAIL si |λ| > 1 ou |λ| < 0
-        4. Rayon spectral               — WARNING si ρ(M) ≥ near_unit_warn
-        5. Valeurs propres quasi-nulles — WARNING si |λ_min| ≈ 0
-        6. Partie imaginaire            — INFO si valeurs propres complexes
+        2. Shape (square matrix)
+        3. Eigenvalues in [0, 1]  — FAIL if |λ| > 1 or |λ| < 0
+        4. Spectral radius        — WARNING if ρ(M) ≥ near_unit_warn
+        5. Near-zero eigenvalues  — WARNING if |λ_min| ≈ 0
+        6. Imaginary part         — INFO if complex eigenvalues
 
     Parameters
     ----------
     matrix : np.ndarray
-        Matrice carrée à analyser.
+        Square matrix to analyse.
     tol : StabilityTolerances, optional
-        Seuils de tolérance personnalisés.
+        Custom tolerance thresholds.
 
     Examples
     --------
@@ -857,7 +857,7 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
     # -------------------------------------------------------
 
     def spectral_radius(self) -> float:
-        """Retourne le rayon spectral ρ(M) = max |λ_i|."""
+        """Returns the spectral radius ρ(M) = max |λ_i|."""
         return float(np.max(np.abs(self._get_eigenvalues())))
 
     # -------------------------------------------------------
@@ -878,13 +878,13 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
         # 2 — Shape
         report.checks.append(self._check_shape())
 
-        # 3 — Valeurs propres dans [0, 1]
+        # 3 — Eigenvalues in [0, 1]
         report.checks.append(self._check_eigenvalue_bounds())
 
-        # 4 — Rayon spectral (quasi-instabilité)
+        # 4 — Spectral radius (near-instability)
         report.checks.append(self._check_spectral_radius())
 
-        # 5 — Valeurs propres quasi-nulles
+        # 5 — Near-zero eigenvalues
         report.checks.append(self._check_near_zero_eigenvalues())
 
         # 6 — Partie imaginaire (informatif)
@@ -897,7 +897,7 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
     # -------------------------------------------------------
 
     def _get_eigenvalues(self) -> np.ndarray:
-        """Calcule (et met en cache) les valeurs propres."""
+        """Computes (and caches) the eigenvalues."""
         if self._eigenvalues is None:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -905,17 +905,17 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
         return self._eigenvalues
 
     # -------------------------------------------------------
-    # Checks spécifiques
+    # Specific checks
     # -------------------------------------------------------
 
     def _check_eigenvalue_bounds(self) -> CheckResult:
-        """Vérifie que tous les |λ_i| ∈ [0, 1]."""
+        """Checks that all |λ_i| ∈ [0, 1]."""
         name = "Eigenvalues in [0, 1]"
         tol = self.tol
         eigvals = self._get_eigenvalues()
         moduli = np.abs(eigvals)
 
-        # Violations : |λ| > 1 + tol_boundary  →  instabilité
+        # Violations: |λ| > 1 + tol_boundary → instability
         unstable_mask = moduli > tol.eigenvalue_max + tol.tol_boundary
         unstable_vals = eigvals[unstable_mask]
 
@@ -937,9 +937,9 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
                 "The system is not stable.",
             )
 
-        # Violations : |λ| < 0  →  impossible mathématiquement,
-        # mais on vérifie par sécurité les moduli hors bornes basses
-        # (ici toujours ≥ 0 par définition, vérification redondante mais explicite)
+        # Violations: |λ| < 0 → mathematically impossible,
+        # but we check for safety the moduli outside lower bounds
+        # (always ≥ 0 by definition, redundant but explicit check)
         max_mod = float(moduli.max())
         min_mod = float(moduli.min())
         return self._ok(
@@ -950,13 +950,13 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
         )
 
     def _check_spectral_radius(self) -> CheckResult:
-        """Avertit si le rayon spectral est proche de 1 (quasi-instabilité)."""
+        """Warns if the spectral radius is close to 1 (near-instability)."""
         name = "Spectral radius ρ(M)"
         tol = self.tol
         rho = self.spectral_radius()
 
         if rho > tol.eigenvalue_max + tol.tol_boundary:
-            # Déjà signalé par _check_eigenvalue_bounds — on remonte FAIL cohérent
+            # Already reported by _check_eigenvalue_bounds — raise consistent FAIL
             return self._fail(
                 name,
                 rho,
@@ -979,7 +979,7 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
         )
 
     def _check_near_zero_eigenvalues(self) -> CheckResult:
-        """Avertit si certains |λ_i| sont quasi-nuls (mode très amorti)."""
+        """Warns if some |λ_i| are near-zero (very heavily damped mode)."""
         name = "Near-zero eigenvalues"
         tol = self.tol
         eigvals = self._get_eigenvalues()
@@ -1007,14 +1007,14 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
         )
 
     def _check_complex_eigenvalues(self) -> CheckResult:
-        """Informe si des valeurs propres sont complexes (oscillations)."""
+        """Informs if any eigenvalues are complex (oscillatory modes)."""
         name = "Complex eigenvalues (oscillatory modes)"
         eigvals = self._get_eigenvalues()
         complex_mask = np.abs(eigvals.imag) > 1e-12
         count = int(complex_mask.sum())
 
         if count > 0:
-            # Présenter les paires conjuguées (dédupliquer approximativement)
+            # Present conjugate pairs (approximate deduplication)
             complex_vals = eigvals[complex_mask]
             # Garde uniquement ceux avec imag > 0 (une valeur par paire)
             positive_imag = complex_vals[complex_vals.imag > 0]
@@ -1043,21 +1043,21 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
 
 if __name__ == "__main__":
 
-    print("\n--- CovarianceMatrix : cas sain ---")
+    print("\n--- CovarianceMatrix : healthy case ---")
     A = np.array([[4.0, 2.0], [2.0, 3.0]])
     cov_a = CovarianceMatrix(A)
     cov_a.summary()
     print(f"  is_ok    = {cov_a.is_ok()}")
     print(f"  is_valid = {cov_a.is_valid()}")
 
-    print("\n--- CovarianceMatrix : quasi-singulière ---")
+    print("\n--- CovarianceMatrix : near-singular ---")
     B = np.array([[1.0, 1.0], [1.0, 1.0 + 1e-11]])
     cov_b = CovarianceMatrix(B)
     cov_b.summary()
     print(f"  is_ok    = {cov_b.is_ok()}")
     print(f"  is_valid = {cov_b.is_valid()}")
 
-    print("\n--- CovarianceMatrix : non-symétrique ---")
+    print("\n--- CovarianceMatrix : non-symmetric ---")
     C = np.array([[4.0, 1.0], [3.0, 3.0]])
     cov_c = CovarianceMatrix(C)
     cov_c.summary()
@@ -1065,27 +1065,27 @@ if __name__ == "__main__":
     print(f"  is_valid = {cov_c.is_valid()}")
 
     print(
-        "\n--- CovarianceMatrix : valeur propre nulle → régularisation automatique ---"
+        "\n--- CovarianceMatrix : zero eigenvalue → automatic regularisation ---"
     )
-    # Matrice avec λ_min = 0 (singulière mais symétrique)
+    # Matrix with λ_min = 0 (singular but symmetric)
     v = np.array([[1.0], [1.0]])
     D_sing = v @ v.T  # [[1, 1], [1, 1]] — rang 1, λ_min = 0
     cov_d = CovarianceMatrix(D_sing)
     cov_d.summary()
-    print(f"  is_valid avant = {cov_d.is_valid()}")
+    print(f"  is_valid before = {cov_d.is_valid()}")
     result = cov_d.regularize()
     print(result)
     print(f"  is_success     = {result.is_success}")
-    print(f"  ε appliqué     = {result.eps_applied:.6g}")
-    print(f"  Matrice régularisée :\n{result.matrix_regularized}")
+    print(f"  ε applied      = {result.eps_applied:.6g}")
+    print(f"  Regularised matrix:\n{result.matrix_regularized}")
 
     print(
-        "\n--- CovarianceMatrix : valeur propre nulle → régularisation manuelle (ε=1e-6) ---"
+        "\n--- CovarianceMatrix : zero eigenvalue → manual regularisation (ε=1e-6) ---"
     )
     result_manual = cov_d.regularize(eps=1e-6)
     print(result_manual)
 
-    print("\n--- InvertibleMatrix : cas sain ---")
+    print("\n--- InvertibleMatrix : healthy case ---")
     E = np.array([[3.0, 1.0], [1.0, 2.0]])
     inv_e = InvertibleMatrix(E)
     inv_e.summary()
@@ -1093,7 +1093,7 @@ if __name__ == "__main__":
     print(f"  is_valid = {inv_e.is_valid()}")
     print("  Inverse :\n", inv_e.inverse())
 
-    print("\n--- InvertibleMatrix : singulière ---")
+    print("\n--- InvertibleMatrix : singular ---")
     F = np.array([[1.0, 2.0], [2.0, 4.0]])
     inv_f = InvertibleMatrix(F)
     print(f"  is_ok    = {inv_f.is_ok()}")

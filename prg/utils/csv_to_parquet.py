@@ -4,11 +4,11 @@
 """
 csv_to_parquet.py
 -----------------
-Convertit un fichier CSV en Parquet de manière robuste.
+Robustly converts a CSV file to Parquet format.
 
 Usage
 -----
-    python3 csv_to_parquet.py <fichier.csv> <fichier.parquet> [--engine pyarrow|fastparquet]
+    python3 csv_to_parquet.py <file.csv> <file.parquet> [--engine pyarrow|fastparquet]
 """
 
 import argparse
@@ -21,49 +21,49 @@ import pandas as pd
 
 
 # ---------------------------------------------------------------------------
-# Constantes
+# Constants
 # ---------------------------------------------------------------------------
 
-# Nombre d'octets lus pour la détection d'encodage.
-# 50 000 octets couvre la majorité des cas ; augmenter si des fichiers
-# à encodage rare sont fréquents dans votre corpus.
+# Number of bytes read for encoding detection.
+# 50 000 bytes covers the majority of cases; increase if files
+# with rare encodings are frequent in your corpus.
 _ENCODING_SAMPLE_BYTES = 50_000
 
 _SUPPORTED_ENGINES = ("pyarrow", "fastparquet")
 
 
 # ---------------------------------------------------------------------------
-# Fonctions
+# Functions
 # ---------------------------------------------------------------------------
 
 
 def detect_encoding(file_path: Path, n_bytes: int = _ENCODING_SAMPLE_BYTES) -> str:
     """
-    Détecte l'encodage d'un fichier texte via ``chardet``.
+    Detects the encoding of a text file via ``chardet``.
 
     Parameters
     ----------
     file_path : Path
-        Chemin vers le fichier à analyser.
+        Path to the file to analyse.
     n_bytes : int
-        Nombre d'octets à lire pour l'analyse (default: 50 000).
+        Number of bytes to read for analysis (default: 50 000).
 
     Returns
     -------
     str
-        Encodage détecté, ou ``"utf-8"`` si la détection échoue.
+        Detected encoding, or ``"utf-8"`` if detection fails.
 
     Warns
     -----
     UserWarning
-        Si la détection échoue, un avertissement est émis avant le fallback.
-        (FIX : l'original avalait silencieusement l'exception sans aucun log)
+        If detection fails, a warning is emitted before the fallback.
+        (FIX: the original silently swallowed the exception without any log)
     """
     try:
         with open(file_path, "rb") as f:
             raw_data = f.read(n_bytes)
     except OSError as e:
-        # FIX : on remonte l'erreur d'accès fichier explicitement
+        # FIX: raise file access error explicitly
         raise OSError(
             f"Impossible de lire '{file_path}' pour la détection d'encodage : {e}"
         ) from e
@@ -72,7 +72,7 @@ def detect_encoding(file_path: Path, n_bytes: int = _ENCODING_SAMPLE_BYTES) -> s
     encoding = result.get("encoding")
 
     if not encoding:
-        # FIX : fallback visible (avertissement) au lieu d'un silence total
+        # FIX: visible fallback (warning) instead of silent failure
         warnings.warn(
             f"Encodage non détecté pour '{file_path}' — fallback sur utf-8.",
             UserWarning,
@@ -89,36 +89,36 @@ def csv_to_parquet(
     engine: str = "pyarrow",
 ) -> None:
     """
-    Convertit un fichier CSV en Parquet.
+    Converts a CSV file to Parquet.
 
     Parameters
     ----------
     csv_path : Path | str
-        Chemin vers le fichier CSV source.
+        Path to the source CSV file.
     parquet_path : Path | str
-        Chemin vers le fichier Parquet de sortie.
+        Path to the output Parquet file.
     engine : {"pyarrow", "fastparquet"}
-        Moteur Parquet à utiliser (default: ``"pyarrow"``).
+        Parquet engine to use (default: ``"pyarrow"``).
 
     Raises
     ------
     ValueError
-        Si ``engine`` n'est pas supporté.
+        If ``engine`` is not supported.
     FileNotFoundError
-        Si ``csv_path`` n'existe pas.
+        If ``csv_path`` does not exist.
     OSError
-        Pour tout autre problème d'accès fichier.
+        For any other file access problem.
     """
     csv_path = Path(csv_path)
     parquet_path = Path(parquet_path)
 
-    # FIX : validation de l'engine avec message clair (pandas lève une erreur cryptique sinon)
+    # FIX: engine validation with a clear message (pandas raises a cryptic error otherwise)
     if engine not in _SUPPORTED_ENGINES:
         raise ValueError(
             f"Engine {engine!r} non supporté. " f"Choisir parmi : {_SUPPORTED_ENGINES}"
         )
 
-    # FIX : vérification explicite de l'existence du fichier source
+    # FIX: explicit check for source file existence
     if not csv_path.exists():
         raise FileNotFoundError(f"Fichier CSV introuvable : '{csv_path}'")
 
@@ -128,7 +128,7 @@ def csv_to_parquet(
     df = pd.read_csv(csv_path, encoding=encoding)
     print(f"  Lignes / colonnes : {df.shape[0]:,} × {df.shape[1]}")
 
-    # Créer le répertoire de sortie si nécessaire
+    # Create output directory if needed
     parquet_path.parent.mkdir(parents=True, exist_ok=True)
 
     df.to_parquet(parquet_path, engine=engine, index=False)
@@ -136,7 +136,7 @@ def csv_to_parquet(
 
 
 # ---------------------------------------------------------------------------
-# Point d'entrée CLI
+# CLI entry point
 # ---------------------------------------------------------------------------
 
 
@@ -147,7 +147,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("csv_file", help="Fichier CSV source")
     p.add_argument("parquet_file", help="Fichier Parquet de sortie")
-    # FIX : --engine exposé en argument CLI (l'original ne permettait pas de le choisir)
+    # FIX: --engine exposed as CLI argument (the original did not allow choosing it)
     p.add_argument(
         "--engine",
         choices=_SUPPORTED_ENGINES,
@@ -160,7 +160,7 @@ def _build_parser() -> argparse.ArgumentParser:
 if __name__ == "__main__":
     args = _build_parser().parse_args()
 
-    # FIX : feedback utilisateur explicite en cas de succès ou d'échec
+    # FIX: explicit user feedback on success or failure
     try:
         print(f"Conversion : '{args.csv_file}' → '{args.parquet_file}'")
         csv_to_parquet(args.csv_file, args.parquet_file, engine=args.engine)

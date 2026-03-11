@@ -118,16 +118,16 @@ class Linear_PKF(PKF):
         Raises
         ------
         ParamError
-            Si ``N`` n'est pas un entier strictement positif ou ``None``
-            (levée par :meth:`_validate_N` dans le parent).
+            If ``N`` is not a strictly positive integer or ``None``
+            (raised by :meth:`_validate_N` in the parent).
         InvertibilityError
-            Si la matrice de covariance d'innovation ``Skp1`` n'est pas
-            inversible lors de l'étape de mise à jour.
+            If the innovation covariance matrix ``Skp1`` is not
+            invertible during the update step.
         NumericalError
-            Si la matrice de covariance prédite ``Pkp1_predict`` n'est pas
-            valide (levée par :meth:`_check_covariance`).
+            If the predicted covariance matrix ``Pkp1_predict`` is not
+            valid (raised by :meth:`_check_covariance`).
         FilterError
-            Si une erreur inattendue survient pendant l'étape de mise à jour.
+            If an unexpected error occurs during the update step.
         """
         self._validate_N(N)
         self.history.clear()
@@ -161,22 +161,22 @@ class Linear_PKF(PKF):
             P_augmented[: self.dim_x, : self.dim_x] = step.PXXkp1_update
             Pkp1_predict: np.ndarray = self._A @ P_augmented @ self._AT + self._BmQBT
 
-            # Validate predicted covariance — lève CovarianceError si invalide
+            # Validate predicted covariance — raises CovarianceError if invalid
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # Consume the next observation
             try:
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
-                return  # Data generator exhausted — arrêt normal, pas une erreur
+                return  # Data generator exhausted — normal stop, not an error
 
-            # Update step — les exceptions custom remontent naturellement
+            # Update step — custom exceptions propagate naturally
             try:
                 step = self._nextUpdating(
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict
                 )
             except (InvertibilityError, NumericalError):
-                # Erreurs numériques connues — on les laisse remonter telles quelles
+                # Known numerical errors — let them propagate as-is
                 raise
             except Exception as e:
                 raise FilterError(
