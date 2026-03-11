@@ -3,18 +3,18 @@
 
 import numpy as np
 from prg.models.linear.base_model_linear import LinearAmQ
-from prg.models.linear.A_mQ_x1_y1 import Model_A_mQ_x1_y1
+from prg.models.linear.model_x1_y1_AQ_pairwise import model_x1_y1_AQ_pairwise
 from prg.utils.exceptions import NumericalError
 
-__all__ = ["Model_A_mQ_x1_y1_augmented"]
+__all__ = ["Model_x1_y1_AQ_augmented"]
 
 
-class Model_A_mQ_x1_y1_augmented(LinearAmQ):
+class Model_x1_y1_AQ_augmented(LinearAmQ):
 
-    MODEL_NAME = "A_mQ_x1_y1_augmented"
+    MODEL_NAME = "Model_x1_y1_AQ_augmented"
 
     def __init__(self):
-        mod = Model_A_mQ_x1_y1()
+        mod = model_x1_y1_AQ_pairwise()
 
         try:
             dim_x = mod.dim_x
@@ -55,7 +55,7 @@ class Model_A_mQ_x1_y1_augmented(LinearAmQ):
 
         except (ValueError, IndexError, np.exceptions.AxisError) as e:
             raise NumericalError(
-                f"[{Model_A_mQ_x1_y1_augmented.MODEL_NAME}] Initialization failed: {e}"
+                f"[{model_x1_y1_AQ_augmented.MODEL_NAME}] Initialization failed: {e}"
             ) from e
 
         super().__init__(

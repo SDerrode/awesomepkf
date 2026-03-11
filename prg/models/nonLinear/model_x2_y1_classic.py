@@ -8,10 +8,10 @@ from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
 from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.utils.exceptions import NumericalError
 
-__all__ = ["ModelX2Y1"]
+__all__ = ["Model_x2_y1_classic"]
 
 
-class ModelX2Y1(BaseModelFxHx):
+class Model_x2_y1_classic(BaseModelFxHx):
     """
     Nonlinear model with:
       - 2-dimensional state vector x = [x1, x2]
@@ -27,7 +27,7 @@ class ModelX2Y1(BaseModelFxHx):
         h(x, u) = sqrt(x1^2 + x2^2) + u
     """
 
-    MODEL_NAME: str = "x2_y1"
+    MODEL_NAME: str = "Model_x2_y1_classic"
     KAPPA: float = 0.10
     R_MIN: float = 1e-8
 

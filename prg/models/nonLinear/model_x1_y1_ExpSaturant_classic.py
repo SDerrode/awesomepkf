@@ -9,11 +9,12 @@ from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.utils.numerics import EPS_REL
 from prg.utils.exceptions import NumericalError
 
-__all__ = ["ModelExtSaturant"]
+__all__ = ["Model_x1_y1_ExpSaturant_classic"]
 
 
-class ModelExtSaturant(BaseModelFxHx):
-    MODEL_NAME: str = "x1_y1_ext_saturant"
+class Model_x1_y1_ExpSaturant_classic(BaseModelFxHx):
+
+    MODEL_NAME: str = "Model_x1_y1_ExpSaturant_classic"
 
     def __init__(self):
 

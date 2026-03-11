@@ -8,11 +8,12 @@ from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
 from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.utils.exceptions import NumericalError
 
-__all__ = ["ModelCubique"]
+__all__ = ["Model_x1_y1_Cubique_classic"]
 
 
-class ModelCubique(BaseModelFxHx):
-    MODEL_NAME: str = "x1_y1_cubique"
+class Model_x1_y1_Cubique_classic(BaseModelFxHx):
+
+    MODEL_NAME: str = "Model_x1_y1_Cubique_classic"
 
     def __init__(self):
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")

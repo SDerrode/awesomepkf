@@ -8,11 +8,12 @@ from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
 from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.utils.exceptions import NumericalError
 
-__all__ = ["ModelGordon"]
+__all__ = ["Model_x1_y1_Gordon_classic"]
 
 
-class ModelGordon(BaseModelFxHx):
-    MODEL_NAME: str = "x1_y1_gordon"
+class Model_x1_y1_Gordon_classic(BaseModelFxHx):
+
+    MODEL_NAME: str = "Model_x1_y1_Gordon_classic"
 
     def __init__(self, dt=1.0):
         self._dt = (
