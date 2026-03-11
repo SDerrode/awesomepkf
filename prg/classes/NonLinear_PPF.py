@@ -41,19 +41,19 @@ __all__ = ["NonLinear_PPF"]
 
 
 class NonLinear_PPF(PKF):
-    """Filtre Particulaire Non Linéaire (Nonlinear Pairwise Particle Filter).
+    """Nonlinear Pairwise Particle Filter.
 
-    Implémente un filtre particulaire pour les systèmes non linéaires à bruit
-    additif gaussien, avec support optionnel des bruits corrélés (M ≠ 0) via
-    la matrice de covariance jointe ``mQ``.
+    Implements a particle filter for nonlinear systems with additive Gaussian
+    noise, with optional support for correlated noises (M ≠ 0) via the joint
+    covariance matrix ``mQ``.
 
-    Le modèle d'état considéré est :
+    The state model considered is:
 
     .. math::
 
         (X_n,Y_n)  = g_x(X_{n-1}, Y_{n-1}, V^x_n, V^y_n)
 
-    avec :
+    with:
 
     .. math::
 
@@ -65,38 +65,37 @@ class NonLinear_PPF(PKF):
     Parameters
     ----------
     param : ParamLinear | ParamNonLinear
-        Paramètres du modèle (dimensions, matrices de bruit, conditions
-        initiales, etc.).
-    nbParticles : int, optional
-        Nombre de particules. Par défaut 300.
+        Model parameters (dimensions, noise matrices, initial conditions, etc.).
+    n_particles : int, optional
+        Number of particles. Default 300.
     resample_threshold : float, optional
-        Seuil relatif sur l'ESS déclenchant le rééchantillonnage,
-        exprimé en fraction de ``nbParticles``. Par défaut 0.5.
+        Relative threshold on the ESS triggering resampling,
+        expressed as a fraction of ``n_particles``. Default 0.5.
     resample_method : str, optional
-        Méthode de rééchantillonnage parmi ``'multinomial'``,
-        ``'systematic'``, ``'stratified'`` (défaut) et ``'residual'``.
+        Resampling method among ``'multinomial'``,
+        ``'systematic'``, ``'stratified'`` (default) and ``'residual'``.
     sKey : optional
-        Graine pour le générateur de nombres aléatoires.
+        Seed for the random number generator.
     verbose : int, optional
-        Niveau de verbosité (0 = silencieux). Par défaut 0.
+        Verbosity level (0 = silent). Default 0.
 
     Attributes
     ----------
-    nbParticles : int
-        Nombre de particules.
+    n_particles : int
+        Number of particles.
     resample_threshold : float
-        Seuil de rééchantillonnage.
+        Resampling threshold.
     resample_method : str
-        Méthode de rééchantillonnage.
+        Resampling method.
     _cached : dict
-        Constantes précalculées par ``_precompute()`` : ``R``, ``R_inv``,
-        ``MRinv``, ``L`` (Cholesky de P'_x), ``log_norm_const``.
+        Constants pre-computed by ``_precompute()``: ``R``, ``R_inv``,
+        ``MRinv``, ``L`` (Cholesky of P'_x), ``log_norm_const``.
     """
 
     def __init__(
         self,
         param,
-        nbParticles: int = 300,
+        n_particles: int = 300,
         resample_threshold: float = 0.5,
         resample_method: str = "stratified",
         sKey=None,
@@ -104,48 +103,48 @@ class NonLinear_PPF(PKF):
     ) -> None:
         super().__init__(param, sKey, verbose)
 
-        self.nbParticles = nbParticles
+        self.n_particles = n_particles
         self.resample_threshold = resample_threshold
         self.resample_method = resample_method
 
         # Random number generator
         self.__randParticles = SeedGenerator()
 
-        # Dictionnaire des constantes précalculées
+        # Dictionary of pre-computed constants
         self._cached: dict = {}
 
     # =========================
-    # RESAMPLING UNIFIÉ
+    # UNIFIED RESAMPLING
     # =========================
     def resample(self, weights: np.ndarray, method: str = "stratified") -> np.ndarray:
-        """Rééchantillonne les particules selon les poids normalisés.
+        """Resamples particles according to normalised weights.
 
         Parameters
         ----------
         weights : np.ndarray, shape (N,)
-            Poids normalisés des particules (doivent sommer à 1).
+            Normalised particle weights (must sum to 1).
         method : str, optional
-            Méthode de rééchantillonnage :
+            Resampling method:
 
-            - ``'multinomial'``  : tirage multinomial indépendant.
-            - ``'systematic'``   : rééchantillonnage systématique (un seul
-              tirage aléatoire uniforme).
-            - ``'stratified'``   : rééchantillonnage stratifié (un tirage
-              par strate). Méthode par défaut.
-            - ``'residual'``     : rééchantillonnage résiduel (copies
-              déterministes + résidu stochastique).
+            - ``'multinomial'``  : independent multinomial sampling.
+            - ``'systematic'``   : systematic resampling (a single
+              uniform random draw).
+            - ``'stratified'``   : stratified resampling (one draw
+              per stratum). Default method.
+            - ``'residual'``     : residual resampling (deterministic
+              copies + stochastic residual).
 
         Returns
         -------
         indexes : np.ndarray of int, shape (N,)
-            Indices des particules sélectionnées.
+            Indices of the selected particles.
 
         Raises
         ------
         ParamError
-            Si ``method`` n'est pas l'une des valeurs admises.
+            If ``method`` is not one of the accepted values.
         """
-        N = self.nbParticles
+        N = self.n_particles
         cumulative_sum = np.cumsum(weights)
         cumulative_sum[-1] = 1.0
 
@@ -196,29 +195,29 @@ class NonLinear_PPF(PKF):
         return indexes
 
     def _precompute(self) -> None:
-        """Précalcule et met en cache les constantes numériques du filtre.
+        """Pre-computes and caches the numerical constants of the filter.
 
-        Extrait les blocs ``Q``, ``M``, ``R`` de la matrice de covariance
-        jointe ``mQ``, puis calcule :
+        Extracts blocks ``Q``, ``M``, ``R`` from the joint covariance matrix
+        ``mQ``, then computes:
 
-        - ``P'_x = Q - M @ R^{-1} @ M^T`` (complément de Schur de R dans Q).
-        - ``L = cholesky(P'_x)`` pour le tirage des particules.
-        - ``MRinv = M @ R^{-1}`` pour la correction par corrélation.
-        - ``log_norm_const`` pour le calcul log-vraisemblance.
+        - ``P'_x = Q - M @ R^{-1} @ M^T`` (Schur complement of R in Q).
+        - ``L = cholesky(P'_x)`` for particle sampling.
+        - ``MRinv = M @ R^{-1}`` for correlation correction.
+        - ``log_norm_const`` for the log-likelihood computation.
 
         Raises
         ------
         InvertibilityError
-            Si ``R`` n'est pas inversible (diagnostic FAIL).
+            If ``R`` is not invertible (diagnostic FAIL).
         CovarianceError
-            Si ``P'_x`` n'est pas définie positive et que la régularisation
-            de Tikhonov échoue.
+            If ``P'_x`` is not positive definite and Tikhonov regularisation
+            fails.
         """
         Q = self.param.mQ[: self.dim_x, : self.dim_x]
         M = self.param.mQ[: self.dim_x, self.dim_x :]
         R = self.param.mQ[self.dim_x :, self.dim_x :]
 
-        # --- Inversion de R avec diagnostic complet ---
+        # --- Inversion of R with full diagnostic ---
         try:
             R_inv = InvertibleMatrix(R).inverse()
         except RuntimeError as e:
@@ -227,10 +226,10 @@ class NonLinear_PPF(PKF):
                 matrix_name="R",
             ) from e
 
-        # --- Complément de Schur ---
+        # --- Schur complement ---
         P_prime_x_base = Q - M @ R_inv @ M.T
 
-        # --- Validation et régularisation si nécessaire ---
+        # --- Validation and regularisation if needed ---
         cov_diag = CovarianceMatrix(P_prime_x_base)
         report = cov_diag.check()
 
@@ -250,40 +249,40 @@ class NonLinear_PPF(PKF):
 
     @staticmethod
     def _safe_normalize_log_weights(log_weights: np.ndarray) -> np.ndarray:
-        """Normalise les log-poids de façon numériquement stable.
+        """Normalises log-weights in a numerically stable way.
 
-        Gère : nan (overflow vraisemblance), tous à -inf (dégénérescence totale),
-        underflow extrême après exp.
+        Handles: nan (likelihood overflow), all at -inf (total degeneracy),
+        extreme underflow after exp.
         """
 
-        # nan → -inf (overflow dans le terme quadratique)
+        # nan → -inf (overflow in the quadratic term)
         nan_mask = np.isnan(log_weights)
         if nan_mask.any():
             logger.warning(
-                f"Je rentre dans _safe_normalize_log_weights(...) - if nan_mask.any()"
+                f"Entering _safe_normalize_log_weights(...) - if nan_mask.any()"
             )
             log_weights = log_weights.copy()
             log_weights[nan_mask] = -np.inf
 
-        # Dégénérescence totale : toutes les particules incompatibles → poids uniformes
+        # Total degeneracy: all particles incompatible → uniform weights
         finite_mask = np.isfinite(log_weights)
         if not finite_mask.any():
             logger.warning(
-                f"Je rentre dans _safe_normalize_log_weights(...) - if not finite_mask.any()"
+                f"Entering _safe_normalize_log_weights(...) - if not finite_mask.any()"
             )
             return np.full(len(log_weights), 1.0 / len(log_weights))
 
-        # log-sum-exp stable : soustraction du max fini uniquement
+        # Stable log-sum-exp: subtract only the finite max
         max_lw = np.max(log_weights[finite_mask])
         log_weights = np.where(finite_mask, log_weights - max_lw, -np.inf)
 
         weights = np.exp(log_weights)
         total = weights.sum()
 
-        # Underflow extrême après exp
+        # Extreme underflow after exp
         if not np.isfinite(total) or total <= 0.0:
             logger.warning(
-                f"Je rentre dans _safe_normalize_log_weights(...) - if not np.isfinite(total) or total <= 0.0"
+                f"Entering _safe_normalize_log_weights(...) - if not np.isfinite(total) or total <= 0.0"
             )
             return np.full(len(log_weights), 1.0 / len(log_weights))
 
@@ -300,43 +299,43 @@ class NonLinear_PPF(PKF):
         None,
         None,
     ]:
-        """Exécute le filtre particulaire et produit les estimées pas à pas.
+        """Runs the particle filter and yields estimates step by step.
 
         Parameters
         ----------
         N : int, optional
-            Nombre maximal de pas de temps à traiter. Si ``None``, la boucle
-            tourne jusqu'à épuisement du générateur de données.
+            Maximum number of time steps to process. If ``None``, the loop
+            runs until the data generator is exhausted.
         data_generator : Generator, optional
-            Générateur externe fournissant des triplets
-            ``(k, x_true, y_obs)``. Si ``None``, le générateur interne
-            ``_data_generation()`` est utilisé.
+            External generator providing triplets
+            ``(k, x_true, y_obs)``. If ``None``, the internal generator
+            ``_data_generation()`` is used.
 
         Yields
         ------
         k : int
-            Indice temporel courant.
+            Current time index.
         xkp1 : np.ndarray or None
-            Vérité terrain à l'instant ``k`` (``None`` si indisponible).
+            Ground truth at time ``k`` (``None`` if unavailable).
         ykp1 : np.ndarray, shape (dim_y, 1)
-            Observation à l'instant ``k``.
+            Observation at time ``k``.
         Xkp1_predict : np.ndarray, shape (dim_x, 1)
-            Estimée a priori (avant observation).
+            Prior estimate (before observation).
         Xkp1_update : np.ndarray, shape (dim_x, 1)
-            Estimée a posteriori (après observation).
+            Posterior estimate (after observation).
 
         Raises
         ------
         ParamError
-            Si ``N`` n'est pas un entier strictement positif ou ``None``.
+            If ``N`` is not a strictly positive integer or ``None``.
         InvertibilityError
-            Si ``R`` n'est pas inversible lors du précalcul.
+            If ``R`` is not invertible during pre-computation.
         CovarianceError
-            Si une matrice de covariance est invalide et non régularisable.
+            If a covariance matrix is invalid and cannot be regularised.
         StepValidationError
-            Si la construction d'un ``PKFStep`` échoue.
+            If construction of a ``PKFStep`` fails.
         FilterError
-            Si une erreur inattendue survient pendant le filtrage.
+            If an unexpected error occurs during filtering.
         """
         self._validate_N(N)
         self.history.clear()
@@ -345,17 +344,17 @@ class NonLinear_PPF(PKF):
             data_generator if data_generator is not None else self._data_generation()
         )
 
-        # Précalcul des constantes — lève InvertibilityError ou CovarianceError
+        # Pre-computation of constants — raises InvertibilityError or CovarianceError
         self._precompute()
 
-        # Initialisation des particules et des poids
+        # Initialisation of particles and weights
         particles_current: np.ndarray = self.__randParticles.rng.multivariate_normal(
             self.mz0[: self.dim_x].flatten(),
             self.Pz0[: self.dim_x, : self.dim_x],
-            self.nbParticles,
+            self.n_particles,
         )
         particles_current = particles_current[..., np.newaxis]
-        weights: np.ndarray = np.full(self.nbParticles, 1.0 / self.nbParticles)
+        weights: np.ndarray = np.full(self.n_particles, 1.0 / self.n_particles)
 
         # --- First estimate -----------------------------------------------------------
         step = self._firstEstimate(generator)
@@ -375,7 +374,7 @@ class NonLinear_PPF(PKF):
             Xkp1_predict: np.ndarray = np.mean(particles_current, axis=0)
             diff = particles_current - Xkp1_predict
             PXXkp1_predict: np.ndarray = np.einsum("tik,tjk->ij", diff, diff) / (
-                self.nbParticles - 1
+                self.n_particles - 1
             )
             self._check_covariance(PXXkp1_predict, step.k, name="PXXkp1_predict")
 
@@ -386,7 +385,7 @@ class NonLinear_PPF(PKF):
                 return
 
             # =========================
-            # PROPAGATION via g (données scalaires)
+            # PROPAGATION via g (scalar data)
             # =========================
             # muxy: np.ndarray = np.array(
             #     [
@@ -400,25 +399,25 @@ class NonLinear_PPF(PKF):
             # )
 
             # =========================
-            # PROPAGATION via g (vectorisée)
+            # PROPAGATION via g (vectorised)
             # =========================
-            # particles_previous : (nbParticles, dim_x, 1)
-            # step.ykp1 : (dim_y, 1)  →  à répliquer pour former z : (nbParticles, dim_xy, 1)
-            ykp1_tiled = np.tile(step.ykp1, (self.nbParticles, 1, 1))  # (N, dim_y, 1)
+            # particles_previous : (n_particles, dim_x, 1)
+            # step.ykp1 : (dim_y, 1)  →  to be tiled to form z : (n_particles, dim_xy, 1)
+            ykp1_tiled = np.tile(step.ykp1, (self.n_particles, 1, 1))  # (N, dim_y, 1)
             z_all = np.concatenate(
                 [particles_previous, ykp1_tiled], axis=1
             )  # (N, dim_xy, 1)
             zeros_tiled = np.tile(
-                self.zeros_dim_xy_1, (self.nbParticles, 1, 1)
+                self.zeros_dim_xy_1, (self.n_particles, 1, 1)
             )  # (N, dim_xy, 1)
 
             muxy = self.param.g(z_all, zeros_tiled, self.dt)  # (N, dim_xy, 1)
 
-            # DEBUG — vérification muxy
+            # DEBUG — muxy verification
             if np.any(~np.isfinite(muxy)):
                 bad = (~np.isfinite(muxy)).any(axis=(1, 2))
                 print(
-                    f"[DEBUG] Step {new_k}: muxy NaN/Inf dans {bad.sum()}/{self.nbParticles} particules"
+                    f"[DEBUG] Step {new_k}: muxy NaN/Inf in {bad.sum()}/{self.n_particles} particles"
                 )
                 print(
                     f"  particles_previous range: [{particles_previous.min():.3g}, {particles_previous.max():.3g}]"
@@ -430,10 +429,10 @@ class NonLinear_PPF(PKF):
             # =========================
             innovations: np.ndarray = new_ykp1 - muxy[:, self.dim_x :, :]
 
-            # Mise à jour des poids par log-vraisemblance gaussienne
+            # Weight update via Gaussian log-likelihood
             tmp = np.matmul(self._cached["R_inv"], innovations)
             quad = np.matmul(innovations.transpose(0, 2, 1), tmp)
-            exponents = -0.5 * quad.reshape(self.nbParticles)
+            exponents = -0.5 * quad.reshape(self.n_particles)
 
             log_weights = (
                 np.log(np.maximum(weights, EPS_ABS))
@@ -445,24 +444,24 @@ class NonLinear_PPF(PKF):
             if __debug__:
                 assert not np.any(
                     np.isnan(weights)
-                ), f"NaN dans les poids au step {new_k}"
+                ), f"NaN in weights at step {new_k}"
                 assert np.isclose(
                     weights.sum(), 1.0, atol=1e-6
-                ), f"Poids non normalisés : {weights.sum()}"
+                ), f"Weights not normalised: {weights.sum()}"
 
-            # Mise à jour stochastique avec correction par corrélation
+            # Stochastic update with correlation correction
             mu_prime_x_all = (
                 muxy[:, : self.dim_x, :] + self._cached["MRinv"] @ innovations
             )
             noise = self.__randParticles.rng.standard_normal(
-                (self.nbParticles, self.dim_x, 1)
+                (self.n_particles, self.dim_x, 1)
             )
             particles_current = mu_prime_x_all + np.einsum(
                 "ij,njk->nik", self._cached["L"], noise
             )
 
-            # Clipping des particules divergentes
-            PARTICLE_CLIP = 1e6  # à ajuster selon l'échelle physique du modèle
+            # Clipping of diverging particles
+            PARTICLE_CLIP = 1e6  # to be adjusted according to the physical scale of the model
             n_clipped = np.sum(
                 ~np.isfinite(particles_current)
                 | (np.abs(particles_current) > PARTICLE_CLIP)
@@ -473,11 +472,11 @@ class NonLinear_PPF(PKF):
                 PARTICLE_CLIP,
             )
 
-            # DEBUG — vérification particles_current
+            # DEBUG — particles_current verification
             if np.any(~np.isfinite(particles_current)):
                 bad = (~np.isfinite(particles_current)).any(axis=(1, 2))
                 print(
-                    f"[DEBUG] Step {new_k}: particles_current NaN/Inf dans {bad.sum()}/{self.nbParticles} particules"
+                    f"[DEBUG] Step {new_k}: particles_current NaN/Inf in {bad.sum()}/{self.n_particles} particles"
                 )
                 print(f"  mu_prime_x_all finite: {np.all(np.isfinite(mu_prime_x_all))}")
                 print(
@@ -490,7 +489,7 @@ class NonLinear_PPF(PKF):
                 print(f"  L (Cholesky):\n{self._cached['L']}")
 
             # =========================
-            # ESTIMATION A POSTERIORI
+            # POSTERIOR ESTIMATE
             # =========================
             particles_current_temp: np.ndarray = particles_current.squeeze(-1)
             Xkp1_update: np.ndarray = np.average(
@@ -504,28 +503,28 @@ class NonLinear_PPF(PKF):
             ess_before_resample = 1.0 / np.sum(weights**2)
             max_innovation = np.abs(innovations).max()
             logger.debug(
-                f"Step {new_k}: ESS={ess_before_resample:.1f}/{self.nbParticles}, "
+                f"Step {new_k}: ESS={ess_before_resample:.1f}/{self.n_particles}, "
                 f"n_clipped={n_clipped}, "
                 f"max_innov={max_innovation:.3g}, "
                 f"Xupdate={Xkp1_update.flatten()}"
             )
 
             # =========================
-            # RÉÉCHANTILLONNAGE
+            # RESAMPLING
             # =========================
             ess: float = 1.0 / np.sum(weights**2)
-            if ess < self.resample_threshold * self.nbParticles:
+            if ess < self.resample_threshold * self.n_particles:
                 indexes = self.resample(weights, self.resample_method)
                 particles_current = particles_current[indexes]
-                weights.fill(1.0 / self.nbParticles)
+                weights.fill(1.0 / self.n_particles)
 
             if __debug__:
                 assert not np.any(
                     np.isnan(particles_current)
-                ), f"NaN dans les particules au step {new_k}"
+                ), f"NaN in particles at step {new_k}"
 
             # =========================
-            # ENREGISTREMENT
+            # RECORDING
             # =========================
             try:
                 step = PKFStep(

@@ -20,7 +20,7 @@ class NonLinearPPFRunnerFromFile(BaseNonLinearPPFRunner):
     def __init__(
         self,
         model_name: str,
-        nbParticles: int,
+        n_particles: int,
         data_filename: Optional[str],
         verbose: int = 0,
         plot: bool = False,
@@ -32,14 +32,14 @@ class NonLinearPPFRunnerFromFile(BaseNonLinearPPFRunner):
         ------
         ParamError
             Si ``verbose`` invalide, ``model_name`` inconnu,
-            ou ``nbParticles`` invalide.
+            ou ``n_particles`` invalide.
         PKFError
             Si l'instanciation du filtre échoue.
         """
         self.N = -1
         self.sKey = None
 
-        super().__init__(model_name, nbParticles, verbose, plot, save_history, base_dir)
+        super().__init__(model_name, n_particles, verbose, plot, save_history, base_dir)
 
         self.data_filename = (
             os.path.join(self.datafile_dir, data_filename)

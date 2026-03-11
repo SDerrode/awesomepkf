@@ -9,24 +9,24 @@ from prg.classes.SeedGenerator import SeedGenerator
 from prg.utils.exceptions import NumericalError
 from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
 
-__all__ = ["BaseModelNonLinear", "NumericalError"]  # ré-exporté pour commodité
+__all__ = ["BaseModelNonLinear", "NumericalError"]  # re-exported for convenience
 
 
 class BaseModelNonLinear:
     """
     Base class for all non-linear models.
 
-    Fournit une structure unifiée pour les fonctions fx, hx et g,
-    ainsi qu'une gestion cohérente des paramètres et matrices de covariance.
-    En mode optimisé (lancé avec `python3 -O`), les vérifications sont désactivées.
+    Provides a unified structure for the fx, hx and g functions,
+    as well as consistent management of parameters and covariance matrices.
+    In optimised mode (launched with `python3 -O`), checks are disabled.
     """
 
     def __init__(
         self, dim_x: int, dim_y: int, model_type: str = "nonlinear", augmented=False
     ):
 
-        assert isinstance(dim_x, int) and dim_x > 0, "dim_x doit être un entier positif"
-        assert isinstance(dim_y, int) and dim_y > 0, "dim_y doit être un entier positif"
+        assert isinstance(dim_x, int) and dim_x > 0, "dim_x must be a positive integer"
+        assert isinstance(dim_y, int) and dim_y > 0, "dim_y must be a positive integer"
 
         self.model_type = model_type
         self.augmented = augmented
@@ -40,12 +40,12 @@ class BaseModelNonLinear:
         self.kappa = 0.0
         self.lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
 
-        # Initialisation des matrices / vecteurs d'état
+        # State matrix / vector initialisation
         self.mQ = None
         self.mz0 = None
         self.Pz0 = None
 
-        self.pairwiseModel = None  # renseigné par l'un des 2 classes filles
+        self.pairwiseModel = None  # set by one of the 2 subclasses
 
         self._randMatrices = SeedGenerator(9)
 
@@ -105,17 +105,17 @@ class BaseModelNonLinear:
 
     # ------------------------------------------------------------------
     def _g(self, x, y, nx, ny, dt):
-        """À implémenter dans la sous-classe"""
+        """To be implemented in the subclass"""
         raise NotImplementedError
 
     def _jacobiens_g(self, x, y, nx, ny, dt):
-        """À implémenter dans la sous-classe"""
+        """To be implemented in the subclass"""
         raise NotImplementedError
 
     def latex_model(self) -> str:
         """
-        Retourne la représentation LaTeX du modèle (équations + jacobiennes).
-        À implémenter dans la sous-classe.
+        Returns the LaTeX representation of the model (equations + Jacobians).
+        To be implemented in the subclass.
         """
         raise NotImplementedError
 
@@ -123,14 +123,14 @@ class BaseModelNonLinear:
     @staticmethod
     def _wrap_lambdify(f):
         """
-        Garantit que le résultat de sp.lambdify est toujours un callable.
+        Guarantees that the result of sp.lambdify is always a callable.
 
-        Quand une expression SymPy est constante (aucun symbole libre,
-        ex. Bn = I pour un bruit additif, ou H = [0,1] pour hx = x[-1]),
-        lambdify génère une fonction qui retourne directement un ndarray
-        au lieu d'un callable acceptant des arguments.
-        Ce wrapper détecte ce cas et retourne une lambda qui ignore ses
-        arguments et renvoie toujours la valeur constante.
+        When a SymPy expression is constant (no free symbols,
+        e.g. Bn = I for additive noise, or H = [0,1] for hx = x[-1]),
+        lambdify generates a function that directly returns an ndarray
+        instead of a callable accepting arguments.
+        This wrapper detects this case and returns a lambda that ignores its
+        arguments and always returns the constant value.
         """
         if callable(f):
             return f
@@ -147,11 +147,11 @@ class BaseModelNonLinear:
             "g": self.g,
             "f": getattr(self, "_fx", None),
             "h": getattr(self, "_hx", None),
-            "jacobiens_g": self.jacobiens_g,  # pour EPKF
-            "alpha": self.alpha,  # pour UPKF
-            "beta": self.beta,  # pour UPKF
-            "kappa": self.kappa,  # pour UPKF
-            "lambda_": self.lambda_,  # pour UPKF
+            "jacobiens_g": self.jacobiens_g,  # for EPKF
+            "alpha": self.alpha,  # for UPKF
+            "beta": self.beta,  # for UPKF
+            "kappa": self.kappa,  # for UPKF
+            "lambda_": self.lambda_,  # for UPKF
             "mQ": self.mQ,
             "mz0": self.mz0,
             "Pz0": self.Pz0,
@@ -162,19 +162,19 @@ class BaseModelNonLinear:
         return f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y})"
 
     # ------------------------------------------------------------------
-    # Helpers communs aux méthodes de visualisation
+    # Helpers common to visualisation methods
     # ------------------------------------------------------------------
 
     def _make_grid(
         self, n_points: int, z_range: tuple[float, float] = (-3.0, 3.0)
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Construit une grille régulière 2D sur z_range × z_range.
+        Builds a regular 2D grid over z_range × z_range.
 
-        Retourne
+        Returns
         --------
         Z1, Z2 : (n_points, n_points)  — meshgrid
-        Z_stack : (n_points², 2)        — liste de points z = [x, y]ᵀ
+        Z_stack : (n_points², 2)        — list of points z = [x, y]ᵀ
         """
         z = np.linspace(*z_range, n_points)
         Z1, Z2 = np.meshgrid(z, z)
@@ -183,11 +183,11 @@ class BaseModelNonLinear:
 
     def _eval_g_on_grid(self, Z_stack: np.ndarray, n_points: int) -> np.ndarray:
         """
-        Évalue g(z, noise=0, dt=1) sur toute la grille.
+        Evaluates g(z, noise=0, dt=1) over the entire grid.
 
-        Retourne
+        Returns
         --------
-        G : (n_points², 2) — valeurs de g ; NaN aux points singuliers.
+        G : (n_points², 2) — values of g; NaN at singular points.
         """
         noise = np.zeros((self.dim_xy, 1))
         G = np.full((Z_stack.shape[0], self.dim_xy), np.nan)
@@ -198,16 +198,16 @@ class BaseModelNonLinear:
                 if np.isfinite(val).all():
                     G[k] = val.ravel()
             except (NumericalError, FloatingPointError):
-                pass  # laisse NaN en place
+                pass  # leaves NaN in place
         return G
 
     def _eval_jac_on_grid(self, Z_stack: np.ndarray, n_points: int) -> np.ndarray:
         """
-        Évalue An = jacobiens_g(z, noise=0, dt=1)[0] sur toute la grille.
+        Evaluates An = jacobiens_g(z, noise=0, dt=1)[0] over the entire grid.
 
-        Retourne
+        Returns
         --------
-        AN : (n_points², dim_xy, dim_xy) — An à chaque point ; NaN aux singularités.
+        AN : (n_points², dim_xy, dim_xy) — An at each point; NaN at singularities.
         """
         nz = self.dim_xy
         noise = np.zeros((nz, 1))
@@ -233,11 +233,11 @@ class BaseModelNonLinear:
         sym: bool = False,
     ) -> None:
         """
-        Trace un contourf avec colorbar sur un axe existant.
+        Draws a contourf with colorbar on an existing axis.
 
-        Paramètres
+        Parameters
         ----------
-        sym   : si True, centre la colormap sur 0 (utile pour valeurs signées).
+        sym   : if True, centres the colormap on 0 (useful for signed values).
         """
         kwargs = dict(cmap=cmap, levels=20)
         if sym:
@@ -259,16 +259,16 @@ class BaseModelNonLinear:
         z_range: tuple[float, float] = (-3.0, 3.0),
     ) -> None:
         """
-        Visualise g(z, noise=0, dt=1) sur z_range × z_range.
-        Disponible uniquement pour dim_x=1, dim_y=1.
-        Sauvegarde la figure dans data/plot/.
+        Visualises g(z, noise=0, dt=1) over z_range × z_range.
+        Available only for dim_x=1, dim_y=1.
+        Saves the figure to data/plot/.
 
-        Sous-figures
+        Subplots
         ------------
-        (1,1) Surface 3D de g_x(x, y)
-        (1,2) Surface 3D de g_y(x, y)
-        (2,1) Carte de la norme ‖g(x, y)‖
-        (2,2) Champ de déplacement g(z) − z  (quiver)
+        (1,1) 3D surface of g_x(x, y)
+        (1,2) 3D surface of g_y(x, y)
+        (2,1) Map of the norm ‖g(x, y)‖
+        (2,2) Displacement field g(z) − z  (quiver)
         """
         if self.dim_x != 1 or self.dim_y != 1:
             return
@@ -300,11 +300,11 @@ class BaseModelNonLinear:
         ax2.set_ylabel(r"$y$")
         ax2.view_init(30, 45)
 
-        # Norme ‖g‖
+        # Norm ‖g‖
         ax3 = fig.add_subplot(2, 2, 3)
         self._contourf_ax(ax3, Z1, Z2, NormG, r"$\|g(x,y)\|$", cmap="plasma")
 
-        # Champ de déplacement
+        # Displacement field
         ax4 = fig.add_subplot(2, 2, 4)
         s = quiver_stride
         ax4.quiver(Z1[::s, ::s], Z2[::s, ::s], Dz1[::s, ::s], Dz2[::s, ::s])
@@ -327,20 +327,20 @@ class BaseModelNonLinear:
         z_range: tuple[float, float] = (-3.0, 3.0),
     ) -> None:
         """
-        Visualise An = dg/dz évalué en (z, noise=0, dt=1) sur z_range × z_range.
-        Disponible uniquement pour dim_x=1, dim_y=1 (An est 2×2).
-        Sauvegarde la figure dans data/plot/.
+        Visualises An = dg/dz evaluated at (z, noise=0, dt=1) over z_range × z_range.
+        Available only for dim_x=1, dim_y=1 (An is 2×2).
+        Saves the figure to data/plot/.
 
-        Sous-figures  (2 lignes × 3 colonnes)
+        Subplots  (2 rows × 3 columns)
         -------------
-        Ligne 1 — entrées de la 1ʳᵉ ligne de An :
+        Row 1 — entries of the 1st row of An:
           (1,1) ∂g_x/∂x   (1,2) ∂g_x/∂y   (1,3) Re(λ₁)
-        Ligne 2 — entrées de la 2ᵉ ligne de An :
+        Row 2 — entries of the 2nd row of An:
           (2,1) ∂g_y/∂x   (2,2) ∂g_y/∂y   (2,3) Re(λ₂)
 
-        Les champs Re(λ) donnent la stabilité locale : |Re(λ)| < 1 indique
-        une contraction dans cette direction propre (temps discret).
-        La frontière |Re(λ)| = 1 est tracée en pointillés blancs.
+        The Re(λ) fields give local stability: |Re(λ)| < 1 indicates
+        contraction in that eigendirection (discrete time).
+        The stability boundary |Re(λ)| = 1 is drawn as white dashed lines.
         """
         if self.dim_x != 1 or self.dim_y != 1:
             return
@@ -348,13 +348,13 @@ class BaseModelNonLinear:
         Z1, Z2, Z_stack = self._make_grid(n_points, z_range)
         AN = self._eval_jac_on_grid(Z_stack, n_points)  # (n², 2, 2)
 
-        # Reshape des 4 entrées
+        # Reshape of the 4 inputs
         A00 = AN[:, 0, 0].reshape(n_points, n_points)
         A01 = AN[:, 0, 1].reshape(n_points, n_points)
         A10 = AN[:, 1, 0].reshape(n_points, n_points)
         A11 = AN[:, 1, 1].reshape(n_points, n_points)
 
-        # Valeurs propres : eigenvalues de chaque matrice 2×2
+        # Eigenvalues: eigenvalues of each 2×2 matrix
         # AN shape (n², 2, 2) → eigvals shape (n², 2)
         eigvals = np.linalg.eigvals(AN)  # (n², 2), complexes
         lam1 = np.real(eigvals[:, 0]).reshape(n_points, n_points)
@@ -372,13 +372,13 @@ class BaseModelNonLinear:
         for ax, data, title in panels:
             self._contourf_ax(ax, Z1, Z2, data, title, cmap="RdBu_r", sym=True)
 
-        # Champs Re(λ) avec isocourbe |Re(λ)| = 1
+        # Re(λ) fields with isocurve |Re(λ)| = 1
         for ax, lam, title in [
             (axes[0, 2], lam1, r"$\mathrm{Re}(\lambda_1)$"),
             (axes[1, 2], lam2, r"$\mathrm{Re}(\lambda_2)$"),
         ]:
             self._contourf_ax(ax, Z1, Z2, lam, title, cmap="RdBu_r", sym=True)
-            # Frontière de stabilité |Re(λ)| = 1
+            # Stability boundary |Re(λ)| = 1
             for level, ls in [(-1.0, "--"), (1.0, "--")]:
                 try:
                     ax.contour(

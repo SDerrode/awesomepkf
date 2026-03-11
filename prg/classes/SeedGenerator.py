@@ -4,8 +4,8 @@
 """
 Module SeedGenerator
 --------------------
-Génère et gère des graines aléatoires reproductibles de manière thread-safe,
-en utilisant numpy.random.SeedSequence et secrets pour la graine initiale.
+Generates and manages reproducible random seeds in a thread-safe manner,
+using numpy.random.SeedSequence and secrets for the initial seed.
 """
 
 from __future__ import annotations
@@ -21,11 +21,10 @@ __all__ = ["SeedGenerator"]
 
 class SeedGenerator:
     """
-    Gère des graines aléatoires reproductibles et thread-safe.
+    Manages reproducible and thread-safe random seeds.
 
-    Utilise numpy.random.SeedSequence pour dériver des RNG indépendants.
-    Permet de créer des sous-générateurs indépendants à partir d'une graine
-    principale (maîtresse).
+    Uses numpy.random.SeedSequence to derive independent RNGs.
+    Allows creating independent sub-generators from a main (master) seed.
     """
 
     def __init__(self, seed_key: Optional[int] = None, verbose: int = 0) -> None:
@@ -33,16 +32,16 @@ class SeedGenerator:
         Parameters
         ----------
         seed_key : Optional[int]
-            Graine initiale (tout entier, positif ou négatif). Si None, une graine forte est générée via secrets.
+            Initial seed (any integer, positive or negative). If None, a strong seed is generated via secrets.
         verbose : int
-            Niveau de verbosité (0, 1 ou 2).
+            Verbosity level (0, 1 or 2).
 
         Raises
         ------
         ParamError
-            Si ``verbose`` n'appartient pas à ``{0, 1, 2}``.
+            If ``verbose`` does not belong to ``{0, 1, 2}``.
         ParamError
-            Si ``seed_key`` est fourni mais n'est pas un entier.
+            If ``seed_key`` is provided but is not an integer.
         """
         if __debug__:
             if verbose not in [0, 1, 2]:
@@ -61,29 +60,29 @@ class SeedGenerator:
         self._rng: np.random.Generator = np.random.default_rng(self._seed_seq)
 
     # ------------------------------------------------------------------
-    # Propriétés
+    # Properties
     # ------------------------------------------------------------------
     @property
     def rng(self) -> np.random.Generator:
-        """Retourne le générateur aléatoire NumPy."""
+        """Returns the NumPy random generator."""
         return self._rng
 
     @property
     def seed(self) -> int:
-        """Retourne la graine principale utilisée à l'initialisation."""
+        """Returns the main seed used at initialisation."""
         return self._root_seed
 
     # ------------------------------------------------------------------
-    # Méthodes principales
+    # Main methods
     # ------------------------------------------------------------------
     def generate_new_seed(self) -> int:
         """
-        Crée et active un nouveau générateur basé sur une sous-séquence indépendante.
+        Creates and activates a new generator based on an independent sub-sequence.
 
         Returns
         -------
         int
-            Une nouvelle graine dérivée, utile pour la traçabilité.
+            A new derived seed, useful for traceability.
         """
         with self._lock:
             new_seq: np.random.SeedSequence = self._seed_seq.spawn(1)[0]
@@ -98,18 +97,18 @@ class SeedGenerator:
 
 
 # ----------------------------------------------------------------------
-# Exemple d'utilisation
+# Usage example
 # ----------------------------------------------------------------------
 if __name__ == "__main__":
     verbose = 1
 
     sg1 = SeedGenerator(verbose=verbose)
     print(f"\nsg1 = {sg1}")
-    print("Premiers tirages:", sg1.rng.random(3))
+    print("First draws:", sg1.rng.random(3))
 
     sg1.generate_new_seed()
-    print("Après nouvelle graine :", sg1.rng.random(3))
+    print("After new seed:", sg1.rng.random(3))
 
     sg2 = SeedGenerator(42, verbose=verbose)
     print(f"\nsg2 = {sg2}")
-    print("Tirages reproductibles :", sg2.rng.random(3))
+    print("Reproducible draws:", sg2.rng.random(3))

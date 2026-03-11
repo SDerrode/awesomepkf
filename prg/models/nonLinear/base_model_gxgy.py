@@ -14,26 +14,26 @@ __all__ = ["BaseModelGxGy"]
 
 class BaseModelGxGy(BaseModelNonLinear, ABC):
     """
-    Classe mère pour les modèles définis symboliquement via symbolic_model().
+    Parent class for models defined symbolically via symbolic_model().
 
-    Gère dim_x >= 1 et dim_y >= 1 avec rétroaction complète :
-    gx et gy peuvent dépendre simultanément de x, y, t et u.
+    Handles dim_x >= 1 and dim_y >= 1 with full feedback:
+    gx and gy can simultaneously depend on x, y, t and u.
 
-    La sous-classe doit implémenter :
+    The subclass must implement:
 
         def symbolic_model(self, sx, sy, st, su):
             ...
             return sgx, sgy
 
-    où :
-        sx  : sp.Matrix(dim_x, 1) — symboles x0 .. x_{dim_x-1}
-        sy  : sp.Matrix(dim_y, 1) — symboles y0 .. y_{dim_y-1}
-        st  : sp.Matrix(dim_x, 1) — symboles t0 .. t_{dim_x-1}  (bruit état)
-        su  : sp.Matrix(dim_y, 1) — symboles u0 .. u_{dim_y-1}  (bruit obs)
-        sgx : sp.Matrix(dim_x, 1) — expression de la transition  gx(x, y, t, u)
-        sgy : sp.Matrix(dim_y, 1) — expression de l'observation  gy(x, y, t, u)
+    where:
+        sx  : sp.Matrix(dim_x, 1) — symbols x0 .. x_{dim_x-1}
+        sy  : sp.Matrix(dim_y, 1) — symbols y0 .. y_{dim_y-1}
+        st  : sp.Matrix(dim_x, 1) — symbols t0 .. t_{dim_x-1}  (state noise)
+        su  : sp.Matrix(dim_y, 1) — symbols u0 .. u_{dim_y-1}  (obs noise)
+        sgx : sp.Matrix(dim_x, 1) — expression of the transition  gx(x, y, t, u)
+        sgy : sp.Matrix(dim_y, 1) — expression of the observation gy(x, y, t, u)
 
-    Exemple dim_x=1, dim_y=1 :
+    Example dim_x=1, dim_y=1:
 
         def symbolic_model(self, sx, sy, st, su):
             x, y, t, u = sx[0], sy[0], st[0], su[0]
@@ -41,8 +41,8 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
             sgy = sp.Matrix([c * y + d * sp.sin(x) + u])
             return sgx, sgy
 
-    Les jacobiennes An = dg/dz et Bn = dg/d_noise sont calculées automatiquement
-    (pas de chain rule : gx et gy sont évaluées au même point (x, y)).
+    The Jacobians An = dg/dz and Bn = dg/d_noise are computed automatically
+    (no chain rule: gx and gy are evaluated at the same point (x, y)).
 
         An = d[gx; gy] / d[x; y]   (dim_xy, dim_xy)
         Bn = d[gx; gy] / d[t; u]   (dim_xy, dim_xy)
@@ -52,16 +52,16 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
     @abstractmethod
     def symbolic_model(self, sx, sy, st, su):
         """
-        À implémenter dans la sous-classe.
+        To be implemented in the subclass.
 
-        Paramètres
+        Parameters
         ----------
-        sx : sp.Matrix(dim_x, 1)  — symboles d'état        x0 .. x_{dim_x-1}
-        sy : sp.Matrix(dim_y, 1)  — symboles d'observation y0 .. y_{dim_y-1}
-        st : sp.Matrix(dim_x, 1)  — symboles bruit d'état  t0 .. t_{dim_x-1}
-        su : sp.Matrix(dim_y, 1)  — symboles bruit obs.    u0 .. u_{dim_y-1}
+        sx : sp.Matrix(dim_x, 1)  — state symbols         x0 .. x_{dim_x-1}
+        sy : sp.Matrix(dim_y, 1)  — observation symbols   y0 .. y_{dim_y-1}
+        st : sp.Matrix(dim_x, 1)  — state noise symbols   t0 .. t_{dim_x-1}
+        su : sp.Matrix(dim_y, 1)  — obs. noise symbols    u0 .. u_{dim_y-1}
 
-        Retourne
+        Returns
         --------
         sgx : sp.Matrix(dim_x, 1) — transition  gx(x, y, t, u)
         sgy : sp.Matrix(dim_y, 1) — observation gy(x, y, t, u)
@@ -77,13 +77,13 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
     def _build_symbolic_model(self):
         nx, ny, nz = self.dim_x, self.dim_y, self.dim_xy
 
-        # Vecteurs de symboles réels
+        # Real symbol vectors
         self._sx = sp.Matrix([sp.Symbol(f"x{i}", real=True) for i in range(nx)])
         self._sy = sp.Matrix([sp.Symbol(f"y{i}", real=True) for i in range(ny)])
         self._st = sp.Matrix([sp.Symbol(f"t{i}", real=True) for i in range(nx)])
         self._su = sp.Matrix([sp.Symbol(f"u{i}", real=True) for i in range(ny)])
 
-        # Modèle fourni par la sous-classe
+        # Model provided by the subclass
         try:
             self._sgx, self._sgy = self.symbolic_model(
                 self._sx, self._sy, self._st, self._su
@@ -95,45 +95,45 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
                 f"Cause: {type(e).__name__}: {e}"
             ) from e
 
-        # Validation des shapes
+        # Shape validation
         if not isinstance(self._sgx, sp.Matrix) or self._sgx.shape != (nx, 1):
             raise ValueError(
-                f"symbolic_model() doit retourner sgx de shape ({nx}, 1), "
+                f"symbolic_model() must return sgx with shape ({nx}, 1), "
                 f"got {getattr(self._sgx, 'shape', type(self._sgx))}"
             )
         if not isinstance(self._sgy, sp.Matrix) or self._sgy.shape != (ny, 1):
             raise ValueError(
-                f"symbolic_model() doit retourner sgy de shape ({ny}, 1), "
+                f"symbolic_model() must return sgy with shape ({ny}, 1), "
                 f"got {getattr(self._sgy, 'shape', type(self._sgy))}"
             )
 
-        # g = [gx ; gy] — vecteur complet pour les jacobiennes
+        # g = [gx ; gy] — full vector for the Jacobians
         sg = self._sgx.col_join(self._sgy)  # (nz, 1)
-        sz = self._sx.col_join(self._sy)  # (nz, 1) — état augmenté z
-        sn = self._st.col_join(self._su)  # (nz, 1) — bruit augmenté
+        sz = self._sx.col_join(self._sy)  # (nz, 1) — augmented state z
+        sn = self._st.col_join(self._su)  # (nz, 1) — augmented noise
 
-        # Jacobiennes symboliques directes (pas de chain rule)
+        # Direct symbolic Jacobians (no chain rule)
         self._sAn = sg.jacobian(sz)  # (nz, nz) : dg/dz
         self._sBn = sg.jacobian(sn)  # (nz, nz) : dg/d_noise
 
-        # Tuples de symboles pour lambdify
+        # Symbol tuples for lambdify
         all_syms = tuple(self._sx) + tuple(self._sy) + tuple(self._st) + tuple(self._su)
 
-        # Compilation NumPy.
-        # Note : si une expression est constante (ex. Bn = I quand le bruit
-        # est additif), lambdify retourne un ndarray au lieu d'un callable.
-        # On normalise via _wrap_lambdify pour garantir un callable dans tous les cas.
+        # NumPy compilation.
+        # Note: if an expression is constant (e.g. Bn = I for additive noise),
+        # lambdify returns an ndarray instead of a callable.
+        # We normalise via _wrap_lambdify to guarantee a callable in all cases.
         self._gx_num = self._wrap_lambdify(sp.lambdify(all_syms, self._sgx, "numpy"))
         self._gy_num = self._wrap_lambdify(sp.lambdify(all_syms, self._sgy, "numpy"))
         self._An_num = self._wrap_lambdify(sp.lambdify(all_syms, self._sAn, "numpy"))
         self._Bn_num = self._wrap_lambdify(sp.lambdify(all_syms, self._sBn, "numpy"))
 
     # ------------------------------------------------------------------
-    # Évaluations numériques internes
+    # Internal numerical evaluations
     # ------------------------------------------------------------------
 
     def _args(self, x, y, t, u, i=None):
-        """Construit le tuple d'arguments pour lambdify à l'indice i (batch) ou 2D."""
+        """Builds the argument tuple for lambdify at index i (batch) or 2D."""
         if i is None:
             return tuple(x[:, 0]) + tuple(y[:, 0]) + tuple(t[:, 0]) + tuple(u[:, 0])
         return (
@@ -145,7 +145,7 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
 
     def _eval_gx(self, x, y, t, u):
         """
-        Évalue gx(x, y, t, u) numériquement.
+        Evaluates gx(x, y, t, u) numerically.
           2D  : x(dim_x,1), y(dim_y,1), ...  → (dim_x, 1)
           3D  : x(N,dim_x,1), ...             → (N, dim_x, 1)
         """
@@ -164,16 +164,16 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
                 return out
         except FloatingPointError as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_gx: erreur numérique à x={x}, y={y}: {e}"
+                f"[{self.__class__.__name__}] _eval_gx: numerical error at x={x}, y={y}: {e}"
             ) from e
         except (ValueError, IndexError) as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_gx: erreur de shape à x={x}, y={y}: {e}"
+                f"[{self.__class__.__name__}] _eval_gx: shape error at x={x}, y={y}: {e}"
             ) from e
 
     def _eval_gy(self, x, y, t, u):
         """
-        Évalue gy(x, y, t, u) numériquement.
+        Evaluates gy(x, y, t, u) numerically.
           2D  : → (dim_y, 1)
           3D  : → (N, dim_y, 1)
         """
@@ -192,16 +192,16 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
                 return out
         except FloatingPointError as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_gy: erreur numérique à x={x}, y={y}: {e}"
+                f"[{self.__class__.__name__}] _eval_gy: numerical error at x={x}, y={y}: {e}"
             ) from e
         except (ValueError, IndexError) as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_gy: erreur de shape à x={x}, y={y}: {e}"
+                f"[{self.__class__.__name__}] _eval_gy: shape error at x={x}, y={y}: {e}"
             ) from e
 
     def _eval_An(self, x, y, t, u):
         """
-        Évalue An = dg/dz numériquement.
+        Evaluates An = dg/dz numerically.
           2D  : → (dim_xy, dim_xy)
           3D  : → (N, dim_xy, dim_xy)
         """
@@ -221,16 +221,16 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
                 return out
         except FloatingPointError as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_An: erreur numérique à x={x}, y={y}: {e}"
+                f"[{self.__class__.__name__}] _eval_An: numerical error at x={x}, y={y}: {e}"
             ) from e
         except (ValueError, IndexError) as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_An: erreur de shape à x={x}, y={y}: {e}"
+                f"[{self.__class__.__name__}] _eval_An: shape error at x={x}, y={y}: {e}"
             ) from e
 
     def _eval_Bn(self, x, y, t, u):
         """
-        Évalue Bn = dg/d_noise numériquement.
+        Evaluates Bn = dg/d_noise numerically.
           2D  : → (dim_xy, dim_xy)
           3D  : → (N, dim_xy, dim_xy)
         """
@@ -250,15 +250,15 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
                 return out
         except FloatingPointError as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_Bn: erreur numérique à x={x}, y={y}: {e}"
+                f"[{self.__class__.__name__}] _eval_Bn: numerical error at x={x}, y={y}: {e}"
             ) from e
         except (ValueError, IndexError) as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_Bn: erreur de shape à x={x}, y={y}: {e}"
+                f"[{self.__class__.__name__}] _eval_Bn: shape error at x={x}, y={y}: {e}"
             ) from e
 
     # ------------------------------------------------------------------
-    # Interfaces appelées par _g et jacobiens_g (BaseModelNonLinear)
+    # Interfaces called by _g and jacobiens_g (BaseModelNonLinear)
     # ------------------------------------------------------------------
 
     def _gx(self, x, y, t, u, dt):
@@ -269,15 +269,15 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
 
     def _jacobiens_g(self, x, y, t, u, dt):
         """
-        Jacobiennes directes de g(z, noise) = [gx(x,y,t,u) ; gy(x,y,t,u)].
+        Direct Jacobians of g(z, noise) = [gx(x,y,t,u) ; gy(x,y,t,u)].
 
-            An = dg/dz     (dim_xy, dim_xy)   évalué en (x, y, t, u)
-            Bn = dg/dnoise (dim_xy, dim_xy)   évalué en (x, y, t, u)
+            An = dg/dz     (dim_xy, dim_xy)   evaluated at (x, y, t, u)
+            Bn = dg/dnoise (dim_xy, dim_xy)   evaluated at (x, y, t, u)
 
-        Pas de chain rule : gx et gy sont évaluées au même point (x, y).
+        No chain rule: gx and gy are evaluated at the same point (x, y).
         """
-        # Les _eval_* catchent FloatingPointError → NumericalError en amont.
-        # On se contente de laisser remonter NumericalError sans l'intercepter.
+        # The _eval_* methods catch FloatingPointError → NumericalError upstream.
+        # We simply let NumericalError propagate without intercepting it.
         An = self._eval_An(x, y, t, u)
         Bn = self._eval_Bn(x, y, t, u)
         return An, Bn
@@ -315,19 +315,19 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
     # ------------------------------------------------------------------
     def latex_model(self) -> str:
         """
-        Retourne une représentation LaTeX du modèle état-espace non linéaire.
+        Returns a LaTeX representation of the nonlinear state-space model.
 
-        Conventions typographiques :
-          - scalaire (dim=1)        : italique simple  x, y
-          - vecteur  (dim>1)        : gras minuscule   \\mathbf{x}, ...
-          - bruit                   : v^x (état), v^y (observation)
-          - matrices jacobiennes    : gras majuscule   \\mathbf{A}_n, \\mathbf{B}_n
-          - bruit gaussien          : (v^x, v^y) ~ N(0, Q)
+        Typographic conventions:
+          - scalar (dim=1)          : plain italic     x, y
+          - vector (dim>1)          : bold lowercase   \\mathbf{x}, ...
+          - noise                   : v^x (state), v^y (observation)
+          - Jacobian matrices       : bold uppercase   \\mathbf{A}_n, \\mathbf{B}_n
+          - Gaussian noise          : (v^x, v^y) ~ N(0, Q)
         """
         nx, ny = self.dim_x, self.dim_y
 
         # ------------------------------------------------------------------
-        # Noms LaTeX pour le bruit : v^x_i / v^y_i (ou v^x / v^y si dim=1)
+        # LaTeX names for noise: v^x_i / v^y_i (or v^x / v^y if dim=1)
         # ------------------------------------------------------------------
         def _vx_name(i: int) -> str:
             return "v^x" if nx == 1 else rf"v^x_{i}"
@@ -336,9 +336,9 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
             return "v^y" if ny == 1 else rf"v^y_{i}"
 
         # ------------------------------------------------------------------
-        # Construction du dictionnaire de substitution sym → LaTeX symbol
-        # dim=1 : x0 → x,  t0 → v^x  (scalaire, pas d'indice)
-        # dim>1 : x0 → x_0, t0 → v^x_0, ... avec gras si vecteur
+        # Construction of the substitution dictionary sym → LaTeX symbol
+        # dim=1 : x0 → x,  t0 → v^x  (scalar, no index)
+        # dim>1 : x0 → x_0, t0 → v^x_0, ... with bold if vector
         # ------------------------------------------------------------------
         def _sub_dict(syms, base: str, bold: bool, names=None) -> dict:
             subs = {}
@@ -373,7 +373,7 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
         sBn_s = _apply(self._sBn)
 
         # ------------------------------------------------------------------
-        # Noms des membres gauches
+        # Left-hand side names
         # ------------------------------------------------------------------
         x_n = r"\mathbf{x}" if bold_x else "x"
         y_n = r"\mathbf{y}" if bold_y else "y"
@@ -386,7 +386,7 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
         Q_n = r"\mathcal{Q}"
 
         # ------------------------------------------------------------------
-        # Formatage de mQ (2 décimales)
+        # mQ formatting (2 decimal places)
         # ------------------------------------------------------------------
         def _np_to_sp(M: np.ndarray) -> sp.Matrix:
             return sp.Matrix(
@@ -398,24 +398,24 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
         mQ_sp = _np_to_sp(self.mQ)
 
         # ------------------------------------------------------------------
-        # Rendu de gx / gy : scalaire sans crochets, vecteur avec ()
-        # On réordonne pour mettre le bruit en dernier via sp.Add.
+        # Rendering of gx / gy: scalar without brackets, vector with ()
+        # Reorder to put noise last via sp.Add.
         # ------------------------------------------------------------------
         import re
 
         def _fix_latex(s: str) -> str:
-            """1.0 \\cdot 10^{-k}  →  10^{-k}  (avec ou sans espace autour de \\cdot)"""
+            """1.0 \\cdot 10^{-k}  →  10^{-k}  (with or without spaces around \\cdot)"""
             return re.sub(r"1\.0\s*\\cdot\s*", "", s)
 
         def _reorder_noise_last(expr: sp.Expr) -> str:
             """
-            Rend une expression LaTeX avec les termes de bruit forcés à la fin.
-            Contourne le tri canonique de sp.Add en substituant noise=0
-            pour extraire la partie déterministe, puis concatène manuellement.
+            Renders a LaTeX expression with noise terms forced to the end.
+            Works around sp.Add canonical sorting by substituting noise=0
+            to extract the deterministic part, then concatenates manually.
             """
             zero_subs = {sp.Symbol(n, real=True): 0 for n in vx_names + vy_names}
-            det = expr.subs(zero_subs)  # partie déterministe
-            noise = sp.expand(expr - det)  # contribution du bruit
+            det = expr.subs(zero_subs)  # deterministic part
+            noise = sp.expand(expr - det)  # noise contribution
 
             if noise == 0:
                 return sp.latex(det)
@@ -423,7 +423,7 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
                 return sp.latex(noise)
 
             noise_lat = sp.latex(noise)
-            # Si le terme bruit commence par '-', pas besoin du '+'
+            # If the noise term starts with '-', no '+' is needed
             sep = " " if noise_lat.startswith("-") else " + "
             return sp.latex(det) + sep + noise_lat
 
@@ -431,29 +431,29 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
             if mat.shape == (1, 1):
                 return _reorder_noise_last(mat[0, 0])
             parts = [_reorder_noise_last(e) for e in mat]
-            # Rendu manuel en colonne avec parenthèses
+            # Manual column rendering with parentheses
             rows = r" \\ ".join(parts)
             return rf"\begin{{pmatrix}} {rows} \end{{pmatrix}}"
 
         # ------------------------------------------------------------------
-        # Assemblage
+        # Assembly
         # ------------------------------------------------------------------
         lines = [
             r"\begin{align}",
-            # ── Dynamique
+            # ── Dynamics
             rf"  g_x\!\left({x_n},\,{y_n},\,{vx_n}\right)"
             rf" &= {_lat(sgx_s)} \\[6pt]",
             # ── Observation
             rf"  g_y\!\left({x_n},\,{y_n},\,{vy_n}\right)"
             rf" &= {_lat(sgy_s)} \\[6pt]",
-            # ── Distribution du bruit (juste après les équations)
+            # ── Noise distribution (just after the equations)
             rf"  {v_n} = ({vx_n},\,{vy_n})"
             rf" &\sim \mathcal{{N}}\!\left(0,\; {Q_n}\right), \qquad"
             rf" {Q_n} = {sp.latex(mQ_sp)} \\[12pt]",
-            # ── Jacobienne d'état
+            # ── State Jacobian
             rf"  {An_n} &= \frac{{\partial\, g}}{{\partial\, {z_n}}}"
             rf" = {sp.latex(sAn_s)} \\[6pt]",
-            # ── Jacobienne de bruit
+            # ── Noise Jacobian
             rf"  {Bn_n} &= \frac{{\partial\, g}}{{\partial\, {v_n}}}"
             rf" = {sp.latex(sBn_s)}",
             r"\end{align}",

@@ -30,30 +30,30 @@ class BaseDataSimulator(ABC):
         withoutX: bool,
     ) -> None:
         """
-        Initialise le simulateur de données.
+        Initialises the data simulator.
 
         Parameters
         ----------
         model_name : str
-            Nom du modèle à instancier.
+            Name of the model to instantiate.
         N : int
-            Nombre de pas de temps à simuler.
+            Number of time steps to simulate.
         sKey : int or None
-            Graine aléatoire (None = graine aléatoire forte).
+            Random seed (None = strong random seed).
         data_file_name : str or None
-            Nom du fichier de sortie. Si None, utilise le nom par défaut.
+            Output file name. If None, uses the default name.
         verbose : int
-            Niveau de verbosité (0, 1 ou 2).
+            Verbosity level (0, 1 or 2).
         withoutX : bool
-            Si True, n'enregistre pas la vérité terrain dans le CSV.
+            If True, does not record ground truth in the CSV.
 
         Raises
         ------
         ParamError
-            Si ``verbose`` n'est pas dans ``{0, 1, 2}``, si ``N`` n'est pas
-            un entier strictement positif, ou si ``sKey`` est négatif.
+            If ``verbose`` is not in ``{0, 1, 2}``, if ``N`` is not
+            a strictly positive integer, or if ``sKey`` is negative.
         PKFError
-            Si la construction des paramètres ou du modèle échoue.
+            If parameter or model construction fails.
         """
         if verbose not in (0, 1, 2):
             raise ParamError("verbose must be 0, 1 or 2.")
@@ -101,13 +101,13 @@ class BaseDataSimulator(ABC):
 
     def _validate_inputs(self) -> None:
         """
-        Valide les paramètres d'entrée communs à tous les simulateurs.
+        Validates the input parameters common to all simulators.
 
         Raises
         ------
         ParamError
-            Si ``N`` n'est pas un entier strictement positif,
-            ou si ``sKey`` est strictement négatif.
+            If ``N`` is not a strictly positive integer,
+            or if ``sKey`` is strictly negative.
         """
         if not (isinstance(self.N, int) and self.N > 0):
             raise ParamError(f"N must be a strictly positive integer, got {self.N!r}.")
@@ -118,25 +118,25 @@ class BaseDataSimulator(ABC):
 
     def _build_parameters(self):
         """
-        Instancie le modèle et construit l'objet de paramètres.
+        Instantiates the model and builds the parameter object.
 
         Returns
         -------
         ParamLinear | ParamNonLinear
-            L'objet de paramètres construit.
+            The built parameter object.
 
         Raises
         ------
         PKFError
-            Si la création du modèle ou des paramètres échoue (wrapping
-            de toute exception levée par ``create_model`` ou
+            If model or parameter creation fails (wrapping
+            any exception raised by ``create_model`` or
             ``create_param``).
         """
 
         try:
             model = self.create_model()
         except PKFError:
-            raise  # déjà typée — on laisse remonter telle quelle
+            raise  # already typed — let it propagate as-is
         except Exception as e:
             raise PKFError(f"Failed to create model {self.model_name!r}.") from e
 
@@ -147,7 +147,7 @@ class BaseDataSimulator(ABC):
         try:
             param = self.create_param(dim_x, dim_y, params)
         except PKFError:
-            raise  # CovarianceError, ParamError, etc. — on laisse remonter
+            raise  # CovarianceError, ParamError, etc. — let it propagate
         except Exception as e:
             raise PKFError(
                 f"Failed to build parameters for model {self.model_name!r}."
@@ -160,14 +160,14 @@ class BaseDataSimulator(ABC):
 
     def run(self) -> None:
         """
-        Exécute la simulation et sauvegarde les données dans un fichier CSV.
+        Executes the simulation and saves the data to a CSV file.
 
         Raises
         ------
         PKFError
-            Si la création du filtre ou la simulation échoue.
+            If filter creation or simulation fails.
         OSError
-            Si la sauvegarde du fichier CSV échoue (permissions, espace disque, etc.).
+            If saving the CSV file fails (permissions, disk space, etc.).
         """
 
         try:

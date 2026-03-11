@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import (
     Any,
     Generator,
-)  # FIX : Any ajouté (était utilisé non importé) ; List/Optional supprimés (legacy)
+)  # FIX: Any added (was used but not imported); List/Optional removed (legacy)
 
 import os  # Used in read_unknown_file
 import math  # Used in format_value
@@ -44,7 +44,7 @@ __all__ = [
     "name_analysis",
 ]
 
-# FIX : force_terminal=True supprimé — évite les séquences ANSI parasites dans les logs fichier/pipe
+# FIX: force_terminal=True removed — avoids spurious ANSI sequences in file/pipe logs
 import sys as _sys
 
 console = Console(color_system="truecolor" if _sys.stdout.isatty() else None)
@@ -151,7 +151,7 @@ def save_dataframe_to_csv(
     """
     path = Path(filepath)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # FIX : try/except avec raise nu supprimé (n'ajoutait rien)
+    # FIX: bare try/except with raise removed (added nothing)
     df.to_csv(path, encoding="utf-8", index=index, float_format="%.15f")
 
 
@@ -257,7 +257,7 @@ def _compute_quadratic_form(
         try:
             Pk_inv = InvertibleMatrix(Pk).inverse()
         except RuntimeError:
-            # Pk quasi-singulière (particle collapse) — pseudo-inverse de Moore-Penrose
+            # Pk near-singular (particle collapse) — Moore-Penrose pseudo-inverse
             Pk_inv = np.linalg.pinv(Pk)
 
         vals[k] = float((ek.T @ Pk_inv @ ek).squeeze())
@@ -314,8 +314,8 @@ def compute_errors(
 
     errors = x_true - x_hat
 
-    # FIX : errors_flat = errors.flatten() (l'original utilisait np.concatenate sur un 2D
-    #        après hstack().T, ce qui aplatissait ligne par ligne de façon incohérente)
+    # FIX: errors_flat = errors.flatten() (the original used np.concatenate on a 2D array
+    #        after hstack().T, which flattened row by row in an inconsistent way)
     errors_flat = errors.flatten()
     mse_total = float(np.mean(errors_flat**2))
     mae_total = float(np.mean(np.abs(errors_flat)))
@@ -328,7 +328,7 @@ def compute_errors(
         "nis_mean": "na",
     }
 
-    # FIX : errors déjà calculé plus haut — ligne dupliquée supprimée
+    # FIX: errors already computed above — duplicate line removed
 
     if not model.param.augmented:
         # Mean NEES
@@ -338,7 +338,7 @@ def compute_errors(
         report["nees_mean"] = nees_mean
 
         # Mean NIS (optional)
-        # FIX : S_list validé explicitement — crash TypeError si None avec i_list fourni
+        # FIX: S_list validated explicitly — TypeError crash if None when i_list is provided
         if i_list is not None:
             if S_list is None:
                 raise ValueError("S_list must be provided when i_list is not None.")
@@ -400,9 +400,9 @@ def read_unknown_file(
     Exception
         Any I/O or parsing error is logged and re-raised.
     """
-    # FIX : Path.suffix utilisé à la place de os.path.splitext (pathlib déjà importé)
+    # FIX: Path.suffix used instead of os.path.splitext (pathlib already imported)
     ext = Path(filepath).suffix.lower()
-    # FIX : try/except avec raise nu supprimé (n'ajoutait rien)
+    # FIX: bare try/except with raise removed (added nothing)
     with open(filepath, "rb") as f:
         raw_data = f.read(50_000)
         enc_info = chardet.detect(raw_data)
@@ -587,7 +587,7 @@ def check_equality(**kwargs: np.ndarray) -> None:
         Named matrices to compare. At least two must be provided.
     """
     if len(kwargs) < 2:
-        # FIX : warnings.warn au lieu de print (signale l'anomalie à l'appelant)
+        # FIX: warnings.warn instead of print (signals the anomaly to the caller)
         _warnings.warn(
             "check_equality: at least 2 matrices required.", UserWarning, stacklevel=2
         )
