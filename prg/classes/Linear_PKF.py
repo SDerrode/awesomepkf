@@ -130,6 +130,7 @@ class Linear_PKF(PKF):
             Si une erreur inattendue survient pendant l'étape de mise à jour.
         """
         self._validate_N(N)
+        self.history.clear()
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()
