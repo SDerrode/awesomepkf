@@ -25,7 +25,6 @@ from __future__ import annotations
 from typing import Generator, Optional
 
 import numpy as np
-from scipy.linalg import LinAlgError
 
 from prg.classes.PKF import PKF
 from prg.classes.SigmaPointsSet import SigmaPointsSet
@@ -93,7 +92,7 @@ class NonLinear_UKF(PKF):
 
         if self.param.pairwiseModel == True:
             raise FilterError(
-                f"Failed to process a pairwise model {model_name!r} with UKF."
+                "UKF does not support pairwise models."
             )
 
         # Jeu de sigma-points pour l'étape de prédiction (espace d'état dim_x)

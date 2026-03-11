@@ -9,10 +9,10 @@ from prg.utils.utils import file_data_generator
 from prg.base_classes.nonlinear_epkf_runner_base import BaseNonLinearEPKFRunner
 from prg.utils.exceptions import FilterError, PKFError
 
-__all__ = ["BaseNonLinearEPKFRunnerFromFile"]
+__all__ = ["NonLinearEPKFRunnerFromFile"]
 
 
-class BaseNonLinearEPKFRunnerFromFile(BaseNonLinearEPKFRunner):
+class NonLinearEPKFRunnerFromFile(BaseNonLinearEPKFRunner):
     """
     Runner for filtering nonlinear data loaded from file.
     """

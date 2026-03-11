@@ -211,6 +211,6 @@ class BaseRunner(ABC):
     # ==========================================================
 
     @abstractmethod
-    def run(self) -> None:
+    def run(self) -> list:
         """Execute the main workflow."""
         pass
