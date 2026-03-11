@@ -84,7 +84,7 @@ _OPTION_CONFIG: dict = {
         "help": "Ne pas sauvegarder l'état vrai X (default: False)",
     },
     "filter": {
-        "choices": ["EPKF", "UPKF", "PPF"],
+        "choices": ["EPKF", "UPKF", "PPF", "UKF", "PKF"],
         "default": None,
         "help": "Type de filtre à utiliser (default: None)",
     },

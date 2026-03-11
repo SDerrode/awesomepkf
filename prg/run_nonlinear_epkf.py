@@ -4,9 +4,9 @@
 import argparse
 import sys
 
-from prg.base_classes.nonlinear_epkf_runner_simulation import BaseNonLinearEPKFRunnerSim
+from prg.base_classes.nonlinear_epkf_runner_simulation import NonLinearEPKFRunnerSim
 from prg.base_classes.nonlinear_epkf_runner_from_file import (
-    BaseNonLinearEPKFRunnerFromFile,
+    NonLinearEPKFRunnerFromFile,
 )
 from prg.utils.parser import add_arguments
 from prg.utils.exceptions import NumericalError, FilterError, PKFError, ParamError
@@ -49,7 +49,7 @@ def main() -> None:
 
     try:
         if args.dataFileName is not None:
-            runner = BaseNonLinearEPKFRunnerFromFile(
+            runner = NonLinearEPKFRunnerFromFile(
                 model_name=model_name,
                 data_filename=args.dataFileName,
                 verbose=args.verbose,
@@ -57,7 +57,7 @@ def main() -> None:
                 save_history=args.saveHistory,
             )
         else:
-            runner = BaseNonLinearEPKFRunnerSim(
+            runner = NonLinearEPKFRunnerSim(
                 model_name=model_name,
                 N=args.N,
                 sKey=args.sKey,
