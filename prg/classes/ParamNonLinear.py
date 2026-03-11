@@ -27,26 +27,26 @@ class ParamNonLinear:
 
     def __init__(self, verbose: int, dim_x: int, dim_y: int, **kwargs) -> None:
         """
-        Initialise les paramètres du filtre PKF non-linéaire.
+        Initialises the nonlinear PKF filter parameters.
 
         Parameters
         ----------
         verbose : int
-            Niveau de verbosité (0, 1 ou 2).
+            Verbosity level (0, 1 or 2).
         dim_x : int
-            Dimension de l'état, doit être un entier strictement positif.
+            State dimension, must be a strictly positive integer.
         dim_y : int
-            Dimension de l'observation, doit être un entier strictement positif.
+            Observation dimension, must be a strictly positive integer.
         **kwargs
-            Paramètres du modèle (g, mQ, mz0, Pz0, alpha, beta, etc.).
+            Model parameters (g, mQ, mz0, Pz0, alpha, beta, etc.).
 
         Raises
         ------
         ParamError
-            Si ``dim_x``, ``dim_y`` ne sont pas des entiers strictement positifs,
-            ou si ``verbose`` n'appartient pas à ``{0, 1, 2}``.
+            If ``dim_x``, ``dim_y`` are not strictly positive integers,
+            or if ``verbose`` does not belong to ``{0, 1, 2}``.
         CovarianceError
-            Si ``mQ`` ou ``Pz0`` ne sont pas définies positives (modèle non augmenté).
+            If ``mQ`` or ``Pz0`` are not positive definite (non-augmented model).
         """
         if __debug__:
             if not (isinstance(dim_x, int) and dim_x > 0):
@@ -71,13 +71,13 @@ class ParamNonLinear:
         self._mz0 = np.array(kwargs["mz0"], dtype=float)
         self._Pz0 = np.array(kwargs["Pz0"], dtype=float)
 
-        # Paramètres spécifiques UPKF
+        # UPKF-specific parameters
         self.alpha = kwargs["alpha"]
         self.beta = kwargs["beta"]
         self.kappa = kwargs["kappa"]
         self.lambda_ = kwargs["lambda_"]
 
-        # Paramètres spécifiques EPKF
+        # EPKF-specific parameters
         self.jacobiens_g = kwargs["jacobiens_g"]
 
         if __debug__:
@@ -101,12 +101,12 @@ class ParamNonLinear:
     # ------------------------------------------------------------------
     def _check_covariance_matrices(self) -> None:
         """
-        Vérifie que ``mQ`` et ``Pz0`` sont des matrices de covariance valides.
+        Checks that ``mQ`` and ``Pz0`` are valid covariance matrices.
 
         Raises
         ------
         CovarianceError
-            Si l'une des matrices n'est pas définie positive semi-définie.
+            If any of the matrices is not positive semi-definite.
         """
         for name, arr in [("mQ", self._mQ), ("Pz0", self._Pz0)]:
             report = CovarianceMatrix(arr).check()
@@ -134,19 +134,19 @@ class ParamNonLinear:
     @mQ.setter
     def mQ(self, new_Q: np.ndarray) -> None:
         """
-        Met à jour la matrice de bruit de process ``mQ``.
+        Updates the process noise matrix ``mQ``.
 
         Parameters
         ----------
         new_Q : np.ndarray
-            Nouvelle matrice de covariance, shape ``(dim_xy, dim_xy)``.
+            New covariance matrix, shape ``(dim_xy, dim_xy)``.
 
         Raises
         ------
         ParamError
-            Si la forme de ``new_Q`` ne correspond pas à ``(dim_xy, dim_xy)``.
+            If the shape of ``new_Q`` does not match ``(dim_xy, dim_xy)``.
         CovarianceError
-            Si ``new_Q`` n'est pas définie positive (modèle non augmenté).
+            If ``new_Q`` is not positive definite (non-augmented model).
         """
         new_Q = np.array(new_Q, dtype=float)
         if __debug__:

@@ -14,24 +14,24 @@ __all__ = ["BaseModelFxHx"]
 
 class BaseModelFxHx(BaseModelNonLinear, ABC):
     """
-    Classe mère pour les modèles définis symboliquement via symbolic_model().
+    Parent class for models defined symbolically via symbolic_model().
 
-    Gère dim_x >= 1 et dim_y >= 1.
+    Handles dim_x >= 1 and dim_y >= 1.
 
-    La sous-classe doit implémenter :
+    The subclass must implement:
 
         def symbolic_model(self, sx, st, su):
             ...
             return sfx, shx
 
-    où :
-        sx  : sp.Matrix(dim_x, 1) — symboles x0 .. x_{dim_x-1}
-        st  : sp.Matrix(dim_x, 1) — symboles t0 .. t_{dim_x-1}
-        su  : sp.Matrix(dim_y, 1) — symboles u0 .. u_{dim_y-1}
-        sfx : sp.Matrix(dim_x, 1) — expression de la transition f(x, t)
-        shx : sp.Matrix(dim_y, 1) — expression de l'observation h(x, u)
+    where:
+        sx  : sp.Matrix(dim_x, 1) — symbols x0 .. x_{dim_x-1}
+        st  : sp.Matrix(dim_x, 1) — symbols t0 .. t_{dim_x-1}
+        su  : sp.Matrix(dim_y, 1) — symbols u0 .. u_{dim_y-1}
+        sfx : sp.Matrix(dim_x, 1) — expression of the transition f(x, t)
+        shx : sp.Matrix(dim_y, 1) — expression of the observation h(x, u)
 
-    Exemple dim_x=1, dim_y=1 :
+    Example dim_x=1, dim_y=1:
 
         def symbolic_model(self, sx, st, su):
             x, t, u = sx[0], st[0], su[0]
@@ -39,7 +39,7 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
             shx = x + u
             return sp.Matrix([sfx]), sp.Matrix([shx])
 
-    Exemple dim_x=2, dim_y=1 :
+    Example dim_x=2, dim_y=1:
 
         def symbolic_model(self, sx, st, su):
             x1, x2 = sx[0], sx[1]
@@ -55,15 +55,15 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
     @abstractmethod
     def symbolic_model(self, sx, st, su):
         """
-        À implémenter dans la sous-classe.
+        To be implemented in the subclass.
 
-        Paramètres
+        Parameters
         ----------
-        sx : sp.Matrix(dim_x, 1)  — symboles d'état        x0 .. x_{dim_x-1}
-        st : sp.Matrix(dim_x, 1)  — symboles bruit d'état  t0 .. t_{dim_x-1}
-        su : sp.Matrix(dim_y, 1)  — symboles bruit obs.    u0 .. u_{dim_y-1}
+        sx : sp.Matrix(dim_x, 1)  — state symbols         x0 .. x_{dim_x-1}
+        st : sp.Matrix(dim_x, 1)  — state noise symbols   t0 .. t_{dim_x-1}
+        su : sp.Matrix(dim_y, 1)  — obs. noise symbols    u0 .. u_{dim_y-1}
 
-        Retourne
+        Returns
         --------
         sfx : sp.Matrix(dim_x, 1) — transition  f(x, t)
         shx : sp.Matrix(dim_y, 1) — observation h(x, u)
@@ -77,13 +77,13 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
 
     # ------------------------------------------------------------------
     def _args_fx(self, x, t, i=None):
-        """Construit le tuple d'arguments (x, t) pour lambdify."""
+        """Builds the argument tuple (x, t) for lambdify."""
         if i is None:
             return tuple(x[:, 0]) + tuple(t[:, 0])
         return tuple(x[i, :, 0]) + tuple(t[i, :, 0])
 
     def _args_hx(self, x, u, i=None):
-        """Construit le tuple d'arguments (x, u) pour lambdify."""
+        """Builds the argument tuple (x, u) for lambdify."""
         if i is None:
             return tuple(x[:, 0]) + tuple(u[:, 0])
         return tuple(x[i, :, 0]) + tuple(u[i, :, 0])
@@ -92,12 +92,12 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
     def _build_symbolic_model(self):
         nx, ny = self.dim_x, self.dim_y
 
-        # Vecteurs de symboles réels
+        # Real symbol vectors
         self._sx = sp.Matrix([sp.Symbol(f"x{i}", real=True) for i in range(nx)])
         self._st = sp.Matrix([sp.Symbol(f"t{i}", real=True) for i in range(nx)])
         self._su = sp.Matrix([sp.Symbol(f"u{i}", real=True) for i in range(ny)])
 
-        # Modèle fourni par la sous-classe
+        # Model provided by the subclass
         try:
             self._sfx, self._shx = self.symbolic_model(self._sx, self._st, self._su)
         except Exception as e:
@@ -107,45 +107,45 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
                 f"Cause: {type(e).__name__}: {e}"
             ) from e
 
-        # Validation des shapes
+        # Shape validation
         if not isinstance(self._sfx, sp.Matrix) or self._sfx.shape != (nx, 1):
             raise ValueError(
-                f"symbolic_model() doit retourner sfx de shape ({nx}, 1), "
+                f"symbolic_model() must return sfx with shape ({nx}, 1), "
                 f"got {getattr(self._sfx, 'shape', type(self._sfx))}"
             )
         if not isinstance(self._shx, sp.Matrix) or self._shx.shape != (ny, 1):
             raise ValueError(
-                f"symbolic_model() doit retourner shx de shape ({ny}, 1), "
+                f"symbolic_model() must return shx with shape ({ny}, 1), "
                 f"got {getattr(self._shx, 'shape', type(self._shx))}"
             )
 
-        # Jacobiennes symboliques
+        # Symbolic Jacobians
         self._sA = self._sfx.jacobian(self._sx)  # (nx, nx) : df/dx
         self._sH = self._shx.jacobian(self._sx)  # (ny, nx) : dh/dx
 
-        # Tuples de symboles pour lambdify
+        # Symbol tuples for lambdify
         sx_t = tuple(self._sx)
         st_t = tuple(self._st)
         su_t = tuple(self._su)
 
-        # Compilation NumPy.
-        # Note : si une expression est constante (ex. H = [0,1] pour hx = x[-1]),
-        # lambdify retourne un ndarray au lieu d'un callable.
-        # On normalise via _wrap_lambdify pour garantir un callable dans tous les cas.
+        # NumPy compilation.
+        # Note: if an expression is constant (e.g. H = [0,1] for hx = x[-1]),
+        # lambdify returns an ndarray instead of a callable.
+        # We normalise via _wrap_lambdify to guarantee a callable in all cases.
         self._fx_num = self._wrap_lambdify(sp.lambdify(sx_t + st_t, self._sfx, "numpy"))
         self._hx_num = self._wrap_lambdify(sp.lambdify(sx_t + su_t, self._shx, "numpy"))
         self._A_num = self._wrap_lambdify(sp.lambdify(sx_t, self._sA, "numpy"))
         self._H_num = self._wrap_lambdify(sp.lambdify(sx_t, self._sH, "numpy"))
 
     # ------------------------------------------------------------------
-    # Évaluations numériques internes
+    # Internal numerical evaluations
     # ------------------------------------------------------------------
 
     def _eval_fx(self, x, t):
         """
-        Évalue f(x, t) numériquement.
-        x : (dim_x, 1)     t : (dim_x, 1) ou scalaire  → retourne (dim_x, 1)
-        x : (N, dim_x, 1)  t : (N, dim_x, 1) ou scalaire → retourne (N, dim_x, 1)
+        Evaluates f(x, t) numerically.
+        x : (dim_x, 1)     t : (dim_x, 1) or scalar  → returns (dim_x, 1)
+        x : (N, dim_x, 1)  t : (N, dim_x, 1) or scalar → returns (N, dim_x, 1)
         """
         try:
             with np.errstate(all="raise"):
@@ -176,18 +176,18 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
 
         except FloatingPointError as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_fx: erreur numérique à x={x}, t={t}: {e}"
+                f"[{self.__class__.__name__}] _eval_fx: numerical error at x={x}, t={t}: {e}"
             ) from e
         except (ValueError, IndexError) as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_fx: erreur de shape à x={x}, t={t}: {e}"
+                f"[{self.__class__.__name__}] _eval_fx: shape error at x={x}, t={t}: {e}"
             ) from e
 
     def _eval_hx(self, x, u):
         """
-        Évalue h(x, u) numériquement.
-        x : (dim_x, 1),    u : (dim_y, 1) ou scalaire   → retourne (dim_y, 1)
-        x : (N, dim_x, 1), u : (N, dim_y, 1) ou scalaire → retourne (N, dim_y, 1)
+        Evaluates h(x, u) numerically.
+        x : (dim_x, 1),    u : (dim_y, 1) or scalar   → returns (dim_y, 1)
+        x : (N, dim_x, 1), u : (N, dim_y, 1) or scalar → returns (N, dim_y, 1)
         """
         try:
             with np.errstate(all="raise"):
@@ -216,18 +216,18 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
 
         except FloatingPointError as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_hx: erreur numérique à x={x}, u={u}: {e}"
+                f"[{self.__class__.__name__}] _eval_hx: numerical error at x={x}, u={u}: {e}"
             ) from e
         except (ValueError, IndexError) as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_hx: erreur de shape à x={x}, u={u}: {e}"
+                f"[{self.__class__.__name__}] _eval_hx: shape error at x={x}, u={u}: {e}"
             ) from e
 
     def _eval_A(self, x):
         """
-        Évalue df/dx numériquement.
-          x : (dim_x, 1)     → retourne (dim_x, dim_x)
-          x : (N, dim_x, 1)  → retourne (N, dim_x, dim_x)
+        Evaluates df/dx numerically.
+          x : (dim_x, 1)     → returns (dim_x, dim_x)
+          x : (N, dim_x, 1)  → returns (N, dim_x, dim_x)
         """
         try:
             with np.errstate(all="raise"):
@@ -244,18 +244,18 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
                 return out
         except FloatingPointError as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_A: erreur numérique à x={x}: {e}"
+                f"[{self.__class__.__name__}] _eval_A: numerical error at x={x}: {e}"
             ) from e
         except (ValueError, IndexError) as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_A: erreur de shape à x={x}: {e}"
+                f"[{self.__class__.__name__}] _eval_A: shape error at x={x}: {e}"
             ) from e
 
     def _eval_H(self, x):
         """
-        Évalue dh/dx numériquement.
-          x : (dim_x, 1)     → retourne (dim_y, dim_x)
-          x : (N, dim_x, 1)  → retourne (N, dim_y, dim_x)
+        Evaluates dh/dx numerically.
+          x : (dim_x, 1)     → returns (dim_y, dim_x)
+          x : (N, dim_x, 1)  → returns (N, dim_y, dim_x)
         """
         try:
             with np.errstate(all="raise"):
@@ -272,15 +272,15 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
                 return out
         except FloatingPointError as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_H: erreur numérique à x={x}: {e}"
+                f"[{self.__class__.__name__}] _eval_H: numerical error at x={x}: {e}"
             ) from e
         except (ValueError, IndexError) as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] _eval_H: erreur de shape à x={x}: {e}"
+                f"[{self.__class__.__name__}] _eval_H: shape error at x={x}: {e}"
             ) from e
 
     # ------------------------------------------------------------------
-    # Interfaces _fx / _hx appelées par _g
+    # _fx / _hx interfaces called by _g
     # ------------------------------------------------------------------
 
     def _fx(self, x, t, dt):
@@ -292,10 +292,10 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
     # ------------------------------------------------------------------
     def _jacobiens_g(self, x, y, t, u, dt):
         """
-        Calcule les jacobiennes de g(z) = [f(x,t) ; h(f(x,t), u)] par rapport
-        à z = [x ; y] et au bruit noise_z = [t ; u].
+        Computes the Jacobians of g(z) = [f(x,t) ; h(f(x,t), u)] with respect
+        to z = [x ; y] and the noise noise_z = [t ; u].
 
-        Structure par blocs (nz = dim_x + dim_y) :
+        Block structure (nz = dim_x + dim_y):
 
             An = dg/dz    = [ df/dx              0     ]
                             [ dh/dx @ df/dx       0    ]
@@ -303,20 +303,20 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
             Bn = dg/dnoise = [ I_nx        0      ]
                              [ dh/dx       I_ny   ]
 
-        dh/dx est évalué en f(x, t) (règle de la chaîne).
+        dh/dx is evaluated at f(x, t) (chain rule).
         """
-        # Les _eval_* catchent FloatingPointError → NumericalError en amont.
-        # On se contente de laisser remonter NumericalError sans l'intercepter.
+        # The _eval_* methods catch FloatingPointError → NumericalError upstream.
+        # We simply let NumericalError propagate without intercepting it.
         nx, ny, nz = self.dim_x, self.dim_y, self.dim_xy
 
         if x.ndim == 2:
             fx_val = self._eval_fx(x, t)  # (nx, 1)
             dfdx = self._eval_A(x)  # (nx, nx)
-            dhdx = self._eval_H(fx_val)  # (ny, nx) évalué en f(x)
+            dhdx = self._eval_H(fx_val)  # (ny, nx) evaluated at f(x)
 
             An = np.zeros((nz, nz))
             An[:nx, :nx] = dfdx
-            An[nx:, :nx] = dhdx @ dfdx  # règle de la chaîne
+            An[nx:, :nx] = dhdx @ dfdx  # chain rule
 
             Bn = np.zeros((nz, nz))
             Bn[:nx, :nx] = np.eye(nx)
@@ -372,21 +372,21 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
 
     def latex_model(self) -> str:
         """
-        Retourne une représentation LaTeX du modèle état-espace non linéaire f/h.
+        Returns a LaTeX representation of the nonlinear state-space model f/h.
 
-        Conventions typographiques :
-          - scalaire (dim=1)        : italique simple  x, y
-          - vecteur  (dim>1)        : gras minuscule   \\mathbf{x}, ...
-          - bruit                   : v^x (état), v^y (observation)
-          - matrices jacobiennes    : gras majuscule   \\mathbf{A}, \\mathbf{H}
-          - bruit gaussien          : v = (v^x, v^y) ~ N(0, Q)
+        Typographic conventions:
+          - scalar (dim=1)          : plain italic     x, y
+          - vector (dim>1)          : bold lowercase   \\mathbf{x}, ...
+          - noise                   : v^x (state), v^y (observation)
+          - Jacobian matrices       : bold uppercase   \\mathbf{A}, \\mathbf{H}
+          - Gaussian noise          : v = (v^x, v^y) ~ N(0, Q)
         """
         nx, ny = self.dim_x, self.dim_y
         bold_x = nx > 1
         bold_y = ny > 1
 
         # ------------------------------------------------------------------
-        # Noms LaTeX pour le bruit
+        # LaTeX names for noise
         # ------------------------------------------------------------------
         def _vx_name(i: int) -> str:
             return "v^x" if nx == 1 else rf"v^x_{i}"
@@ -398,7 +398,7 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
         vy_names = [_vy_name(i) for i in range(ny)]
 
         # ------------------------------------------------------------------
-        # Dictionnaire de substitution sym → symbole LaTeX propre
+        # Substitution dictionary sym → clean LaTeX symbol
         # ------------------------------------------------------------------
         def _sub_dict(syms, base: str, bold: bool, names=None) -> dict:
             subs = {}
@@ -422,7 +422,7 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
 
         sfx_s = _apply(self._sfx)
 
-        # Pour h : substituer les x par y dans l'expression (h est évaluée en f(x)=y_{k})
+        # For h: substitute x by y in the expression (h is evaluated at f(x)=y_{k})
         subs_xy = {}
         subs_xy.update(_sub_dict(list(self._sx), "y", bold=bold_y))
         subs_xy.update(_sub_dict(list(self._st), "t", bold=False, names=vx_names))
@@ -436,7 +436,7 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
         sH_s = _apply(self._sH)
 
         # ------------------------------------------------------------------
-        # Noms des membres gauches
+        # Left-hand side names
         # ------------------------------------------------------------------
         x_n = r"\mathbf{x}" if bold_x else "x"
         y_n = r"\mathbf{y}" if bold_y else "y"
@@ -448,7 +448,7 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
         Q_n = r"\mathcal{Q}"
 
         # ------------------------------------------------------------------
-        # Formatage de mQ (2 décimales)
+        # mQ formatting (2 decimal places)
         # ------------------------------------------------------------------
         def _np_to_sp(M: np.ndarray) -> sp.Matrix:
             return sp.Matrix(
@@ -460,13 +460,13 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
         mQ_sp = _np_to_sp(self.mQ)
 
         # ------------------------------------------------------------------
-        # Rendu LaTeX avec bruit forcé en dernier
-        # Contourne le tri canonique de sp.Add en isolant la partie déterministe.
+        # LaTeX rendering with noise forced last
+        # Works around sp.Add canonical sorting by isolating the deterministic part.
         # ------------------------------------------------------------------
         import re
 
         def _fix_latex(s: str) -> str:
-            """1.0 \\cdot 10^{-k}  →  10^{-k}  (avec ou sans espace autour de \\cdot)"""
+            """1.0 \\cdot 10^{-k}  →  10^{-k}  (with or without spaces around \\cdot)"""
             return re.sub(r"1\.0\s*\\cdot\s*", "", s)
 
         def _reorder_noise_last(expr: sp.Expr) -> str:
@@ -489,28 +489,28 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
             return rf"\begin{{pmatrix}} {rows} \end{{pmatrix}}"
 
         def _lat_jac(mat: sp.Matrix) -> str:
-            """Rendu des jacobiennes : scalaire sans pmatrix, matrice avec."""
+            """Jacobian rendering: scalar without pmatrix, matrix with."""
             if mat.shape == (1, 1):
                 return sp.latex(mat[0, 0])
             return sp.latex(mat)
 
         # ------------------------------------------------------------------
-        # Assemblage
+        # Assembly
         # ------------------------------------------------------------------
         lines = [
             r"\begin{align}",
             # ── Transition
             rf"  f\!\left({x_n},\,{vx_n}\right)" rf" &= {_lat(sfx_s)} \\[6pt]",
-            # ── Observation  (h évaluée en y = f(x))
+            # ── Observation (h evaluated at y = f(x))
             rf"  h\!\left({y_n},\,{vy_n}\right)" rf" &= {_lat(shx_s)} \\[6pt]",
-            # ── Distribution du bruit
+            # ── Noise distribution
             rf"  {v_n} = ({vx_n},\,{vy_n})"
             rf" &\sim \mathcal{{N}}\!\left(0,\; {Q_n}\right), \qquad"
             rf" {Q_n} = {sp.latex(mQ_sp)} \\[12pt]",
-            # ── Jacobienne de transition (dfrac + pas de pmatrix si scalaire)
+            # ── Transition Jacobian (dfrac + no pmatrix if scalar)
             rf"  \dfrac{{\partial\, f}}{{\partial\, {x_n}}}"
             rf" &= {_lat_jac(sA_s)} \\[10pt]",
-            # ── Jacobienne d'observation
+            # ── Observation Jacobian
             rf"  \dfrac{{\partial\, h}}{{\partial\, {y_n}}}" rf" &= {_lat_jac(sH_s)}",
             r"\end{align}",
         ]

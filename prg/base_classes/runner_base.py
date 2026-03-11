@@ -31,29 +31,29 @@ class BaseRunner(ABC):
         **kwargs,
     ) -> None:
         """
-        Initialise le runner de base.
+        Initialises the base runner.
 
         Parameters
         ----------
         model_name : str
-            Nom du modèle à instancier.
+            Name of the model to instantiate.
         verbose : int, optional
-            Niveau de verbosité (0, 1 ou 2). Par défaut 1.
+            Verbosity level (0, 1 or 2). Default is 1.
         plot : bool, optional
-            Si True, affiche les graphiques après le run.
+            If True, displays plots after the run.
         save_history : bool, optional
-            Si True, sauvegarde l'historique en pickle.
+            If True, saves the history as pickle.
         base_dir : str, optional
-            Répertoire de base pour les sorties.
+            Base directory for outputs.
         **kwargs
-            Arguments supplémentaires (nbParticles, sigmaSet, etc.).
+            Additional arguments (n_particles, sigmaSet, etc.).
 
         Raises
         ------
         ParamError
-            Si ``verbose`` n'est pas dans ``{0, 1, 2}``.
+            If ``verbose`` is not in ``{0, 1, 2}``.
         PKFError
-            Si la construction du modèle ou des paramètres échoue.
+            If model or parameter construction fails.
         """
 
         if verbose not in (0, 1, 2):
@@ -100,19 +100,19 @@ class BaseRunner(ABC):
 
     def _build_model(self):
         """
-        Instancie le modèle et construit l'objet de paramètres.
+        Instantiates the model and builds the parameter object.
 
         Returns
         -------
         tuple[model, param]
-            Le modèle et l'objet de paramètres construits.
+            The model and the built parameter object.
 
         Raises
         ------
         ParamError
-            Si ``model_name`` n'est trouvé dans aucune des deux factories.
+            If ``model_name`` is not found in either factory.
         PKFError
-            Si la construction du modèle ou des paramètres échoue.
+            If model or parameter construction fails.
         """
         factoryL, factoryNL = self._get_model_factory()
         param_class_linear, param_class_nonlinear = self._get_param_class()
@@ -161,12 +161,12 @@ class BaseRunner(ABC):
 
     def _compute_errors(self) -> None:
         """
-        Calcule et affiche les erreurs de filtrage.
+        Computes and displays filtering errors.
 
         Raises
         ------
         FilterError
-            Si le calcul des erreurs échoue de manière inattendue.
+            If error computation fails unexpectedly.
         """
 
         try:
@@ -183,8 +183,8 @@ class BaseRunner(ABC):
         except PKFError:
             raise
         except RuntimeError as e:
-            # Cas typique : matrice de covariance Pk dégénérée (rang 0, det ≈ 0)
-            # après effondrement des particules du PPF ou divergence du filtre.
+            # Typical case: degenerate covariance matrix Pk (rank 0, det ≈ 0)
+            # after PPF particle collapse or filter divergence.
             raise FilterError(
                 f"Error computation failed — covariance matrix may be degenerate "
                 f"(particle collapse or filter divergence). Detail: {e}"
@@ -196,12 +196,12 @@ class BaseRunner(ABC):
 
     def _save_history(self, filename: str) -> None:
         """
-        Sauvegarde l'historique du filtre dans un fichier pickle.
+        Saves the filter history to a pickle file.
 
         Raises
         ------
         OSError
-            Si la sauvegarde échoue (permissions, espace disque, etc.).
+            If saving fails (permissions, disk space, etc.).
         """
         filepath = os.path.join(self.tracker_dir, filename)
         self.runner_instance.history.save_pickle(filepath)

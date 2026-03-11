@@ -14,15 +14,15 @@ __all__ = [f.stem for f in p.glob("*.py") if not f.name.startswith("_")]
 
 
 class ModelFactoryLinear:
-    """Fabrique automatique : découvre et instancie tous les modèles du dossier."""
+    """Automatic factory: discovers and instantiates all models in the directory."""
 
     _registry: dict[str, type] = {}
 
     @classmethod
     def _discover_models(cls) -> None:
-        """Scanne tous les modules dans ce paquet et enregistre les sous-classes de BaseModelLinear."""
+        """Scans all modules in this package and registers subclasses of BaseModelLinear."""
 
-        # éviter de rescanner si déjà fait
+        # avoid rescanning if already done
         if cls._registry:
             return
 
@@ -44,7 +44,7 @@ class ModelFactoryLinear:
 
             for _, obj in inspect.getmembers(module, inspect.isclass):
 
-                # ignorer les classes importées
+                # ignore imported classes
                 if obj.__module__ != module.__name__:
                     continue
 
@@ -54,7 +54,7 @@ class ModelFactoryLinear:
                 if obj in (BaseModelLinear, LinearAmQ, LinearSigma):
                     continue
 
-                # ignorer les classes abstraites (intermédiaires non instanciables)
+                # ignore abstract classes (non-instantiable intermediates)
                 if inspect.isabstract(obj):
                     continue
 
@@ -66,8 +66,8 @@ class ModelFactoryLinear:
         key = name.strip()
         if key not in cls._registry:
             raise ValueError(
-                f"Modèle inconnu: '{key}'. "
-                f"Disponibles: {list(cls._registry.keys())}"
+                f"Unknown model: '{key}'. "
+                f"Available: {list(cls._registry.keys())}"
             )
         return cls._registry[key]()
 

@@ -28,7 +28,7 @@ _OPTION_CONFIG: dict = {
         "default": None,
         "help": "Nombre d'échantillons à traiter (default: None)",
     },
-    "nbParticles": {
+    "n_particles": {
         "type": int_ge_1,
         "default": 300,
         "help": "Nombre de particules à utiliser (default: 300)",
@@ -124,7 +124,7 @@ def add_arguments(parser: argparse.ArgumentParser, list_options: list[str]) -> N
     parser.add_argument(
         "--plot",
         action="store_true",
-        help="Affiche et sauvegarde les signaux sur disque (default: False)",  # FIX : était "True if not specified" → inversé
+        help="Affiche et sauvegarde les signaux sur disque (default: False)",  # FIX: was "True if not specified" → inverted
     )
     parser.add_argument(
         "--saveHistory",
@@ -135,7 +135,7 @@ def add_arguments(parser: argparse.ArgumentParser, list_options: list[str]) -> N
     # --- Options optionnelles configurables ---
     for opt in list_options:
         if opt not in _OPTION_CONFIG:
-            # FIX : option inconnue → avertissement explicite au lieu d'ignorer silencieusement
+            # FIX: unknown option → explicit warning instead of silently ignoring
             warnings.warn(
                 f"add_arguments : option inconnue {opt!r} ignorée "
                 f"(options disponibles : {list(_OPTION_CONFIG)})",
@@ -145,5 +145,5 @@ def add_arguments(parser: argparse.ArgumentParser, list_options: list[str]) -> N
             continue
 
         kwargs = _OPTION_CONFIG[opt].copy()
-        # FIX : dest=opt supprimé — argparse le déduit automatiquement depuis --opt
+        # FIX: dest=opt removed — argparse infers it automatically from --opt
         parser.add_argument(f"--{opt}", **kwargs)
