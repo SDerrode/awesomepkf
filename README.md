@@ -129,32 +129,32 @@ python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "model_x2_y1_pairwise" --
 │   │   └── __init__.py
 │   ├── models/
 │   │   ├── linear/
-│   │   │   ├── model_x1_y1_AQ_pairwise.py
+│   │   │   ├── __init__.py
+│   │   │   ├── base_model_linear.py
 │   │   │   ├── model_x1_y1_AQ_augmented.py
 │   │   │   ├── model_x1_y1_AQ_classic.py
-│   │   │   ├── model_x2_y2_AQ_pairwise.py
-│   │   │   ├── model_x3_y1_AQ_pairwise.py
+│   │   │   ├── model_x1_y1_AQ_pairwise.py
 │   │   │   ├── model_x1_y1_Sigma_pairwise.py
+│   │   │   ├── model_x2_y2_AQ_pairwise.py
 │   │   │   ├── model_x2_y2_Sigma_pairwise.py
-│   │   │   ├── model_x3_y1_Sigma_pairwise.py
-│   │   │   ├── __init__.py
-│   │   │   └── base_model_linear.py
+│   │   │   ├── model_x3_y1_AQ_pairwise.py
+│   │   │   └── model_x3_y1_Sigma_pairwise.py
 │   │   ├── nonLinear/
 │   │   │   ├── __init__.py
 │   │   │   ├── base_model_fxhx.py
 │   │   │   ├── base_model_gxgy.py
 │   │   │   ├── base_model_nonLinear.py
-│   │   │   ├── model_cubique.py
-│   │   │   ├── model_ext_saturant.py
-│   │   │   ├── model_gordon.py
-│   │   │   ├── model_sinus.py
-│   │   │   ├── model_x1_y1_pairwise.py
+│   │   │   ├── model_x1_y1_ExpSaturant_classic.py
 │   │   │   ├── model_x1_y1_augmented.py
-│   │   │   ├── model_x2_y1.py
-│   │   │   ├── model_x2_y1_pairwise.py
+│   │   │   ├── model_x1_y1_cubique_classic.py
+│   │   │   ├── model_x1_y1_gordon_classic.py
+│   │   │   ├── model_x1_y1_pairwise.py
+│   │   │   ├── model_x1_y1_sinus_classic.py
 │   │   │   ├── model_x2_y1_augmented.py
-│   │   │   ├── model_x2_y1_Rapport_classic.py
-│   │   │   └── model_x2_y2_withRetroactions.py
+│   │   │   ├── model_x2_y1_classic.py
+│   │   │   ├── model_x2_y1_pairwise.py
+│   │   │   ├── model_x2_y1_rapport_classic.py
+│   │   │   └── model_x2_y2_pairwise.py
 │   │   ├── Generate_MatrixCov.py
 │   │   └── __init__.py
 │   ├── utils/
