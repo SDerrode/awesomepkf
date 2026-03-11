@@ -9,8 +9,6 @@ __all__ = ["Model_x1_y1_AQ_classic"]
 
 class Model_x1_y1_AQ_classic(LinearAmQ):
 
-    MODEL_NAME = "Model_x1_y1_AQ_classic"
-
     def __init__(self):
         dim_x, dim_y = 1, 1
         A = np.array([[0.95, 0.0], [0.2, 0.0]])

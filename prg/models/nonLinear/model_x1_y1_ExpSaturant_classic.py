@@ -14,8 +14,6 @@ __all__ = ["Model_x1_y1_ExpSaturant_classic"]
 
 class Model_x1_y1_ExpSaturant_classic(BaseModelFxHx):
 
-    MODEL_NAME: str = "Model_x1_y1_ExpSaturant_classic"
-
     def __init__(self):
 
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")

@@ -5,7 +5,7 @@ import numpy as np
 import sympy as sp
 
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
-from prg.models.nonLinear.Model_x1_y1_pairwise import Model_x1_y1_pairwise
+from prg.models.nonLinear.model_x1_y1_pairwise import Model_x1_y1_pairwise
 from prg.utils.exceptions import NumericalError
 
 __all__ = ["Model_x1_y1_augmented"]
@@ -37,8 +37,6 @@ class Model_x1_y1_augmented(BaseModelFxHx):
         Bn = [[I,     0],
               [H,     0]]
     """
-
-    MODEL_NAME: str = "Model_x1_y1_augmented"
 
     def __init__(self):
         # ← self.mod instancié AVANT super() : ses paramètres sont utilisés

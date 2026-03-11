@@ -27,7 +27,6 @@ class Model_x2_y1_classic(BaseModelFxHx):
         h(x, u) = sqrt(x1^2 + x2^2) + u
     """
 
-    MODEL_NAME: str = "Model_x2_y1_classic"
     KAPPA: float = 0.10
     R_MIN: float = 1e-8
 

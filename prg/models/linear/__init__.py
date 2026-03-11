@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import importlib
+import inspect
 import pkgutil
+import traceback
 from pathlib import Path
 
 from prg.models.linear.base_model_linear import BaseModelLinear, LinearAmQ, LinearSigma
@@ -14,28 +16,53 @@ __all__ = [f.stem for f in p.glob("*.py") if not f.name.startswith("_")]
 class ModelFactoryLinear:
     """Fabrique automatique : découvre et instancie tous les modèles du dossier."""
 
-    _registry = {}
+    _registry: dict[str, type] = {}
 
     @classmethod
-    def _discover_models(cls):
+    def _discover_models(cls) -> None:
         """Scanne tous les modules dans ce paquet et enregistre les sous-classes de BaseModelLinear."""
+
+        # éviter de rescanner si déjà fait
+        if cls._registry:
+            return
+
         package_dir = Path(__file__).parent
-        for _, module_name, _ in pkgutil.iter_modules([str(package_dir)]):
-            module = importlib.import_module(f"{__package__}.{module_name}")
-            for attr_name in dir(module):
-                attr = getattr(module, attr_name)
-                if (
-                    isinstance(attr, type)
-                    and issubclass(attr, BaseModelLinear)
-                    and attr not in (BaseModelLinear, LinearAmQ, LinearSigma)
-                    and hasattr(attr, "MODEL_NAME")
-                ):
-                    cls._registry[attr.MODEL_NAME] = attr
+        package_name = __package__
+
+        for module_info in pkgutil.iter_modules([str(package_dir)]):
+
+            full_module_name = f"{package_name}.{module_info.name}"
+
+            try:
+                module = importlib.import_module(full_module_name)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to import module '{full_module_name}': "
+                    f"{type(e).__name__}: {e}\n"
+                    f"{''.join(traceback.format_exc())}"
+                ) from e
+
+            for _, obj in inspect.getmembers(module, inspect.isclass):
+
+                # ignorer les classes importées
+                if obj.__module__ != module.__name__:
+                    continue
+
+                if not issubclass(obj, BaseModelLinear):
+                    continue
+
+                if obj in (BaseModelLinear, LinearAmQ, LinearSigma):
+                    continue
+
+                # ignorer les classes abstraites (intermédiaires non instanciables)
+                if inspect.isabstract(obj):
+                    continue
+
+                cls._registry[obj.MODEL_NAME] = obj
 
     @classmethod
     def create(cls, name: str) -> BaseModelLinear:
-        if not cls._registry:
-            cls._discover_models()
+        cls._discover_models()
         key = name.strip()
         if key not in cls._registry:
             raise ValueError(
@@ -46,6 +73,5 @@ class ModelFactoryLinear:
 
     @classmethod
     def list_models(cls) -> list[str]:
-        if not cls._registry:
-            cls._discover_models()
-        return list(cls._registry.keys())
+        cls._discover_models()
+        return sorted(cls._registry.keys())

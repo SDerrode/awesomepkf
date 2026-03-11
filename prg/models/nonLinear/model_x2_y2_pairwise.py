@@ -32,7 +32,6 @@ class Model_x2_y2_pairwise(BaseModelGxGy):
         Bn = dg/dn = I_4
     """
 
-    MODEL_NAME: str = "Model_x2_y2_pairwise"
     KAPPA: float = 0.15
 
     def __init__(self):

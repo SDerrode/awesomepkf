@@ -9,8 +9,6 @@ __all__ = ["Model_x2_y2_AQ_pairwise"]
 
 class Model_x2_y2_AQ_pairwise(LinearAmQ):
 
-    MODEL_NAME = "Model_x2_y2_AQ_pairwise"
-
     def __init__(self):
         dim_x, dim_y = 2, 2
         A = np.array(

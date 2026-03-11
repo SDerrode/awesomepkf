@@ -153,7 +153,7 @@ python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "model_x2_y1_pairwise" --
 │   │   │   ├── model_x2_y1.py
 │   │   │   ├── model_x2_y1_pairwise.py
 │   │   │   ├── model_x2_y1_augmented.py
-│   │   │   ├── model_x2_y1_Rapport_pairwise.py
+│   │   │   ├── model_x2_y1_Rapport_classic.py
 │   │   │   └── model_x2_y2_withRetroactions.py
 │   │   ├── Generate_MatrixCov.py
 │   │   └── __init__.py

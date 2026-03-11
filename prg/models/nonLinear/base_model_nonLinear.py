@@ -49,6 +49,11 @@ class BaseModelNonLinear:
 
         self._randMatrices = SeedGenerator(9)
 
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        n = cls.__name__
+        cls.MODEL_NAME = n[0].lower() + n[1:]
+
     # ------------------------------------------------------------------
     def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
 

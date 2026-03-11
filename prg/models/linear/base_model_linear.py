@@ -47,6 +47,11 @@ class BaseModelLinear:
         self.kappa = 0.0
         self.lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
 
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        n = cls.__name__
+        cls.MODEL_NAME = n[0].lower() + n[1:]
+
     # ------------------------------------------------------------------
     def g(self, z, noise_z, dt):
         if __debug__:
