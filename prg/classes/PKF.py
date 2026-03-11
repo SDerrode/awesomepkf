@@ -119,7 +119,7 @@ class PKF:
         param : ParamLinear | ParamNonLinear
             Object holding the model parameters.
         sKey : int, optional
-            Random seed for reproducibility (default ``None``).
+            Random seed for reproducibility, any integer (default ``None``).
         verbose : int, optional
             Verbosity level: ``0`` = silent, ``1`` = warnings, ``2`` = debug
             (default ``0``).
@@ -129,7 +129,7 @@ class PKF:
         TypeError
             If ``param`` is not an instance of ``ParamLinear`` or ``ParamNonLinear``.
         ParamError
-            If ``sKey`` is not a strictly positive integer or ``None``.
+            If ``sKey`` is not an integer or ``None``.
         ParamError
             If ``verbose`` is not in ``{0, 1, 2}``.
         """
@@ -138,8 +138,8 @@ class PKF:
             raise TypeError(
                 "param must be an instance of ParamLinear or ParamNonLinear"
             )
-        if not ((isinstance(sKey, int) and sKey > 0) or sKey is None):
-            raise ParamError("sKey must be None or a strictly positive integer")
+        if sKey is not None and not isinstance(sKey, int):
+            raise ParamError("sKey must be None or an integer")
         if verbose not in [0, 1, 2]:
             raise ParamError("verbose must be 0, 1 or 2")
 

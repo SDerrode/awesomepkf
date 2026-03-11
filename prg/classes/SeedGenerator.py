@@ -33,7 +33,7 @@ class SeedGenerator:
         Parameters
         ----------
         seed_key : Optional[int]
-            Graine initiale (si None, une graine forte est générée via secrets).
+            Graine initiale (tout entier, positif ou négatif). Si None, une graine forte est générée via secrets.
         verbose : int
             Niveau de verbosité (0, 1 ou 2).
 
@@ -42,13 +42,13 @@ class SeedGenerator:
         ParamError
             Si ``verbose`` n'appartient pas à ``{0, 1, 2}``.
         ParamError
-            Si ``seed_key`` est fourni mais n'est pas un entier strictement positif.
+            Si ``seed_key`` est fourni mais n'est pas un entier.
         """
         if __debug__:
             if verbose not in [0, 1, 2]:
                 raise ParamError("verbose must be 0, 1 or 2")
-            if seed_key is not None and not (isinstance(seed_key, int)):
-                raise ParamError("seed_key must be None or a strictly positive integer")
+            if seed_key is not None and not isinstance(seed_key, int):
+                raise ParamError("seed_key must be None or an integer")
 
         self._lock: threading.Lock = threading.Lock()
         self.verbose: int = verbose
