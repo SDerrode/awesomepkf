@@ -39,23 +39,23 @@ class NonLinear_UPKF(PKF):
         verbose: int = 0,
     ) -> None:
         """
-        Initialise le filtre UPKF.
+        Initialise the UPKF filter.
 
         Parameters
         ----------
         param : ParamLinear | ParamNonLinear
-            Paramètres du modèle.
+            Model parameters.
         sigmaSet : str
-            Clé du jeu de sigma-points dans ``SigmaPointsSet.registry``.
+            Key of the sigma-point set in ``SigmaPointsSet.registry``.
         sKey : int, optional
-            Graine aléatoire pour la reproductibilité.
+            Random seed for reproducibility.
         verbose : int, optional
-            Niveau de verbosité (défaut 0).
+            Verbosity level (default 0).
 
         Raises
         ------
         ParamError
-            Si ``sigmaSet`` n'est pas une clé connue du registre.
+            If ``sigmaSet`` is not a known key in the registry.
         """
         super().__init__(param, sKey, verbose)
 
@@ -79,43 +79,41 @@ class NonLinear_UPKF(PKF):
         ] = None,
     ) -> Generator[tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
         """
-        Exécute le filtre UPKF comme générateur.
+        Runs the UPKF filter as a generator.
 
         Parameters
         ----------
         N : int, optional
-            Nombre maximal de pas de temps. Si ``None``, tourne jusqu'à
-            épuisement du générateur de données.
+            Maximum number of time steps. If ``None``, runs until the data generator is exhausted.
         data_generator : Generator, optional
-            Générateur externe de données. Si ``None``, le générateur
-            interne est utilisé.
+            External data generator. If ``None``, the internal generator is used.
 
         Yields
         ------
         k : int
-            Indice temporel courant.
+            Current time index.
         x_true : np.ndarray or None
-            Vérité terrain à l'instant ``k``.
+            Ground truth at time ``k``.
         y_observed : np.ndarray
-            Observation à l'instant ``k``.
+            Observation at time ``k``.
         X_predict : np.ndarray
-            Estimée a priori, shape ``(dim_x, 1)``.
+            Prior estimate, shape ``(dim_x, 1)``.
         X_update : np.ndarray
-            Estimée a posteriori, shape ``(dim_x, 1)``.
+            Posterior estimate, shape ``(dim_x, 1)``.
 
         Raises
         ------
         ParamError
-            Si ``N`` n'est pas un entier strictement positif ou ``None``
-            (levée par :meth:`_validate_N` dans le parent).
+            If ``N`` is not a strictly positive integer or ``None``
+            (raised by :meth:`_validate_N` in the parent).
         InvertibilityError
-            Si la matrice de covariance d'innovation ``Skp1`` n'est pas
-            inversible lors de l'étape de mise à jour.
+            If the innovation covariance matrix ``Skp1`` is not
+            invertible during the update step.
         NumericalError
-            Si la matrice de covariance prédite ``Pkp1_predict`` n'est pas
-            valide (levée par :meth:`_check_covariance`).
+            If the predicted covariance matrix ``Pkp1_predict`` is not
+            valid (raised by :meth:`_check_covariance`).
         FilterError
-            Si une erreur inattendue survient pendant l'étape de mise à jour.
+            If an unexpected error occurs during the update step.
         """
         self._validate_N(N)
         self.history.clear()
@@ -139,7 +137,7 @@ class NonLinear_UPKF(PKF):
 
         while N is None or step.k < N:
 
-            # Sigma points et leur propagation par g
+            # Sigma points and their propagation through g
             za[: self.dim_x] = step.Xkp1_update
             Pa = Pa_base.copy()
             Pa[: self.dim_x, : self.dim_x] = step.PXXkp1_update
@@ -151,7 +149,7 @@ class NonLinear_UPKF(PKF):
             n_sigma = sigma_stack.shape[0]
             ykp1_tiled = np.tile(step.ykp1, (n_sigma, 1, 1))  # (n_sigma, dim_y, 1)
 
-            # Insertion de ykp1 entre les dim_x premiers et le reste (bruit process)
+            # Insert ykp1 between the first dim_x elements and the rest (process noise)
             sigma_with_y = np.concatenate(
                 [
                     sigma_stack[:, : self.dim_x, :],  # (n_sigma, dim_x, 1)
@@ -161,7 +159,7 @@ class NonLinear_UPKF(PKF):
                 axis=1,
             )  # (n_sigma, dim_xy + dim_x, 1)
 
-            # Appel vectorisé à g — un seul appel batch au lieu de n_sigma appels scalaires
+            # Vectorised call to g — single batch call instead of n_sigma scalar calls
             z_batch, noise_batch = np.split(sigma_with_y, [self.dim_xy], axis=1)
             sigma_propag = self.param.g(
                 z_batch, noise_batch, self.dt
@@ -177,16 +175,16 @@ class NonLinear_UPKF(PKF):
                 "i,ijk,ilk->jl", self.sigma_point_set_obj.Wc, diffs, diffs
             )
 
-            # Validate predicted covariance — lève CovarianceError si invalide
+            # Validate predicted covariance — raises CovarianceError if invalid
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # Consume the next observation
             try:
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
-                return  # Data generator exhausted — arrêt normal, pas une erreur
+                return  # Data generator exhausted — normal stop, not an error
 
-            # Update step — les exceptions custom remontent naturellement
+            # Update step — custom exceptions propagate naturally
             try:
                 step = self._nextUpdating(
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict

@@ -19,7 +19,7 @@ class NonLinearPPFRunnerSim(BaseNonLinearPPFRunner):
         model_name: str,
         N: int,
         sKey: Optional[int],
-        nbParticles: Optional[int],
+        n_particles: Optional[int],
         verbose: int,
         plot: bool,
         save_history: bool,
@@ -31,7 +31,7 @@ class NonLinearPPFRunnerSim(BaseNonLinearPPFRunner):
         ParamError
             Si ``N`` n'est pas un entier strictement positif,
             ``verbose`` invalide, ``model_name`` inconnu,
-            ou ``nbParticles`` invalide.
+            ou ``n_particles`` invalide.
         PKFError
             Si l'instanciation du filtre échoue.
         """
@@ -41,7 +41,7 @@ class NonLinearPPFRunnerSim(BaseNonLinearPPFRunner):
         self.N = N
         self.sKey = sKey
 
-        super().__init__(model_name, nbParticles, verbose, plot, save_history, base_dir)
+        super().__init__(model_name, n_particles, verbose, plot, save_history, base_dir)
 
     # ==========================================================
 

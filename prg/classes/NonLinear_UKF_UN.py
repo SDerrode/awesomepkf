@@ -3,22 +3,21 @@
 
 """
 ####################################################################
-Unscented Kalman Filter (UKF) — non-linéaire, bruit additif
+Unscented Kalman Filter (UKF) — nonlinear, additive noise
 ####################################################################
 
-Différences par rapport à l'UPKF :
-  - Pas de structure « pairwise » : l'état n'est pas augmenté avec
-    l'observation.
-  - Deux jeux de sigma-points indépendants :
-      * ``sigma_pred_set``  (dim = dim_x) pour l'étape de prédiction,
-      * ``sigma_upd_set``   (dim = dim_x) pour l'étape de mise à jour.
-  - Q et R sont injectés de façon **additive** (UKF non-augmenté).
-  - ``_fx`` et ``_hx`` encapsulent respectivement l'équation d'état
-    et l'équation d'observation ; les deux sont vectorisées sur
-    l'axe des sigma-points (batch axis 0).
-  - À la fin de chaque cycle, un bloc (Zkp1_predict, Pkp1_predict)
-    de dimension (dim_xy × dim_xy) est assemblé afin de réutiliser
-    :meth:`PKF._nextUpdating` sans modification.
+Differences compared to the UPKF:
+  - No pairwise structure: the state is not augmented with the observation.
+  - Two independent sigma-point sets:
+      * ``sigma_pred_set``  (dim = dim_x) for the prediction step,
+      * ``sigma_upd_set``   (dim = dim_x) for the update step.
+  - Q and R are injected additively (unaugmented UKF).
+  - ``_fx`` and ``_hx`` encapsulate the state equation and the
+    observation equation respectively; both are vectorised over
+    the sigma-point axis (batch axis 0).
+  - At the end of each cycle, a block (Zkp1_predict, Pkp1_predict)
+    of dimension (dim_xy × dim_xy) is assembled in order to reuse
+    :meth:`PKF._nextUpdating` without modification.
 """
 
 from __future__ import annotations
@@ -41,36 +40,36 @@ __all__ = ["NonLinear_UKF"]
 
 class NonLinear_UKF(PKF):
     """
-    Unscented Kalman Filter (UKF) non-linéaire à bruit additif.
+    Nonlinear Unscented Kalman Filter (UKF) with additive noise.
 
-    Étend :class:`PKF` en implémentant le cycle UKF standard :
+    Extends :class:`PKF` by implementing the standard UKF cycle:
 
-    1. **Prédiction** — sigma-points sur l'état courant ``(x, P_xx)``,
-       propagation par :meth:`_fx`, covariance prédite augmentée de Q.
-    2. **Mise à jour** — sigma-points sur l'état prédit ``(x_pred, P_xx_pred)``,
-       propagation par :meth:`_hx`, covariance d'innovation augmentée de R,
-       calcul du gain via :meth:`PKF._nextUpdating`.
+    1. **Prediction** — sigma-points on the current state ``(x, P_xx)``,
+       propagation through :meth:`_fx`, predicted covariance augmented by Q.
+    2. **Update** — sigma-points on the predicted state ``(x_pred, P_xx_pred)``,
+       propagation through :meth:`_hx`, innovation covariance augmented by R,
+       gain computation via :meth:`PKF._nextUpdating`.
 
     Parameters
     ----------
     param : ParamLinear | ParamNonLinear
-        Paramètres du modèle.  Doit exposer :
+        Model parameters. Must expose:
 
-        * ``mQ`` — covariance du bruit de processus,  shape ``(dim_xy, dim_xy)``
-        * ``f(x, t, dt)`` — fonction de transition vectorisée ;
-        * ``h(x, u, dt)`` — fonction d'observation vectorisée.
+        * ``mQ`` — process noise covariance, shape ``(dim_xy, dim_xy)``
+        * ``f(x, t, dt)`` — vectorised transition function;
+        * ``h(x, u, dt)`` — vectorised observation function.
 
     sigmaSet : str
-        Clé du jeu de sigma-points dans ``SigmaPointsSet.registry``.
+        Key of the sigma-point set in ``SigmaPointsSet.registry``.
     sKey : int, optional
-        Graine aléatoire pour la reproductibilité.
+        Random seed for reproducibility.
     verbose : int, optional
-        Niveau de verbosité (défaut 0).
+        Verbosity level (default 0).
 
     Raises
     ------
     ParamError
-        Si ``sigmaSet`` n'est pas une clé connue du registre.
+        If ``sigmaSet`` is not a known key in the registry.
     """
 
     def __init__(
@@ -96,19 +95,19 @@ class NonLinear_UKF(PKF):
                 "UKF does not support pairwise models."
             )
 
-        # Jeu de sigma-points pour l'étape de prédiction (espace d'état dim_x)
+        # Sigma-point set for the prediction step (state space dim_x)
         self.sigma_pred_set = cls(dim=self.dim_x, param=self.param)
 
-        # Jeu de sigma-points pour l'étape de mise à jour (espace d'état dim_x)
+        # Sigma-point set for the update step (state space dim_x)
         self.sigma_upd_set = cls(dim=self.dim_x, param=self.param)
 
-        # Extraction de Q_x et R une seule fois — évite les découpages en boucle.
+        # Extract Q_x and R once — avoids slicing inside the loop.
         self._Q_x: np.ndarray = self.param.mQ[: self.dim_x, : self.dim_x]
         self._R: np.ndarray = self.param.mQ[self.dim_x :, self.dim_x :]
         # self._M: np.ndarray = self.param.mQ[: self.dim_x, self.dim_x :]
 
     # ------------------------------------------------------------------
-    # Boucle principale du filtre
+    # Main filter loop
     # ------------------------------------------------------------------
 
     def process_filter(
@@ -119,40 +118,38 @@ class NonLinear_UKF(PKF):
         ] = None,
     ) -> Generator[tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
         """
-        Exécute le filtre UKF comme générateur.
+        Runs the UKF filter as a generator.
 
         Parameters
         ----------
         N : int, optional
-            Nombre maximal de pas de temps. Si ``None``, tourne jusqu'à
-            épuisement du générateur de données.
+            Maximum number of time steps. If ``None``, runs until the data generator is exhausted.
         data_generator : Generator, optional
-            Générateur externe de données. Si ``None``, le générateur
-            interne est utilisé.
+            External data generator. If ``None``, the internal generator is used.
 
         Yields
         ------
         k : int
-            Indice temporel courant.
+            Current time index.
         x_true : np.ndarray or None
-            Vérité terrain à l'instant ``k``.
+            Ground truth at time ``k``.
         y_observed : np.ndarray
-            Observation à l'instant ``k``.
+            Observation at time ``k``.
         X_predict : np.ndarray
-            Estimée a priori, shape ``(dim_x, 1)``.
+            Prior estimate, shape ``(dim_x, 1)``.
         X_update : np.ndarray
-            Estimée a posteriori, shape ``(dim_x, 1)``.
+            Posterior estimate, shape ``(dim_x, 1)``.
 
         Raises
         ------
         ParamError
-            Si ``N`` n'est pas un entier strictement positif ou ``None``.
+            If ``N`` is not a strictly positive integer or ``None``.
         InvertibilityError
-            Si la matrice d'innovation ``Skp1`` n'est pas inversible.
+            If the innovation matrix ``Skp1`` is not invertible.
         NumericalError
-            Si la covariance prédite ``P_xx_pred`` n'est pas valide.
+            If the predicted covariance ``P_xx_pred`` is not valid.
         FilterError
-            Si une erreur inattendue survient pendant la mise à jour.
+            If an unexpected error occurs during the update.
         """
 
         self._validate_N(N)
@@ -162,28 +159,28 @@ class NonLinear_UKF(PKF):
             data_generator if data_generator is not None else self._data_generation()
         )
 
-        # --- Première estimée (conditionnement gaussien sur y_0) ------------------
+        # --- First estimate (Gaussian conditioning on y_0) ------------------
         step = self._firstEstimate(generator)
         if step.xkp1 is None:
             self.ground_truth = False
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
-        # Pré-allocation du bloc de covariance augmentée réutilisé à chaque pas
+        # Pre-allocation of the augmented covariance block reused at each step
         Pkp1_predict = self.zeros_dim_xy_xy.copy()
 
-        # Vecteurs nuls pour bruit — alloués une seule fois au premier pas
+        # Zero noise vectors — allocated once at the first step
         zeros_x: Optional[np.ndarray] = None
         zeros_y: Optional[np.ndarray] = None
 
-        # --- Boucle principale ----------------------------------------------------
+        # --- Main loop ----------------------------------------------------
         while N is None or step.k < N:
 
             # ================================================================
-            # ÉTAPE DE PRÉDICTION
+            # PREDICTION STEP
             # ================================================================
 
-            # Sigma-points sur (x_k, P_xx_k) — dimension dim_x
+            # Sigma-points on (x_k, P_xx_k) — dimension dim_x
             sigma_pred_list = self.sigma_pred_set._sigma_point(
                 step.Xkp1_update, step.PXXkp1_update
             )
@@ -193,60 +190,60 @@ class NonLinear_UKF(PKF):
             if zeros_x is None:
                 zeros_x = np.zeros((n_sigma, self.dim_x, 1))
 
-            # Propagation vectorisée par f  →  f(σ_i)
+            # Vectorised propagation through f → f(σ_i)
             sigma_f = self.param.f(sigma_pred, zeros_x, self.dt)  # (n_sigma, dim_x, 1)
 
-            # Moyenne prédite  x_pred = Σ Wm_i · f(σ_i)
+            # Predicted mean x_pred = Σ Wm_i · f(σ_i)
             x_pred: np.ndarray = np.sum(
                 self.sigma_pred_set.Wm[:, None, None] * sigma_f, axis=0
             )  # (dim_x, 1)
 
-            # Covariance prédite  P_xx_pred = Σ Wc_i · δf_i δf_iᵀ  +  Q
+            # Predicted covariance P_xx_pred = Σ Wc_i · δf_i δf_iᵀ + Q
             diffs_f = sigma_f - x_pred  # (n_sigma, dim_x, 1)
             P_xx_pred: np.ndarray = (
                 np.einsum("i,ijk,ilk->jl", self.sigma_pred_set.Wc, diffs_f, diffs_f)
                 + self._Q_x
             )  # (dim_x, dim_x)
 
-            # Validation — lève NumericalError si invalide
+            # Validation — raises NumericalError if invalid
             self._check_covariance(P_xx_pred, step.k, name="P_xx_pred")
 
             # ================================================================
-            # ÉTAPE DE MISE À JOUR (sigma-points sur l'état prédit)
+            # UPDATE STEP (sigma-points on the predicted state)
             # ================================================================
 
-            # Sigma-points sur (x_pred, P_xx_pred) — dimension dim_x
+            # Sigma-points on (x_pred, P_xx_pred) — dimension dim_x
             sigma_upd_list = self.sigma_upd_set._sigma_point(x_pred, P_xx_pred)
             sigma_upd = np.array(sigma_upd_list)  # (n_sigma, dim_x, 1)
 
-            # Terme auxiliaire nul pour _hx — alloué une seule fois
+            # Zero auxiliary term for _hx — allocated once
             if zeros_y is None:
                 zeros_y = np.zeros((n_sigma, self.dim_y, 1))
 
-            # Propagation vectorisée par h  →  h(σ_i)
+            # Vectorised propagation through h → h(σ_i)
             sigma_h = self.param.h(sigma_upd, zeros_y, self.dt)  # (n_sigma, dim_y, 1)
 
-            # Observation prédite  y_pred = Σ Wm_i · h(σ_i)
+            # Predicted observation y_pred = Σ Wm_i · h(σ_i)
             y_pred: np.ndarray = np.sum(
                 self.sigma_upd_set.Wm[:, None, None] * sigma_h, axis=0
             )  # (dim_y, 1)
 
-            # Covariance d'innovation  P_yy = Σ Wc_i · δh_i δh_iᵀ  +  R
+            # Innovation covariance  P_yy = Σ Wc_i · δh_i δh_iᵀ  +  R
             diffs_h = sigma_h - y_pred  # (n_sigma, dim_y, 1)
             P_yy: np.ndarray = (
                 np.einsum("i,ijk,ilk->jl", self.sigma_upd_set.Wc, diffs_h, diffs_h)
                 + self._R
             )  # (dim_y, dim_y)
 
-            # Covariance croisée  P_xy = Σ Wc_i · δx_i δh_iᵀ
+            # Cross-covariance  P_xy = Σ Wc_i · δx_i δh_iᵀ
             diffs_x = sigma_upd - x_pred  # (n_sigma, dim_x, 1)
-            # Dans process_filter — covariance croisée corrigée :
+            # In process_filter — corrected cross-covariance:
             P_xy: np.ndarray = np.einsum(
                 "i,ijk,ilk->jl", self.sigma_upd_set.Wc, diffs_x, diffs_h
             )  # (dim_x, dim_y)
 
             # ================================================================
-            # Assemblage du bloc augmenté attendu par _nextUpdating :
+            # Assembly of the augmented block expected by _nextUpdating:
             #
             #   Zkp1_predict = [ x_pred ]   shape (dim_xy, 1)
             #                  [ y_pred ]
@@ -263,13 +260,13 @@ class NonLinear_UKF(PKF):
             Pkp1_predict[self.dim_x :, : self.dim_x] = P_xy.T
             Pkp1_predict[self.dim_x :, self.dim_x :] = P_yy
 
-            # Consommation de la prochaine observation
+            # Consume the next observation
             try:
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
-                return  # générateur épuisé — arrêt normal, pas une erreur
+                return  # generator exhausted — normal stop, not an error
 
-            # Mise à jour de Kalman — les exceptions custom remontent naturellement
+            # Kalman update — custom exceptions propagate naturally
             try:
                 step = self._nextUpdating(
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict

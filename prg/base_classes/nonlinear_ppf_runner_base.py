@@ -18,7 +18,7 @@ class BaseNonLinearPPFRunner(BaseRunner):
     def __init__(
         self,
         model_name,
-        nbParticles=None,
+        n_particles=None,
         verbose=1,
         plot=False,
         save_history=False,
@@ -29,26 +29,26 @@ class BaseNonLinearPPFRunner(BaseRunner):
         ------
         ParamError
             Si ``verbose`` est invalide, ``model_name`` inconnu,
-            ou ``nbParticles`` n'est pas un entier strictement positif.
+            ou ``n_particles`` n'est pas un entier strictement positif.
         PKFError
             Si l'instanciation de ``NonLinear_PPF`` échoue.
         """
-        if nbParticles is not None and not (
-            isinstance(nbParticles, int) and nbParticles > 0
+        if n_particles is not None and not (
+            isinstance(n_particles, int) and n_particles > 0
         ):
             raise ParamError(
-                f"nbParticles must be None or a strictly positive integer, "
-                f"got {nbParticles!r}."
+                f"n_particles must be None or a strictly positive integer, "
+                f"got {n_particles!r}."
             )
 
-        self.nbParticles = nbParticles
+        self.n_particles = n_particles
 
         super().__init__(model_name, verbose, plot, save_history, base_dir)
 
         try:
             self.runner_instance = NonLinear_PPF(
                 param=self.param,
-                nbParticles=self.nbParticles,
+                n_particles=self.n_particles,
                 sKey=self.sKey,
                 verbose=self.verbose,
             )

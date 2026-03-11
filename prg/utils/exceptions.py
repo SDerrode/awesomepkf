@@ -4,10 +4,10 @@
 """
 prg/exceptions.py
 -----------------
-Hiérarchie centralisée des exceptions du projet PKF.
+Centralised exception hierarchy for the PKF project.
 
-Arborescence
-------------
+Tree
+----
 PKFError
 ├── ParamError
 ├── NumericalError
@@ -29,19 +29,19 @@ __all__ = [
 
 
 # ---------------------------------------------------------------------------
-# Mixin : attribut step partagé
+# Mixin: shared step attribute
 # ---------------------------------------------------------------------------
 
 
 class _StepMixin:
     """
-    Mixin interne apportant l'attribut ``step`` à une exception.
+    Internal mixin providing the ``step`` attribute to an exception.
 
-    Évite la duplication de logique entre ``NumericalError`` et
-    ``StepValidationError``.  Non exporté (préfixe ``_``).
+    Avoids logic duplication between ``NumericalError`` and
+    ``StepValidationError``.  Not exported (``_`` prefix).
     """
 
-    step: int  # déclaré ici pour les outils d'analyse statique
+    step: int  # declared here for static analysis tools
 
     def _step_repr(self) -> str:
         """Retourne la partie step du repr, factorisée."""
@@ -49,66 +49,66 @@ class _StepMixin:
 
 
 # ---------------------------------------------------------------------------
-# Racine
+# Root
 # ---------------------------------------------------------------------------
 
 
 class PKFError(Exception):
     """
-    Racine de toutes les exceptions du projet PKF.
+    Root of all PKF project exceptions.
 
-    Tous les ``except`` de haut niveau peuvent attraper cette classe pour
-    intercepter n'importe quelle erreur du projet en un seul bloc.
+    All top-level ``except`` blocks can catch this class to
+    intercept any project error in a single block.
     """
 
     def __repr__(self) -> str:
-        # FIX : self.args peut être vide si levée sans message → fallback sur ""
+        # FIX: self.args can be empty if raised without a message → fallback to ""
         msg = self.args[0] if self.args else ""
         return f"{self.__class__.__name__}({msg!r})"
 
 
 # ---------------------------------------------------------------------------
-# Erreurs de paramètres
+# Parameter errors
 # ---------------------------------------------------------------------------
 
 
 class ParamError(PKFError):
     """
-    Paramètre invalide fourni à une classe ou une méthode du projet.
+    Invalid parameter supplied to a project class or method.
 
-    Levée par exemple si ``sKey`` n'est pas un entier strictement positif,
-    ou si ``verbose`` n'appartient pas à ``{0, 1, 2}``.
+    Raised for example if ``sKey`` is not a strictly positive integer,
+    or if ``verbose`` does not belong to ``{0, 1, 2}``.
     """
 
 
 # ---------------------------------------------------------------------------
-# Erreurs numériques
+# Numerical errors
 # ---------------------------------------------------------------------------
 
 
 class NumericalError(_StepMixin, PKFError):
     """
-    Erreur numérique générique.
+    Generic numerical error.
 
-    Classe de base pour toutes les erreurs liées aux calculs matriciels.
-    Porte le contexte structuré (step, matrix_name) partagé par ses
-    sous-classes, ce qui évite de parser les messages texte chez l'appelant.
+    Base class for all errors related to matrix computations.
+    Carries the structured context (step, matrix_name) shared by its
+    subclasses, avoiding the need to parse text messages at the call site.
 
     Parameters
     ----------
     message : str
-        Description humaine de l'erreur.
+        Human-readable description of the error.
     matrix_name : str, optional
-        Nom de la matrice concernée (default ``""``).
+        Name of the matrix concerned (default ``""``).
     step : int, optional
-        Indice du pas de temps où l'erreur s'est produite (default ``-1``).
+        Time step index where the error occurred (default ``-1``).
 
     Attributes
     ----------
     matrix_name : str
-        Nom de la matrice concernée.
+        Name of the matrix concerned.
     step : int
-        Indice du pas de temps où l'erreur s'est produite. ``-1`` si inconnu.
+        Time step index where the error occurred. ``-1`` if unknown.
 
     Examples
     --------
@@ -144,54 +144,54 @@ class NumericalError(_StepMixin, PKFError):
 
 class CovarianceError(NumericalError):
     """
-    Matrice de covariance invalide.
+    Invalid covariance matrix.
 
-    Levée lorsqu'une matrice n'est pas symétrique définie positive,
-    ou lorsque la tentative de régularisation a échoué.
+    Raised when a matrix is not symmetric positive definite,
+    or when the regularisation attempt has failed.
     """
 
 
 class InvertibilityError(NumericalError):
     """
-    Matrice non inversible.
+    Non-invertible matrix.
 
-    Levée lorsqu'une matrice attendue inversible (ex. ``Skp1``, ``Sigma22``)
-    ne passe pas le diagnostic d'inversibilité.
+    Raised when a matrix expected to be invertible (e.g. ``Skp1``, ``Sigma22``)
+    fails the invertibility diagnostic.
     """
 
 
 # ---------------------------------------------------------------------------
-# Erreurs de filtre
+# Filter errors
 # ---------------------------------------------------------------------------
 
 
 class FilterError(PKFError):
     """
-    Erreur générique du filtre PKF.
+    Generic PKF filter error.
 
-    Classe de base pour les erreurs survenant pendant l'exécution du filtre,
-    indépendamment des calculs matriciels internes.
+    Base class for errors occurring during filter execution,
+    independent of internal matrix computations.
     """
 
 
 class StepValidationError(_StepMixin, FilterError):
     """
-    Échec de la construction d'un ``PKFStep``.
+    Failure to construct a ``PKFStep``.
 
-    Levée lorsque les données transmises au constructeur de ``PKFStep``
-    sont invalides (mauvaises formes, incohérences entre champs, etc.).
+    Raised when data passed to the ``PKFStep`` constructor
+    is invalid (wrong shapes, field inconsistencies, etc.).
 
     Parameters
     ----------
     message : str
-        Description humaine de l'erreur.
+        Human-readable description of the error.
     step : int, optional
-        Indice du pas de temps où l'erreur s'est produite (default ``-1``).
+        Time step index where the error occurred (default ``-1``).
 
     Attributes
     ----------
     step : int
-        Indice du pas de temps où l'erreur s'est produite. ``-1`` si inconnu.
+        Time step index where the error occurred. ``-1`` if unknown.
     """
 
     def __init__(self, message: str, step: int = -1) -> None:
