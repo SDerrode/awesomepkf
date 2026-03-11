@@ -61,18 +61,18 @@ Each filter has two types of programs:
 ### Simulate Linear Data and Filter with PKF
 
 ```bash
-python3 prg/run_simulator.py --N 2000 --linearModelName "A_mQ_x1_y1" --dataFileName "testL.csv" --verbose 1 --sKey 303
-python3 prg/run_linear_pkf.py --linearModelName "A_mQ_x1_y1" --dataFileName "testL.csv" --verbose 1 --saveHistory --plot
+python3 prg/run_simulator.py --N 2000 --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --verbose 1 --sKey 303
+python3 prg/run_linear_pkf.py --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --verbose 1 --saveHistory --plot
 ```
 
 ### Simulate Non-Linear Data and Filter with EPKF, UPKF and PPF
 
 ```bash
-python3 prg/run_simulator.py   --N 1000 --nonLinearModelName "x2_y1_Retroactions" --dataFileName "testNL.csv" --verbose 1 --sKey 303
+python3 prg/run_simulator.py   --N 1000 --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --verbose 1 --sKey 303
 
-python3 prg/run_nonlinear_epkf.py --nonLinearModelName "x2_y1_Retroactions" --dataFileName "testNL.csv"                       --verbose 1 --saveHistory --plot
-python3 prg/run_nonlinear_upkf.py --nonLinearModelName "x2_y1_Retroactions" --dataFileName "testNL.csv" --sigmaSet "wan2000"   --verbose 1 --saveHistory --plot
-python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "x2_y1_Retroactions" --dataFileName "testNL.csv" --nbParticles 300       --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_epkf.py --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv"                       --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_upkf.py --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --sigmaSet "wan2000"   --verbose 1 --saveHistory --plot
+python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --nbParticles 300       --verbose 1 --saveHistory --plot
 ```
 
 ---
@@ -129,14 +129,14 @@ python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "x2_y1_Retroactions" --da
 │   │   └── __init__.py
 │   ├── models/
 │   │   ├── linear/
-│   │   │   ├── A_mQ_x1_y1.py
-│   │   │   ├── A_mQ_x1_y1_augmented.py
-│   │   │   ├── A_mQ_x1_y1_classic.py
-│   │   │   ├── A_mQ_x2_y2.py
-│   │   │   ├── A_mQ_x3_y1.py
-│   │   │   ├── Sigma_x1_y1.py
-│   │   │   ├── Sigma_x2_y2.py
-│   │   │   ├── Sigma_x3_y1.py
+│   │   │   ├── model_x1_y1_AQ_pairwise.py
+│   │   │   ├── model_x1_y1_AQ_augmented.py
+│   │   │   ├── model_x1_y1_AQ_classic.py
+│   │   │   ├── model_x2_y2_AQ_pairwise.py
+│   │   │   ├── model_x3_y1_AQ_pairwise.py
+│   │   │   ├── model_x1_y1_Sigma_pairwise.py
+│   │   │   ├── model_x2_y2_Sigma_pairwise.py
+│   │   │   ├── model_x3_y1_Sigma_pairwise.py
 │   │   │   ├── __init__.py
 │   │   │   └── base_model_linear.py
 │   │   ├── nonLinear/
@@ -148,12 +148,12 @@ python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "x2_y1_Retroactions" --da
 │   │   │   ├── model_ext_saturant.py
 │   │   │   ├── model_gordon.py
 │   │   │   ├── model_sinus.py
-│   │   │   ├── model_x1_y1_Retroactions.py
-│   │   │   ├── model_x1_y1_Retroactions_augmented.py
+│   │   │   ├── model_x1_y1_pairwise.py
+│   │   │   ├── model_x1_y1_augmented.py
 │   │   │   ├── model_x2_y1.py
-│   │   │   ├── model_x2_y1_Retroactions.py
-│   │   │   ├── model_x2_y1_Retroactions_augmented.py
-│   │   │   ├── model_x2_y1_rapport.py
+│   │   │   ├── model_x2_y1_pairwise.py
+│   │   │   ├── model_x2_y1_augmented.py
+│   │   │   ├── model_x2_y1_Rapport_pairwise.py
 │   │   │   └── model_x2_y2_withRetroactions.py
 │   │   ├── Generate_MatrixCov.py
 │   │   └── __init__.py

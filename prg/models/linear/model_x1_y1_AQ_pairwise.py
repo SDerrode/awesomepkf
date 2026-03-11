@@ -4,12 +4,12 @@
 import numpy as np
 from prg.models.linear.base_model_linear import LinearAmQ
 
-__all__ = ["Model_A_mQ_x1_y1"]
+__all__ = ["Model_x1_y1_AQ_pairwise"]
 
 
-class Model_A_mQ_x1_y1(LinearAmQ):
+class Model_x1_y1_AQ_pairwise(LinearAmQ):
 
-    MODEL_NAME = "A_mQ_x1_y1"
+    MODEL_NAME = "Model_x1_y1_AQ_pairwise"
 
     def __init__(self):
         dim_x, dim_y = 1, 1

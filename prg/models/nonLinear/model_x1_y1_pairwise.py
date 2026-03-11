@@ -8,10 +8,10 @@ from prg.models.nonLinear.base_model_gxgy import BaseModelGxGy
 from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.utils.exceptions import NumericalError
 
-__all__ = ["ModelX1Y1_Retroactions"]
+__all__ = ["Model_x1_y1_pairwise"]
 
 
-class ModelX1Y1_Retroactions(BaseModelGxGy):
+class Model_x1_y1_pairwise(BaseModelGxGy):
     """
     Nonlinear model with full retroaction (dim_x=1, dim_y=1).
 
@@ -29,7 +29,7 @@ class ModelX1Y1_Retroactions(BaseModelGxGy):
         Bn = dg/dn = I_2
     """
 
-    MODEL_NAME: str = "x1_y1_Retroactions"
+    MODEL_NAME: str = "Model_x1_y1_pairwise"
 
     def __init__(self):
         # paramètres AVANT super().__init__()

@@ -7,16 +7,16 @@ import sympy as sp
 
 import numpy as np
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
-from prg.models.nonLinear.model_x2_y1_Retroactions import (
+from prg.models.nonLinear.model_x2_y1_pairwise import (
     ModelX2Y1_Retroactions,
 )
 from prg.utils.exceptions import NumericalError
 
 
-__all__ = ["ModelX2Y1_Retroactions_augmented"]
+__all__ = ["Model_x2_y1_augmented"]
 
 
-class ModelX2Y1_Retroactions_augmented(BaseModelFxHx):
+class Model_x2_y1_augmented(BaseModelFxHx):
     """
     Version augmentée de ModelX2Y1_Retroactions (BaseModelFxHx).
 
@@ -46,7 +46,7 @@ class ModelX2Y1_Retroactions_augmented(BaseModelFxHx):
               [H,      0]]
     """
 
-    MODEL_NAME: str = "x2_y1_Retroactions_augmented"
+    MODEL_NAME: str = "Model_x2_y1_augmented"
 
     def __init__(self):
         # ← self.mod et ses paramètres AVANT super() :

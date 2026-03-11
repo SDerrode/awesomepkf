@@ -8,10 +8,10 @@ from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
 from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.utils.exceptions import NumericalError
 
-__all__ = ["ModelX2Y1Rapport"]
+__all__ = ["Model_x2_y1_Rapport_classic"]
 
 
-class ModelX2Y1Rapport(BaseModelFxHx):
+class Model_x2_y1_Rapport_classic(BaseModelFxHx):
     """
     Nonlinear model with:
       - 2-dimensional state vector x = [x1, x2]
@@ -27,7 +27,7 @@ class ModelX2Y1Rapport(BaseModelFxHx):
         h(x) = x1^2/(1 + x1^2) + gamma*sin(x2) + u
     """
 
-    MODEL_NAME: str = "x2_y1_rapport"
+    MODEL_NAME: str = "Model_x2_y1_Rapport_classic"
 
     def __init__(self):
         # ← paramètres AVANT super().__init__() qui appelle _build_symbolic_model()

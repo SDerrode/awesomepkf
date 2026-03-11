@@ -8,11 +8,12 @@ from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
 from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.utils.exceptions import NumericalError
 
-__all__ = ["ModelSinus"]
+__all__ = ["Model_x1_y1_Sinus_classic"]
 
 
-class ModelSinus(BaseModelFxHx):
-    MODEL_NAME: str = "x1_y1_sinus"
+class Model_x1_y1_Sinus_classic(BaseModelFxHx):
+
+    MODEL_NAME: str = "Model_x1_y1_Sinus_classic"
 
     def __init__(self):
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
