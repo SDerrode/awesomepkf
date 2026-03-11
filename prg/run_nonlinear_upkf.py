@@ -4,9 +4,9 @@
 import argparse
 import sys
 
-from prg.base_classes.nonlinear_upkf_runner_simulation import BaseNonLinearUPKFRunnerSim
+from prg.base_classes.nonlinear_upkf_runner_simulation import NonLinearUPKFRunnerSim
 from prg.base_classes.nonlinear_upkf_runner_from_file import (
-    BaseNonLinearUPKFRunnerFromFile,
+    NonLinearUPKFRunnerFromFile,
 )
 from prg.utils.parser import add_arguments
 from prg.utils.exceptions import NumericalError, FilterError, PKFError, ParamError
@@ -56,7 +56,7 @@ def main() -> None:
 
     try:
         if args.dataFileName is not None:
-            runner = BaseNonLinearUPKFRunnerFromFile(
+            runner = NonLinearUPKFRunnerFromFile(
                 model_name=model_name,
                 sigmaSet=args.sigmaSet,
                 data_filename=args.dataFileName,
@@ -65,7 +65,7 @@ def main() -> None:
                 save_history=args.saveHistory,
             )
         else:
-            runner = BaseNonLinearUPKFRunnerSim(
+            runner = NonLinearUPKFRunnerSim(
                 model_name=model_name,
                 N=args.N,
                 sKey=args.sKey,

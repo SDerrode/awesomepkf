@@ -4,9 +4,9 @@
 import argparse
 import sys
 
-from prg.base_classes.nonlinear_ppf_runner_simulation import BaseNonLinearPPFRunnerSim
+from prg.base_classes.nonlinear_ppf_runner_simulation import NonLinearPPFRunnerSim
 from prg.base_classes.nonlinear_ppf_runner_from_file import (
-    BaseNonLinearPPFRunnerFromFile,
+    NonLinearPPFRunnerFromFile,
 )
 from prg.utils.parser import add_arguments
 from prg.utils.exceptions import NumericalError, FilterError, PKFError, ParamError
@@ -71,7 +71,7 @@ def main() -> None:
 
     try:
         if args.dataFileName is not None:
-            runner = BaseNonLinearPPFRunnerFromFile(
+            runner = NonLinearPPFRunnerFromFile(
                 model_name=model_name,
                 nbParticles=args.nbParticles,
                 data_filename=args.dataFileName,
@@ -80,7 +80,7 @@ def main() -> None:
                 save_history=args.saveHistory,
             )
         else:
-            runner = BaseNonLinearPPFRunnerSim(
+            runner = NonLinearPPFRunnerSim(
                 model_name=model_name,
                 N=args.N,
                 sKey=args.sKey,

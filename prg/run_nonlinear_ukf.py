@@ -4,9 +4,9 @@
 import argparse
 import sys
 
-from prg.base_classes.nonlinear_ukf_runner_simulation import BaseNonLinearUKFRunnerSim
+from prg.base_classes.nonlinear_ukf_runner_simulation import NonLinearUKFRunnerSim
 from prg.base_classes.nonlinear_ukf_runner_from_file import (
-    BaseNonLinearUKFRunnerFromFile,
+    NonLinearUKFRunnerFromFile,
 )
 from prg.utils.parser import add_arguments
 from prg.utils.exceptions import NumericalError, FilterError, PKFError, ParamError
@@ -56,7 +56,7 @@ def main() -> None:
 
     try:
         if args.dataFileName is not None:
-            runner = BaseNonLinearUKFRunnerFromFile(
+            runner = NonLinearUKFRunnerFromFile(
                 model_name=model_name,
                 sigmaSet=args.sigmaSet,
                 data_filename=args.dataFileName,
@@ -65,7 +65,7 @@ def main() -> None:
                 save_history=args.saveHistory,
             )
         else:
-            runner = BaseNonLinearUKFRunnerSim(
+            runner = NonLinearUKFRunnerSim(
                 model_name=model_name,
                 N=args.N,
                 sKey=args.sKey,
