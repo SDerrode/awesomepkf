@@ -37,9 +37,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
-logger = logging.getLogger(__name__)
-
 __all__ = ["NonLinear_PPF"]
 
 
@@ -342,6 +339,7 @@ class NonLinear_PPF(PKF):
             Si une erreur inattendue survient pendant le filtrage.
         """
         self._validate_N(N)
+        self.history.clear()
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()

@@ -6,10 +6,10 @@ from typing import Optional
 from prg.base_classes.nonlinear_ukf_runner_base import BaseNonLinearUKFRunner
 from prg.utils.exceptions import FilterError, ParamError, PKFError
 
-__all__ = ["BaseNonLinearUKFRunnerSim"]
+__all__ = ["NonLinearUKFRunnerSim"]
 
 
-class BaseNonLinearUKFRunnerSim(BaseNonLinearUKFRunner):
+class NonLinearUKFRunnerSim(BaseNonLinearUKFRunner):
     """
     Runner for nonlinear simulation + UKF filtering.
     """
