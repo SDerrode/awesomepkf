@@ -8,10 +8,10 @@ from prg.utils.utils import file_data_generator
 from prg.base_classes.nonlinear_upkf_runner_base import BaseNonLinearUPKFRunner
 from prg.utils.exceptions import FilterError, PKFError
 
-__all__ = ["BaseNonLinearUPKFRunnerFromFile"]
+__all__ = ["NonLinearUPKFRunnerFromFile"]
 
 
-class BaseNonLinearUPKFRunnerFromFile(BaseNonLinearUPKFRunner):
+class NonLinearUPKFRunnerFromFile(BaseNonLinearUPKFRunner):
     """
     Runner for filtering nonlinear data loaded from file.
     """

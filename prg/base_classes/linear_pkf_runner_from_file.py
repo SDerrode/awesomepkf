@@ -64,7 +64,7 @@ class LinearPKFRunnerFromFile(BaseLinearPKFRunner):
 
     # ==========================================================
 
-    def run(self, i: int = 0) -> None:
+    def run(self, i: int = 0) -> list:
         """
         Exécute le filtrage sur les données chargées depuis le fichier.
 
