@@ -63,7 +63,7 @@ class LinearPKFRunnerSim(BaseLinearPKFRunner):
 
     # ==========================================================
 
-    def run(self, i: int = 0) -> None:
+    def run(self, i: int = 0) -> list:
         """
         Exécute la simulation et le filtrage PKF.
 

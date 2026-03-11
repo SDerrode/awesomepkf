@@ -8,10 +8,10 @@ from prg.utils.utils import file_data_generator
 from prg.base_classes.nonlinear_ukf_runner_base import BaseNonLinearUKFRunner
 from prg.utils.exceptions import FilterError, PKFError
 
-__all__ = ["BaseNonLinearUKFRunnerFromFile"]
+__all__ = ["NonLinearUKFRunnerFromFile"]
 
 
-class BaseNonLinearUKFRunnerFromFile(BaseNonLinearUKFRunner):
+class NonLinearUKFRunnerFromFile(BaseNonLinearUKFRunner):
     """
     Runner for filtering nonlinear data loaded from file.
     """
