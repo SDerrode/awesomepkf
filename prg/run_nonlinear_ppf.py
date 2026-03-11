@@ -35,7 +35,7 @@ def parse_arguments():
             "linearModelName",
             "N",
             "sKey",
-            "nbParticles",
+            "n_particles",
             "dataFileName",
         ],
     )
@@ -73,7 +73,7 @@ def main() -> None:
         if args.dataFileName is not None:
             runner = NonLinearPPFRunnerFromFile(
                 model_name=model_name,
-                nbParticles=args.nbParticles,
+                n_particles=args.n_particles,
                 data_filename=args.dataFileName,
                 verbose=args.verbose,
                 plot=args.plot,
@@ -84,7 +84,7 @@ def main() -> None:
                 model_name=model_name,
                 N=args.N,
                 sKey=args.sKey,
-                nbParticles=args.nbParticles,
+                n_particles=args.n_particles,
                 verbose=args.verbose,
                 plot=args.plot,
                 save_history=args.saveHistory,

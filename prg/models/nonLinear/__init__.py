@@ -9,13 +9,13 @@ from pathlib import Path
 
 from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
 
-# tous les modules sont importables
+# all modules are importable
 p = Path(__file__).parent
 __all__ = [f.stem for f in p.glob("*.py") if not f.name.startswith("_")]
 
 
 class ModelFactoryNonLinear:
-    """Fabrique automatique : découvre et instancie tous les modèles du dossier."""
+    """Automatic factory: discovers and instantiates all models in the directory."""
 
     _registry: dict[str, type] = {}
 
@@ -31,7 +31,7 @@ class ModelFactoryNonLinear:
         Scan the package directory and register all subclasses of BaseModelNonLinear.
         """
 
-        # éviter de rescanner si déjà fait
+        # avoid rescanning if already done
         if cls._registry:
             return
 
@@ -56,10 +56,10 @@ class ModelFactoryNonLinear:
                     f"{''.join(traceback.format_exc())}"
                 ) from e
 
-            # recherche des classes dans le module
+            # search for classes in the module
             for _, obj in inspect.getmembers(module, inspect.isclass):
 
-                # ignorer les classes importées
+                # ignore imported classes
                 if obj.__module__ != module.__name__:
                     continue
 
@@ -69,7 +69,7 @@ class ModelFactoryNonLinear:
                 if obj is BaseModelNonLinear:
                     continue
 
-                # ignorer les classes abstraites (intermédiaires non instanciables)
+                # ignore abstract classes (non-instantiable intermediates)
                 if inspect.isabstract(obj):
                     continue
 

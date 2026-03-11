@@ -21,18 +21,18 @@ class BaseModelLinear:
     """
     Base class for linear models.
 
-    Deux paramétrisations possibles :
-      1. 'linear_AmQ' : dynamique z_{n+1} = A z_n + B noise, avec covariance Q
-      2. 'linear_Sigma' : paramétrisation via variances sxx, syy et coefficients a, b, c, d, e
+    Two possible parametrisations:
+      1. 'linear_AmQ' : dynamics z_{n+1} = A z_n + B noise, with covariance Q
+      2. 'linear_Sigma' : parametrisation via variances sxx, syy and coefficients a, b, c, d, e
     """
 
     def __init__(self, dim_x, dim_y, model_type, augmented=False, pairwiseModel=True):
         if not isinstance(dim_x, int) or dim_x <= 0:
-            raise ValueError("dim_x doit être un entier positif")
+            raise ValueError("dim_x must be a positive integer")
         if not isinstance(dim_y, int) or dim_y <= 0:
-            raise ValueError("dim_y doit être un entier positif")
+            raise ValueError("dim_y must be a positive integer")
         if model_type not in ("linear_AmQ", "linear_Sigma"):
-            raise ValueError("model_type doit être 'linear_AmQ' ou 'linear_Sigma'")
+            raise ValueError("model_type must be 'linear_AmQ' or 'linear_Sigma'")
 
         self.dim_x = dim_x
         self.dim_y = dim_y
@@ -78,10 +78,10 @@ class BaseModelLinear:
 
     def _fx(self, x, noise_x, dt):
         """
-        Évalue la transition f(x, noise_x) = A_xx @ x + B_xx @ noise_x.
+        Evaluates the transition f(x, noise_x) = A_xx @ x + B_xx @ noise_x.
 
-        x, noise_x : (dim_x, 1)       → retourne (dim_x, 1)
-        x, noise_x : (N, dim_x, 1)    → retourne (N, dim_x, 1)
+        x, noise_x : (dim_x, 1)       → returns (dim_x, 1)
+        x, noise_x : (N, dim_x, 1)    → returns (N, dim_x, 1)
         """
         if __debug__:
             if x.ndim == 2:
@@ -111,8 +111,8 @@ class BaseModelLinear:
         """
         h(x, noise_y) = A_yx @ x + B_yy @ noise_y
 
-        x, noise_y : (dim_x, 1)       → retourne (dim_y, 1)
-        x, noise_y : (N, dim_x, 1)    → retourne (N, dim_y, 1)
+        x, noise_y : (dim_x, 1)       → returns (dim_y, 1)
+        x, noise_y : (N, dim_x, 1)    → returns (N, dim_y, 1)
         """
         if __debug__:
             if x.ndim == 2:
@@ -123,7 +123,7 @@ class BaseModelLinear:
                 assert noise_y.ndim == 3 and noise_y.shape[1:] == (self.dim_y, 1)
                 assert x.shape[0] == noise_y.shape[0]
 
-        A_yx = self.A[self.dim_x :, : self.dim_x]  # (dim_y, dim_x) ← le bon bloc
+        A_yx = self.A[self.dim_x :, : self.dim_x]  # (dim_y, dim_x) ← correct block
         B_yy = self.B[self.dim_x :, self.dim_x :]  # (dim_y, dim_y)
 
         try:
@@ -156,7 +156,7 @@ class BaseModelLinear:
             return np.tile(self.A, (N, 1, 1)), np.tile(self.B, (N, 1, 1))
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] jacobiens_g: erreur de shape: {e}"
+                f"[{self.__class__.__name__}] jacobiens_g: shape error: {e}"
             ) from e
 
     # ------------------------------------------------------------------
@@ -164,19 +164,19 @@ class BaseModelLinear:
         return f"{self.__class__.__name__}(dim_x={self.dim_x}, dim_y={self.dim_y}, type={self.model_type})"
 
     # ------------------------------------------------------------------
-    # Représentation symbolique
+    # Symbolic representation
     # ------------------------------------------------------------------
 
     def _build_symbolic_model(self) -> None:
         """
-        Construit la représentation SymPy de A et B.
+        Builds the SymPy representation of A and B.
 
-        Appelée à la fin de LinearAmQ.__init__ et LinearSigma._initSigma(),
-        une fois self.A et self.B numériquement disponibles.
+        Called at the end of LinearAmQ.__init__ and LinearSigma._initSigma(),
+        once self.A and self.B are numerically available.
 
-        Tente de simplifier les entrées flottantes en fractions exactes
-        (tolérance 1e-4) pour un rendu LaTeX plus lisible. Repli sur les
-        valeurs numériques brutes en cas d'échec.
+        Attempts to simplify floating-point entries as exact fractions
+        (tolerance 1e-4) for a more readable LaTeX rendering. Falls back to
+        raw numerical values on failure.
         """
 
         def _to_sp(M: np.ndarray) -> sp.Matrix:
@@ -196,28 +196,28 @@ class BaseModelLinear:
         except Exception as e:
             raise RuntimeError(
                 f"[{self.__class__.__name__}] _build_symbolic_model() failed — "
-                f"vérifier que self.A et self.B sont des ndarray valides.\n"
+                f"check that self.A and self.B are valid ndarrays.\n"
                 f"Cause: {type(e).__name__}: {e}"
             ) from e
 
     def latex_model(self) -> str:
         """
-        Retourne la représentation LaTeX du modèle état-espace linéaire :
+        Returns the LaTeX representation of the linear state-space model:
 
             z_k = A z_{k-1} + B v_k,   v = (v^x, v^y) ~ N(0, Q)
 
-        Conventions typographiques :
-          - scalaire (dim=1)   : italique simple  x, y
-          - vecteur  (dim>1)   : gras minuscule   \\mathbf{x}, ...
-          - bruit               : v^x (état), v^y (observation)
-          - matrices A, B, Q   : gras majuscule
+        Typographic conventions:
+          - scalar (dim=1)     : plain italic     x, y
+          - vector (dim>1)     : bold lowercase   \\mathbf{x}, ...
+          - noise              : v^x (state), v^y (observation)
+          - matrices A, B, Q  : bold uppercase
         """
         import re
 
         if not hasattr(self, "_sA"):
             raise RuntimeError(
-                f"[{self.__class__.__name__}] _build_symbolic_model() non appelée — "
-                "vérifier l'ordre d'initialisation."
+                f"[{self.__class__.__name__}] _build_symbolic_model() not called — "
+                "check initialisation order."
             )
 
         nx, ny = self.dim_x, self.dim_y
@@ -225,7 +225,7 @@ class BaseModelLinear:
         bold_y = ny > 1
 
         # ------------------------------------------------------------------
-        # Noms LaTeX
+        # LaTeX names
         # ------------------------------------------------------------------
         x_n = r"\mathbf{x}" if bold_x else "x"
         y_n = r"\mathbf{y}" if bold_y else "y"
@@ -238,7 +238,7 @@ class BaseModelLinear:
         Q_n = r"\mathcal{Q}"
 
         # ------------------------------------------------------------------
-        # mQ formaté à 2 décimales
+        # mQ formatted to 2 decimal places
         # ------------------------------------------------------------------
         def _np_to_sp(M: np.ndarray) -> sp.Matrix:
             return sp.Matrix(
@@ -250,11 +250,11 @@ class BaseModelLinear:
         mQ_sp = _np_to_sp(self.mQ)
 
         def _fix_latex(s: str) -> str:
-            """1.0 \\cdot 10^{-k}  →  10^{-k}"""
+            """1.0 \\cdot 10^{-k}  →  10^{-k}  (with or without spaces around \\cdot)"""
             return re.sub(r"1\.0\s*\\cdot\s*", "", s)
 
         # ------------------------------------------------------------------
-        # Rendu de A et B : scalaire sans pmatrix, matrice avec
+        # Rendering of A and B: scalar without pmatrix, matrix with
         # ------------------------------------------------------------------
         def _lat_mat(mat: sp.Matrix) -> str:
             if mat.shape == (1, 1):
@@ -266,11 +266,11 @@ class BaseModelLinear:
                 r"\begin{align}",
                 # ── Dynamique globale
                 rf"  {z_n}_k &= {A_n}\,{z_n}_{{k-1}} + {B_n}\,{v_n}_k \\[6pt]",
-                # ── Décomposition par blocs
+                # ── Block decomposition
                 rf"  \begin{{pmatrix}} {x_n}_k \\ {y_n}_k \end{{pmatrix}}"
                 rf" &= {A_n} \begin{{pmatrix}} {x_n}_{{k-1}} \\ {y_n}_{{k-1}} \end{{pmatrix}}"
                 rf" + {B_n} \begin{{pmatrix}} {vx_n} \\ {vy_n} \end{{pmatrix}} \\[6pt]",
-                # ── Distribution du bruit
+                # ── Noise distribution
                 rf"  {v_n} = ({vx_n},\,{vy_n})"
                 rf" &\sim \mathcal{{N}}\!\left(0,\; {Q_n}\right), \qquad"
                 rf" {Q_n} = {sp.latex(mQ_sp)} \\[12pt]",
@@ -284,12 +284,12 @@ class BaseModelLinear:
 
         except Exception as e:
             raise RuntimeError(
-                f"[{self.__class__.__name__}] latex_model: échec du rendu LaTeX.\n"
+                f"[{self.__class__.__name__}] latex_model: LaTeX rendering failed.\n"
                 f"Cause: {type(e).__name__}: {e}"
             ) from e
 
     # ------------------------------------------------------------------
-    # Helpers communs aux méthodes de visualisation
+    # Helpers common to visualisation methods
     # ------------------------------------------------------------------
 
     def _make_grid(
@@ -297,7 +297,7 @@ class BaseModelLinear:
         n_points: int,
         z_range: tuple[float, float] = (-1.0, 1.0),
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Construit une grille régulière 2D. Retourne Z1, Z2, Z_stack."""
+        """Builds a regular 2D grid. Returns Z1, Z2, Z_stack."""
         z = np.linspace(*z_range, n_points)
         Z1, Z2 = np.meshgrid(z, z)
         Z_stack = np.stack([Z1.ravel(), Z2.ravel()], axis=1)
@@ -312,12 +312,12 @@ class BaseModelLinear:
         fmt: str = ".3f",
     ) -> None:
         """
-        Trace un heatmap annoté d'une matrice numérique sur un axe existant.
+        Draws an annotated heatmap of a numerical matrix on an existing axis.
 
-        Paramètres
+        Parameters
         ----------
-        annotate : affiche la valeur numérique dans chaque cellule.
-        fmt      : format d'affichage des valeurs.
+        annotate : displays the numerical value in each cell.
+        fmt      : display format for values.
         """
         vmax = np.abs(M).max() or 1.0
         im = ax.imshow(M, cmap="RdBu_r", vmin=-vmax, vmax=vmax, aspect="auto")
@@ -343,28 +343,28 @@ class BaseModelLinear:
     # ------------------------------------------------------------------
     def plot_jacobian(self) -> None:
         """
-        Visualise les matrices A et B du modèle linéaire et la position
-        des valeurs propres de A dans le plan complexe.
+        Visualises matrices A and B of the linear model and the position
+        of the eigenvalues of A in the complex plane.
 
-        Disponible pour toute dimension.
-        Sauvegarde la figure dans data/plot/.
+        Available for any dimension.
+        Saves the figure to data/plot/.
 
-        Sous-figures  (2 lignes × 2 colonnes)
+        Subplots  (2 rows × 2 columns)
         -------------
-        (1,1) Heatmap annotée de A — matrice de transition
-        (1,2) Heatmap annotée de B — matrice de bruit
-        (2,1) Valeurs propres de A dans le plan complexe
-              • cercle unité en pointillés
-              • points stables (|λ| < 1) en bleu, instables en rouge
-        (2,2) Tableau récapitulatif : rayon spectral, stabilité,
-              liste des valeurs propres et de leurs modules
+        (1,1) Annotated heatmap of A — transition matrix
+        (1,2) Annotated heatmap of B — noise matrix
+        (2,1) Eigenvalues of A in the complex plane
+              • unit circle as dashed line
+              • stable points (|λ| < 1) in blue, unstable in red
+        (2,2) Summary table: spectral radius, stability,
+              list of eigenvalues and their moduli
         """
         try:
             eigvals = np.linalg.eigvals(self.A)
         except np.linalg.LinAlgError as e:
             raise NumericalError(
                 f"[{self.__class__.__name__}] plot_jacobian: "
-                f"calcul des valeurs propres impossible: {e}"
+                f"eigenvalue computation failed: {e}"
             ) from e
         rho = np.max(np.abs(eigvals))
         is_stable = rho < 1.0
@@ -374,15 +374,15 @@ class BaseModelLinear:
         fig, axes = plt.subplots(2, 2, figsize=(13, 10))
 
         # ── (1,1) Heatmap A ──────────────────────────────────────────
-        self._heatmap_ax(axes[0, 0], self.A, r"Matrice de transition $A$")
+        self._heatmap_ax(axes[0, 0], self.A, r"Transition matrix $A$")
 
         # ── (1,2) Heatmap B ──────────────────────────────────────────
-        self._heatmap_ax(axes[0, 1], self.B, r"Matrice de bruit $B$")
+        self._heatmap_ax(axes[0, 1], self.B, r"Noise matrix $B$")
 
-        # ── (2,1) Valeurs propres ─────────────────────────────────────
+        # ── (2,1) Eigenvalues ─────────────────────────────────────────
         ax = axes[1, 0]
         theta = np.linspace(0, 2 * np.pi, 300)
-        ax.plot(np.cos(theta), np.sin(theta), "k--", lw=1.0, label="cercle unité")
+        ax.plot(np.cos(theta), np.sin(theta), "k--", lw=1.0, label="unit circle")
         ax.axhline(0, color="gray", lw=0.5)
         ax.axvline(0, color="gray", lw=0.5)
         for k, lam in enumerate(eigvals):
@@ -395,7 +395,7 @@ class BaseModelLinear:
                 xytext=(6, 4),
                 fontsize=9,
             )
-        ax.set_title(r"Valeurs propres de $A$", size=BIG_SIZE)
+        ax.set_title(r"Eigenvalues of $A$", size=BIG_SIZE)
         ax.set_xlabel(r"$\mathrm{Re}(\lambda)$")
         ax.set_ylabel(r"$\mathrm{Im}(\lambda)$")
         ax.set_aspect("equal")
@@ -404,16 +404,16 @@ class BaseModelLinear:
         ax.set_ylim(-rho - margin, rho + margin)
         ax.legend(fontsize=8)
 
-        # ── (2,2) Tableau récapitulatif ───────────────────────────────
+        # ── (2,2) Summary table ───────────────────────────────────────
         ax = axes[1, 1]
         ax.axis("off")
         stab_color = "#1f77b4" if is_stable else "#d62728"
-        stab_text = "✓ Stable" if is_stable else "✗ Instable"
+        stab_text = "✓ Stable" if is_stable else "✗ Unstable"
         lines = [
             rf"$\rho(A) = {rho:.6f}$",
-            rf"Stabilité : {stab_text}",
+            rf"Stability: {stab_text}",
             "",
-            r"Valeurs propres $\lambda_k$ :",
+            r"Eigenvalues $\lambda_k$ :",
         ]
         for k, lam in enumerate(eigvals):
             mod = abs(lam)
@@ -448,7 +448,7 @@ class BaseModelLinear:
         except OSError as e:
             raise OSError(
                 f"[{self.__class__.__name__}] plot_jacobian: "
-                f"impossible d'écrire '{path}': {e}"
+                f"failed to write '{path}': {e}"
             ) from e
         finally:
             plt.close(fig)
@@ -469,7 +469,7 @@ class BaseModelLinear:
             raise
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
-                f"[{self.__class__.__name__}] plot_g_dynamic: erreur lors de l'évaluation de g: {e}"
+                f"[{self.__class__.__name__}] plot_g_dynamic: error during evaluation of g: {e}"
             ) from e
 
         G1 = G[:, 0].reshape(n_points, n_points)
@@ -517,19 +517,19 @@ class BaseModelLinear:
             plt.savefig(path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
         except OSError as e:
             raise OSError(
-                f"[{self.__class__.__name__}] plot_g_dynamic: impossible d'écrire '{path}': {e}"
+                f"[{self.__class__.__name__}] plot_g_dynamic: failed to write '{path}': {e}"
             ) from e
         finally:
             plt.close(fig)
 
 
 # ----------------------------------------------------------
-# Sous-classe pour la paramétrisation linear_AmQ
+# Subclass for the linear_AmQ parametrisation
 # ----------------------------------------------------------
 class LinearAmQ(BaseModelLinear):
     """
-    Modèle linéaire avec matrice de transition A et covariance Q.
-    B est l'identité par défaut si non fourni.
+    Linear model with transition matrix A and covariance Q.
+    B defaults to the identity if not provided.
     """
 
     def __init__(
@@ -564,7 +564,7 @@ class LinearAmQ(BaseModelLinear):
 
     @staticmethod
     def _init_random_params(dim_x, dim_y, val_max, seed=None):
-        """Génère mQ, mz0, Pz0 de façon standard via SeedGenerator."""
+        """Generates mQ, mz0, Pz0 in a standard way via SeedGenerator."""
         seed = 9
         rng = SeedGenerator(seed).rng
         try:
@@ -598,11 +598,11 @@ class LinearAmQ(BaseModelLinear):
 
 
 # ----------------------------------------------------------
-# Sous-classe pour la paramétrisation linear_Sigma
+# Subclass for the linear_Sigma parametrisation
 # ----------------------------------------------------------
 class LinearSigma(BaseModelLinear):
     """
-    Modèle linéaire avec variances sxx, syy et coefficients a, b, c, d, e.
+    Linear model with variances sxx, syy and coefficients a, b, c, d, e.
     """
 
     def __init__(
@@ -653,8 +653,8 @@ class LinearSigma(BaseModelLinear):
             stab.summary()
             raise ValueError(
                 f"[{self.__class__.__name__}] _initSigma: "
-                f"la matrice A calculée n'est pas stable (rayon spectral ≥ 1). "
-                f"Vérifier les paramètres sxx, syy, a, b, c, d, e."
+                f"the computed matrix A is not stable (spectral radius >= 1). "
+                f"Check parameters sxx, syy, a, b, c, d, e."
             )
 
         self.B = np.eye(self.A.shape[0])
