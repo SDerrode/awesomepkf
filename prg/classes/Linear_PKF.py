@@ -17,6 +17,8 @@ from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.utils.exceptions import FilterError, InvertibilityError, NumericalError
 
+from rich import print
+
 __all__ = ["Linear_PKF"]
 
 
@@ -131,6 +133,9 @@ class Linear_PKF(PKF):
         """
         self._validate_N(N)
         self.history.clear()
+
+        print(f"self.param.pairwiseModel:={self.param.pairwiseModel:}")
+        print(f"self.param.augmented:={self.param.augmented:}")
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()

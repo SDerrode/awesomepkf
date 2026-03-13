@@ -57,6 +57,13 @@ class NonLinearEPKFRunnerSim(BaseNonLinearEPKFRunner):
             self.runner_instance.process_N_data(N=self.N)
         except PKFError:
             raise
+        # except Exception as e:
+        #     import traceback
+
+        #     traceback.print_exc()  # ← affiche la vraie cause immédiatement
+        #     raise FilterError(
+        #         f"Filtering failed (simulation mode) for model {self.model_name!r}."
+        #     ) from e
         except Exception as e:
             raise FilterError(
                 f"Filtering failed (simulation mode) for model {self.model_name!r}."

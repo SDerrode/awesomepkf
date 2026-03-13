@@ -555,7 +555,7 @@ class LinearAmQ(BaseModelLinear):
             ) from e
 
         if __debug__ and not self.augmented:
-            for arr in [self.mQ, self.Pz0]:
+            for arr in [self.mQ, self.Pz0, self.B @ self.B.transpose()]:
                 report = CovarianceMatrix(arr).check()
                 if not report.is_valid:
                     raise ValueError("Matrix is not positive semi-definite.")
@@ -595,6 +595,52 @@ class LinearAmQ(BaseModelLinear):
             "kappa": self.kappa,
             "lambda_": self.lambda_,
         }
+
+    def classic2pairwise(self, mod):
+
+        try:
+            dim_x = mod.dim_x
+            dim_y = mod.dim_y
+            dim_xy = mod.dim_xy
+
+            F = mod.A
+            C = mod.B
+
+            H = np.zeros((dim_y, dim_xy))
+            H[:, dim_x:] = np.eye(dim_y)
+            D = np.zeros((dim_y, dim_y))
+
+        except (ValueError, IndexError, np.exceptions.AxisError) as e:
+            raise NumericalError(
+                f"[{model_x1_y1_AQ_augmented.MODEL_NAME}] Initialization failed: {e}"
+            ) from e
+
+        A = np.block(
+            [
+                [F, np.zeros((dim_xy, dim_y))],
+                [H @ F, np.zeros((dim_y, dim_y))],
+            ]
+        )
+        B = np.block(
+            [
+                [C, np.zeros((dim_xy, dim_y))],
+                [H @ C, D],
+            ]
+        )
+
+        mQ = np.zeros((dim_xy + dim_y, dim_xy + dim_y))
+        mQ[0:dim_xy, 0:dim_xy] = mod.mQ
+
+        mz0 = np.zeros((dim_xy + dim_y, 1))
+        mz0[0:dim_xy] = mod.mz0
+        mz0[dim_xy : dim_xy + dim_y] = mz0[dim_xy - dim_y : dim_xy]
+
+        Pz0 = np.zeros((dim_xy + dim_y, dim_xy + dim_y))
+        Pz0[0:dim_xy, 0:dim_xy] = mod.Pz0
+        Pz0[dim_xy : dim_xy + dim_y, :] = Pz0[dim_xy - dim_y : dim_xy, :]
+        Pz0[:, dim_xy : dim_xy + dim_y] = Pz0[:, dim_xy - dim_y : dim_xy]
+
+        return (dim_xy, dim_y, A, mQ, mz0, Pz0, B)
 
 
 # ----------------------------------------------------------

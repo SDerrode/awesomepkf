@@ -280,6 +280,7 @@ class PKF:
         Ykp1_simul : np.ndarray
             Simulated observation vector at step ``k``, shape ``(dim_y, 1)``.
         """
+
         Zkp1_simul = np.zeros((self.dim_xy, 1))
 
         # First step — sample initial state from prior distribution
@@ -295,6 +296,8 @@ class PKF:
             Zkp1_simul[:, 0] = self.__randSimulation.rng.multivariate_normal(
                 mean=self.mz0[:, 0], cov=self.Pz0
             )
+        # print(f"Zkp1_simul={Zkp1_simul}")
+        # input("ATTENTE")
 
         Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
         k = 0
@@ -306,21 +309,42 @@ class PKF:
         noise_z = np.zeros((self.dim_xy, 1))
 
         while N is None or k < N:
+
+            # ── Tirage du bruit ──────────────────────────────────────────────
             if self.param.augmented:
+                # Bruit d'état seul (dim_x composantes)
                 noise_z[: self.dim_x, 0] = (
                     self.__randSimulation.rng.multivariate_normal(
                         mean=zerosvector_x,
                         cov=self.param.mQ[: self.dim_x, : self.dim_x],
                     )
                 )
+                # Bruit d'observation = dernières dim_y composantes du bruit d'état
+                # (modèle augmenté : v^y est une fonction de v^x)
                 noise_z[self.dim_x :, 0] = noise_z[
                     self.dim_x - self.dim_y : self.dim_x, 0
                 ]
             else:
                 noise_z[:, 0] = self.__randSimulation.rng.multivariate_normal(
-                    mean=zerosvector_xy, cov=self.param.mQ
+                    mean=zerosvector_xy,
+                    cov=self.param.mQ,
                 )
+
+            # ── Propagation ──────────────────────────────────────────────────
             Zkp1_simul = self.param.g(Zkp1_simul, noise_z, self.dt)
+            # if self.param.pairwiseModel:
+            #     Zkp1_simul = self.param.g(Zkp1_simul, noise_z, self.dt)
+            # else:
+            #     Xkp1_simul, _ = np.split(Zkp1_simul, [self.dim_x])
+            #     noise_x, noise_y = np.split(noise_z, [self.dim_x])
+            #     fx_val = self.param.f(Xkp1_simul, noise_x, self.dt)
+            #     hx_val = self.param.h(Xkp1_simul, noise_y, self.dt)
+            #     Zkp1_simul = np.vstack([fx_val, hx_val])
+
+            # print(Zkp1_simul)
+            # input("ATTENTE")
+
+            # ── Émission ─────────────────────────────────────────────────────
             Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
             k += 1
             yield k, Xkp1_simul, Ykp1_simul

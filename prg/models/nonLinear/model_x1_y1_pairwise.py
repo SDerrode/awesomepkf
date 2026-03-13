@@ -60,6 +60,6 @@ class Model_x1_y1_pairwise(BaseModelGxGy):
         x, y, t, u = sx[0], sy[0], st[0], su[0]
 
         sgx = sp.Matrix([self.a * x + self.b * sp.tanh(y) + t])
-        sgy = sp.Matrix([self.c * y + self.d * sp.sin(x / 20.0) + u])
+        sgy = sp.Matrix([self.c * y + self.d * sp.sin(x / 20) + u])
 
         return sgx, sgy
