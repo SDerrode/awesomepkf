@@ -79,22 +79,68 @@ class Model_x2_y1_augmented(BaseModelFxHx):
             ) from e
 
     # ------------------------------------------------------------------
-    def symbolic_model(self, sx, st, su):
-        """
-        sx : sp.Matrix(3, 1) → [x1, x2, x3]  (état augmenté, x3 = y_prev)
-        st : sp.Matrix(3, 1) → [t1, t2, t3]  (bruits d'état, t3 ≡ u du modèle de base)
-        su : sp.Matrix(1, 1) → [u]            (bruit d'observation, non utilisé ici)
-        """
-        x1, x2, x3 = sx[0], sx[1], sx[2]
-        t1, t2, t3 = st[0], st[1], st[2]
+    # def symbolic_model(self, sx, st, su):
+    #     """
+    #     sx : sp.Matrix(3, 1) → [x1, x2, x3]  (état augmenté, x3 = y_prev)
+    #     st : sp.Matrix(3, 1) → [t1, t2, t3]  (bruits d'état, t3 ≡ u du modèle de base)
+    #     su : sp.Matrix(1, 1) → [u]            (bruit d'observation, non utilisé ici)
+    #     """
+    #     x1, x2, x3 = sx[0], sx[1], sx[2]
+    #     t1, t2, t3 = st[0], st[1], st[2]
+    #     u = su[0]
 
-        sfx = sp.Matrix(
-            [
-                self.a * x1 + self.b * x2 + self.c * sp.tanh(x3) + t1,
-                self.d * x2 + self.e * sp.sin(x3) + t2,
-                x1**2 / (1 + x1**2) + self.f * x3 + t3,
-            ]
-        )
-        shx = sp.Matrix([x3])  # hx = dernière composante de l'état augmenté
+    #     sfx = sp.Matrix(
+    #         [
+    #             self.a * x1 + self.b * x2 + self.c * sp.tanh(x3) + t1,
+    #             self.d * x2 + self.e * sp.sin(x3) + t2,
+    #             x1**2 / (1 + x1**2) + self.f * x3 + t3,
+    #         ]
+    #     )
+
+    #     shx = sp.Matrix(
+    #         [
+    #             x1**2 / (1 + x1**2) + self.f * x3 + u,
+    #         ]
+    #     )
+    #     # shx = sp.Matrix([x3])  # hx = dernière composante de l'état augmenté
+
+    #     print("sgx=", self.mod._sgx)
+    #     print("sgy=", self.mod._sgy)
+    #     print("sfx=", sfx)
+    #     print("shx=", shx)
+    #     input("ATTENTE")
+
+    #     return sfx, shx
+
+    def symbolic_model(self, sx, st, su):
+        # Récupérer les symboles exacts utilisés dans _sgx / _sgy
+        sym = {
+            s.name: s
+            for expr in [*self.mod._sgx, *self.mod._sgy]
+            for s in expr.free_symbols
+        }
+
+        subs = {
+            sym["x0"]: sx[0],
+            sym["x1"]: sx[1],
+            sym["y0"]: sx[2],
+            sym["t0"]: st[0],
+            sym["t1"]: st[1],
+            sym["u0"]: st[2],  # pour sfx[2]
+        }
+        subs_u = {**subs, sym["u0"]: su[0]}  # pour shx
+
+        sgx_subs = self.mod._sgx.subs(subs)
+        sgy_t = self.mod._sgy.subs(subs)
+        sgy_u = self.mod._sgy.subs(subs_u)
+
+        sfx = sp.Matrix([*sgx_subs, *sgy_t])
+        shx = sp.Matrix([*sgy_u])
+
+        print("sgx=", self.mod._sgx)
+        print("sgy=", self.mod._sgy)
+        print("sfx=", sfx)
+        print("shx=", shx)
+        input("ATTENTE")
 
         return sfx, shx

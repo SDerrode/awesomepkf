@@ -11,7 +11,7 @@ class Model_x1_y1_AQ_pairwise(LinearAmQ):
 
     def __init__(self):
         dim_x, dim_y = 1, 1
-        A = np.array([[0.95, -0.3], [0.2, 0.85]])
+        A = np.array([[0.95, -0.5], [0.3, 0.85]])
         mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.15)
         super().__init__(
             dim_x=dim_x,

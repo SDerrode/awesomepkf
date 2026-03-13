@@ -55,7 +55,7 @@ class BaseModelNonLinear:
         cls.MODEL_NAME = n[0].lower() + n[1:]
 
     # ------------------------------------------------------------------
-    def g(self, z: np.ndarray, noise_z: np.ndarray, dt: float) -> np.ndarray:
+    def g(self, z, noise_z, dt):
 
         if __debug__:
             if z.ndim == 2:
@@ -68,7 +68,6 @@ class BaseModelNonLinear:
                 assert z.shape[0] == noise_z.shape[0]
 
         try:
-
             axis = 1 if z.ndim == 3 else 0
             x, y = np.split(z, [self.dim_x], axis=axis)
             nx, ny = np.split(noise_z, [self.dim_x], axis=axis)
