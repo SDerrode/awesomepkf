@@ -38,18 +38,18 @@ _OPTION_CONFIG: dict = {
         "default": None,
         "help": "Graine du générateur aléatoire (default: None)",
     },
-    # Available non linear models:
-    #   'model_x1_y1_Cubique_classic', 'model_x1_y1_ExpSaturant_classic', 'model_x1_y1_Gordon_classic', 'model_x1_y1_Sinus_classic',
-    #   'model_x1_y1_augmented', 'model_x1_y1_pairwise', 'model_x2_y1_Rapport_classic', 'model_x2_y1_augmented', 'model_x2_y1_classic',
-    #   'model_x2_y1_pairwise', 'model_x2_y2_pairwise'
     "linearModelName": {
         "choices": [
             "model_x1_y1_AQ_augmented",
             "model_x1_y1_AQ_classic",
             "model_x1_y1_AQ_pairwise",
             "model_x1_y1_Sigma_pairwise",
+            "model_x2_y2_AQ_augmented",
+            "model_x2_y2_AQ_classic",
             "model_x2_y2_AQ_pairwise",
             "model_x2_y2_Sigma_pairwise",
+            "model_x3_y1_AQ_augmented",
+            "model_x3_y1_AQ_classic",
             "model_x3_y1_AQ_pairwise",
             "model_x3_y1_Sigma_pairwise",
         ],

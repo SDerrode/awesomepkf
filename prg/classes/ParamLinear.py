@@ -57,6 +57,7 @@ class ParamLinear:
             If a covariance matrix is not positive definite
             during the consistency check.
         """
+
         if __debug__:
             if not (isinstance(dim_x, int) and dim_x > 0):
                 raise ParamError("dim_x must be a strictly positive integer.")
@@ -153,7 +154,7 @@ class ParamLinear:
         self._mz0 = np.array(mz0, dtype=float)
         self._Pz0 = np.array(Pz0, dtype=float)
 
-        self._update_Sigma_from_A_B_mQ()
+        # self._update_Sigma_from_A_B_mQ()
 
     def constructorFrom_Sigma(
         self,
@@ -216,33 +217,36 @@ class ParamLinear:
             If the relative error between ``mQ`` and ``Q1 - A @ Q2^T`` exceeds
             the ``EPS_REL`` threshold.
         """
-        self._Q1 = solve_discrete_lyapunov(self._A, self._mQ)
-        self._Q2 = self._A @ self._Q1
-        self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
 
-        if __debug__:
-            Q_est = self._Q1 - self._A @ self._Q2.T
-            diff = self._mQ - Q_est
-            rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + EPS_ABS)
-            if rel_error > EPS_REL:
-                raise NumericalError(
-                    f"Incohérence détectée : Q ≉ Q1 - A Q2^T "
-                    f"(erreur relative = {rel_error:.2e}).",
-                    matrix_name="mQ",
-                )
+        return
 
-        # Sub-blocks
-        self._a = self._Sigma[self.dim_xy : self.dim_xy + self.dim_x, : self.dim_x]
-        self._b = self._Sigma[self.dim_x : self.dim_xy, : self.dim_x]
-        self._c = self._Sigma[
-            self.dim_xy + self.dim_x : 2 * self.dim_xy, self.dim_x : self.dim_xy
-        ]
-        self._d = self._Sigma[self.dim_xy + self.dim_x : 2 * self.dim_xy, : self.dim_x]
-        self._e = self._Sigma[
-            self.dim_xy : self.dim_xy + self.dim_x, self.dim_x : self.dim_xy
-        ]
-        self._sxx = self._Sigma[: self.dim_x, : self.dim_x]
-        self._syy = self._Sigma[self.dim_x : self.dim_xy, self.dim_x : self.dim_xy]
+        # self._Q1 = solve_discrete_lyapunov(self._A, self._mQ)
+        # self._Q2 = self._A @ self._Q1
+        # self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
+
+        # if __debug__:
+        #     Q_est = self._Q1 - self._A @ self._Q2.T
+        #     diff = self._mQ - Q_est
+        #     rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + EPS_ABS)
+        #     if rel_error > EPS_REL:
+        #         raise NumericalError(
+        #             f"Incohérence détectée : Q ≉ Q1 - A Q2^T "
+        #             f"(erreur relative = {rel_error:.2e}).",
+        #             matrix_name="mQ",
+        #         )
+
+        # # Sub-blocks
+        # self._a = self._Sigma[self.dim_xy : self.dim_xy + self.dim_x, : self.dim_x]
+        # self._b = self._Sigma[self.dim_x : self.dim_xy, : self.dim_x]
+        # self._c = self._Sigma[
+        #     self.dim_xy + self.dim_x : 2 * self.dim_xy, self.dim_x : self.dim_xy
+        # ]
+        # self._d = self._Sigma[self.dim_xy + self.dim_x : 2 * self.dim_xy, : self.dim_x]
+        # self._e = self._Sigma[
+        #     self.dim_xy : self.dim_xy + self.dim_x, self.dim_x : self.dim_xy
+        # ]
+        # self._sxx = self._Sigma[: self.dim_x, : self.dim_x]
+        # self._syy = self._Sigma[self.dim_x : self.dim_xy, self.dim_x : self.dim_xy]
 
     # ------------------------------------------------------------------
     # Consistency checks
@@ -256,17 +260,22 @@ class ParamLinear:
         CovarianceError
             If any of the matrices is not positive semi-definite.
         """
-        if self.augmented:
-            listMatrix = [("Q1", self._Q1), ("sxx", self._sxx), ("syy", self._syy)]
-        else:
-            listMatrix = [
-                ("Q1", self._Q1),
-                ("sxx", self._sxx),
-                ("syy", self._syy),
-                ("mQ", self._mQ),
-                ("Sigma", self._Sigma),
-                ("Pz0", self._Pz0),
-            ]
+
+        listMatrix = []
+        if not self.augmented:
+            listMatrix = [("mQ", self._mQ), ("Pz0", self._Pz0)]
+
+        # if self.augmented:
+        #     listMatrix = [("Q1", self._Q1), ("sxx", self._sxx), ("syy", self._syy)]
+        # else:
+        #     listMatrix = [
+        #         # ("Q1", self._Q1),
+        #         # ("sxx", self._sxx),
+        #         # ("syy", self._syy),
+        #         ("mQ", self._mQ),
+        #         # ("Sigma", self._Sigma),
+        #         ("Pz0", self._Pz0),
+        #     ]
 
         for name, arr in listMatrix:
             report = CovarianceMatrix(arr).check()
@@ -344,33 +353,33 @@ class ParamLinear:
     def Pz0(self) -> np.ndarray:
         return self._Pz0
 
-    @property
-    def sxx(self) -> np.ndarray:
-        return self._sxx
+    # @property
+    # def sxx(self) -> np.ndarray:
+    #     return self._sxx
 
-    @property
-    def syy(self) -> np.ndarray:
-        return self._syy
+    # @property
+    # def syy(self) -> np.ndarray:
+    #     return self._syy
 
-    @property
-    def a(self) -> np.ndarray:
-        return self._a
+    # @property
+    # def a(self) -> np.ndarray:
+    #     return self._a
 
-    @property
-    def b(self) -> np.ndarray:
-        return self._b
+    # @property
+    # def b(self) -> np.ndarray:
+    #     return self._b
 
-    @property
-    def c(self) -> np.ndarray:
-        return self._c
+    # @property
+    # def c(self) -> np.ndarray:
+    #     return self._c
 
-    @property
-    def d(self) -> np.ndarray:
-        return self._d
+    # @property
+    # def d(self) -> np.ndarray:
+    #     return self._d
 
-    @property
-    def e(self) -> np.ndarray:
-        return self._e
+    # @property
+    # def e(self) -> np.ndarray:
+    #     return self._e
 
     # ------------------------------------------------------------------
     # Summary

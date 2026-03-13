@@ -93,21 +93,21 @@ def main() -> None:
         runner.run()
 
     except NumericalError as e:
-        print(f"[ERREUR NUMÉRIQUE] {e}", file=sys.stderr)
+        print(f"[NUMERICAL ERROR] {e}", file=sys.stderr)
         sys.exit(1)
     except FilterError as e:
-        print(f"[ERREUR FILTRE] {e}", file=sys.stderr)
+        print(f"[FILTER ERROR] {e}", file=sys.stderr)
     except PKFError as e:
-        print(f"[ERREUR PKF] {e}", file=sys.stderr)
+        print(f"[PKF ERROR] {e}", file=sys.stderr)
         sys.exit(1)
     except ParamError as e:
-        print(f"[ERREUR PARAMÈTRE] {e}", file=sys.stderr)
+        print(f"[PARAMETER ERROR] {e}", file=sys.stderr)
         sys.exit(2)
     except ValueError as e:
-        print(f"[ERREUR PARAMÈTRE] {e}", file=sys.stderr)
+        print(f"[PARAMETER ERROR] {e}", file=sys.stderr)
         sys.exit(2)
     except RuntimeError as e:
-        print(f"[ERREUR EXÉCUTION] {e}", file=sys.stderr)
+        print(f"[RUN ERROR] {e}", file=sys.stderr)
         sys.exit(3)
 
 

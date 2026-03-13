@@ -4,13 +4,14 @@
 import numpy as np
 from prg.models.linear.base_model_linear import LinearAmQ
 
-__all__ = ["Model_x1_y1_AQ_classic"]
+__all__ = ["Model_x2_y2_AQ_classic"]
 
 
-class Model_x1_y1_AQ_classic(LinearAmQ):
+class Model_x2_y2_AQ_classic(LinearAmQ):
 
     def __init__(self):
-        dim_x, dim_y = 1, 1
+
+        dim_x, dim_y = 2, 2
 
         # 1- Ecriture dun modele classique selon
         # \begin{align}
@@ -26,14 +27,14 @@ class Model_x1_y1_AQ_classic(LinearAmQ):
             H = np.zeros((dim_y, dim_x))
             D = np.zeros((dim_y, dim_y))
 
-            F[0, 0] = 0.8
-            C[0, 0] = 0.1
-            H[0, 0] = 0.4
-            D[0, 0] = 0.05
+            F = np.array([[0.6, 0.1], [0.1, 0.5]])
+            C = np.array([[0.1, 0.05], [0.05, 0.1]])
+            H = np.array([[0.4, 0.01], [0.15, 0.7]])
+            D = np.array([[0.1, 0.05], [0.05, 0.1]])
 
         except (ValueError, IndexError, np.exceptions.AxisError) as e:
             raise NumericalError(
-                f"[{model_x1_y1_AQ_classic.MODEL_NAME}] Initialization failed: {e}"
+                f"[{model_x2_y2_AQ_classic.MODEL_NAME}] Initialization failed: {e}"
             ) from e
 
         mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.15)

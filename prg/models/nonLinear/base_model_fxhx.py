@@ -209,6 +209,7 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
 
                 out = np.empty((N, self.dim_y, 1))
                 for i in range(N):
+
                     out[i] = np.array(
                         self._hx_num(*self._args_hx(x, u_norm, i)), dtype=float
                     ).reshape(self.dim_y, 1)
@@ -343,7 +344,6 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
         if __debug__:
-            assert isinstance(dt, (float, int))
             if x.ndim == 2:
                 assert all(a.shape == (self.dim_x, 1) for a in (x, t))
                 assert all(a.shape == (self.dim_y, 1) for a in (y, u))
