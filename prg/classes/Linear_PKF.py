@@ -134,8 +134,8 @@ class Linear_PKF(PKF):
         self._validate_N(N)
         self.history.clear()
 
-        print(f"self.param.pairwiseModel:={self.param.pairwiseModel:}")
-        print(f"self.param.augmented:={self.param.augmented:}")
+        # print(f"self.param.pairwiseModel:={self.param.pairwiseModel:}")
+        # print(f"self.param.augmented:={self.param.augmented:}")
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()

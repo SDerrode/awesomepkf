@@ -14,15 +14,14 @@ __all__ = ["Model_x1_y1_Sinus_classic"]
 class Model_x1_y1_Sinus_classic(BaseModelFxHx):
 
     def __init__(self):
+
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
+
         try:
-            self.mQ = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.15
+            self.mQ, self.mz0, self.Pz0 = self._init_random_params(
+                self.dim_x, self.dim_y, 0.50, seed=None
             )
-            self.mz0 = np.zeros((self.dim_xy, 1)) + 0.3
-            self.Pz0 = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
-            )
+
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] Initialization failed: {e}"
