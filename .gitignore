@@ -2,20 +2,18 @@
 .DS_Store
 
 # Données générées (sorties du simulateur et des filtres)
-# FIX : règles spécifiques à data/ (les wildcards globaux *.csv/*.png les écrasaient — redondance supprimée)
 data/datafile/
 data/historyTracker/
 data/plot/
+data/realdata/
 
 # Logs générés par les scripts bash
-# FIX : logs/ ajouté (créé par run_tests.sh, run_algoVect.sh, etc. — était absent)
 logs/
 
+# tous les programmes de tests perso
 /prg/tests
-# FIX : /update_readme_structure.sh supprimé — script utilitaire qui doit être versionné
 
 # VSCodium / VSCode
-# FIX : "vdscodium" → "VSCodium" (faute de frappe)
 AwesomePKF.code-workspace
 .vscode/
 

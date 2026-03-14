@@ -20,3 +20,8 @@ class Model_x1_y1_AQ_augmented(LinearAmQ):
             augmented=True,
             pairwiseModel=False,
         )
+
+        # print(f"mQ={self.mQ}")
+        # print(f"Pz0={self.Pz0}")
+        # print(f"mz0={self.mz0}")
+        # input("ATTENTE")

@@ -40,12 +40,15 @@ class Model_x2_y2_pairwise(BaseModelGxGy):
         super().__init__(dim_x=2, dim_y=2, model_type="nonlinear")
 
         try:
-            Q = np.array([[0.08, 0.01], [0.01, 0.05]])
-            R = np.array([[0.1, 0.0], [0.0, 0.05]])
-            M = np.array([[0.01, 0.0], [0.0, 0.01]])
-            self.mQ = np.block([[Q, M], [M.T, R]])
-            self.mz0 = np.zeros((self.dim_xy, 1))
-            self.Pz0 = np.eye(self.dim_xy) / 20.0
+            # Q = np.array([[0.08, 0.01], [0.01, 0.05]])
+            # R = np.array([[0.1, 0.0], [0.0, 0.05]])
+            # M = np.array([[0.01, 0.0], [0.0, 0.01]])
+            # self.mQ = np.block([[Q, M], [M.T, R]])
+            # self.mz0 = np.zeros((self.dim_xy, 1))
+            # self.Pz0 = np.eye(self.dim_xy) / 20.0
+            self.mQ, self.mz0, self.Pz0 = self._init_random_params(
+                self.dim_x, self.dim_y, 0.15, seed=None
+            )
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] Initialization failed: {e}"

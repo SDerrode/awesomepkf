@@ -14,25 +14,14 @@ __all__ = ["Model_x1_y1_Gordon_classic"]
 class Model_x1_y1_Gordon_classic(BaseModelFxHx):
 
     def __init__(self, dt=1.0):
-        self._dt = (
-            dt  # ← stocker AVANT super().__init__ qui appelle _build_symbolic_model
-        )
+        self._dt = dt
 
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
         try:
-            self.mQ = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.10
+            self.mQ, self.mz0, self.Pz0 = self._init_random_params(
+                self.dim_x, self.dim_y, 0.50, seed=None
             )
-            # self.mQ = np.diag(np.diag(self.mQ))
-            # print(f"self.mQ={self.mQ}")
-            # input("ATTENTE")
 
-            self.mz0 = self._randMatrices.rng.uniform(-1, 1, size=self.dim_xy).reshape(
-                -1, 1
-            )
-            self.Pz0 = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.02
-            )
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] Initialization failed: {e}"

@@ -41,15 +41,11 @@ class Model_x1_y1_pairwise(BaseModelGxGy):
         # self.d = 1.5
 
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
-
         try:
-            self.mQ = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 1.5
+            self.mQ, self.mz0, self.Pz0 = self._init_random_params(
+                self.dim_x, self.dim_y, 0.50, seed=None
             )
-            self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
-            self.Pz0 = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 1.5
-            )
+
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] Initialization failed: {e}"

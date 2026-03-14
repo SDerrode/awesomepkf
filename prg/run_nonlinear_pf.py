@@ -4,9 +4,9 @@
 import argparse
 import sys
 
-from prg.base_classes.nonlinear_ppf_runner_simulation import NonLinearPPFRunnerSim
-from prg.base_classes.nonlinear_ppf_runner_from_file import (
-    NonLinearPPFRunnerFromFile,
+from prg.base_classes.nonlinear_pf_runner_simulation import NonLinearPFRunnerSim
+from prg.base_classes.nonlinear_pf_runner_from_file import (
+    NonLinearPFRunnerFromFile,
 )
 from prg.utils.parser import add_arguments
 from prg.utils.exceptions import NumericalError, FilterError, PKFError, ParamError
@@ -26,7 +26,7 @@ def setup_logging(verbose: int):
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Run NonLinear PPF")
+    parser = argparse.ArgumentParser(description="Run NonLinear PF")
 
     add_arguments(
         parser,
@@ -71,7 +71,7 @@ def main() -> None:
 
     try:
         if args.dataFileName is not None:
-            runner = NonLinearPPFRunnerFromFile(
+            runner = NonLinearPFRunnerFromFile(
                 model_name=model_name,
                 n_particles=args.n_particles,
                 data_filename=args.dataFileName,
@@ -80,7 +80,7 @@ def main() -> None:
                 save_history=args.saveHistory,
             )
         else:
-            runner = NonLinearPPFRunnerSim(
+            runner = NonLinearPFRunnerSim(
                 model_name=model_name,
                 N=args.N,
                 sKey=args.sKey,

@@ -343,7 +343,9 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
+
         if __debug__:
+            assert isinstance(dt, (float, int))
             if x.ndim == 2:
                 assert all(a.shape == (self.dim_x, 1) for a in (x, t))
                 assert all(a.shape == (self.dim_y, 1) for a in (y, u))
@@ -370,6 +372,7 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
                 f"[{self.__class__.__name__}] _g: shape mismatch during stack: {e}"
             ) from e
 
+    # ------------------------------------------------------------------
     def latex_model(self) -> str:
         """
         Returns a LaTeX representation of the nonlinear state-space model f/h.

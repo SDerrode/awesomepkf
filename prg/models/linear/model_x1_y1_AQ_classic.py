@@ -27,16 +27,16 @@ class Model_x1_y1_AQ_classic(LinearAmQ):
             D = np.zeros((dim_y, dim_y))
 
             F[0, 0] = 0.8
-            C[0, 0] = 0.1
+            C[0, 0] = 0.25
             H[0, 0] = 0.4
-            D[0, 0] = 0.05
+            D[0, 0] = 0.35
 
         except (ValueError, IndexError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{model_x1_y1_AQ_classic.MODEL_NAME}] Initialization failed: {e}"
             ) from e
 
-        mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.15)
+        mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.90)
         # mQ = np.diag(np.diag(mQ))  # bruit non corrélé
 
         # 2- Ecriture du meme modele sous forme couple pour utiliser les algo couples

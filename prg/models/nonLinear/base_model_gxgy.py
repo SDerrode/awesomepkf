@@ -284,6 +284,7 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
 
     # ------------------------------------------------------------------
     def _g(self, x, y, t, u, dt):
+
         if __debug__:
             assert isinstance(dt, (float, int))
             if x.ndim == 2:

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 from prg.classes.SeedGenerator import SeedGenerator
 from prg.utils.exceptions import NumericalError
+from prg.models.Generate_MatrixCov import generate_block_matrix
 from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
 
 __all__ = ["BaseModelNonLinear", "NumericalError"]  # re-exported for convenience
@@ -53,6 +54,19 @@ class BaseModelNonLinear:
         super().__init_subclass__(**kwargs)
         n = cls.__name__
         cls.MODEL_NAME = n[0].lower() + n[1:]
+
+    @staticmethod
+    def _init_random_params(dim_x, dim_y, val_max, seed=None):
+        """Generates mQ, mz0, Pz0 in a standard way via SeedGenerator."""
+        seed = 9
+        rng = SeedGenerator(seed).rng
+        try:
+            mQ = generate_block_matrix(rng, dim_x, dim_y, val_max)
+            mz0 = rng.standard_normal((dim_x + dim_y, 1))
+            Pz0 = generate_block_matrix(rng, dim_x, dim_y, val_max)
+        except (ValueError, np.exceptions.AxisError) as e:
+            raise NumericalError(f"_init_random_params failed: {e}") from e
+        return mQ, mz0, Pz0
 
     # ------------------------------------------------------------------
     def g(self, z, noise_z, dt):
