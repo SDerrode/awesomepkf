@@ -31,15 +31,13 @@ class Model_x2_y1_classic(BaseModelFxHx):
     R_MIN: float = 1e-8
 
     def __init__(self):
+
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
         try:
-            self.mQ = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+            self.mQ, self.mz0, self.Pz0 = self._init_random_params(
+                self.dim_x, self.dim_y, 0.50, seed=None
             )
-            self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
-            self.Pz0 = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
-            )
+
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] Initialization failed: {e}"

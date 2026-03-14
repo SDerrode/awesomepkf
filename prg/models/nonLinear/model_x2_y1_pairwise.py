@@ -43,13 +43,16 @@ class Model_x2_y1_pairwise(BaseModelGxGy):
         super().__init__(dim_x=2, dim_y=1, model_type="nonlinear")
 
         try:
-            Q = np.array([[0.03, 0.0], [0.0, 0.03]])
-            R = np.array([[0.03]])
-            M = np.zeros((self.dim_x, self.dim_y))
-            self.mQ = np.block([[Q, M], [M.T, R]])
-            self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
-            self.Pz0 = generate_block_matrix(
-                self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+            # Q = np.array([[0.03, 0.0], [0.0, 0.03]])
+            # R = np.array([[0.03]])
+            # M = np.zeros((self.dim_x, self.dim_y))
+            # self.mQ = np.block([[Q, M], [M.T, R]])
+            # self.mz0 = self._randMatrices.rng.standard_normal((self.dim_xy, 1))
+            # self.Pz0 = generate_block_matrix(
+            #     self._randMatrices.rng, self.dim_x, self.dim_y, 0.05
+            # )
+            self.mQ, self.mz0, self.Pz0 = self._init_random_params(
+                self.dim_x, self.dim_y, 0.15, seed=None
             )
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(

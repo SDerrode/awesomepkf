@@ -73,6 +73,7 @@ _OPTION_CONFIG: dict = {
             "model_x2_y1_classic",
             "model_x2_y1_pairwise",
             "model_x2_y1_Rapport_classic",
+            "model_x2_y2_augmented",
             "model_x2_y2_pairwise",
         ],
         "default": None,

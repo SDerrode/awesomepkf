@@ -28,16 +28,16 @@ class Model_x2_y2_AQ_classic(LinearAmQ):
             D = np.zeros((dim_y, dim_y))
 
             F = np.array([[0.6, 0.1], [0.1, 0.5]])
-            C = np.array([[0.1, 0.05], [0.05, 0.1]])
-            H = np.array([[0.4, 0.01], [0.15, 0.7]])
-            D = np.array([[0.1, 0.05], [0.05, 0.1]])
+            C = np.array([[0.15, 0.05], [0.10, 0.15]])
+            H = np.array([[0.6, 0.20], [0.15, 0.7]])
+            D = np.array([[0.2, 0.15], [0.15, 0.25]])
 
         except (ValueError, IndexError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{model_x2_y2_AQ_classic.MODEL_NAME}] Initialization failed: {e}"
             ) from e
 
-        mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.15)
+        mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.40)
         # mQ = np.diag(np.diag(mQ))  # bruit non corrélé
 
         # 2- Ecriture du meme modele sous forme couple pour utiliser les algo couples
