@@ -45,6 +45,15 @@ class BaseModelLinear:
         self.alpha = 0.25
         self.beta = 2.0
         self.kappa = 0.0
+        # Option 1 — valeurs classiques Wan & Merwe
+        # self.alpha = 1e-3
+        # self.beta = 2.0
+        # self.kappa = 0.0  # → lambda_ ≈ -2 + ε, Wm[0] ≈ -1, Wc[0] ≈ 1
+        # Option 2 — cubature (symétrique, tous poids positifs)
+        # self.alpha = 1.0
+        # self.beta  = 0.0
+        # self.kappa = 0.0   # → lambda_ = 0, Wm = Wc = 1/(2n)
+
         self.lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
 
     def __init_subclass__(cls, **kwargs):
