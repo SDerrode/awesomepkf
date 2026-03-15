@@ -99,18 +99,42 @@ class NonLinear_UKF(PKF):
         # Sigma-point set for the update step (state space dim_x)
         self.sigma_upd_set = cls(dim=self.dim_x, param=self.param)
 
-        # Extract Q_x and R once — avoids slicing inside the loop.
-        # For linear models, the actual noise covariance is B @ mQ @ B^T
-        # (not mQ directly, since mQ is the covariance of the raw noise v_n
-        # and B is the noise input matrix). For nonlinear models, B does not
-        # exist and mQ is the effective covariance directly (B = I implicitly).
+        # Extract Q_x, R and M once — avoids slicing inside the loop.
+        #
+        # For linear pairwise models the noise enters as  z' = A z + B v,
+        # v ~ N(0, mQ), with B = [[B_xx, 0], [B_yx, B_yy]].
+        # The UKF reformulates the model as
+        #   x' = f(x) + w,  w = B_xx v^x ~ N(0, Q_x)
+        #   y  = H x  + e,  e = B_yy v^y ~ N(0, R)
+        # where v^x and v^y may be correlated: M = Cov(w, e) = B_xx mQ_xy B_yy^T.
+        #
+        # Using B @ mQ @ B^T to extract R is WRONG: the [dim_x:, dim_x:] block
+        # equals  B_yx mQ_xx B_yx^T + ... + B_yy mQ_yy B_yy^T, which contains
+        # a H·Q_x·H^T term that is already counted in H·P_pred·H^T → double
+        # counting inflates R and biases the Kalman gain.
+        #
+        # Correct extraction for linear models:
+        #   Q_x = B_xx @ mQ_xx @ B_xx^T   (unchanged — B @ mQ @ B^T [0:, 0:] is the same)
+        #   R   = B_yy @ mQ_yy @ B_yy^T   (pure obs-noise variance, no H·Q·H^T term)
+        #   M   = B_xx @ mQ_xy @ B_yy^T   (process/obs cross-covariance)
+        #
+        # For nonlinear models B = I implicitly, so mQ is the effective covariance
+        # and noise channels are independent (M = 0).
         if hasattr(self.param, "B"):
-            _Sigma_z = self.param.B @ self.param.mQ @ self.param.B.T
+            _B   = self.param.B
+            _mQ  = self.param.mQ
+            _Bxx = _B[: self.dim_x, : self.dim_x]   # process-noise input  (dim_x, dim_x)
+            _Byy = _B[self.dim_x :, self.dim_x :]   # obs-noise input      (dim_y, dim_y)
+            self._Q_x: np.ndarray = _Bxx @ _mQ[: self.dim_x, : self.dim_x] @ _Bxx.T
+            self._R:   np.ndarray = _Byy @ _mQ[self.dim_x :, self.dim_x :] @ _Byy.T
+            self._M:   Optional[np.ndarray] = (
+                _Bxx @ _mQ[: self.dim_x, self.dim_x :] @ _Byy.T
+            )
         else:
-            _Sigma_z = self.param.mQ
-        self._Q_x: np.ndarray = _Sigma_z[: self.dim_x, : self.dim_x]
-        self._R: np.ndarray = _Sigma_z[self.dim_x :, self.dim_x :]
-        # self._M: np.ndarray = _Sigma_z[: self.dim_x, self.dim_x :]
+            _mQ = self.param.mQ
+            self._Q_x = _mQ[: self.dim_x, : self.dim_x]
+            self._R   = _mQ[self.dim_x :, self.dim_x :]
+            self._M   = None
 
         # For linear models with pairwise A matrix, _hx gives h(x) = A_yx @ x
         # where A_yx = H_true @ F (classic) or H_true @ A_aug (augmented).
@@ -268,10 +292,17 @@ class NonLinear_UKF(PKF):
 
             # Cross-covariance  P_xy = Σ Wc_i · δx_i δh_iᵀ
             diffs_x = sigma_upd - x_pred  # (n_sigma, dim_x, 1)
-            # In process_filter — corrected cross-covariance:
             P_xy: np.ndarray = np.einsum(
                 "i,ijk,ilk->jl", self.sigma_upd_set.Wc, diffs_x, diffs_h
             )  # (dim_x, dim_y)
+
+            # Correction for correlated process/observation noise (linear models).
+            # The unscented cross-covariance P_xy misses M = Cov(w, e) and P_yy
+            # misses H·M + M^T·H^T (see derivation in __init__).
+            if self._M is not None and self._H_obs is not None:
+                P_xy += self._M
+                _HM   = self._H_obs @ self._M   # (dim_y, dim_y)
+                P_yy += _HM + _HM.T
 
             # ================================================================
             # Assembly of the augmented block expected by _nextUpdating:
