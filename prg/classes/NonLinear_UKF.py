@@ -91,9 +91,7 @@ class NonLinear_UKF(PKF):
             )
 
         if self.param.pairwiseModel:
-            raise FilterError(
-                "UKF does not support pairwise models."
-            )
+            raise FilterError("UKF does not support pairwise models.")
 
         # Sigma-point set for the prediction step (state space dim_x)
         self.sigma_pred_set = cls(dim=self.dim_x, param=self.param)
