@@ -114,6 +114,23 @@ class NonLinear_UKF(PKF):
         self._R: np.ndarray = _Sigma_z[self.dim_x :, self.dim_x :]
         # self._M: np.ndarray = _Sigma_z[: self.dim_x, self.dim_x :]
 
+        # For linear models with pairwise A matrix, _hx gives h(x) = A_yx @ x
+        # where A_yx = H_true @ F (classic) or H_true @ A_aug (augmented).
+        # The standard UKF update step applies h to sigma-points representing
+        # x_{k+1|k}, so it needs H_true @ x_{k+1}, not H_true @ F @ x_{k+1}.
+        # H_true is recovered analytically: H_true = A_yx @ inv(F)
+        # where F = A[:dim_x, :dim_x].  This identity holds for both classic
+        # (A_yx = H @ F) and augmented (A_yx = H_aug @ A_pairwise) models.
+        # For nonlinear models (no A attribute), param.h is used directly.
+        self._H_obs: Optional[np.ndarray] = None
+        if hasattr(self.param, "A"):
+            _F_blk = self.param.A[: self.dim_x, : self.dim_x]  # (dim_x, dim_x)
+            _A_yx  = self.param.A[self.dim_x :, : self.dim_x]  # (dim_y, dim_x)
+            try:
+                self._H_obs = _A_yx @ np.linalg.inv(_F_blk)   # (dim_y, dim_x)
+            except np.linalg.LinAlgError:
+                pass  # singular F — fallback to param.h
+
     # ------------------------------------------------------------------
     # Main filter loop
     # ------------------------------------------------------------------
@@ -231,7 +248,13 @@ class NonLinear_UKF(PKF):
                 zeros_y = np.zeros((n_sigma, self.dim_y, 1))
 
             # Vectorised propagation through h  →  h(σ_i)
-            sigma_h = self.param.h(sigma_upd, zeros_y, self.dt)  # (n_sigma, dim_y, 1)
+            # Linear models: apply H_true directly (avoids the pairwise A_yx @ x
+            # bias where A_yx = H_true @ F introduces an extra factor F).
+            # Nonlinear models: call param.h as usual.
+            if self._H_obs is not None:
+                sigma_h = np.einsum("ij,njk->nik", self._H_obs, sigma_upd)
+            else:
+                sigma_h = self.param.h(sigma_upd, zeros_y, self.dt)  # (n_sigma, dim_y, 1)
 
             # Predicted observation  y_pred = Σ Wm_i · h(σ_i)
             y_pred: np.ndarray = np.sum(
