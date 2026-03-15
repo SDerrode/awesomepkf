@@ -102,9 +102,17 @@ class NonLinear_UKF(PKF):
         self.sigma_upd_set = cls(dim=self.dim_x, param=self.param)
 
         # Extract Q_x and R once — avoids slicing inside the loop.
-        self._Q_x: np.ndarray = self.param.mQ[: self.dim_x, : self.dim_x]
-        self._R: np.ndarray = self.param.mQ[self.dim_x :, self.dim_x :]
-        # self._M: np.ndarray = self.param.mQ[: self.dim_x, self.dim_x :]
+        # For linear models, the actual noise covariance is B @ mQ @ B^T
+        # (not mQ directly, since mQ is the covariance of the raw noise v_n
+        # and B is the noise input matrix). For nonlinear models, B does not
+        # exist and mQ is the effective covariance directly (B = I implicitly).
+        if hasattr(self.param, "B"):
+            _Sigma_z = self.param.B @ self.param.mQ @ self.param.B.T
+        else:
+            _Sigma_z = self.param.mQ
+        self._Q_x: np.ndarray = _Sigma_z[: self.dim_x, : self.dim_x]
+        self._R: np.ndarray = _Sigma_z[self.dim_x :, self.dim_x :]
+        # self._M: np.ndarray = _Sigma_z[: self.dim_x, self.dim_x :]
 
     # ------------------------------------------------------------------
     # Main filter loop
