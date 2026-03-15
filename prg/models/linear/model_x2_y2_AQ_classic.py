@@ -38,7 +38,7 @@ class Model_x2_y2_AQ_classic(LinearAmQ):
             ) from e
 
         mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.40)
-        # mQ = np.diag(np.diag(mQ))  # bruit non corrélé
+        mQ = np.diag(np.diag(mQ))  # bruit non corrélé
 
         # 2- Ecriture du meme modele sous forme couple pour utiliser les algo couples
         A = np.block(
