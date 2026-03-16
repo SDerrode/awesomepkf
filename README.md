@@ -86,6 +86,7 @@ Interactive Jupyter notebooks are available in the [`ipynb/`](ipynb/) directory:
 | 02 | [`tutorial_02_nonlinear_models.ipynb`](ipynb/tutorial_02_nonlinear_models.ipynb) | Nonlinear models: EPKF, UPKF, PPF and PF — classic vs pairwise, sigma-point sets, particle count impact, filter comparison |
 | 03 | [`tutorial_03_sigma_points.ipynb`](ipynb/tutorial_03_sigma_points.ipynb) | Sigma-point sets for the UPKF: wan2000, cpkf, lerner2002, ito2000 — impact on estimation accuracy |
 | 04 | [`tutorial_04_particle_filters.ipynb`](ipynb/tutorial_04_particle_filters.ipynb) | Particle filters (PPF and PF): tuning the number of particles, resampling, comparison with EPKF/UPKF |
+| 05 | [`tutorial_05_new_model_lotkavolterra.ipynb`](ipynb/tutorial_05_new_model_lotkavolterra.ipynb) | How to add a new nonlinear pairwise model: Lotka-Volterra prey-predator (dim_x=1, dim_y=1), augmented version, filtering with EPKF/UPKF/PPF |
 
 ---
 
