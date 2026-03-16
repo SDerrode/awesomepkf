@@ -39,7 +39,7 @@ class Model_x2_y2_AQ_pairwise(LinearAmQ):
                 ],
             ]
         )
-        mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.15)
+        mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=1.0)
         super().__init__(
             dim_x=dim_x,
             dim_y=dim_y,
