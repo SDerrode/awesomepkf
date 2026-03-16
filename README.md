@@ -19,6 +19,7 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
         - [Extended Pairwise Kalman Filter (EPKF)](#extended-pairwise-kalman-filter-epkf)
         - [Unscented Pairwise Kalman Filter (UPKF)](#unscented-pairwise-kalman-filter-upkf)
         - [Pairwise Particle Filter (PPF)](#pairwise-particle-filter-ppf)
+    - [Tutorials](#tutorials)
     - [Usage Examples](#usage-examples)
         - [Simulate Linear Data and Filter with PKF](#simulate-linear-data-and-filter-with-pkf)
         - [Simulate Non-Linear Data and Filter with EPKF, UPKF and PPF](#simulate-non-linear-data-and-filter-with-epkf-upkf-and-ppf)
@@ -72,6 +73,19 @@ Or use the CLI entry points installed with the package:
 awesomepkf-simulate --N 2000 --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --sKey 303
 awesomepkf-pkf      --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --plot
 ```
+
+---
+
+## Tutorials
+
+Interactive Jupyter notebooks are available in the [`ipynb/`](ipynb/) directory:
+
+| # | Notebook | Description |
+|---|----------|-------------|
+| 01 | [`tutorial_01_getting_started.ipynb`](ipynb/tutorial_01_getting_started.ipynb) | Introduction to the PKF framework: linear models, running the filter, visualizing estimates, error metrics (MSE, NEES, NIS), comparing PKF / EPKF / UPKF |
+| 02 | [`tutorial_02_nonlinear_models.ipynb`](ipynb/tutorial_02_nonlinear_models.ipynb) | Nonlinear models: EPKF, UPKF, PPF and PF — classic vs pairwise, sigma-point sets, particle count impact, filter comparison |
+| 03 | [`tutorial_03_sigma_points.ipynb`](ipynb/tutorial_03_sigma_points.ipynb) | Sigma-point sets for the UPKF: wan2000, cpkf, lerner2002, ito2000 — impact on estimation accuracy |
+| 04 | [`tutorial_04_particle_filters.ipynb`](ipynb/tutorial_04_particle_filters.ipynb) | Particle filters (PPF and PF): tuning the number of particles, resampling, comparison with EPKF/UPKF |
 
 ---
 
@@ -132,6 +146,14 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 <!-- PROJECT_STRUCTURE_START -->
 ```text
 ./
+├── .claude/
+│   └── worktrees/
+│       ├── cranky-raman
+│       └── vigilant-euler
+├── .github/
+│   └── workflows/
+│       ├── ci.yml
+│       └── publish.yml
 ├── data/
 │   ├── datafile/
 │   ├── historyTracker/
@@ -148,6 +170,9 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 │   │   ├── nonlinear_epkf_runner_base.py
 │   │   ├── nonlinear_epkf_runner_from_file.py
 │   │   ├── nonlinear_epkf_runner_simulation.py
+│   │   ├── nonlinear_pf_runner_base.py
+│   │   ├── nonlinear_pf_runner_from_file.py
+│   │   ├── nonlinear_pf_runner_simulation.py
 │   │   ├── nonlinear_ppf_runner_base.py
 │   │   ├── nonlinear_ppf_runner_from_file.py
 │   │   ├── nonlinear_ppf_runner_simulation.py
@@ -166,6 +191,7 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 │   │   ├── Linear_PKF.py
 │   │   ├── MatrixDiagnostics.py
 │   │   ├── NonLinear_EPKF.py
+│   │   ├── NonLinear_PF.py
 │   │   ├── NonLinear_PPF.py
 │   │   ├── NonLinear_UKF.py
 │   │   ├── NonLinear_UKF_CN_Linearized.py
@@ -185,8 +211,12 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 │   │   │   ├── model_x1_y1_AQ_classic.py
 │   │   │   ├── model_x1_y1_AQ_pairwise.py
 │   │   │   ├── model_x1_y1_Sigma_pairwise.py
+│   │   │   ├── model_x2_y2_AQ_augmented.py
+│   │   │   ├── model_x2_y2_AQ_classic.py
 │   │   │   ├── model_x2_y2_AQ_pairwise.py
 │   │   │   ├── model_x2_y2_Sigma_pairwise.py
+│   │   │   ├── model_x3_y1_AQ_augmented.py
+│   │   │   ├── model_x3_y1_AQ_classic.py
 │   │   │   ├── model_x3_y1_AQ_pairwise.py
 │   │   │   └── model_x3_y1_Sigma_pairwise.py
 │   │   ├── nonLinear/
@@ -204,9 +234,16 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 │   │   │   ├── model_x2_y1_classic.py
 │   │   │   ├── model_x2_y1_pairwise.py
 │   │   │   ├── model_x2_y1_rapport_classic.py
+│   │   │   ├── model_x2_y2_augmented.py
 │   │   │   └── model_x2_y2_pairwise.py
 │   │   ├── Generate_MatrixCov.py
 │   │   └── __init__.py
+│   ├── tests/
+│   │   ├── __init__.py
+│   │   ├── conftest.py
+│   │   ├── test_linear_pkf.py
+│   │   ├── test_models.py
+│   │   └── test_nonlinear_filters.py
 │   ├── utils/
 │   │   ├── __init__.py
 │   │   ├── csv_to_parquet.py
@@ -218,15 +255,18 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 │   ├── __init__.py
 │   ├── run_linear_pkf.py
 │   ├── run_nonlinear_epkf.py
+│   ├── run_nonlinear_pf.py
 │   ├── run_nonlinear_ppf.py
 │   ├── run_nonlinear_ukf.py
 │   ├── run_nonlinear_upkf.py
 │   └── run_simulator.py
 ├── .gitignore
+├── CHANGELOG.md
 ├── LICENSE
 ├── README.md
+├── pyproject.toml
 └── update_readme_structure.sh
 
-13 directories, 82 files
+18 directories, 103 files
 ```
 <!-- PROJECT_STRUCTURE_END -->
