@@ -10,8 +10,9 @@ data/realdata/
 # Logs générés par les scripts bash
 logs/
 
-# tous les programmes de tests perso
-/prg/tests
+# scripts de tests personnels (gitignorés, ne pas committer)
+/prg/tests/run_test*.sh
+/prg/tests/testClement.py
 
 # VSCodium / VSCode
 AwesomePKF.code-workspace
