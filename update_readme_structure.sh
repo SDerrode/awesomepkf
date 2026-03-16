@@ -1,53 +1,56 @@
 #!/usr/bin/env bash
-# FIX : #!/usr/bin/env bash pour portabilité
-set -euo pipefail   # FIX : toute erreur interrompt le script avant d'écraser le README
+set -euo pipefail
 
 # ---------------------------------------------------------------------------
-# Vérification des dépendances
-# FIX : tree et git vérifiés — sinon README vidé silencieusement
+# Usage as a pre-push hook:
+#   ln -sf ../../update_readme_structure.sh .git/hooks/pre-push
+# Or run manually before pushing:
+#   ./update_readme_structure.sh && git push origin main
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Dependency check
 # ---------------------------------------------------------------------------
 for cmd in git tree awk; do
     if ! command -v "$cmd" &>/dev/null; then
-        echo "❌ Commande requise introuvable : $cmd"
+        echo "❌ Required command not found: $cmd"
         exit 1
     fi
 done
 
 # ---------------------------------------------------------------------------
-# Vérification que README.md existe dans le répertoire courant
-# FIX : évite d'écraser / créer un README vide si lancé au mauvais endroit
+# Ensure README.md exists in current directory
 # ---------------------------------------------------------------------------
 if [ ! -f "README.md" ]; then
-    echo "❌ README.md introuvable dans le répertoire courant ($(pwd))."
-    echo "   Lancez ce script depuis la racine du projet."
+    echo "❌ README.md not found in current directory ($(pwd))."
+    echo "   Run this script from the project root."
     exit 1
 fi
 
 # ---------------------------------------------------------------------------
-# Fichiers temporaires avec nettoyage garanti
-# FIX : trap assure la suppression de README.tmp même en cas d'erreur
+# Temporary files with guaranteed cleanup
 # ---------------------------------------------------------------------------
 TMP_TREE=$(mktemp)
 TMP_README=$(mktemp)
 trap 'rm -f "$TMP_TREE" "$TMP_README"' EXIT
 
 # ---------------------------------------------------------------------------
-# Génération de l'arborescence
+# Generate directory tree
+# Excludes: hidden dirs (.claude, .github), logs, venv, binaries, caches
+# Strips the summary line ("N directories, M files") added by tree
 # ---------------------------------------------------------------------------
 git ls-files | tree --fromfile -F -a -L 4 --dirsfirst \
-    -I "logs|venv|*.csv|*.pkl|*.png|__pycache__|*.code-workspace|*.ipynb|.vscode|.gitkeep|.DS_Store" \
+    -I "logs|venv|*.csv|*.pkl|*.png|__pycache__|*.code-workspace|*.ipynb|.vscode|.gitkeep|.DS_Store|.github|.claude" \
+    | grep -Ev "^[0-9]+ director" \
     > "$TMP_TREE"
 
-# Vérification que tree a produit un résultat non vide
 if [ ! -s "$TMP_TREE" ]; then
-    echo "❌ tree n'a produit aucune sortie — README non modifié."
+    echo "❌ tree produced no output — README not modified."
     exit 1
 fi
 
 # ---------------------------------------------------------------------------
-# Mise à jour du README
-# FIX : TMP_TREE passé via -v (plus d'interpolation shell dans awk → pas d'injection)
-# FIX : résultat écrit dans TMP_README d'abord, puis mv atomique vers README.md
+# Update README between markers
 # ---------------------------------------------------------------------------
 awk -v tmp="$TMP_TREE" '
 /<!-- PROJECT_STRUCTURE_START -->/ {
@@ -65,4 +68,13 @@ awk -v tmp="$TMP_TREE" '
 
 mv "$TMP_README" README.md
 
-echo "✅ README mis à jour."
+# ---------------------------------------------------------------------------
+# Auto-commit README if it changed (useful when run as pre-push hook)
+# ---------------------------------------------------------------------------
+if ! git diff --quiet README.md; then
+    git add README.md
+    git commit -m "Auto-update project structure in README"
+    echo "✅ README updated and committed."
+else
+    echo "✅ README already up to date."
+fi
