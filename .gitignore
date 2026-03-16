@@ -10,8 +10,8 @@ data/realdata/
 # Logs générés par les scripts bash
 logs/
 
-# scripts et programmes de tests personnels (non versionnés)
-/tests/testDev/
+# Personal dev test scripts and programs (not versioned)
+/prg/testsDev/
 
 # VSCodium / VSCode
 AwesomePKF.code-workspace
