@@ -102,6 +102,12 @@ class NonLinear_PF(PKF):
     ) -> None:
         super().__init__(param, sKey, verbose)
 
+        if getattr(param, "pairwiseModel", False):
+            raise ParamError(
+                "NonLinear_PF does not support pairwise models (param.f is None). "
+                "Use NonLinear_PPF instead."
+            )
+
         self.n_particles = n_particles
         self.resample_threshold = resample_threshold
         self.resample_method = resample_method
