@@ -1,0 +1,80 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "awesomepkf"
+version = "0.1.0"
+description = "Pairwise Kalman Filter (PKF) and variants (EPKF, UPKF, PPF) for linear and nonlinear state estimation"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Derrode Stéphane", email = "" },
+]
+keywords = [
+    "kalman filter",
+    "pairwise kalman filter",
+    "unscented kalman filter",
+    "particle filter",
+    "state estimation",
+    "nonlinear filtering",
+    "bayesian filtering",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "matplotlib>=3.7",
+    "pandas>=2.0",
+    "rich>=13.0",
+    "chardet>=5.0",
+    "sympy>=1.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+awesomepkf-simulate    = "prg.run_simulator:main"
+awesomepkf-pkf         = "prg.run_linear_pkf:main"
+awesomepkf-epkf        = "prg.run_nonlinear_epkf:main"
+awesomepkf-upkf        = "prg.run_nonlinear_upkf:main"
+awesomepkf-ukf         = "prg.run_nonlinear_ukf:main"
+awesomepkf-ppf         = "prg.run_nonlinear_ppf:main"
+awesomepkf-pf          = "prg.run_nonlinear_pf:main"
+
+[project.urls]
+Homepage   = "https://github.com/sderrode/awesomepkf"
+Repository = "https://github.com/sderrode/awesomepkf"
+
+[tool.hatch.build.targets.wheel]
+packages = ["prg"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "prg/",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+exclude = [
+    "data/",
+    "ipynb/",
+    "prg/tests/",
+    ".claude/",
+]
