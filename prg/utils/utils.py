@@ -330,24 +330,24 @@ def compute_errors(
 
     # FIX: errors already computed above — duplicate line removed
 
-    if not model.param.augmented:
-        # Mean NEES
-        tab_Pk = np.stack(P_list, axis=0)
-        nees_all = _compute_quadratic_form(errors, tab_Pk)
-        nees_mean = float(np.nanmean(nees_all))
-        report["nees_mean"] = nees_mean
+    # if not model.param.augmented:
+    # Mean NEES
+    tab_Pk = np.stack(P_list, axis=0)
+    nees_all = _compute_quadratic_form(errors, tab_Pk)
+    nees_mean = float(np.nanmean(nees_all))
+    report["nees_mean"] = nees_mean
 
-        # Mean NIS (optional)
-        # FIX: S_list validated explicitly — TypeError crash if None when i_list is provided
-        if i_list is not None:
-            if S_list is None:
-                raise ValueError("S_list must be provided when i_list is not None.")
-            tab_Sk = np.stack(S_list, axis=0)
-            nis_all = _compute_quadratic_form(i_list, tab_Sk)
-            nis_mean = float(np.nanmean(nis_all))
-        else:
-            nis_mean = "na"
-        report["nis_mean"] = nis_mean
+    # Mean NIS (optional)
+    # FIX: S_list validated explicitly — TypeError crash if None when i_list is provided
+    if i_list is not None:
+        if S_list is None:
+            raise ValueError("S_list must be provided when i_list is not None.")
+        tab_Sk = np.stack(S_list, axis=0)
+        nis_all = _compute_quadratic_form(i_list, tab_Sk)
+        nis_mean = float(np.nanmean(nis_all))
+    else:
+        nis_mean = "na"
+    report["nis_mean"] = nis_mean
 
     # Per-component MSE and MAE for augmented models
     if model.param.augmented:
