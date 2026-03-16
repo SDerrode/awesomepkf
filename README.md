@@ -3,8 +3,8 @@
 This repository contains a set of programs illustrating the **Pairwise Kalman Filter (PKF)**, a generalization of the classical Kalman Filter, extended to non-linear models. It includes several variants of non-linear filters:
 
 - **Extended Pairwise Kalman Filter (EPKF)**
-- **Unscented Pairwise Kalman Filter (UPKF)**, with multiple variants depending on the choice of sigma points  
-- **Pairwise Particle Filter (PPF)**  
+- **Unscented Pairwise Kalman Filter (UPKF)**, with multiple variants depending on the choice of sigma points
+- **Pairwise Particle Filter (PPF)**
 
 ---
 
@@ -12,6 +12,7 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
 
 - [AwesomePKF](#awesomepkf)
     - [Table of Contents](#table-of-contents)
+    - [Installation](#installation)
     - [Models and Simulations](#models-and-simulations)
     - [Filters](#filters)
         - [Pairwise Kalman Filter (PKF)](#pairwise-kalman-filter-pkf)
@@ -22,6 +23,55 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
         - [Simulate Linear Data and Filter with PKF](#simulate-linear-data-and-filter-with-pkf)
         - [Simulate Non-Linear Data and Filter with EPKF, UPKF and PPF](#simulate-non-linear-data-and-filter-with-epkf-upkf-and-ppf)
     - [Folders structure](#folders-structure)
+
+---
+
+## Installation
+
+### From PyPI (recommended)
+
+```bash
+pip install awesomepkf
+```
+
+### From source
+
+```bash
+git clone https://github.com/sderrode/awesomepkf.git
+cd awesomepkf
+pip install .
+```
+
+### Development install
+
+```bash
+pip install -e ".[dev]"
+```
+
+### Requirements
+
+- Python >= 3.10
+- numpy, scipy, matplotlib, pandas, rich, sympy
+
+---
+
+## Quick Start
+
+```python
+from prg.classes.Linear_PKF import Linear_PKF
+from prg.models.linear.model_x1_y1_AQ_pairwise import Model_x1_y1_AQ_pairwise
+
+model = Model_x1_y1_AQ_pairwise()
+pkf = Linear_PKF(model)
+# ... run the filter step by step
+```
+
+Or use the CLI entry points installed with the package:
+
+```bash
+awesomepkf-simulate --N 2000 --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --sKey 303
+awesomepkf-pkf      --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --plot
+```
 
 ---
 
@@ -61,18 +111,18 @@ Each filter has two types of programs:
 ### Simulate Linear Data and Filter with PKF
 
 ```bash
-python3 prg/run_simulator.py --N 2000 --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --verbose 1 --sKey 303
-python3 prg/run_linear_pkf.py --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --verbose 1 --saveHistory --plot
+awesomepkf-simulate --N 2000 --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --verbose 1 --sKey 303
+awesomepkf-pkf      --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --verbose 1 --saveHistory --plot
 ```
 
 ### Simulate Non-Linear Data and Filter with EPKF, UPKF and PPF
 
 ```bash
-python3 prg/run_simulator.py   --N 1000 --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --verbose 1 --sKey 303
+awesomepkf-simulate --N 1000 --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --verbose 1 --sKey 303
 
-python3 prg/run_nonlinear_epkf.py --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv"                       --verbose 1 --saveHistory --plot
-python3 prg/run_nonlinear_upkf.py --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --sigmaSet "wan2000"   --verbose 1 --saveHistory --plot
-python3 prg/run_nonlinear_ppf.py  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --nbParticles 300       --verbose 1 --saveHistory --plot
+awesomepkf-epkf --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv"                      --verbose 1 --saveHistory --plot
+awesomepkf-upkf --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --sigmaSet "wan2000"  --verbose 1 --saveHistory --plot
+awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --nbParticles 300     --verbose 1 --saveHistory --plot
 ```
 
 ---
