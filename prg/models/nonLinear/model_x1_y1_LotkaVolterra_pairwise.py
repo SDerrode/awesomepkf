@@ -26,22 +26,44 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
         DT    = 0.3   pas de discretisation temporelle
 
     Equation de transition gx(x, y, vx) :
-        gx = (1 + ALPHA*DT)*x - BETA*DT*x*y + vx
+        gx = x * exp((ALPHA - BETA*y)*DT + vx)
 
     Equation d observation gy(x, y, vy) :
-        gy = (1 - GAMMA*DT)*y + DELTA*DT*x*y + vy
+        gy = y * exp((DELTA*x - GAMMA)*DT + vy)
 
-    Point d equilibre non trivial : (x*, y*) = (GAMMA/DELTA, ALPHA/BETA) = (8, 5)
+    Discretisation exponentielle avec bruit multiplicatif log-normal :
+    le bruit rentre dans l exponentielle, garantissant x > 0 et y > 0
+    a chaque pas. Les variances sigma2_u/sigma2_v sont estimees en espace
+    log, coherent avec ce modele de bruit.
+    Evite l instabilite inherente du schema d Euler explicite sur LV
+    (valeurs propres du Jacobien en equilibre : 1 ± i*sqrt(alpha*gamma)*DT,
+    module > 1 quelle que soit la valeur de DT avec Euler).
+
+    Point d equilibre non trivial : (x*, y*) = (GAMMA/DELTA, ALPHA/BETA)
 
     Les jacobiens An = dg/dz et Bn = dg/dn sont calcules automatiquement
     par SymPy dans BaseModelGxGy.
+
+    D'apres le script estimate_lotka_volterra.py (les estimations pour les fichiers C3, C7 C10 n'aboutissent pas)
+    Tableau complet des jeux de paramètres estimés par  :
+         alpha    beta   gamma   delta  sigma2_u  sigma2_v    x_eq     y_eq
+    file
+    C1.csv 0.27503 0.01030 0.35974 0.76738   0.16179   0.09662 0.46878 26.69027
+    C2.csv 0.10867 0.00768 0.22848 0.41950   0.12951   0.13069 0.54466 14.14477
+    C4.csv 0.37483 0.01657 0.10005 0.18329   0.05395   0.08138 0.54587 22.62324
+    C5.csv 0.13292 0.00784 0.25214 0.56788   0.10016   0.08002 0.44399 16.95028
+    C6.csv 0.00312 0.00014 0.02534 0.01175   0.04425   0.15036 2.15718 21.86837
+    C8.csv 0.17664 0.02475 0.25907 0.34799   0.20895   0.13382 0.74447  7.13705
+    C9.csv 0.14704 0.00608 0.26263 0.27429   0.11398   0.04613 0.95752 24.17644
+
     """
 
-    ALPHA: float = 0.5
-    BETA:  float = 0.1
-    GAMMA: float = 0.4
-    DELTA: float = 0.05
-    DT:    float = 0.3
+    # C1
+    ALPHA: float = 0.27503
+    BETA: float = 0.01030
+    GAMMA: float = 0.35974
+    DELTA: float = 0.76738
+    DT: float = 1.0
 
     def __init__(self):
         # Les attributs de classe sont accessibles avant super().__init__()
@@ -49,8 +71,8 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
         super().__init__(dim_x=1, dim_y=1, model_type="nonlinear")
 
         # Point d equilibre non trivial
-        x_eq = self.GAMMA / self.DELTA   # 8.0
-        y_eq = self.ALPHA / self.BETA    # 5.0
+        x_eq = self.GAMMA / self.DELTA
+        y_eq = self.ALPHA / self.BETA
 
         try:
             self.mQ, self.mz0, self.Pz0 = self._init_random_params(
@@ -58,6 +80,9 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
             )
             # Initialisation autour du point d equilibre
             self.mz0 = np.array([[x_eq], [y_eq]])
+            # Variance du bruit:
+            self.mQ = np.diag([0.16179, 0.09662])
+
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{self.MODEL_NAME}] Initialization failed: {e}"
@@ -67,11 +92,11 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
     def symbolic_model(self, sx, sy, st, su):
         x, y, t, u = sx[0], sy[0], st[0], su[0]
 
-        sgx = sp.Matrix([
-            (1 + self.ALPHA * self.DT) * x - self.BETA * self.DT * x * y + t
-        ])
-        sgy = sp.Matrix([
-            (1 - self.GAMMA * self.DT) * y + self.DELTA * self.DT * x * y + u
-        ])
+        sgx = sp.Matrix(
+            [x * sp.exp((self.ALPHA - self.BETA * y) * self.DT + t)]
+        )
+        sgy = sp.Matrix(
+            [y * sp.exp((self.DELTA * x - self.GAMMA) * self.DT + u)]
+        )
 
         return sgx, sgy
