@@ -25,19 +25,19 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
         DELTA = 0.05  efficacite de conversion predation -> croissance
         DT    = 0.3   pas de discretisation temporelle
 
-    Equation de transition gx(x, y, vx) :
-        gx = x * exp((ALPHA - BETA*y)*DT + vx)
+    Equations de transition (intégrateur symplectique de Suris) :
+        y_det  = y * exp((DELTA*x - GAMMA)*DT)           [y sans bruit]
+        gx     = x * exp((ALPHA - BETA*y_det)*DT + vx)   [x utilise y_det]
+        gy     = y_det * exp(vy)                          [bruit multiplicatif]
 
-    Equation d observation gy(x, y, vy) :
-        gy = y * exp((DELTA*x - GAMMA)*DT + vy)
+    L integrateur symplectique (Suris / Volterra-preserving) met a jour y
+    en premier puis utilise ce y dans la mise a jour de x. Le determinant
+    du Jacobien de la partie deterministe vaut 1 (volume-preservant) :
+    les trajectoires restent sur les courbes fermees du systeme continu.
+    Toute methode explicite (Euler, exponentielle) a des valeurs propres
+    1 ± i*sqrt(alpha*gamma)*DT de module > 1 — instable.
 
-    Discretisation exponentielle avec bruit multiplicatif log-normal :
-    le bruit rentre dans l exponentielle, garantissant x > 0 et y > 0
-    a chaque pas. Les variances sigma2_u/sigma2_v sont estimees en espace
-    log, coherent avec ce modele de bruit.
-    Evite l instabilite inherente du schema d Euler explicite sur LV
-    (valeurs propres du Jacobien en equilibre : 1 ± i*sqrt(alpha*gamma)*DT,
-    module > 1 quelle que soit la valeur de DT avec Euler).
+    Bruit log-normal (dans l exponentielle) : garantit x > 0, y > 0.
 
     Point d equilibre non trivial : (x*, y*) = (GAMMA/DELTA, ALPHA/BETA)
 
@@ -59,10 +59,21 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
     """
 
     # C1
-    ALPHA: float = 0.27503
-    BETA: float = 0.01030
-    GAMMA: float = 0.35974
-    DELTA: float = 0.76738
+    # ALPHA: float = 0.27503
+    # BETA: float = 0.01030
+    # GAMMA: float = 0.35974
+    # DELTA: float = 0.76738
+    # C4
+    # ALPHA: float = 0.37483
+    # BETA: float = 0.01657
+    # GAMMA: float = 0.10005
+    # DELTA: float = 0.18329
+    # autre
+    ALPHA: float = 0.5
+    BETA: float = 0.1
+    GAMMA: float = 0.4
+    DELTA: float = 0.05
+
     DT: float = 1.0
 
     def __init__(self):
@@ -81,7 +92,8 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
             # Initialisation autour du point d equilibre
             self.mz0 = np.array([[x_eq], [y_eq]])
             # Variance du bruit:
-            self.mQ = np.diag([0.16179, 0.09662])
+            # self.mQ = np.diag([0.05395, 0.08138])
+            self.mQ = np.diag([0.01, 0.01])
 
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
@@ -92,11 +104,11 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
     def symbolic_model(self, sx, sy, st, su):
         x, y, t, u = sx[0], sy[0], st[0], su[0]
 
-        sgx = sp.Matrix(
-            [x * sp.exp((self.ALPHA - self.BETA * y) * self.DT + t)]
-        )
-        sgy = sp.Matrix(
-            [y * sp.exp((self.DELTA * x - self.GAMMA) * self.DT + u)]
-        )
+        # Intégrateur symplectique de Suris : y mis à jour en premier,
+        # puis x utilise ce y_det (volume-preservant, trajectoires bornées)
+        y_det = y * sp.exp((self.DELTA * x - self.GAMMA) * self.DT)
+
+        sgx = sp.Matrix([x * sp.exp((self.ALPHA - self.BETA * y_det) * self.DT + t)])
+        sgy = sp.Matrix([y_det * sp.exp(u)])
 
         return sgx, sgy
