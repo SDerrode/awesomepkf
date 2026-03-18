@@ -22,11 +22,12 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
         xB = population de predateurs (observation precedente y)
     dim_x = 2, dim_y = 1, augmented = True.
 
-    Dynamique  : f(x_aug) = [gx(xA, xB), gy(xA, xB)]
-        Les expressions symboliques gx et gy sont recuperees directement
-        depuis Model_x1_y1_LotkaVolterra_pairwise._sgx / _sgy via
-        substitution SymPy — l integrateur symplectique est donc
-        automatiquement herite.
+    Dynamique  : f(x_aug) = [gx_det(xA, xB) + vx, gy_det(xA, xB) + vy]
+        gx_det et gy_det sont les parties deterministes (bruit=0) de
+        l integrateur symplectique du modele pairwise.
+        Le bruit est rajoute additivement car BaseModelFxHx._eval_A
+        evalue le Jacobien d(f)/d(x) sans les bruits — si le bruit
+        etait dans l exp, l evaluation numerique echouerait.
     Observation: h(x_aug) = xB  (predateurs)
     """
 
@@ -75,9 +76,9 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
 
         subs_state = {mx0: sx[0], my0: sx[1]}
 
-        # Partie déterministe (bruit=0) : Jacobien d(sfx)/d(sx) sans termes de bruit.
-        # BaseModelFxHx._eval_A évalue le Jacobien sans fournir les bruits ;
-        # si le bruit était dans l'exp, l'évaluation numérique échouerait
+        # Partie deterministe (bruit=0) : Jacobien d(sfx)/d(sx) sans termes de bruit.
+        # BaseModelFxHx._eval_A evalue le Jacobien sans fournir les bruits ;
+        # si le bruit etait dans l'exp, l'evaluation numerique echouerait
         # avec "'Add' object has no attribute 'exp'".
         gx_det = self.mod._sgx.subs({**subs_state, mt0: sp.Integer(0)})[0]
         gy_det = self.mod._sgy.subs({**subs_state, mu0: sp.Integer(0)})[0]
