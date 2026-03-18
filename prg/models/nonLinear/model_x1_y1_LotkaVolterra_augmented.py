@@ -26,7 +26,7 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
         gx = (1 + ALPHA*DT)*xA - BETA*DT*xA*xB + vx
         gy = (1 - GAMMA*DT)*xB + DELTA*DT*xA*xB + vy
         L integrateur symplectique du modele pairwise contient exp(DELTA*xA)
-        qui deborde des que xA > ~10 (x_eq ≈ 0.47 pour C1). Le schema
+        qui deborde des que xA > ~10 (x_eq = 0.47 pour C1). Le schema
         d Euler est polynomial — pas d overflow possible — et convient pour
         le filtre PKF qui corrige l etat a chaque pas avec les observations.
     Observation: h(x_aug) = xB  (predateurs)
@@ -46,15 +46,28 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
         )
 
         try:
+            x_eq = self.mod.GAMMA / self.mod.DELTA
+            y_eq = self.mod.ALPHA / self.mod.BETA
+
+            # Convertit le bruit log-normal du modele pairwise en bruit additif
+            # pour le schema d Euler : var_additif ≈ equilibre^2 * sigma2_log.
+            # Le Jacobien d Euler a |lambda|^2 = 1 + alpha*gamma*DT^2 > 1 :
+            # un Q trop petit laisse la covariance croitre et devenir indefinie.
+            # Q[1,1] = y_eq^2 * mQ[1,1] ≈ 26.7^2 * 0.01 ≈ 7 domine la croissance.
+            var_xA = x_eq**2 * self.mod.mQ[0, 0]
+            var_xB = y_eq**2 * self.mod.mQ[1, 1]
+
             self.mQ = np.zeros((dim_xy + dim_y, dim_xy + dim_y))
-            self.mQ[0:dim_xy, 0:dim_xy] = self.mod.mQ
+            self.mQ[0, 0] = var_xA
+            self.mQ[1, 1] = var_xB
 
             self.mz0 = np.zeros((dim_xy + dim_y, 1))
             self.mz0[0:dim_xy] = self.mod.mz0
             self.mz0[dim_xy : dim_xy + dim_y] = self.mz0[dim_xy - dim_y : dim_xy]
 
             self.Pz0 = np.zeros((dim_xy + dim_y, dim_xy + dim_y))
-            self.Pz0[0:dim_xy, 0:dim_xy] = self.mod.Pz0
+            self.Pz0[0, 0] = var_xA
+            self.Pz0[1, 1] = var_xB
             self.Pz0[dim_xy : dim_xy + dim_y, :] = self.Pz0[dim_xy - dim_y : dim_xy, :]
             self.Pz0[:, dim_xy : dim_xy + dim_y] = self.Pz0[:, dim_xy - dim_y : dim_xy]
 
@@ -74,10 +87,10 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
         Le Jacobien d(sfx)/d(sx) ne depend pas de st -> _eval_A fonctionne.
         """
         xA, xB = sx[0], sx[1]
-        A = self.mod.ALPHA
-        B = self.mod.BETA
-        G = self.mod.GAMMA
-        D = self.mod.DELTA
+        A  = self.mod.ALPHA
+        B  = self.mod.BETA
+        G  = self.mod.GAMMA
+        D  = self.mod.DELTA
         DT = self.mod.DT
 
         sfx = sp.Matrix([
