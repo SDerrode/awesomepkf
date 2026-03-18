@@ -12,20 +12,13 @@ __all__ = ["Model_x1_y1_LotkaVolterra_pairwise"]
 
 class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
     """
-    Modele proie-predateur de Lotka-Volterra discretise a l ordre 1
-    (Euler explicite), forme pairwise scalaire (dim_x=1, dim_y=1).
+    Modele proie-predateur de Lotka-Volterra, forme pairwise scalaire
+    (dim_x=1, dim_y=1).
 
     x = population de proies    (scalaire)
     y = population de predateurs (scalaire)
 
-    Parametres :
-        ALPHA = 0.5   taux de croissance des proies
-        BETA  = 0.1   taux de predation
-        GAMMA = 0.4   taux de mortalite des predateurs
-        DELTA = 0.05  efficacite de conversion predation -> croissance
-        DT    = 0.3   pas de discretisation temporelle
-
-    Equations de transition (intégrateur symplectique de Suris) :
+    Equations de transition (integrateur symplectique de Suris) :
         y_det  = y * exp((DELTA*x - GAMMA)*DT)           [y sans bruit]
         gx     = x * exp((ALPHA - BETA*y_det)*DT + vx)   [x utilise y_det]
         gy     = y_det * exp(vy)                          [bruit multiplicatif]
@@ -35,7 +28,7 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
     du Jacobien de la partie deterministe vaut 1 (volume-preservant) :
     les trajectoires restent sur les courbes fermees du systeme continu.
     Toute methode explicite (Euler, exponentielle) a des valeurs propres
-    1 ± i*sqrt(alpha*gamma)*DT de module > 1 — instable.
+    1 +/- i*sqrt(alpha*gamma)*DT de module > 1 -- instable.
 
     Bruit log-normal (dans l exponentielle) : garantit x > 0, y > 0.
 
@@ -44,8 +37,7 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
     Les jacobiens An = dg/dz et Bn = dg/dn sont calcules automatiquement
     par SymPy dans BaseModelGxGy.
 
-    D'apres le script estimate_lotka_volterra.py (les estimations pour les fichiers C3, C7 C10 n'aboutissent pas)
-    Tableau complet des jeux de paramètres estimés par  :
+    D apres le script estimate_lotka_volterra.py :
          alpha    beta   gamma   delta  sigma2_u  sigma2_v    x_eq     y_eq
     file
     C1.csv 0.27503 0.01030 0.35974 0.76738   0.16179   0.09662 0.46878 26.69027
@@ -55,24 +47,23 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
     C6.csv 0.00312 0.00014 0.02534 0.01175   0.04425   0.15036 2.15718 21.86837
     C8.csv 0.17664 0.02475 0.25907 0.34799   0.20895   0.13382 0.74447  7.13705
     C9.csv 0.14704 0.00608 0.26263 0.27429   0.11398   0.04613 0.95752 24.17644
-
     """
 
     # C1
-    # ALPHA: float = 0.27503
-    # BETA: float = 0.01030
-    # GAMMA: float = 0.35974
-    # DELTA: float = 0.76738
+    ALPHA: float = 0.27503
+    BETA:  float = 0.01030
+    GAMMA: float = 0.35974
+    DELTA: float = 0.76738
     # C4
     # ALPHA: float = 0.37483
-    # BETA: float = 0.01657
+    # BETA:  float = 0.01657
     # GAMMA: float = 0.10005
     # DELTA: float = 0.18329
-    # autre
-    ALPHA: float = 0.5
-    BETA: float = 0.1
-    GAMMA: float = 0.4
-    DELTA: float = 0.05
+    # parametres classiques (equilibre x*=8, y*=5)
+    # ALPHA: float = 0.5
+    # BETA:  float = 0.1
+    # GAMMA: float = 0.4
+    # DELTA: float = 0.05
 
     DT: float = 1.0
 
@@ -91,8 +82,7 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
             )
             # Initialisation autour du point d equilibre
             self.mz0 = np.array([[x_eq], [y_eq]])
-            # Variance du bruit:
-            # self.mQ = np.diag([0.05395, 0.08138])
+            # Variance du bruit (faible pour simulation stable)
             self.mQ = np.diag([0.01, 0.01])
 
         except (ValueError, np.exceptions.AxisError) as e:
@@ -104,8 +94,8 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
     def symbolic_model(self, sx, sy, st, su):
         x, y, t, u = sx[0], sy[0], st[0], su[0]
 
-        # Intégrateur symplectique de Suris : y mis à jour en premier,
-        # puis x utilise ce y_det (volume-preservant, trajectoires bornées)
+        # Integrateur symplectique de Suris : y mis a jour en premier,
+        # puis x utilise ce y_det (volume-preservant, trajectoires bornees)
         y_det = y * sp.exp((self.DELTA * x - self.GAMMA) * self.DT)
 
         sgx = sp.Matrix([x * sp.exp((self.ALPHA - self.BETA * y_det) * self.DT + t)])
