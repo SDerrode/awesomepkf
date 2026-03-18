@@ -50,7 +50,7 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
             y_eq = self.mod.ALPHA / self.mod.BETA
 
             # Convertit le bruit log-normal du modele pairwise en bruit additif
-            # pour le schema d Euler : var_additif ≈ equilibre^2 * sigma2_log.
+            # pour le schema d Euler : var_additif = equilibre^2 * sigma2_log.
             # Le Jacobien d Euler a |lambda|^2 = 1 + alpha*gamma*DT^2 > 1 :
             # un Q trop petit laisse la covariance croitre et devenir indefinie.
             # Q[1,1] = y_eq^2 * mQ[1,1] ≈ 26.7^2 * 0.01 ≈ 7 domine la croissance.
