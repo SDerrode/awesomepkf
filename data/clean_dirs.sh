@@ -32,18 +32,18 @@ for dir in "${DIRS[@]}"; do
     # FIX 2 : les dossiers contenant un .gitkeep sont également préservés
     #          (l'original supprimait le dossier parent même si .gitkeep était dedans)
 
-    # Supprimer les fichiers (hors .gitkeep)
+    # Supprimer les fichiers (hors .gitkeep et hors realdata/)
     if [ "$DRY_RUN" = true ]; then
-        find "$TARGET_DIR" -mindepth 1 -type f ! -name ".gitkeep" -print
+        find "$TARGET_DIR" -mindepth 1 -not -path "*/realdata*" -type f ! -name ".gitkeep" -print
     else
-        find "$TARGET_DIR" -mindepth 1 -type f ! -name ".gitkeep" -delete
+        find "$TARGET_DIR" -mindepth 1 -not -path "*/realdata*" -type f ! -name ".gitkeep" -delete
     fi
 
-    # Supprimer les dossiers vides (les dossiers avec .gitkeep ne seront pas vides)
+    # Supprimer les dossiers vides (hors realdata/, les dossiers avec .gitkeep ne seront pas vides)
     if [ "$DRY_RUN" = true ]; then
-        find "$TARGET_DIR" -mindepth 1 -type d -empty -print
+        find "$TARGET_DIR" -mindepth 1 -not -path "*/realdata*" -type d -empty -print
     else
-        find "$TARGET_DIR" -mindepth 1 -type d -empty -delete
+        find "$TARGET_DIR" -mindepth 1 -not -path "*/realdata*" -type d -empty -delete
     fi
 
 done
