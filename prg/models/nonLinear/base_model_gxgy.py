@@ -413,8 +413,12 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
             Renders a LaTeX expression with noise terms forced to the end.
             Works around sp.Add canonical sorting by substituting noise=0
             to extract the deterministic part, then concatenates manually.
+            Only reorders when noise is purely additive (noise term depends
+            exclusively on noise symbols). For multiplicative noise (e.g.
+            x*exp(A + vx)), falls back to sp.latex(expr) directly.
             """
-            zero_subs = {sp.Symbol(n, real=True): 0 for n in vx_names + vy_names}
+            noise_syms = {sp.Symbol(n, real=True) for n in vx_names + vy_names}
+            zero_subs = {s: 0 for s in noise_syms}
             det = expr.subs(zero_subs)  # deterministic part
             noise = sp.expand(expr - det)  # noise contribution
 
@@ -422,6 +426,11 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
                 return sp.latex(det)
             if det == 0:
                 return sp.latex(noise)
+
+            # For multiplicative noise (e.g. x*exp(A+vx)), noise contains
+            # state variables — not purely additive. Render the full expression.
+            if not noise.free_symbols.issubset(noise_syms):
+                return sp.latex(expr)
 
             noise_lat = sp.latex(noise)
             # If the noise term starts with '-', no '+' is needed
@@ -440,7 +449,7 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
         # Assembly
         # ------------------------------------------------------------------
         lines = [
-            r"\begin{align}",
+            r"\begin{aligned}",
             # ── Dynamics
             rf"  g_x\!\left({x_n},\,{y_n},\,{vx_n}\right)"
             rf" &= {_lat(sgx_s)} \\[6pt]",
@@ -457,7 +466,7 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
             # ── Noise Jacobian
             rf"  {Bn_n} &= \frac{{\partial\, g}}{{\partial\, {v_n}}}"
             rf" = {sp.latex(sBn_s)}",
-            r"\end{align}",
+            r"\end{aligned}",
         ]
 
         return _fix_latex("\n".join(lines))
