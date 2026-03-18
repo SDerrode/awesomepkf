@@ -23,18 +23,22 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
     dim_x = 2, dim_y = 1, augmented = True.
 
     Dynamique  : f(x_aug) = [gx(xA, xB), gy(xA, xB)]
+        Les expressions symboliques gx et gy sont recuperees directement
+        depuis Model_x1_y1_LotkaVolterra_pairwise._sgx / _sgy via
+        substitution SymPy — l integrateur symplectique est donc
+        automatiquement herite.
     Observation: h(x_aug) = xB  (predateurs)
     """
 
     def __init__(self):
         self.mod = Model_x1_y1_LotkaVolterra_pairwise()
-        dim_x = self.mod.dim_x  # 1
-        dim_y = self.mod.dim_y  # 1
+        dim_x  = self.mod.dim_x   # 1
+        dim_y  = self.mod.dim_y   # 1
         dim_xy = self.mod.dim_xy  # 2
 
         super().__init__(
-            dim_x=dim_x + dim_y,  # 2
-            dim_y=dim_y,  # 1
+            dim_x=dim_x + dim_y,   # 2
+            dim_y=dim_y,           # 1
             model_type="nonlinear",
             augmented=True,
         )
@@ -71,12 +75,17 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
 
         subs_state = {mx0: sx[0], my0: sx[1]}
 
-        sfx = sp.Matrix(
-            [
-                self.mod._sgx.subs({**subs_state, mt0: st[0]})[0],  # gx(xA, xB)
-                self.mod._sgy.subs({**subs_state, mu0: st[1]})[0],  # gy(xA, xB)
-            ]
-        )
+        # Partie déterministe (bruit=0) : Jacobien d(sfx)/d(sx) sans termes de bruit.
+        # BaseModelFxHx._eval_A évalue le Jacobien sans fournir les bruits ;
+        # si le bruit était dans l'exp, l'évaluation numérique échouerait
+        # avec "'Add' object has no attribute 'exp'".
+        gx_det = self.mod._sgx.subs({**subs_state, mt0: sp.Integer(0)})[0]
+        gy_det = self.mod._sgy.subs({**subs_state, mu0: sp.Integer(0)})[0]
+
+        sfx = sp.Matrix([
+            gx_det + st[0],  # dynamique symplectique + bruit additif pour xA
+            gy_det + st[1],  # dynamique symplectique + bruit additif pour xB
+        ])
 
         # h(x_aug) = xB = predateurs
         shx = sp.Matrix([[sx[1]]])
