@@ -221,10 +221,7 @@ def run_pipeline(
     -------
     DataFrame indexé par nom de fichier avec les paramètres estimés.
     """
-    csv_files = sorted(
-        f for f in data_dir.glob("*.csv")
-        if not (f.stem.endswith("_clean") or f.stem.endswith("_clean_xy"))
-    )
+    csv_files = sorted(data_dir.glob("[Cc][0-9]*.csv"))
     if not csv_files:
         raise FileNotFoundError(f"Aucun fichier CSV trouvé dans {data_dir}")
 
@@ -280,10 +277,7 @@ def print_summary(results: pd.DataFrame, data_dir: Path) -> None:
     print("VALIDATION — Point d'équilibre théorique vs. moyenne empirique des données")
     print("─" * 72)
     print(f"  {'fichier':12s}  {'x* théo':>8}  {'x̄ réel':>8}  {'y* théo':>8}  {'ȳ réel':>8}")
-    for fpath in sorted(
-        f for f in data_dir.glob("*.csv")
-        if not (f.stem.endswith("_clean") or f.stem.endswith("_clean_xy"))
-    ):
+    for fpath in sorted(data_dir.glob("[Cc][0-9]*.csv")):
         if fpath.name not in results.index:
             continue
         row = results.loc[fpath.name]
