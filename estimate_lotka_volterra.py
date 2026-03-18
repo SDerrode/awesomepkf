@@ -79,7 +79,31 @@ def load_csv(filepath: Path) -> pd.DataFrame:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2. Lissage par spline et dérivation analytique
+# 2. Sauvegarde du CSV nettoyé
+# ─────────────────────────────────────────────────────────────────────────────
+
+def save_cleaned_csv(df: pd.DataFrame, filepath: Path) -> Path:
+    """
+    Sauvegarde une version nettoyée du fichier CSV dans le même répertoire,
+    avec le suffixe '_clean.csv'.
+
+    Colonnes de sortie :
+      dt  — incrément de temps par rapport à la ligne précédente (NaN pour la 1re ligne)
+      X0  — population proie (algues)
+      Y0  — population prédateur (rotifères)
+    """
+    out = df[["time", "prey", "predator"]].copy()
+    out.insert(0, "dt", out["time"].diff())
+    out = out.drop(columns="time")
+    out.columns = ["dt", "X0", "Y0"]
+
+    out_path = filepath.with_name(filepath.stem + "_clean.csv")
+    out.to_csv(out_path, index=False)
+    return out_path
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Lissage par spline et dérivation analytique
 # ─────────────────────────────────────────────────────────────────────────────
 
 def spline_smooth_and_derive(
@@ -103,7 +127,7 @@ def spline_smooth_and_derive(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 3. Estimation des paramètres sur un fichier
+# 5. Estimation des paramètres sur un fichier
 # ─────────────────────────────────────────────────────────────────────────────
 
 def estimate_one_file(
@@ -179,7 +203,7 @@ def estimate_one_file(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4. Pipeline complet sur tous les fichiers CSV
+# 6. Pipeline complet sur tous les fichiers CSV
 # ─────────────────────────────────────────────────────────────────────────────
 
 PARAM_NAMES = ["alpha", "beta", "gamma", "delta", "sigma2_u", "sigma2_v"]
@@ -207,6 +231,9 @@ def run_pipeline(
             if len(df) < 10:
                 print(f"  [SKIP] {fpath.name} : seulement {len(df)} points valides")
                 continue
+
+            out_path = save_cleaned_csv(df, fpath)
+            print(f"  → {out_path.name} sauvegardé ({len(df)} lignes)")
 
             result = estimate_one_file(df, smooth_factor=smooth_factor)
             result["file"] = fpath.name
@@ -264,7 +291,7 @@ def print_summary(results: pd.DataFrame, data_dir: Path) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 5. Point d'entrée
+# 7. Point d'entrée
 # ─────────────────────────────────────────────────────────────────────────────
 
 def parse_args() -> argparse.Namespace:
