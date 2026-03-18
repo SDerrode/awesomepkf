@@ -22,12 +22,13 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
         xB = population de predateurs (observation precedente y)
     dim_x = 2, dim_y = 1, augmented = True.
 
-    Dynamique  : f(x_aug) = [gx_det(xA, xB) + vx, gy_det(xA, xB) + vy]
-        gx_det et gy_det sont les parties deterministes (bruit=0) de
-        l integrateur symplectique du modele pairwise.
-        Le bruit est rajoute additivement car BaseModelFxHx._eval_A
-        evalue le Jacobien d(f)/d(x) sans les bruits — si le bruit
-        etait dans l exp, l evaluation numerique echouerait.
+    Dynamique  : schema d Euler explicite (polynomiale) :
+        gx = (1 + ALPHA*DT)*xA - BETA*DT*xA*xB + vx
+        gy = (1 - GAMMA*DT)*xB + DELTA*DT*xA*xB + vy
+        L integrateur symplectique du modele pairwise contient exp(DELTA*xA)
+        qui deborde des que xA > ~10 (x_eq ≈ 0.47 pour C1). Le schema
+        d Euler est polynomial — pas d overflow possible — et convient pour
+        le filtre PKF qui corrige l etat a chaque pas avec les observations.
     Observation: h(x_aug) = xB  (predateurs)
     """
 
@@ -66,29 +67,24 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
     def symbolic_model(self, sx, st, su):
         """
         sx : sp.Matrix(2, 1) -> [xA, xB]  (proies, predateurs)
-        st : sp.Matrix(2, 1) -> [t0, t1]  (bruits process)
+        st : sp.Matrix(2, 1) -> [t0, t1]  (bruits process additifs)
         su : sp.Matrix(1, 1) -> [u0]      (bruit observation, non utilise dans h)
+
+        Schema d Euler explicite : dynamique polynomiale, pas d overflow.
+        Le Jacobien d(sfx)/d(sx) ne depend pas de st -> _eval_A fonctionne.
         """
-        mx0 = sp.Symbol("x0", real=True)
-        my0 = sp.Symbol("y0", real=True)
-        mt0 = sp.Symbol("t0", real=True)
-        mu0 = sp.Symbol("u0", real=True)
-
-        subs_state = {mx0: sx[0], my0: sx[1]}
-
-        # Partie deterministe (bruit=0) : Jacobien d(sfx)/d(sx) sans termes de bruit.
-        # BaseModelFxHx._eval_A evalue le Jacobien sans fournir les bruits ;
-        # si le bruit etait dans l'exp, l'evaluation numerique echouerait
-        # avec "'Add' object has no attribute 'exp'".
-        gx_det = self.mod._sgx.subs({**subs_state, mt0: sp.Integer(0)})[0]
-        gy_det = self.mod._sgy.subs({**subs_state, mu0: sp.Integer(0)})[0]
+        xA, xB = sx[0], sx[1]
+        A = self.mod.ALPHA
+        B = self.mod.BETA
+        G = self.mod.GAMMA
+        D = self.mod.DELTA
+        DT = self.mod.DT
 
         sfx = sp.Matrix([
-            gx_det + st[0],  # dynamique symplectique + bruit additif pour xA
-            gy_det + st[1],  # dynamique symplectique + bruit additif pour xB
+            (1 + A * DT) * xA - B * DT * xA * xB + st[0],
+            (1 - G * DT) * xB + D * DT * xA * xB + st[1],
         ])
 
-        # h(x_aug) = xB = predateurs
-        shx = sp.Matrix([[sx[1]]])
+        shx = sp.Matrix([[xB]])
 
         return sfx, shx
