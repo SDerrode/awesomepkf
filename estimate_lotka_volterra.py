@@ -82,24 +82,25 @@ def load_csv(filepath: Path) -> pd.DataFrame:
 # 2. Sauvegarde du CSV nettoyé
 # ─────────────────────────────────────────────────────────────────────────────
 
-def save_cleaned_csv(df: pd.DataFrame, filepath: Path) -> Path:
+def save_cleaned_csv(df: pd.DataFrame, filepath: Path) -> tuple[Path, Path]:
     """
-    Sauvegarde une version nettoyée du fichier CSV dans le même répertoire,
-    avec le suffixe '_clean.csv'.
+    Sauvegarde deux versions nettoyées du fichier CSV dans le même répertoire :
 
-    Colonnes de sortie :
-      dt  — incrément de temps par rapport à la ligne précédente (NaN pour la 1re ligne)
-      X0  — population proie (algues)
-      Y0  — population prédateur (rotifères)
+      *_clean.csv  — 3 colonnes : t (temps), X0 (proie), Y0 (prédateur)
+      *_xy.csv     — 2 colonnes : X0 (proie), Y0 (prédateur)
     """
-    out = df[["time", "prey", "predator"]].copy()
-    out.insert(0, "dt", out["time"].diff())
-    out = out.drop(columns="time")
-    out.columns = ["dt", "X0", "Y0"]
+    prey_pred = df[["prey", "predator"]].rename(columns={"prey": "X0", "predator": "Y0"})
 
-    out_path = filepath.with_name(filepath.stem + "_clean.csv")
-    out.to_csv(out_path, index=False)
-    return out_path
+    # Format 3 colonnes : t, X0, Y0
+    txyz = df[["time"]].rename(columns={"time": "t"}).join(prey_pred)
+    path_3col = filepath.with_name(filepath.stem + "_clean.csv")
+    txyz.to_csv(path_3col, index=False)
+
+    # Format 2 colonnes : X0, Y0
+    path_2col = filepath.with_name(filepath.stem + "_xy.csv")
+    prey_pred.to_csv(path_2col, index=False)
+
+    return path_3col, path_2col
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -232,8 +233,8 @@ def run_pipeline(
                 print(f"  [SKIP] {fpath.name} : seulement {len(df)} points valides")
                 continue
 
-            out_path = save_cleaned_csv(df, fpath)
-            print(f"  → {out_path.name} sauvegardé ({len(df)} lignes)")
+            path_3col, path_2col = save_cleaned_csv(df, fpath)
+            print(f"  → {path_3col.name}, {path_2col.name} sauvegardés ({len(df)} lignes)")
 
             result = estimate_one_file(df, smooth_factor=smooth_factor)
             result["file"] = fpath.name
