@@ -86,8 +86,8 @@ def save_cleaned_csv(df: pd.DataFrame, filepath: Path) -> tuple[Path, Path]:
     """
     Sauvegarde deux versions nettoyées du fichier CSV dans le même répertoire :
 
-      *_clean.csv  — 3 colonnes : t (temps), X0 (proie), Y0 (prédateur)
-      *_xy.csv     — 2 colonnes : X0 (proie), Y0 (prédateur)
+      *_clean.csv     — 3 colonnes : t (temps), X0 (proie), Y0 (prédateur)
+      *_clean_xy.csv  — 2 colonnes : X0 (proie), Y0 (prédateur)
     """
     prey_pred = df[["prey", "predator"]].rename(columns={"prey": "X0", "predator": "Y0"})
 
@@ -97,7 +97,7 @@ def save_cleaned_csv(df: pd.DataFrame, filepath: Path) -> tuple[Path, Path]:
     txyz.to_csv(path_3col, index=False)
 
     # Format 2 colonnes : X0, Y0
-    path_2col = filepath.with_name(filepath.stem + "_xy.csv")
+    path_2col = filepath.with_name(filepath.stem + "_clean_xy.csv")
     prey_pred.to_csv(path_2col, index=False)
 
     return path_3col, path_2col
@@ -221,7 +221,10 @@ def run_pipeline(
     -------
     DataFrame indexé par nom de fichier avec les paramètres estimés.
     """
-    csv_files = sorted(data_dir.glob("*.csv"))
+    csv_files = sorted(
+        f for f in data_dir.glob("*.csv")
+        if not (f.stem.endswith("_clean") or f.stem.endswith("_clean_xy"))
+    )
     if not csv_files:
         raise FileNotFoundError(f"Aucun fichier CSV trouvé dans {data_dir}")
 
@@ -277,7 +280,10 @@ def print_summary(results: pd.DataFrame, data_dir: Path) -> None:
     print("VALIDATION — Point d'équilibre théorique vs. moyenne empirique des données")
     print("─" * 72)
     print(f"  {'fichier':12s}  {'x* théo':>8}  {'x̄ réel':>8}  {'y* théo':>8}  {'ȳ réel':>8}")
-    for fpath in sorted(data_dir.glob("*.csv")):
+    for fpath in sorted(
+        f for f in data_dir.glob("*.csv")
+        if not (f.stem.endswith("_clean") or f.stem.endswith("_clean_xy"))
+    ):
         if fpath.name not in results.index:
             continue
         row = results.loc[fpath.name]
