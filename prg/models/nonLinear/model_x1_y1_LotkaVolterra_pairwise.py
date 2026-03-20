@@ -49,11 +49,13 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
     C9.csv 0.14704 0.00608 0.26263 0.27429   0.11398   0.04613 0.95752 24.17644
     """
 
-    # C1
-    ALPHA: float = 0.27503
-    BETA:  float = 0.01030
-    GAMMA: float = 0.35974
-    DELTA: float = 0.76738
+    # C6
+    ALPHA: float = 0.00312
+    BETA: float = 0.00014
+    GAMMA: float = 0.02534
+    DELTA: float = 0.01175
+    SIGMAX: float = 0.39668
+    SIGMAY: float = 0.43850
     # C4
     # ALPHA: float = 0.37483
     # BETA:  float = 0.01657
@@ -83,7 +85,7 @@ class Model_x1_y1_LotkaVolterra_pairwise(BaseModelGxGy):
             # Initialisation autour du point d equilibre
             self.mz0 = np.array([[x_eq], [y_eq]])
             # Variance du bruit (faible pour simulation stable)
-            self.mQ = np.diag([0.01, 0.01])
+            self.mQ = np.diag([self.SIGMAX, self.SIGMAY])
 
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
