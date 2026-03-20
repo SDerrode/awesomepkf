@@ -147,21 +147,12 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 <!-- PROJECT_STRUCTURE_START -->
 ```text
 ./
-├── .claude/
-│   └── worktrees/
-│       ├── cranky-raman
-│       └── vigilant-euler
-├── .github/
-│   └── workflows/
-│       ├── ci.yml
-│       └── publish.yml
 ├── data/
 │   ├── datafile/
 │   ├── historyTracker/
 │   ├── plot/
 │   └── clean_dirs.sh
 ├── ipynb/
-│   └── readme.md
 ├── prg/
 │   ├── base_classes/
 │   │   ├── __init__.py
@@ -226,6 +217,8 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 │   │   │   ├── base_model_gxgy.py
 │   │   │   ├── base_model_nonLinear.py
 │   │   │   ├── model_x1_y1_ExpSaturant_classic.py
+│   │   │   ├── model_x1_y1_LotkaVolterra_augmented.py
+│   │   │   ├── model_x1_y1_LotkaVolterra_pairwise.py
 │   │   │   ├── model_x1_y1_augmented.py
 │   │   │   ├── model_x1_y1_cubique_classic.py
 │   │   │   ├── model_x1_y1_gordon_classic.py
@@ -268,6 +261,5 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 ├── pyproject.toml
 └── update_readme_structure.sh
 
-18 directories, 103 files
 ```
 <!-- PROJECT_STRUCTURE_END -->
