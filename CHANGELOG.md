@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-04-21
+
+### Added
+
+- **Paper reproducibility scripts** for the article "Non-linear extensions to Gaussian pairwise Kalman filter"
+  - `run_paper_section4.py` — synthetic experiment (EPKF / UPKF / PPF / EKF-aug / UKF-aug) with timing
+  - `run_paper_section5.py` — real ENSO data experiment (downloads data, trains NNModel, runs filters)
+- **NNModel** (`prg/utils/nn_model.py`) — MLP-based transition model (2×64, tanh) for data-driven dynamics estimation; exposes `g()` and `jacobians_g()` via PyTorch autograd
+- **`--list-models` flag** in `run_simulator.py` to print all available linear and nonlinear models then exit
+
+### Fixed
+
+- **UPKF lambda bug** (`SigmaPointsSet.py`): `lambda_` is now recomputed locally from the actual sigma-point dimension `dim` (= `2p+q` for UPKF, `p` for UKF) rather than read from `param.lambda_` which was always computed from `dim_x` alone — this caused incorrect sigma-point spreads and weight values when `p ≠ q`
+
+---
+
 ## [0.2.0] - 2026-03-18
 
 ### Added
@@ -57,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NEES and NIS calibration metrics with history tracking
 - Rich terminal output and matplotlib plots
 
-[Unreleased]: https://github.com/sderrode/awesomepkf/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/sderrode/awesomepkf/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/sderrode/awesomepkf/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sderrode/awesomepkf/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sderrode/awesomepkf/releases/tag/v0.1.0
