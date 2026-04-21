@@ -1,0 +1,14 @@
+# Core dependencies (see pyproject.toml for version constraints)
+numpy==2.4.4
+scipy==1.17.1
+matplotlib==3.10.8
+pandas==3.0.2
+rich==15.0.0
+chardet==7.4.2
+sympy==1.14.0
+
+# Neural network (required by prg/utils/nn_model.py and run_paper_section5.py)
+torch==2.11.0
+
+# Development / testing
+pytest==9.0.3
