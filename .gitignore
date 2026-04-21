@@ -10,6 +10,9 @@ data/realdata/
 # Logs générés par les scripts bash
 logs/
 
+# le papier
+papier_NonLinearPKF/
+
 # Personal dev test scripts and programs (not versioned)
 /prg/testsDev/
 

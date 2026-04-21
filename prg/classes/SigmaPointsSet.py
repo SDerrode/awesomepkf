@@ -202,7 +202,7 @@ class SetWAN2000(SigmaPointsSet, key="wan2000"):
         dim : int
             State dimension.
         param : object
-            Parameter object exposing ``lambda_``, ``alpha``, and ``beta``.
+            Parameter object exposing ``alpha``, ``beta``, and ``kappa``.
 
         Raises
         ------
@@ -215,17 +215,22 @@ class SetWAN2000(SigmaPointsSet, key="wan2000"):
 
         self.nbSigmaPoint: int = 2 * self.dim + 1
 
+        # λ is recomputed from self.dim so that it is always consistent with
+        # the actual sigma-point dimension, whether that dimension is dim_x
+        # (standard UKF) or 2*dim_x + dim_y (UPKF).
+        lambda_: float = param.alpha**2 * (self.dim + param.kappa) - self.dim
+
         self.Wm: np.ndarray = np.full(
-            self.nbSigmaPoint, 1.0 / (2.0 * (self.dim + param.lambda_))
+            self.nbSigmaPoint, 1.0 / (2.0 * (self.dim + lambda_))
         )
-        self.Wm[0] = param.lambda_ / (self.dim + param.lambda_)
+        self.Wm[0] = lambda_ / (self.dim + lambda_)
         self._normalize_weights(self.Wm)
 
         # Wc equals Wm except at index 0, which includes a corrective term
         self.Wc: np.ndarray = np.copy(self.Wm)
         self.Wc[0] += 1.0 - param.alpha**2 + param.beta
 
-        self.gamma: float = np.sqrt(self.dim + param.lambda_)
+        self.gamma: float = np.sqrt(self.dim + lambda_)
 
     def _sigma_point(self, x: np.ndarray, P: np.ndarray) -> np.ndarray:
         """
