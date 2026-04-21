@@ -126,7 +126,8 @@ Each filter has two types of programs:
 Two scripts reproduce all experiments from the article *"Non-linear extensions to Gaussian pairwise Kalman filter"*:
 
 - **run_paper_section4.py** – synthetic bidirectional-feedback experiment: runs EPKF, UPKF, PPF (and state-augmented EKF/UKF), prints performance tables and timing, and saves figures.
-- **run_paper_section5.py** – real ENSO data experiment: downloads Niño 3.4 SST and SOI from NOAA CPC, trains a neural-network dynamics model (`NNModel`), applies EPKF/UPKF/PPF to the 2006–2026 test period, and saves figures.
+- **run_paper_section5.py** – real S&P 500 stochastic volatility experiment: downloads daily OHLCV data via `yfinance` (2000–2023), trains a neural-network dynamics model (`NNModel`) on the 2000–2015 period, applies EPKF/UPKF/PPF to the 2016–2023 test period estimating latent log-variance (Parkinson estimator) from log-squared returns, and saves figures.
+- **run_paper_section5_enso.py** – archived ENSO experiment (Niño 3.4 / SOI), kept for reference.
 
 ```bash
 python3 -m prg.run_paper_section4
