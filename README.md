@@ -257,6 +257,7 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 |   |   |-- __init__.py
 |   |   |-- csv_to_parquet.py
 |   |   |-- exceptions.py
+|   |   |-- nn_model.py
 |   |   |-- numerics.py
 |   |   |-- parser.py
 |   |   |-- plot_settings.py
@@ -268,12 +269,16 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 |   |-- run_nonlinear_ppf.py
 |   |-- run_nonlinear_ukf.py
 |   |-- run_nonlinear_upkf.py
+|   |-- run_paper_section4.py
+|   |-- run_paper_section5.py
+|   |-- run_paper_section5_enso.py
 |   `-- run_simulator.py
 |-- .gitignore
 |-- CHANGELOG.md
 |-- LICENSE
 |-- README.md
 |-- pyproject.toml
+|-- requirements.txt
 `-- update_readme_structure.sh
 
 ```
