@@ -30,24 +30,25 @@ __all__ = ["NNModel"]
 
 
 # ======================================================================
-# MLP definition
+# MLP definition (only defined when torch is available)
 # ======================================================================
-class _MLP(nn.Module):
-    """Simple fully-connected network  R^dim_in → R^dim_out."""
+if _TORCH_AVAILABLE:
+    class _MLP(nn.Module):
+        """Simple fully-connected network  R^dim_in → R^dim_out."""
 
-    def __init__(self, dim_in, dim_out, hidden_sizes=(64, 64), activation=nn.Tanh):
-        super().__init__()
-        layers = []
-        prev = dim_in
-        for h in hidden_sizes:
-            layers.append(nn.Linear(prev, h))
-            layers.append(activation())
-            prev = h
-        layers.append(nn.Linear(prev, dim_out))
-        self.net = nn.Sequential(*layers)
+        def __init__(self, dim_in, dim_out, hidden_sizes=(64, 64), activation=nn.Tanh):
+            super().__init__()
+            layers = []
+            prev = dim_in
+            for h in hidden_sizes:
+                layers.append(nn.Linear(prev, h))
+                layers.append(activation())
+                prev = h
+            layers.append(nn.Linear(prev, dim_out))
+            self.net = nn.Sequential(*layers)
 
-    def forward(self, z):
-        return self.net(z)
+        def forward(self, z):
+            return self.net(z)
 
 
 # ======================================================================
