@@ -5,7 +5,7 @@ import numpy as np
 import sympy as sp
 
 from prg.models.nonLinear.base_model_gxgy import BaseModelGxGy
-from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.utils.generate_matrix_cov import generate_block_matrix
 from prg.utils.exceptions import NumericalError
 
 __all__ = ["Model_x2_y1_pairwise"]
