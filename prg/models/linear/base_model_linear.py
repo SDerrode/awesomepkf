@@ -10,7 +10,7 @@ from scipy.linalg import cho_factor, cho_solve, LinAlgError
 
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
 from prg.classes.SeedGenerator import SeedGenerator
-from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.utils.generate_matrix_cov import generate_block_matrix
 from prg.utils.exceptions import NumericalError
 from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
 

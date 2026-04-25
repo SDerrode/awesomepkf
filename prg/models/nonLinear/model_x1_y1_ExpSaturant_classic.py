@@ -5,7 +5,7 @@ import numpy as np
 import sympy as sp
 
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
-from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.utils.generate_matrix_cov import generate_block_matrix
 from prg.utils.numerics import EPS_REL
 from prg.utils.exceptions import NumericalError
 
