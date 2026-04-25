@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from prg.classes.SeedGenerator import SeedGenerator
 from prg.utils.exceptions import NumericalError
-from prg.models.Generate_MatrixCov import generate_block_matrix
+from prg.utils.generate_matrix_cov import generate_block_matrix
 from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
 
 __all__ = ["BaseModelNonLinear", "NumericalError"]  # re-exported for convenience

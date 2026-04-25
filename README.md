@@ -123,16 +123,39 @@ Each filter has two types of programs:
 
 ## Paper Reproducibility Scripts
 
-Two scripts reproduce all experiments from the article *"Non-linear extensions to Gaussian pairwise Kalman filter"*:
+The following scripts reproduce all figures and tables from the article
+*"Non-linear extensions to Gaussian pairwise Kalman filter"*.
+Each script can be run independently from the repository root.
 
-- **run_paper_section4.py** – synthetic bidirectional-feedback experiment: runs EPKF, UPKF, PPF (and state-augmented EKF/UKF), prints performance tables and timing, and saves figures.
-- **run_paper_section5.py** – real S&P 500 stochastic volatility experiment: downloads daily OHLCV data via `yfinance` (2000–2023), trains a neural-network dynamics model (`NNModel`) on the 2000–2015 period, applies EPKF/UPKF/PPF to the 2016–2023 test period estimating latent log-variance (Parkinson estimator) from log-squared returns, and saves figures.
-- **run_paper_section5_enso.py** – archived ENSO experiment (Niño 3.4 / SOI), kept for reference.
+### Section 4 — Simulation Results
+
+| Script | Figures generated |
+|--------|------------------|
+| `run_paper_section4.py` | `epkf_observations_x1_y1_Retroactions.png`, `epkf_x1_y1_Retroactions.png`, `upkf_x1_y1_Retroactions.png`, `ppf_x1_y1_Retroactions.png` + Tables 1 & 2 |
+| `run_paper_section4_backaction.py` | `backaction_mse_nees_vs_b.png` |
+| `run_paper_section4_multip.py` | `multip_mse_nees_vs_sigma.png` |
+| `run_paper_section4_sensitivity.py` | console output — mean ± std of MSE over 30 seeds |
 
 ```bash
 python3 -m prg.run_paper_section4
-python3 -m prg.run_paper_section5
+python3 -m prg.run_paper_section4_backaction
+python3 -m prg.run_paper_section4_multip
+python3 -m prg.run_paper_section4_sensitivity
 ```
+
+### Section 5 — Real Data Experiment (S&P 500 Stochastic Volatility)
+
+| Script | Figures generated |
+|--------|------------------|
+| `run_paper_section5.py` | `nn_gx_gy_sv.png`, `epkf_sv.png`, `upkf_sv.png`, `ppf_sv.png` |
+| `run_paper_section5_enso.py` | archived ENSO experiment (Niño 3.4 / SOI), kept for reference |
+
+```bash
+python3 -m prg.run_paper_section5       # requires: pip install yfinance
+python3 -m prg.run_paper_section5_enso  # archived version
+```
+
+> **Note:** all figures are saved in `papier_NonLinearPKF/figures/`.
 
 ---
 
@@ -270,6 +293,8 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 |   |-- run_nonlinear_ukf.py
 |   |-- run_nonlinear_upkf.py
 |   |-- run_paper_section4.py
+|   |-- run_paper_section4_backaction.py
+|   |-- run_paper_section4_multip.py
 |   |-- run_paper_section5.py
 |   |-- run_paper_section5_enso.py
 |   `-- run_simulator.py

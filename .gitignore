@@ -16,6 +16,10 @@ papier_NonLinearPKF/
 # Personal dev test scripts and programs (not versioned)
 /prg/testsDev/
 
+# Paper scripts — duplicates / exploratory (not versioned)
+/prg/run_paper_section5_sv.py
+/prg/run_sv_test.py
+
 # VSCodium / VSCode
 AwesomePKF.code-workspace
 .vscode/
