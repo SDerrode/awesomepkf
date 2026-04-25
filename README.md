@@ -260,7 +260,11 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 |   |   |   |-- model_x1_y1_augmented.py
 |   |   |   |-- model_x1_y1_cubique_classic.py
 |   |   |   |-- model_x1_y1_gordon_classic.py
+|   |   |   |-- model_x1_y1_markov_naive.py
+|   |   |   |-- model_x1_y1_multiplicative.py
+|   |   |   |-- model_x1_y1_multiplicative_augmented.py
 |   |   |   |-- model_x1_y1_pairwise.py
+|   |   |   |-- model_x1_y1_pairwise_param.py
 |   |   |   |-- model_x1_y1_sinus_classic.py
 |   |   |   |-- model_x2_y1_augmented.py
 |   |   |   |-- model_x2_y1_classic.py
@@ -268,7 +272,6 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 |   |   |   |-- model_x2_y1_rapport_classic.py
 |   |   |   |-- model_x2_y2_augmented.py
 |   |   |   `-- model_x2_y2_pairwise.py
-|   |   |-- Generate_MatrixCov.py
 |   |   `-- __init__.py
 |   |-- tests/
 |   |   |-- __init__.py
@@ -280,6 +283,7 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 |   |   |-- __init__.py
 |   |   |-- csv_to_parquet.py
 |   |   |-- exceptions.py
+|   |   |-- generate_matrix_cov.py
 |   |   |-- nn_model.py
 |   |   |-- numerics.py
 |   |   |-- parser.py
@@ -295,6 +299,7 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 |   |-- run_paper_section4.py
 |   |-- run_paper_section4_backaction.py
 |   |-- run_paper_section4_multip.py
+|   |-- run_paper_section4_sensitivity.py
 |   |-- run_paper_section5.py
 |   |-- run_paper_section5_enso.py
 |   `-- run_simulator.py
