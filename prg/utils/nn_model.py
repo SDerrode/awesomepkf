@@ -12,9 +12,14 @@ Noise model is additive:  g(z, noise, dt) = g_nn(z) + B · noise,  B = I.
 """
 
 import numpy as np
-import torch
-import torch.nn as nn
 from pathlib import Path
+
+try:
+    import torch
+    import torch.nn as nn
+    _TORCH_AVAILABLE = True
+except ImportError:
+    _TORCH_AVAILABLE = False
 
 from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
 from prg.utils.generate_matrix_cov import generate_block_matrix
@@ -88,6 +93,13 @@ class NNModel(BaseModelNonLinear):
         verbose=50,
         seed=42,
     ):
+        if not _TORCH_AVAILABLE:
+            raise ImportError(
+                "NNModel requires PyTorch. Install it with:\n"
+                "  pip install awesomepkf[nn]\n"
+                "or:\n"
+                "  pip install torch"
+            )
         super().__init__(dim_x, dim_y, model_type="nonlinear")
         self.pairwiseModel = True
 
