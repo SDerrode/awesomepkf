@@ -185,131 +185,131 @@ awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "test
 <!-- PROJECT_STRUCTURE_START -->
 ```text
 ./
-|-- data/
-|   |-- datafile/
-|   |-- historyTracker/
-|   |-- plot/
-|   `-- clean_dirs.sh
-|-- ipynb/
-|-- prg/
-|   |-- base_classes/
-|   |   |-- __init__.py
-|   |   |-- linear_pkf_runner_base.py
-|   |   |-- linear_pkf_runner_from_file.py
-|   |   |-- linear_pkf_runner_simulation.py
-|   |   |-- nonlinear_epkf_runner_base.py
-|   |   |-- nonlinear_epkf_runner_from_file.py
-|   |   |-- nonlinear_epkf_runner_simulation.py
-|   |   |-- nonlinear_pf_runner_base.py
-|   |   |-- nonlinear_pf_runner_from_file.py
-|   |   |-- nonlinear_pf_runner_simulation.py
-|   |   |-- nonlinear_ppf_runner_base.py
-|   |   |-- nonlinear_ppf_runner_from_file.py
-|   |   |-- nonlinear_ppf_runner_simulation.py
-|   |   |-- nonlinear_ukf_runner_base.py
-|   |   |-- nonlinear_ukf_runner_from_file.py
-|   |   |-- nonlinear_ukf_runner_simulation.py
-|   |   |-- nonlinear_upkf_runner_base.py
-|   |   |-- nonlinear_upkf_runner_from_file.py
-|   |   |-- nonlinear_upkf_runner_simulation.py
-|   |   |-- runner_base.py
-|   |   |-- simulator_base.py
-|   |   |-- simulator_linear.py
-|   |   `-- simulator_nonlinear.py
-|   |-- classes/
-|   |   |-- HistoryTracker.py
-|   |   |-- Linear_PKF.py
-|   |   |-- MatrixDiagnostics.py
-|   |   |-- NonLinear_EPKF.py
-|   |   |-- NonLinear_PF.py
-|   |   |-- NonLinear_PPF.py
-|   |   |-- NonLinear_UKF.py
-|   |   |-- NonLinear_UKF_CN_Linearized.py
-|   |   |-- NonLinear_UKF_UN.py
-|   |   |-- NonLinear_UPKF.py
-|   |   |-- PKF.py
-|   |   |-- ParamLinear.py
-|   |   |-- ParamNonLinear.py
-|   |   |-- SeedGenerator.py
-|   |   |-- SigmaPointsSet.py
-|   |   `-- __init__.py
-|   |-- models/
-|   |   |-- linear/
-|   |   |   |-- __init__.py
-|   |   |   |-- base_model_linear.py
-|   |   |   |-- model_x1_y1_AQ_augmented.py
-|   |   |   |-- model_x1_y1_AQ_classic.py
-|   |   |   |-- model_x1_y1_AQ_pairwise.py
-|   |   |   |-- model_x1_y1_Sigma_pairwise.py
-|   |   |   |-- model_x2_y2_AQ_augmented.py
-|   |   |   |-- model_x2_y2_AQ_classic.py
-|   |   |   |-- model_x2_y2_AQ_pairwise.py
-|   |   |   |-- model_x2_y2_Sigma_pairwise.py
-|   |   |   |-- model_x3_y1_AQ_augmented.py
-|   |   |   |-- model_x3_y1_AQ_classic.py
-|   |   |   |-- model_x3_y1_AQ_pairwise.py
-|   |   |   `-- model_x3_y1_Sigma_pairwise.py
-|   |   |-- nonLinear/
-|   |   |   |-- __init__.py
-|   |   |   |-- base_model_fxhx.py
-|   |   |   |-- base_model_gxgy.py
-|   |   |   |-- base_model_nonLinear.py
-|   |   |   |-- model_x1_y1_ExpSaturant_classic.py
-|   |   |   |-- model_x1_y1_LotkaVolterra_augmented.py
-|   |   |   |-- model_x1_y1_LotkaVolterra_pairwise.py
-|   |   |   |-- model_x1_y1_augmented.py
-|   |   |   |-- model_x1_y1_cubique_classic.py
-|   |   |   |-- model_x1_y1_gordon_classic.py
-|   |   |   |-- model_x1_y1_markov_naive.py
-|   |   |   |-- model_x1_y1_multiplicative.py
-|   |   |   |-- model_x1_y1_multiplicative_augmented.py
-|   |   |   |-- model_x1_y1_pairwise.py
-|   |   |   |-- model_x1_y1_pairwise_param.py
-|   |   |   |-- model_x1_y1_sinus_classic.py
-|   |   |   |-- model_x2_y1_augmented.py
-|   |   |   |-- model_x2_y1_classic.py
-|   |   |   |-- model_x2_y1_pairwise.py
-|   |   |   |-- model_x2_y1_rapport_classic.py
-|   |   |   |-- model_x2_y2_augmented.py
-|   |   |   `-- model_x2_y2_pairwise.py
-|   |   `-- __init__.py
-|   |-- tests/
-|   |   |-- __init__.py
-|   |   |-- conftest.py
-|   |   |-- test_linear_pkf.py
-|   |   |-- test_models.py
-|   |   `-- test_nonlinear_filters.py
-|   |-- utils/
-|   |   |-- __init__.py
-|   |   |-- csv_to_parquet.py
-|   |   |-- exceptions.py
-|   |   |-- generate_matrix_cov.py
-|   |   |-- nn_model.py
-|   |   |-- numerics.py
-|   |   |-- parser.py
-|   |   |-- plot_settings.py
-|   |   `-- utils.py
-|   |-- __init__.py
-|   |-- run_linear_pkf.py
-|   |-- run_nonlinear_epkf.py
-|   |-- run_nonlinear_pf.py
-|   |-- run_nonlinear_ppf.py
-|   |-- run_nonlinear_ukf.py
-|   |-- run_nonlinear_upkf.py
-|   |-- run_paper_section4.py
-|   |-- run_paper_section4_backaction.py
-|   |-- run_paper_section4_multip.py
-|   |-- run_paper_section4_sensitivity.py
-|   |-- run_paper_section5.py
-|   |-- run_paper_section5_enso.py
-|   `-- run_simulator.py
-|-- .gitignore
-|-- CHANGELOG.md
-|-- LICENSE
-|-- README.md
-|-- pyproject.toml
-|-- requirements.txt
-`-- update_readme_structure.sh
+├── data/
+│   ├── datafile/
+│   ├── historyTracker/
+│   ├── plot/
+│   └── clean_dirs.sh
+├── ipynb/
+├── prg/
+│   ├── base_classes/
+│   │   ├── __init__.py
+│   │   ├── linear_pkf_runner_base.py
+│   │   ├── linear_pkf_runner_from_file.py
+│   │   ├── linear_pkf_runner_simulation.py
+│   │   ├── nonlinear_epkf_runner_base.py
+│   │   ├── nonlinear_epkf_runner_from_file.py
+│   │   ├── nonlinear_epkf_runner_simulation.py
+│   │   ├── nonlinear_pf_runner_base.py
+│   │   ├── nonlinear_pf_runner_from_file.py
+│   │   ├── nonlinear_pf_runner_simulation.py
+│   │   ├── nonlinear_ppf_runner_base.py
+│   │   ├── nonlinear_ppf_runner_from_file.py
+│   │   ├── nonlinear_ppf_runner_simulation.py
+│   │   ├── nonlinear_ukf_runner_base.py
+│   │   ├── nonlinear_ukf_runner_from_file.py
+│   │   ├── nonlinear_ukf_runner_simulation.py
+│   │   ├── nonlinear_upkf_runner_base.py
+│   │   ├── nonlinear_upkf_runner_from_file.py
+│   │   ├── nonlinear_upkf_runner_simulation.py
+│   │   ├── runner_base.py
+│   │   ├── simulator_base.py
+│   │   ├── simulator_linear.py
+│   │   └── simulator_nonlinear.py
+│   ├── classes/
+│   │   ├── HistoryTracker.py
+│   │   ├── Linear_PKF.py
+│   │   ├── MatrixDiagnostics.py
+│   │   ├── NonLinear_EPKF.py
+│   │   ├── NonLinear_PF.py
+│   │   ├── NonLinear_PPF.py
+│   │   ├── NonLinear_UKF.py
+│   │   ├── NonLinear_UKF_CN_Linearized.py
+│   │   ├── NonLinear_UKF_UN.py
+│   │   ├── NonLinear_UPKF.py
+│   │   ├── PKF.py
+│   │   ├── ParamLinear.py
+│   │   ├── ParamNonLinear.py
+│   │   ├── SeedGenerator.py
+│   │   ├── SigmaPointsSet.py
+│   │   └── __init__.py
+│   ├── models/
+│   │   ├── linear/
+│   │   │   ├── __init__.py
+│   │   │   ├── base_model_linear.py
+│   │   │   ├── model_x1_y1_AQ_augmented.py
+│   │   │   ├── model_x1_y1_AQ_classic.py
+│   │   │   ├── model_x1_y1_AQ_pairwise.py
+│   │   │   ├── model_x1_y1_Sigma_pairwise.py
+│   │   │   ├── model_x2_y2_AQ_augmented.py
+│   │   │   ├── model_x2_y2_AQ_classic.py
+│   │   │   ├── model_x2_y2_AQ_pairwise.py
+│   │   │   ├── model_x2_y2_Sigma_pairwise.py
+│   │   │   ├── model_x3_y1_AQ_augmented.py
+│   │   │   ├── model_x3_y1_AQ_classic.py
+│   │   │   ├── model_x3_y1_AQ_pairwise.py
+│   │   │   └── model_x3_y1_Sigma_pairwise.py
+│   │   ├── nonLinear/
+│   │   │   ├── __init__.py
+│   │   │   ├── base_model_fxhx.py
+│   │   │   ├── base_model_gxgy.py
+│   │   │   ├── base_model_nonLinear.py
+│   │   │   ├── model_x1_y1_ExpSaturant_classic.py
+│   │   │   ├── model_x1_y1_LotkaVolterra_augmented.py
+│   │   │   ├── model_x1_y1_LotkaVolterra_pairwise.py
+│   │   │   ├── model_x1_y1_augmented.py
+│   │   │   ├── model_x1_y1_cubique_classic.py
+│   │   │   ├── model_x1_y1_gordon_classic.py
+│   │   │   ├── model_x1_y1_markov_naive.py
+│   │   │   ├── model_x1_y1_multiplicative.py
+│   │   │   ├── model_x1_y1_multiplicative_augmented.py
+│   │   │   ├── model_x1_y1_pairwise.py
+│   │   │   ├── model_x1_y1_pairwise_param.py
+│   │   │   ├── model_x1_y1_sinus_classic.py
+│   │   │   ├── model_x2_y1_augmented.py
+│   │   │   ├── model_x2_y1_classic.py
+│   │   │   ├── model_x2_y1_pairwise.py
+│   │   │   ├── model_x2_y1_rapport_classic.py
+│   │   │   ├── model_x2_y2_augmented.py
+│   │   │   └── model_x2_y2_pairwise.py
+│   │   └── __init__.py
+│   ├── tests/
+│   │   ├── __init__.py
+│   │   ├── conftest.py
+│   │   ├── test_linear_pkf.py
+│   │   ├── test_models.py
+│   │   └── test_nonlinear_filters.py
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   ├── csv_to_parquet.py
+│   │   ├── exceptions.py
+│   │   ├── generate_matrix_cov.py
+│   │   ├── nn_model.py
+│   │   ├── numerics.py
+│   │   ├── parser.py
+│   │   ├── plot_settings.py
+│   │   └── utils.py
+│   ├── __init__.py
+│   ├── run_linear_pkf.py
+│   ├── run_nonlinear_epkf.py
+│   ├── run_nonlinear_pf.py
+│   ├── run_nonlinear_ppf.py
+│   ├── run_nonlinear_ukf.py
+│   ├── run_nonlinear_upkf.py
+│   ├── run_paper_section4.py
+│   ├── run_paper_section4_backaction.py
+│   ├── run_paper_section4_multip.py
+│   ├── run_paper_section4_sensitivity.py
+│   ├── run_paper_section5.py
+│   ├── run_paper_section5_enso.py
+│   └── run_simulator.py
+├── .gitignore
+├── CHANGELOG.md
+├── LICENSE
+├── README.md
+├── pyproject.toml
+├── requirements.txt
+└── update_readme_structure.sh
 
 ```
 <!-- PROJECT_STRUCTURE_END -->
