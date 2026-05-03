@@ -8,8 +8,7 @@ Extended Pairwise Kalman filter (EPKF) implementation
 """
 
 from __future__ import annotations
-from typing import Generator, Optional, Union
-from scipy.linalg import LinAlgError
+from typing import Generator, Optional
 import numpy as np
 
 from prg.classes.PKF import PKF

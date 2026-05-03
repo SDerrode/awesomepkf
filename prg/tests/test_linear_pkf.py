@@ -3,11 +3,8 @@
 import numpy as np
 import pytest
 
-from prg.models.linear.model_x1_y1_AQ_pairwise import Model_x1_y1_AQ_pairwise
-from prg.models.linear.model_x2_y2_AQ_pairwise import Model_x2_y2_AQ_pairwise
 from prg.classes.Linear_PKF import Linear_PKF
 from prg.utils.exceptions import ParamError
-from prg.tests.conftest import make_param_linear
 
 SEED = 42
 N_SHORT = 100

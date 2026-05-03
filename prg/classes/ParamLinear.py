@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Any, Union, Optional
-import warnings
+from typing import Any
 
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve, solve_discrete_lyapunov
+from scipy.linalg import cho_factor, cho_solve
 
-from prg.models.linear import BaseModelLinear, ModelFactoryLinear
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
-from prg.utils.numerics import EPS_ABS, EPS_REL
 from prg.utils.exceptions import CovarianceError, NumericalError, ParamError
 
 __all__ = ["ParamLinear"]

@@ -446,8 +446,8 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
         vx_n = r"\mathbf{v}^x" if bold_x else "v^x"
         vy_n = r"\mathbf{v}^y" if bold_y else "v^y"
         v_n = r"\mathbf{v}"
-        A_n = r"\mathbf{A}"
-        H_n = r"\mathbf{H}"
+        _A_n = r"\mathbf{A}"
+        _H_n = r"\mathbf{H}"
         Q_n = r"\mathcal{Q}"
 
         # ------------------------------------------------------------------

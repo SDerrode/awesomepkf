@@ -4,10 +4,9 @@
 import os
 from typing import Optional
 
-from prg.classes.Linear_PKF import Linear_PKF
 from prg.utils.utils import file_data_generator
 from prg.base_classes.linear_pkf_runner_base import BaseLinearPKFRunner
-from prg.utils.exceptions import FilterError, ParamError, PKFError
+from prg.utils.exceptions import FilterError, PKFError
 
 __all__ = ["LinearPKFRunnerFromFile"]
 

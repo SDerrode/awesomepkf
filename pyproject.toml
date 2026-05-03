@@ -71,6 +71,11 @@ awesomepkf-pf          = "prg.run_nonlinear_pf:main"
 Homepage   = "https://github.com/sderrode/awesomepkf"
 Repository = "https://github.com/sderrode/awesomepkf"
 
+[tool.ruff.lint]
+# E402: imports not at top — intentional in paper/section scripts (deferred imports)
+# E702: multiple statements on one line — used in paper scripts and matplotlib calls
+ignore = ["E402", "E702"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["prg"]
 

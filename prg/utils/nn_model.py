@@ -22,8 +22,6 @@ except ImportError:
     _TORCH_AVAILABLE = False
 
 from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
-from prg.utils.generate_matrix_cov import generate_block_matrix
-from prg.classes.SeedGenerator import SeedGenerator
 from prg.utils.exceptions import NumericalError
 
 __all__ = ["NNModel"]

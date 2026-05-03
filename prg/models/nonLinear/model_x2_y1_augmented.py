@@ -5,7 +5,6 @@ import numpy as np
 import sympy as sp
 
 
-import numpy as np
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
 from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
 from prg.utils.exceptions import NumericalError

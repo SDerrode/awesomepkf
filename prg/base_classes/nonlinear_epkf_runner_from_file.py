@@ -4,7 +4,6 @@
 import os
 from typing import Optional
 
-from prg.classes.NonLinear_EPKF import NonLinear_EPKF
 from prg.utils.utils import file_data_generator
 from prg.base_classes.nonlinear_epkf_runner_base import BaseNonLinearEPKFRunner
 from prg.utils.exceptions import FilterError, PKFError
@@ -74,14 +73,7 @@ class NonLinearEPKFRunnerFromFile(BaseNonLinearEPKFRunner):
             )
         except PKFError:
             raise
-            # except Exception as e:
-            #     import traceback
-
-            #     traceback.print_exc()  # ← affiche la vraie cause immédiatement
-            #     raise FilterError(
-            #         f"Filtering failed (simulation mode) for model {self.model_name!r}."
-            #     ) from e
-            # except Exception as e:
+        except Exception as e:
             raise FilterError(
                 f"Filtering failed (file mode) for model {self.model_name!r}."
             ) from e

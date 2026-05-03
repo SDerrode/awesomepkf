@@ -3,6 +3,7 @@
 
 import numpy as np
 from prg.models.linear.base_model_linear import LinearAmQ
+from prg.utils.exceptions import NumericalError
 
 __all__ = ["Model_x3_y1_AQ_classic"]
 
@@ -34,7 +35,7 @@ class Model_x3_y1_AQ_classic(LinearAmQ):
 
         except (ValueError, IndexError, np.exceptions.AxisError) as e:
             raise NumericalError(
-                f"[{model_x3_y1_AQ_classic.MODEL_NAME}] Initialization failed: {e}"
+                f"[{Model_x3_y1_AQ_classic.__name__}] Initialization failed: {e}"
             ) from e
 
         mQ, mz0, Pz0 = LinearAmQ._init_random_params(dim_x, dim_y, val_max=0.35)

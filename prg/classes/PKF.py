@@ -9,7 +9,6 @@ from dataclasses import dataclass
 # Third-party
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve, LinAlgError
-from rich import print
 
 # Local imports
 from prg.classes.HistoryTracker import HistoryTracker
@@ -567,7 +566,7 @@ class PKF:
         Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
         PXXkp1_predict = Pkp1_predict[: self.dim_x, : self.dim_x]
         PXYkp1_predict = Pkp1_predict[: self.dim_x, self.dim_x :]
-        PYXkp1_predict = Pkp1_predict[self.dim_x :, : self.dim_x]
+        _PYXkp1_predict = Pkp1_predict[self.dim_x :, : self.dim_x]
         PYYkp1_predict = Pkp1_predict[self.dim_x :, self.dim_x :]
 
         ikp1: np.ndarray = ykp1 - Ykp1_predict

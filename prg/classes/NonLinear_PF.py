@@ -25,7 +25,6 @@ from typing import Generator, Optional
 
 import numpy as np
 from scipy.linalg import cholesky
-from rich import print
 
 import logging
 
@@ -35,8 +34,6 @@ from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
 from prg.utils.numerics import EPS_ABS
 from prg.utils.utils import rich_show_fields
 from prg.utils.exceptions import (
-    CovarianceError,
-    FilterError,
     InvertibilityError,
     ParamError,
     StepValidationError,

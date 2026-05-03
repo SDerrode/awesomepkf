@@ -4,7 +4,6 @@
 import os
 from typing import Optional
 
-from prg.classes.NonLinear_PPF import NonLinear_PPF
 from prg.utils.utils import file_data_generator
 from prg.base_classes.nonlinear_ppf_runner_base import BaseNonLinearPPFRunner
 from prg.utils.exceptions import FilterError, PKFError

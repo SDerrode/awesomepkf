@@ -26,7 +26,6 @@ from __future__ import annotations
 from typing import Generator, Optional
 
 import numpy as np
-from scipy.linalg import LinAlgError
 
 from prg.classes.PKF import PKF
 from prg.classes.SigmaPointsSet import SigmaPointsSet
@@ -105,7 +104,7 @@ class NonLinear_UKF(PKF):
             )
 
         if self.param.pairwiseModel:
-            raise FilterError(f"Failed to process a pairwise model with UKF.")
+            raise FilterError("Failed to process a pairwise model with UKF.")
 
         # Sigma-point set for the prediction step (state space dim_x)
         self.sigma_pred_set = cls(dim=self.dim_x, param=self.param)

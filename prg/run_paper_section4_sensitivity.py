@@ -10,7 +10,8 @@ Usage (from repo root):
     python3 -m prg.run_paper_section4_sensitivity
 """
 import numpy as np
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from prg.models.nonLinear import ModelFactoryNonLinear

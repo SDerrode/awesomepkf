@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from abc import ABC, abstractmethod
-from typing import Dict, Type, Optional
+from typing import Dict, Type
 import numpy as np
 from itertools import product
 

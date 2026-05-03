@@ -5,7 +5,6 @@ from typing import Any
 
 import numpy as np
 
-from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.classes.MatrixDiagnostics import CovarianceMatrix
 from prg.utils.exceptions import CovarianceError, ParamError
 
