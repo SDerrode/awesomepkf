@@ -11,9 +11,7 @@ import matplotlib.ticker as mticker
 
 from dataclasses import dataclass, is_dataclass, asdict
 
-from rich.table import Table
 from rich.console import Console
-from rich.pretty import Pretty
 
 from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
 from prg.utils.utils import rich_show_fields, compute_errors
@@ -148,7 +146,7 @@ class HistoryTracker:
             Additional columns for certain filters (e.g. particle).
         """
         df = self.as_dataframe()
-        console = Console(force_terminal=True, color_system="truecolor")
+        _console = Console(force_terminal=True, color_system="truecolor")
 
         if ListeD is None or ListeE is None:
             for a, b, c in zip(ListeA, ListeB, ListeC):

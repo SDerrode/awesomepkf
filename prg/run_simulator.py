@@ -112,7 +112,7 @@ def main() -> None:
 
     try:
         simulator.run()
-    except RuntimeError as rte:
+    except RuntimeError:
         raise
 
 

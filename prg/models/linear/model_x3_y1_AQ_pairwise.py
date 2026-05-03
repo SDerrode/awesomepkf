@@ -4,7 +4,7 @@
 import numpy as np
 from prg.models.linear.base_model_linear import LinearAmQ
 
-__all__ = ["model_x3_y1_AQ_pairwise"]
+__all__ = ["Model_x3_y1_AQ_pairwise"]
 
 
 class Model_x3_y1_AQ_pairwise(LinearAmQ):

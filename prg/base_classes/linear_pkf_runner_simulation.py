@@ -3,7 +3,6 @@
 
 from typing import Optional
 
-from prg.classes.Linear_PKF import Linear_PKF
 from prg.base_classes.linear_pkf_runner_base import BaseLinearPKFRunner
 from prg.utils.exceptions import FilterError, ParamError, PKFError
 

@@ -175,7 +175,7 @@ awesomepkf-simulate --N 1000 --nonLinearModelName "model_x2_y1_pairwise" --dataF
 
 awesomepkf-epkf --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv"                      --verbose 1 --saveHistory --plot
 awesomepkf-upkf --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --sigmaSet "wan2000"  --verbose 1 --saveHistory --plot
-awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --nbParticles 300     --verbose 1 --saveHistory --plot
+awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --n_particles 300      --verbose 1 --saveHistory --plot
 ```
 
 ---

@@ -7,7 +7,6 @@ from prg.classes.NonLinear_EPKF import NonLinear_EPKF
 from prg.classes.NonLinear_UPKF import NonLinear_UPKF
 from prg.utils.exceptions import ParamError
 from prg.tests.conftest import make_param_nonlinear
-from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
 from prg.models.nonLinear.model_x1_y1_pairwise import Model_x1_y1_pairwise as NL_x1y1
 
 SEED = 42

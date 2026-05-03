@@ -426,8 +426,8 @@ class BaseModelLinear:
         ]
         for k, lam in enumerate(eigvals):
             mod = abs(lam)
-            sign = "●" if mod < 1.0 else "●"
-            c = "#1f77b4" if mod < 1.0 else "#d62728"
+            _sign = "●" if mod < 1.0 else "●"
+            _c = "#1f77b4" if mod < 1.0 else "#d62728"
             lines.append(
                 rf"  $\lambda_{{{k}}}$ = {lam.real:+.4f} {'+' if lam.imag >= 0 else ''}{lam.imag:.4f}j"
                 rf"   $|\lambda_{{{k}}}|$ = {mod:.4f}"
@@ -621,7 +621,7 @@ class LinearAmQ(BaseModelLinear):
 
         except (ValueError, IndexError, np.exceptions.AxisError) as e:
             raise NumericalError(
-                f"[{model_x1_y1_AQ_augmented.MODEL_NAME}] Initialization failed: {e}"
+                f"[{mod.__class__.__name__}] Initialization failed: {e}"
             ) from e
 
         A = np.block(

@@ -75,7 +75,7 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
 
     # ------------------------------------------------------------------
     def _build_symbolic_model(self):
-        nx, ny, nz = self.dim_x, self.dim_y, self.dim_xy
+        nx, ny, _nz = self.dim_x, self.dim_y, self.dim_xy
 
         # Real symbol vectors
         self._sx = sp.Matrix([sp.Symbol(f"x{i}", real=True) for i in range(nx)])

@@ -18,7 +18,6 @@ from typing import (
     Generator,
 )  # FIX: Any added (was used but not imported); List/Optional removed (legacy)
 
-import os  # Used in read_unknown_file
 import math  # Used in format_value
 import csv  # Used in read_unknown_file
 import chardet  # Used in read_unknown_file
@@ -31,7 +30,7 @@ from rich.console import Console
 from rich.text import Text
 
 from prg.utils.numerics import EPS_ABS, EPS_REL
-from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.classes.MatrixDiagnostics import InvertibleMatrix
 
 __all__ = [
     "rich_show_fields",
@@ -266,7 +265,7 @@ def _compute_quadratic_form(
 
 
 def compute_errors(
-    model: "PKF",
+    model: Any,
     x_true: list[np.ndarray],
     x_hat: list[np.ndarray],
     P_list: list[np.ndarray],
@@ -407,7 +406,7 @@ def read_unknown_file(
         raw_data = f.read(50_000)
         enc_info = chardet.detect(raw_data)
         encoding = enc_info["encoding"] or "utf-8"
-        confidence = enc_info.get("confidence", 0)
+        _confidence = enc_info.get("confidence", 0)
     if ext == ".parquet":
         return pd.read_parquet(filepath)
     if ext == ".json":

@@ -3,7 +3,7 @@
 
 import os
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Type
+from typing import Tuple, Type
 
 from prg.utils.exceptions import FilterError, ParamError, PKFError
 

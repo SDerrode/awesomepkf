@@ -24,7 +24,6 @@ from __future__ import annotations
 from typing import Generator, Optional
 
 import numpy as np
-from scipy.linalg import LinAlgError
 
 from prg.classes.PKF import PKF
 from prg.classes.SigmaPointsSet import SigmaPointsSet

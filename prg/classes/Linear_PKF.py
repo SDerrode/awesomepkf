@@ -10,14 +10,12 @@ Linear Pairwise Kalman filter (PKF) implementation
 from __future__ import annotations
 from typing import Generator, Optional
 import numpy as np
-from scipy.linalg import LinAlgError
 
 from prg.classes.PKF import PKF
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.utils.exceptions import FilterError, InvertibilityError, NumericalError
 
-from rich import print
 
 __all__ = ["Linear_PKF"]
 

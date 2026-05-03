@@ -151,7 +151,7 @@ def main():
         for key in ("epkf", "upkf", "naive"):
             vals  = np.array(results[key][metric])
             means = vals[:, 0]
-            stds  = vals[:, 1]
+            _stds = vals[:, 1]
             ax.semilogy(B_VALUES, means, "o-", color=colors[key],
                         label=labels[key], linewidth=1.5)
         if metric == "nees":

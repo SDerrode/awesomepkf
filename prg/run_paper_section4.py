@@ -20,7 +20,6 @@ Usage (from repo root):
 """
 
 import os
-import sys
 import time
 import numpy as np
 import matplotlib
@@ -63,7 +62,6 @@ def _build_param(model_name: str):
         dim_x, dim_y = p.pop("dim_x"), p.pop("dim_y")
         param = ParamNonLinear(0, dim_x, dim_y, **p)
     elif model_name in ModelFactoryLinear.list_models():
-        from prg.models.linear import ModelFactoryLinear
         model = ModelFactoryLinear.create(model_name)
         p = model.get_params().copy()
         dim_x, dim_y = p.pop("dim_x"), p.pop("dim_y")
@@ -97,7 +95,6 @@ def _compute_metrics(filt, x_true_list, x_hat_list, P_list, i_arr, S_list):
 
 def _plot_filter(history, title, params, labels, covars, out_path):
     """Produce a single-panel time-series figure and save it."""
-    import pandas as pd
     df = history.as_dataframe()
 
     fig, ax = plt.subplots(figsize=(8, 3))

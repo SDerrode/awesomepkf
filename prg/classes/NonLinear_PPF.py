@@ -10,13 +10,12 @@ Pairwise Particle Filter implementation
 from __future__ import annotations
 
 # Stdlib
-from dataclasses import replace
 from typing import Generator, Optional
 
 # Third-party
 import numpy as np
 from rich import print
-from scipy.linalg import cholesky, cho_factor, cho_solve
+from scipy.linalg import cholesky
 
 # Local
 from prg.classes.SeedGenerator import SeedGenerator
@@ -25,10 +24,7 @@ from prg.utils.numerics import EPS_ABS
 from prg.utils.utils import rich_show_fields
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
 from prg.utils.exceptions import (
-    CovarianceError,
-    FilterError,
     InvertibilityError,
-    NumericalError,
     ParamError,
     StepValidationError,
 )
@@ -259,7 +255,7 @@ class NonLinear_PPF(PKF):
         nan_mask = np.isnan(log_weights)
         if nan_mask.any():
             logger.warning(
-                f"Entering _safe_normalize_log_weights(...) - if nan_mask.any()"
+                "Entering _safe_normalize_log_weights(...) - if nan_mask.any()"
             )
             log_weights = log_weights.copy()
             log_weights[nan_mask] = -np.inf
@@ -268,7 +264,7 @@ class NonLinear_PPF(PKF):
         finite_mask = np.isfinite(log_weights)
         if not finite_mask.any():
             logger.warning(
-                f"Entering _safe_normalize_log_weights(...) - if not finite_mask.any()"
+                "Entering _safe_normalize_log_weights(...) - if not finite_mask.any()"
             )
             return np.full(len(log_weights), 1.0 / len(log_weights))
 
@@ -282,7 +278,7 @@ class NonLinear_PPF(PKF):
         # Extreme underflow after exp
         if not np.isfinite(total) or total <= 0.0:
             logger.warning(
-                f"Entering _safe_normalize_log_weights(...) - if not np.isfinite(total) or total <= 0.0"
+                "Entering _safe_normalize_log_weights(...) - if not np.isfinite(total) or total <= 0.0"
             )
             return np.full(len(log_weights), 1.0 / len(log_weights))
 
@@ -507,7 +503,7 @@ class NonLinear_PPF(PKF):
             P_prime_x = self._cached["L"] @ self._cached["L"].T
 
             # Correction ESS : ≈ 1 si ESS élevé, évite la sur-estimation à faible ESS
-            ess_correction = 1.0 - np.sum(weights**2)
+            _ess_correction = 1.0 - np.sum(weights**2)
 
             # Après (formule Rao-Blackwell exacte)
             PXXkp1_update = var_between + P_prime_x

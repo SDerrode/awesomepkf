@@ -181,7 +181,7 @@ def load_and_split(rows):
     ya = train_arr[:, 1]
     corr = float(np.corrcoef(xa, ya)[0, 1])
     print(f"  Contemporaneous correlation x ↔ ỹ  (train): {corr:.4f}")
-    print(f"  [ENSO had x ↔ y correlation ≈ −0.617; lower is better here]")
+    print("  [ENSO had x ↔ y correlation ≈ −0.617; lower is better here]")
 
     return train_arr, test_arr, dates_test
 
@@ -334,7 +334,7 @@ def main():
 
     # Convert to list of (x, ytilde) tuples for filtering
     test_list  = [(float(r[0]), float(r[1])) for r in test_data]
-    train_list = [(float(r[0]), float(r[1])) for r in train_data]
+    _train_list = [(float(r[0]), float(r[1])) for r in train_data]
 
     # ── 2. Train NNModel ──────────────────────────────────────────────────────
     print(f"\n[2] Training NNModel  (epochs={NN_EPOCHS}, hidden={NN_HIDDEN}) …")

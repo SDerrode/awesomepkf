@@ -14,7 +14,7 @@ Usage (from repo root):
     python3 -m prg.run_paper_section4_multip
 """
 
-import os, sys
+import os
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -27,7 +27,6 @@ os.makedirs(FIGURES_DIR, exist_ok=True)
 from prg.models.nonLinear.model_x1_y1_multiplicative          import Model_x1_y1_multiplicative
 from prg.models.nonLinear.model_x1_y1_multiplicative_augmented import Model_x1_y1_multiplicative_augmented
 from prg.classes.ParamNonLinear import ParamNonLinear
-from prg.classes.ParamLinear    import ParamLinear
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
 from prg.classes.NonLinear_UPKF import NonLinear_UPKF
 from prg.classes.NonLinear_UKF  import NonLinear_UKF
