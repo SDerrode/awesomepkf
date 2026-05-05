@@ -112,7 +112,7 @@ def _plot_filter(history, title, params, labels, covars, out_path):
     fig.tight_layout()
     fig.savefig(out_path, dpi=DPI, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Saved → {os.path.relpath(out_path, REPO_ROOT)}")
+    print(f"  Saved → {Path(out_path).relative_to(REPO_ROOT)}")
 
 
 # ==============================================================================

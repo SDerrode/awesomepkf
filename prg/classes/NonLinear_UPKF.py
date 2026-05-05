@@ -59,11 +59,11 @@ class NonLinear_UPKF(PKF):
 
         try:
             cls = SigmaPointsSet.registry[sigmaSet]
-        except KeyError:
+        except KeyError as e:
             raise ParamError(
-                f"Jeu de sigma-points inconnu : {sigmaSet!r}. "
-                f"Disponibles : {list(SigmaPointsSet.registry.keys())}."
-            )
+                f"Unknown sigma-point set: {sigmaSet!r}. "
+                f"Available: {list(SigmaPointsSet.registry.keys())}."
+            ) from e
 
         self.sigma_point_set_obj = cls(
             dim=2 * self.dim_x + self.dim_y, param=self.param

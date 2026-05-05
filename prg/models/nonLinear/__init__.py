@@ -24,14 +24,12 @@ import inspect
 import pkgutil
 import traceback
 from pathlib import Path
+from typing import ClassVar
 
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
 from prg.models.nonLinear.base_model_gxgy import BaseModelGxGy
 from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
 from prg.models.nonLinear.configs import NONLINEAR_CONFIGS, NonLinearSpec
-
-__all__ = ["ModelFactoryNonLinear", "NONLINEAR_CONFIGS", "NonLinearSpec"]
-
 
 # ----------------------------------------------------------------------
 # Generic spec-driven model classes
@@ -101,9 +99,9 @@ __all__ = [f.stem for f in p.glob("*.py") if not f.name.startswith("_")] + [
 class ModelFactoryNonLinear:
     """Factory: registry first (NONLINEAR_CONFIGS), then class discovery."""
 
-    _registry: dict[str, type] = {}
+    _registry: ClassVar[dict[str, type]] = {}
 
-    _EXCLUDED_MODULES = {
+    _EXCLUDED_MODULES: ClassVar[set[str]] = {
         "base_model_nonLinear",
         "base_model_fxhx",
         "base_model_gxgy",

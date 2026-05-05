@@ -95,11 +95,11 @@ class NonLinear_UKF(PKF):
 
         try:
             cls = SigmaPointsSet.registry[sigmaSet]
-        except KeyError:
+        except KeyError as e:
             raise ParamError(
-                f"Jeu de sigma-points inconnu : {sigmaSet!r}. "
-                f"Disponibles : {list(SigmaPointsSet.registry.keys())}."
-            )
+                f"Unknown sigma-point set: {sigmaSet!r}. "
+                f"Available: {list(SigmaPointsSet.registry.keys())}."
+            ) from e
 
         if self.param.pairwiseModel:
             raise FilterError("Failed to process a pairwise model with UKF.")

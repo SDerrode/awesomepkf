@@ -23,7 +23,7 @@ from prg.base_classes.filter_specs import FILTER_SPECS
 from prg.utils.exceptions import FilterError, NumericalError, ParamError, PKFError
 from prg.utils.parser import add_arguments
 
-__all__ = ["run", "main"]
+__all__ = ["main", "run"]
 
 
 # ----------------------------------------------------------------------
@@ -108,7 +108,7 @@ def _handle_errors(func, *args, **kwargs):
     """Run ``func(*args, **kwargs)``; map known exceptions to stderr + exit code."""
     try:
         return func(*args, **kwargs)
-    except Exception as e:  # noqa: BLE001 — dispatched against _ERROR_TABLE below
+    except Exception as e:
         for exc_type, label, code in _ERROR_TABLE:
             if isinstance(e, exc_type):
                 print(f"[{label}] {e}", file=sys.stderr)

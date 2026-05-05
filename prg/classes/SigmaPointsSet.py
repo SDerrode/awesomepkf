@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from itertools import product
+from typing import ClassVar
 
 import numpy as np
 
@@ -28,7 +29,7 @@ class SigmaPointsSet(ABC):
         Dimension of the state space.
     """
 
-    registry: dict[str, type["SigmaPointsSet"]] = {}
+    registry: ClassVar[dict[str, type["SigmaPointsSet"]]] = {}
 
     def __init_subclass__(cls, *, key: str, **kwargs) -> None:
         """

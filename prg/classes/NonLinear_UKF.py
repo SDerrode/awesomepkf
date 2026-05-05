@@ -20,6 +20,7 @@ Differences compared to the UPKF:
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Generator
 
 import numpy as np
@@ -82,11 +83,11 @@ class NonLinear_UKF(PKF):
 
         try:
             cls = SigmaPointsSet.registry[sigmaSet]
-        except KeyError:
+        except KeyError as e:
             raise ParamError(
                 f"Unknown sigma-point set: {sigmaSet!r}. "
                 f"Available: {list(SigmaPointsSet.registry.keys())}."
-            )
+            ) from e
 
         if self.param.pairwiseModel:
             raise FilterError("UKF does not support pairwise models.")
@@ -146,10 +147,9 @@ class NonLinear_UKF(PKF):
         if hasattr(self.param, "A"):
             _F_blk = self.param.A[: self.dim_x, : self.dim_x]  # (dim_x, dim_x)
             _A_yx  = self.param.A[self.dim_x :, : self.dim_x]  # (dim_y, dim_x)
-            try:
+            with contextlib.suppress(np.linalg.LinAlgError):
+                # singular F — leave self._H_obs as None, fallback to param.h
                 self._H_obs = _A_yx @ np.linalg.inv(_F_blk)   # (dim_y, dim_x)
-            except np.linalg.LinAlgError:
-                pass  # singular F — fallback to param.h
 
     # ------------------------------------------------------------------
     # Main filter loop

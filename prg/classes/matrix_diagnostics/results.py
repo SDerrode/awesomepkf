@@ -54,7 +54,6 @@ class DiagnosticReport:
             f"  Overall : {self.overall_status}",
             "-" * 60,
         ]
-        for check in self.checks:
-            lines.append(str(check))
+        lines.extend(str(check) for check in self.checks)
         lines.append("=" * 60)
         return "\n".join(lines)
