@@ -147,22 +147,27 @@ class ModelFactoryNonLinear:
                 cls._registry[obj.MODEL_NAME] = obj
 
     @classmethod
-    def create(cls, name: str):
-        # 1. Registry first
+    def create(cls, name: str, **kwargs):
+        # 1. Registry first (config-driven, no constructor knobs)
         if name in NONLINEAR_CONFIGS:
+            if kwargs:
+                raise ValueError(
+                    f"Model '{name}' is config-driven and does not accept "
+                    f"constructor overrides {sorted(kwargs)}."
+                )
             spec = NONLINEAR_CONFIGS[name]
             builder_cls = _GENERIC_BUILDERS[spec.form]
             instance = builder_cls(spec)
             instance.MODEL_NAME = name
             return instance
 
-        # 2. Fall back to class-based discovery
+        # 2. Fall back to class-based discovery (kwargs forwarded to __init__)
         cls._discover_models()
         if name not in cls._registry:
             raise ValueError(
                 f"Unknown model: '{name}'. Available: {cls.list_models()}"
             )
-        return cls._registry[name]()
+        return cls._registry[name](**kwargs)
 
     @classmethod
     def list_models(cls) -> list[str]:

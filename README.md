@@ -78,15 +78,16 @@ awesomepkf-pkf      --linear-model-name "model_x1_y1_AQ_pairwise" --data-filenam
 
 ## Tutorials
 
-Interactive Jupyter notebooks are available in the [`ipynb/`](ipynb/) directory:
+Interactive Jupyter notebooks are available in the [`notebooks/`](notebooks/) directory:
 
 | # | Notebook | Description |
 |---|----------|-------------|
-| 01 | [`tutorial_01_getting_started.ipynb`](ipynb/tutorial_01_getting_started.ipynb) | Introduction to the PKF framework: linear models, running the filter, visualizing estimates, error metrics (MSE, NEES, NIS), comparing PKF / EPKF / UPKF |
-| 02 | [`tutorial_02_nonlinear_models.ipynb`](ipynb/tutorial_02_nonlinear_models.ipynb) | Nonlinear models: EPKF, UPKF, PPF and PF — classic vs pairwise, sigma-point sets, particle count impact, filter comparison |
-| 03 | [`tutorial_03_sigma_points.ipynb`](ipynb/tutorial_03_sigma_points.ipynb) | Sigma-point sets for the UPKF: wan2000, cpkf, lerner2002, ito2000 — impact on estimation accuracy |
-| 04 | [`tutorial_04_particle_filters.ipynb`](ipynb/tutorial_04_particle_filters.ipynb) | Particle filters (PPF and PF): tuning the number of particles, resampling, comparison with EPKF/UPKF |
-| 05 | [`tutorial_05_new_model_lotkavolterra.ipynb`](ipynb/tutorial_05_new_model_lotkavolterra.ipynb) | How to add a new nonlinear pairwise model: Lotka-Volterra prey-predator (dim_x=1, dim_y=1), augmented version, filtering with EPKF/UPKF/PPF |
+| 01 | [`tutorial_01_getting_started.ipynb`](notebooks/tutorial_01_getting_started.ipynb) | Introduction to the PKF framework: linear models, running the filter, visualizing estimates, error metrics (MSE, NEES, NIS), comparing PKF / EPKF / UPKF |
+| 02 | [`tutorial_02_nonlinear_models.ipynb`](notebooks/tutorial_02_nonlinear_models.ipynb) | Nonlinear models: EPKF, UPKF, PPF and PF — classic vs pairwise, sigma-point sets, particle count impact, filter comparison |
+| 03 | [`tutorial_03_sigma_points.ipynb`](notebooks/tutorial_03_sigma_points.ipynb) | Sigma-point sets for the UPKF: wan2000, cpkf, lerner2002, ito2000 — impact on estimation accuracy |
+| 04 | [`tutorial_04_particle_filters.ipynb`](notebooks/tutorial_04_particle_filters.ipynb) | Particle filters (PPF and PF): tuning the number of particles, resampling, comparison with EPKF/UPKF |
+| 05 | [`tutorial_05_new_model_lotkavolterra.ipynb`](notebooks/tutorial_05_new_model_lotkavolterra.ipynb) | How to add a new nonlinear pairwise model: Lotka-Volterra prey-predator (dim_x=1, dim_y=1), augmented version, filtering with EPKF/UPKF/PPF |
+| 06 | [`tutorial_06_filter_runner_and_config.ipynb`](notebooks/tutorial_06_filter_runner_and_config.ipynb) | High-level orchestration with `FilterRunner` and `RunOptions`; parameter sweeps via `model_kwargs`; saving and replaying experiments through TOML session configs |
 
 ---
 
@@ -190,7 +191,7 @@ awesomepkf-ppf  --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "t
 │   ├── historyTracker/
 │   ├── plot/
 │   └── clean_dirs.sh
-├── ipynb/
+├── notebooks/
 ├── prg/
 │   ├── base_classes/
 │   │   ├── __init__.py

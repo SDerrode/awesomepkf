@@ -94,6 +94,7 @@ class FilterRunner(BaseRunner):
         sigmaSet: str | None = None,
         n_particles: int | None = None,
         options: RunOptions | None = None,
+        model_kwargs: dict | None = None,
     ) -> None:
         if options is None:
             options = RunOptions()
@@ -141,6 +142,7 @@ class FilterRunner(BaseRunner):
             options.plot,
             options.save_history,
             options.base_dir,
+            model_kwargs=model_kwargs,
         )
 
         if mode == "from_file":
