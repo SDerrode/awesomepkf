@@ -49,6 +49,20 @@ def model_nl_x1y1():
 
 
 @pytest.fixture(scope="session")
+def model_nl_classic_x1y1():
+    """A classic (non-pairwise) FxHx model — required by the bootstrap PF
+    which doesn't accept pairwise models."""
+    return ModelFactoryNonLinear.create("model_x1_y1_Sinus_classic")
+
+
+@pytest.fixture(scope="session")
+def model_nl_classic_x2y1():
+    """A 2-D classic FxHx model — used to exercise the UKF and PF on
+    higher-dim states without the pairwise back-action."""
+    return ModelFactoryNonLinear.create("model_x2_y1_classic")
+
+
+@pytest.fixture(scope="session")
 def param_x1y1(model_x1y1):
     return make_param_linear(model_x1y1)
 
@@ -66,3 +80,13 @@ def param_nl_x2y1(model_nl_x2y1):
 @pytest.fixture(scope="session")
 def param_nl_x1y1(model_nl_x1y1):
     return make_param_nonlinear(model_nl_x1y1)
+
+
+@pytest.fixture(scope="session")
+def param_nl_classic_x1y1(model_nl_classic_x1y1):
+    return make_param_nonlinear(model_nl_classic_x1y1)
+
+
+@pytest.fixture(scope="session")
+def param_nl_classic_x2y1(model_nl_classic_x2y1):
+    return make_param_nonlinear(model_nl_classic_x2y1)
