@@ -8,12 +8,12 @@ for EPKF, UPKF and PPF (addresses reviewer concern on result robustness).
 Usage (from repo root):
     python3 -m prg.run_paper_section4_sensitivity
 """
-import os
 import sys
+from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
 from prg.classes.NonLinear_PPF import NonLinear_PPF

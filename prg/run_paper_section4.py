@@ -17,8 +17,8 @@ Usage (from repo root):
     python3 -m prg.run_paper_section4
 """
 
-import os
 import time
+from pathlib import Path
 
 import matplotlib as mpl
 import numpy as np
@@ -27,9 +27,9 @@ mpl.use("Agg")
 import matplotlib.pyplot as plt
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
-REPO_ROOT    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FIGURES_DIR  = os.path.join(REPO_ROOT, "papier_NonLinearPKF", "figures")
-os.makedirs(FIGURES_DIR, exist_ok=True)
+REPO_ROOT    = Path(__file__).resolve().parent.parent
+FIGURES_DIR  = REPO_ROOT / "papier_NonLinearPKF" / "figures"
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Experiment parameters ──────────────────────────────────────────────────────
 N           = 1000   # number of time steps (as stated in the paper)
@@ -287,7 +287,7 @@ def main():
         epkf.history,
         "Simulated observations",
         ["ykp1"], ["Observation y"], [None],
-        os.path.join(FIGURES_DIR, "epkf_observations_x1_y1_Retroactions.png"),
+        str(FIGURES_DIR / "epkf_observations_x1_y1_Retroactions.png"),
     )
 
     _plot_filter(
@@ -296,7 +296,7 @@ def main():
         ["xkp1", "Xkp1_update"],
         ["x true", "x̂ EPKF"],
         [None, "PXXkp1_update"],
-        os.path.join(FIGURES_DIR, "epkf_x1_y1_Retroactions.png"),
+        str(FIGURES_DIR / "epkf_x1_y1_Retroactions.png"),
     )
 
     _plot_filter(
@@ -305,7 +305,7 @@ def main():
         ["xkp1", "Xkp1_update"],
         ["x true", "x̂ UPKF"],
         [None, "PXXkp1_update"],
-        os.path.join(FIGURES_DIR, "upkf_x1_y1_Retroactions.png"),
+        str(FIGURES_DIR / "upkf_x1_y1_Retroactions.png"),
     )
 
     _plot_filter(
@@ -314,7 +314,7 @@ def main():
         ["xkp1", "Xkp1_update"],
         ["x true", "x̂ PPF"],
         [None, "PXXkp1_update"],
-        os.path.join(FIGURES_DIR, "ppf_x1_y1_Retroactions.png"),
+        str(FIGURES_DIR / "ppf_x1_y1_Retroactions.png"),
     )
 
     print("\nDone.")
