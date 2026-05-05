@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -374,7 +374,7 @@ class BaseModelLinear:
         rho = np.max(np.abs(eigvals))
         is_stable = rho < 1.0
 
-        os.makedirs("data/plot", exist_ok=True)
+        Path("data/plot").mkdir(parents=True, exist_ok=True)
         model_name = getattr(self, "MODEL_NAME", self.__class__.__name__)
         fig, axes = plt.subplots(2, 2, figsize=(13, 10))
 
@@ -482,7 +482,7 @@ class BaseModelLinear:
         NormG = np.sqrt(G1**2 + G2**2)
         Dz1, Dz2 = G1 - Z1, G2 - Z2
 
-        os.makedirs("data/plot", exist_ok=True)
+        Path("data/plot").mkdir(parents=True, exist_ok=True)
         model_name = getattr(self, "MODEL_NAME", self.__class__.__name__)
         fig = plt.figure(figsize=(12, 8), facecolor=FACECOLOR)
 

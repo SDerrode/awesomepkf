@@ -336,7 +336,6 @@ class NNModel(BaseModelNonLinear):
 # ======================================================================
 if __name__ == "__main__":
     import argparse
-    import os
 
     import matplotlib.pyplot as plt
 
@@ -407,7 +406,7 @@ if __name__ == "__main__":
     print("Jacobien calculé.")
 
     # ── 4. Figure ─────────────────────────────────────────────────────
-    os.makedirs(args.out, exist_ok=True)
+    Path(args.out).mkdir(parents=True, exist_ok=True)
     fig = plt.figure(figsize=(18, 10), facecolor=FACECOLOR)
     fig.suptitle("NNModel — fonction apprise et jacobienne", fontsize=BIG_SIZE + 2,
                  fontweight="bold")
@@ -462,7 +461,7 @@ if __name__ == "__main__":
         _cbar(fig, ax, im, title)
 
     plt.tight_layout()
-    out_path = os.path.join(args.out, "nn_model_test.png")
+    out_path = str(Path(args.out) / "nn_model_test.png")
     plt.savefig(out_path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
     plt.close(fig)
     print(f"\nFigure sauvegardée → {out_path}")

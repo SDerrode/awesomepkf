@@ -1,6 +1,6 @@
-import os
 import pickle
 from dataclasses import asdict, dataclass, is_dataclass
+from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -90,10 +90,10 @@ class HistoryTracker:
 
     # ------------------------------------------------------------------
     def save_pickle(self, path: str) -> None:
-        dir_path = os.path.dirname(path)
-        if dir_path:
-            os.makedirs(dir_path, exist_ok=True)
-        with open(path, "wb") as f:
+        p = Path(path)
+        if p.parent != Path():
+            p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("wb") as f:
             pickle.dump(self._history, f)
 
     @classmethod
@@ -118,10 +118,11 @@ class HistoryTracker:
         TypeError
             If the file content is not a list. — stdlib, intentional.
         """
-        if not os.path.exists(path):
+        p = Path(path)
+        if not p.exists():
             raise FileNotFoundError(f"File not found: {path}")
-        with open(path, "rb") as f:
-            data = pickle.load(f)
+        with p.open("rb") as f:
+            data = pickle.load(f)  # noqa: S301 — local research artifacts only
         if not isinstance(data, list):
             raise TypeError("The file does not contain a list of records.")
         tracker = cls()
@@ -403,8 +404,9 @@ class HistoryTracker:
         if show:
             plt.show()
         else:
-            os.makedirs(base_dir or ".", exist_ok=True)
-            save_path = os.path.join(base_dir or ".", f"{basename}.png")
+            out_dir = Path(base_dir or ".")
+            out_dir.mkdir(parents=True, exist_ok=True)
+            save_path = out_dir / f"{basename}.png"
             fig.savefig(save_path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
             plt.close(fig)
 
@@ -460,10 +462,10 @@ class A:
 # ======================================================================
 if __name__ == "__main__":
     verbose = 1
-    graph_dir = os.path.join(".", "data", "plot")
-    tracker_dir = os.path.join(".", "data", "historyTracker")
-    os.makedirs(graph_dir, exist_ok=True)
-    os.makedirs(tracker_dir, exist_ok=True)
+    graph_dir = Path(".") / "data" / "plot"
+    tracker_dir = Path(".") / "data" / "historyTracker"
+    graph_dir.mkdir(parents=True, exist_ok=True)
+    tracker_dir.mkdir(parents=True, exist_ok=True)
 
     a = A(x0=1.0, verbose=verbose)
     for step in a.iterate_gen(5):
@@ -476,6 +478,6 @@ if __name__ == "__main__":
         list_covar=[None],
         window={"xmin": 0, "xmax": len(a.history)},
         show=False,
-        base_dir=graph_dir,
+        base_dir=str(graph_dir),
     )
-    a.history.save_pickle(os.path.join(tracker_dir, "history_run_a.pkl"))
+    a.history.save_pickle(str(tracker_dir / "history_run_a.pkl"))

@@ -1,5 +1,5 @@
 import contextlib
-import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -293,7 +293,7 @@ class BaseModelNonLinear:
         NormG = np.sqrt(G1**2 + G2**2)
         Dz1, Dz2 = G1 - Z1, G2 - Z2
 
-        os.makedirs("data/plot", exist_ok=True)
+        Path("data/plot").mkdir(parents=True, exist_ok=True)
         fig = plt.figure(figsize=(12, 8))
 
         # Surface g_x
@@ -372,7 +372,7 @@ class BaseModelNonLinear:
         lam1 = np.real(eigvals[:, 0]).reshape(n_points, n_points)
         lam2 = np.real(eigvals[:, 1]).reshape(n_points, n_points)
 
-        os.makedirs("data/plot", exist_ok=True)
+        Path("data/plot").mkdir(parents=True, exist_ok=True)
         fig, axes = plt.subplots(2, 3, figsize=(15, 9))
 
         panels = [
