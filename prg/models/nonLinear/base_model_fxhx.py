@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import sympy as sp
 
+from prg.models.nonLinear._latex_helpers import _LatexBuilder
 from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
 from prg.utils.exceptions import NumericalError
 
@@ -311,138 +312,35 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
           - Jacobian matrices       : bold uppercase   \\mathbf{A}, \\mathbf{H}
           - Gaussian noise          : v = (v^x, v^y) ~ N(0, Q)
         """
-        nx, ny = self.dim_x, self.dim_y
-        bold_x = nx > 1
-        bold_y = ny > 1
+        b = _LatexBuilder(self.dim_x, self.dim_y, self.mQ)
 
-        # ------------------------------------------------------------------
-        # LaTeX names for noise
-        # ------------------------------------------------------------------
-        def _vx_name(i: int) -> str:
-            return "v^x" if nx == 1 else rf"v^x_{i}"
+        # f, A, H are all expressed in terms of x → use the same substitutions
+        subs_x = {
+            **b.sub_dict(list(self._sx), "x", bold=b.bold_x),
+            **b.sub_dict(list(self._st), "t", bold=False, names=b.vx_names),
+            **b.sub_dict(list(self._su), "u", bold=False, names=b.vy_names),
+        }
 
-        def _vy_name(i: int) -> str:
-            return "v^y" if ny == 1 else rf"v^y_{i}"
+        # h is evaluated at y = f(x), so x-symbols in shx are renamed to y
+        subs_y = {
+            **b.sub_dict(list(self._sx), "y", bold=b.bold_y),
+            **b.sub_dict(list(self._st), "t", bold=False, names=b.vx_names),
+            **b.sub_dict(list(self._su), "u", bold=False, names=b.vy_names),
+        }
 
-        vx_names = [_vx_name(i) for i in range(nx)]
-        vy_names = [_vy_name(i) for i in range(ny)]
+        sfx_s = b.apply(self._sfx, subs_x)
+        shx_s = b.apply(self._shx, subs_y)
+        sA_s = b.apply(self._sA, subs_x)
+        sH_s = b.apply(self._sH, subs_x)
 
-        # ------------------------------------------------------------------
-        # Substitution dictionary sym → clean LaTeX symbol
-        # ------------------------------------------------------------------
-        def _sub_dict(syms, base: str, bold: bool, names=None) -> dict:
-            subs = {}
-            for i, s in enumerate(syms):
-                if names is not None:
-                    latex_name = names[i]
-                elif len(syms) == 1:
-                    latex_name = rf"\mathbf{{{base}}}" if bold else base
-                else:
-                    latex_name = rf"\mathbf{{{base}}}_{i}" if bold else rf"{base}_{i}"
-                subs[s] = sp.Symbol(latex_name, real=True)
-            return subs
-
-        subs = {}
-        subs.update(_sub_dict(list(self._sx), "x", bold=bold_x))
-        subs.update(_sub_dict(list(self._st), "t", bold=False, names=vx_names))
-        subs.update(_sub_dict(list(self._su), "u", bold=False, names=vy_names))
-
-        def _apply(mat: sp.Matrix) -> sp.Matrix:
-            return sp.Matrix(mat.shape[0], mat.shape[1], [e.subs(subs) for e in mat])
-
-        sfx_s = _apply(self._sfx)
-
-        # For h: substitute x by y in the expression (h is evaluated at f(x)=y_{k})
-        subs_xy = {}
-        subs_xy.update(_sub_dict(list(self._sx), "y", bold=bold_y))
-        subs_xy.update(_sub_dict(list(self._st), "t", bold=False, names=vx_names))
-        subs_xy.update(_sub_dict(list(self._su), "u", bold=False, names=vy_names))
-
-        def _apply_xy(mat: sp.Matrix) -> sp.Matrix:
-            return sp.Matrix(mat.shape[0], mat.shape[1], [e.subs(subs_xy) for e in mat])
-
-        shx_s = _apply_xy(self._shx)
-        sA_s = _apply(self._sA)
-        sH_s = _apply(self._sH)
-
-        # ------------------------------------------------------------------
-        # Left-hand side names
-        # ------------------------------------------------------------------
-        x_n = r"\mathbf{x}" if bold_x else "x"
-        y_n = r"\mathbf{y}" if bold_y else "y"
-        vx_n = r"\mathbf{v}^x" if bold_x else "v^x"
-        vy_n = r"\mathbf{v}^y" if bold_y else "v^y"
-        v_n = r"\mathbf{v}"
-        _A_n = r"\mathbf{A}"
-        _H_n = r"\mathbf{H}"
-        Q_n = r"\mathcal{Q}"
-
-        # ------------------------------------------------------------------
-        # mQ formatting (2 decimal places)
-        # ------------------------------------------------------------------
-        def _np_to_sp(M: np.ndarray) -> sp.Matrix:
-            return sp.Matrix(
-                M.shape[0],
-                M.shape[1],
-                [sp.Float(round(float(v), 2)) for v in M.ravel()],
-            )
-
-        mQ_sp = _np_to_sp(self.mQ)
-
-        # ------------------------------------------------------------------
-        # LaTeX rendering with noise forced last
-        # Works around sp.Add canonical sorting by isolating the deterministic part.
-        # ------------------------------------------------------------------
-        import re
-
-        def _fix_latex(s: str) -> str:
-            """1.0 \\cdot 10^{-k}  →  10^{-k}  (with or without spaces around \\cdot)"""
-            return re.sub(r"1\.0\s*\\cdot\s*", "", s)
-
-        def _reorder_noise_last(expr: sp.Expr) -> str:
-            zero_subs = {sp.Symbol(n, real=True): 0 for n in vx_names + vy_names}
-            det = expr.subs(zero_subs)
-            noise = sp.expand(expr - det)
-            if noise == 0:
-                return sp.latex(det)
-            if det == 0:
-                return sp.latex(noise)
-            noise_lat = sp.latex(noise)
-            sep = " " if noise_lat.startswith("-") else " + "
-            return sp.latex(det) + sep + noise_lat
-
-        def _lat(mat: sp.Matrix) -> str:
-            if mat.shape == (1, 1):
-                return _reorder_noise_last(mat[0, 0])
-            parts = [_reorder_noise_last(e) for e in mat]
-            rows = r" \\ ".join(parts)
-            return rf"\begin{{pmatrix}} {rows} \end{{pmatrix}}"
-
-        def _lat_jac(mat: sp.Matrix) -> str:
-            """Jacobian rendering: scalar without pmatrix, matrix with."""
-            if mat.shape == (1, 1):
-                return sp.latex(mat[0, 0])
-            return sp.latex(mat)
-
-        # ------------------------------------------------------------------
-        # Assembly
-        # ------------------------------------------------------------------
         lines = [
             r"\begin{align}",
-            # ── Transition
-            rf"  f\!\left({x_n},\,{vx_n}\right)" rf" &= {_lat(sfx_s)} \\[6pt]",
-            # ── Observation (h evaluated at y = f(x))
-            rf"  h\!\left({y_n},\,{vy_n}\right)" rf" &= {_lat(shx_s)} \\[6pt]",
-            # ── Noise distribution
-            rf"  {v_n} = ({vx_n},\,{vy_n})"
-            rf" &\sim \mathcal{{N}}\!\left(0,\; {Q_n}\right), \qquad"
-            rf" {Q_n} = {sp.latex(mQ_sp)} \\[12pt]",
-            # ── Transition Jacobian (dfrac + no pmatrix if scalar)
-            rf"  \dfrac{{\partial\, f}}{{\partial\, {x_n}}}"
-            rf" &= {_lat_jac(sA_s)} \\[10pt]",
-            # ── Observation Jacobian
-            rf"  \dfrac{{\partial\, h}}{{\partial\, {y_n}}}" rf" &= {_lat_jac(sH_s)}",
+            rf"  f\!\left({b.x_n},\,{b.vx_n}\right) &= {b.lat(sfx_s)} \\[6pt]",
+            rf"  h\!\left({b.y_n},\,{b.vy_n}\right) &= {b.lat(shx_s)} \\[6pt]",
+            b.noise_distribution_line(),
+            rf"  \dfrac{{\partial\, f}}{{\partial\, {b.x_n}}}"
+            rf" &= {b.lat_jac(sA_s)} \\[10pt]",
+            rf"  \dfrac{{\partial\, h}}{{\partial\, {b.y_n}}} &= {b.lat_jac(sH_s)}",
             r"\end{align}",
         ]
-
-        return _fix_latex("\n".join(lines))
+        return b.fix_latex("\n".join(lines))
