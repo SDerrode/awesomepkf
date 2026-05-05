@@ -1,5 +1,5 @@
-import os
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 from prg.utils.exceptions import FilterError, ParamError, PKFError
 from prg.utils.utils import data_to_dataframe, save_dataframe_to_csv
@@ -66,8 +66,8 @@ class BaseDataSimulator(ABC):
             data_file_name = self.default_filename()
         self.data_file_name = data_file_name
 
-        self.base_dir = os.path.join(".", "data")
-        self.datafile_dir = os.path.join(self.base_dir, "datafile")
+        self.base_dir = str(Path(".") / "data")
+        self.datafile_dir = str(Path(self.base_dir) / "datafile")
 
         self._validate_inputs()
         self.param = self._build_parameters()
@@ -193,7 +193,7 @@ class BaseDataSimulator(ABC):
             withoutX=self.withoutX,
         )
 
-        os.makedirs(self.datafile_dir, exist_ok=True)
+        Path(self.datafile_dir).mkdir(parents=True, exist_ok=True)
 
-        filepath = os.path.join(self.datafile_dir, self.data_file_name)
+        filepath = str(Path(self.datafile_dir) / self.data_file_name)
         save_dataframe_to_csv(df, filepath)  # OSError remonte naturellement

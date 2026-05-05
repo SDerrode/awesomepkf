@@ -56,7 +56,7 @@ def detect_encoding(file_path: Path, n_bytes: int = _ENCODING_SAMPLE_BYTES) -> s
         (FIX: the original silently swallowed the exception without any log)
     """
     try:
-        with open(file_path, "rb") as f:
+        with Path(file_path).open("rb") as f:
             raw_data = f.read(n_bytes)
     except OSError as e:
         # FIX: raise file access error explicitly

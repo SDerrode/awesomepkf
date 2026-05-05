@@ -1,5 +1,5 @@
-import os
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 from prg.utils.exceptions import FilterError, ParamError, PKFError
 
@@ -70,17 +70,17 @@ class BaseRunner(ABC):
     # ----------------------------------------------------------
 
     def _setup_directories(self) -> tuple[str, str, str]:
-        base_dir = os.path.join(self.base_dir, "data")
+        base_dir = Path(self.base_dir) / "data"
 
-        tracker_dir = os.path.join(base_dir, "historyTracker")
-        datafile_dir = os.path.join(base_dir, "datafile")
-        graph_dir = os.path.join(base_dir, "plot")
+        tracker_dir = base_dir / "historyTracker"
+        datafile_dir = base_dir / "datafile"
+        graph_dir = base_dir / "plot"
 
-        os.makedirs(tracker_dir, exist_ok=True)
-        os.makedirs(datafile_dir, exist_ok=True)
-        os.makedirs(graph_dir, exist_ok=True)
+        tracker_dir.mkdir(parents=True, exist_ok=True)
+        datafile_dir.mkdir(parents=True, exist_ok=True)
+        graph_dir.mkdir(parents=True, exist_ok=True)
 
-        return tracker_dir, datafile_dir, graph_dir
+        return str(tracker_dir), str(datafile_dir), str(graph_dir)
 
     # ----------------------------------------------------------
 
@@ -199,8 +199,8 @@ class BaseRunner(ABC):
         OSError
             If saving fails (permissions, disk space, etc.).
         """
-        filepath = os.path.join(self.tracker_dir, filename)
-        self.runner_instance.history.save_pickle(filepath)
+        filepath = Path(self.tracker_dir) / filename
+        self.runner_instance.history.save_pickle(str(filepath))
 
     # ==========================================================
     # Abstract execution

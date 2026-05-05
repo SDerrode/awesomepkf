@@ -399,7 +399,7 @@ def read_unknown_file(
     # FIX: Path.suffix used instead of os.path.splitext (pathlib already imported)
     ext = Path(filepath).suffix.lower()
     # FIX: bare try/except with raise removed (added nothing)
-    with open(filepath, "rb") as f:
+    with Path(filepath).open("rb") as f:
         raw_data = f.read(50_000)
         enc_info = chardet.detect(raw_data)
         encoding = enc_info["encoding"] or "utf-8"
@@ -412,7 +412,7 @@ def read_unknown_file(
         return pd.read_excel(filepath)
     if ext in (".csv", ".txt", ".dat", ".tsv", ""):
 
-        with open(filepath, encoding=encoding) as f:
+        with Path(filepath).open(encoding=encoding) as f:
             sample_lines = [next(f, "") for _ in range(min(nrows_detect, 10))]
         sample = "".join(sample_lines)
 
