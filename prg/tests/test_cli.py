@@ -134,9 +134,8 @@ class TestCLIErrors:
             "--N", "10",
             "--data-filename", "foo.csv",
         ]
-        with pytest.raises(SystemExit) as excinfo:
-            with cli_args(argv):
-                run_filter.main("pkf")
+        with pytest.raises(SystemExit) as excinfo, cli_args(argv):
+            run_filter.main("pkf")
         # argparse exits with 2, not via our _ERROR_TABLE
         assert excinfo.value.code == 2
 
@@ -146,9 +145,8 @@ class TestCLIErrors:
             "awesomepkf-pkf",
             "--linear-model-name", "model_x1_y1_AQ_classic",
         ]
-        with pytest.raises(SystemExit) as excinfo:
-            with cli_args(argv):
-                run_filter.main("pkf")
+        with pytest.raises(SystemExit) as excinfo, cli_args(argv):
+            run_filter.main("pkf")
         assert excinfo.value.code == 2
 
 

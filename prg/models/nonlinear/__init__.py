@@ -15,7 +15,7 @@ Usage
 -----
 ::
 
-    from prg.models.nonLinear import ModelFactoryNonLinear
+    from prg.models.nonlinear import ModelFactoryNonLinear
     model = ModelFactoryNonLinear.create("model_x1_y1_Sinus_classic")
 """
 
@@ -26,10 +26,10 @@ import traceback
 from pathlib import Path
 from typing import ClassVar
 
-from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
-from prg.models.nonLinear.base_model_gxgy import BaseModelGxGy
-from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
-from prg.models.nonLinear.configs import NONLINEAR_CONFIGS, NonLinearSpec
+from prg.models.nonlinear.base_model_fxhx import BaseModelFxHx
+from prg.models.nonlinear.base_model_gxgy import BaseModelGxGy
+from prg.models.nonlinear.base_model_nonlinear import BaseModelNonLinear
+from prg.models.nonlinear.configs import NONLINEAR_CONFIGS, NonLinearSpec
 
 # ----------------------------------------------------------------------
 # Generic spec-driven model classes
@@ -102,7 +102,7 @@ class ModelFactoryNonLinear:
     _registry: ClassVar[dict[str, type]] = {}
 
     _EXCLUDED_MODULES: ClassVar[set[str]] = {
-        "base_model_nonLinear",
+        "base_model_nonlinear",
         "base_model_fxhx",
         "base_model_gxgy",
         "configs",

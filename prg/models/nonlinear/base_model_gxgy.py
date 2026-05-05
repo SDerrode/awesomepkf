@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 import numpy as np
 import sympy as sp
 
-from prg.models.nonLinear._latex_helpers import _LatexBuilder
-from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
+from prg.models.nonlinear._latex_helpers import _LatexBuilder
+from prg.models.nonlinear.base_model_nonlinear import BaseModelNonLinear
 from prg.utils.exceptions import NumericalError
 
 __all__ = ["BaseModelGxGy"]

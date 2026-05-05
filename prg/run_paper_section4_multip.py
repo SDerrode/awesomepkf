@@ -28,8 +28,8 @@ from prg.classes.nonlinear_epkf import NonLinear_EPKF
 from prg.classes.nonlinear_ukf import NonLinear_UKF
 from prg.classes.nonlinear_upkf import NonLinear_UPKF
 from prg.classes.param_nonlinear import ParamNonLinear
-from prg.models.nonLinear.model_x1_y1_multiplicative import Model_x1_y1_multiplicative
-from prg.models.nonLinear.model_x1_y1_multiplicative_augmented import Model_x1_y1_multiplicative_augmented
+from prg.models.nonlinear.model_x1_y1_multiplicative import Model_x1_y1_multiplicative
+from prg.models.nonlinear.model_x1_y1_multiplicative_augmented import Model_x1_y1_multiplicative_augmented
 from prg.utils.metrics import compute_errors
 
 N         = 1000

@@ -29,8 +29,8 @@ FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 from prg.classes.nonlinear_epkf import NonLinear_EPKF
 from prg.classes.nonlinear_upkf import NonLinear_UPKF
 from prg.classes.param_nonlinear import ParamNonLinear
-from prg.models.nonLinear.model_x1_y1_markov_naive import Model_x1_y1_markov_naive
-from prg.models.nonLinear.model_x1_y1_pairwise_param import Model_x1_y1_pairwise_param
+from prg.models.nonlinear.model_x1_y1_markov_naive import Model_x1_y1_markov_naive
+from prg.models.nonlinear.model_x1_y1_pairwise_param import Model_x1_y1_pairwise_param
 from prg.utils.metrics import compute_errors
 
 # ── Experiment parameters ──────────────────────────────────────────────────────

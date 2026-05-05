@@ -1,9 +1,9 @@
 import numpy as np
 import sympy as sp
 
-from prg.models.nonLinear import ModelFactoryNonLinear
-from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
-from prg.models.nonLinear.configs import _LV
+from prg.models.nonlinear import ModelFactoryNonLinear
+from prg.models.nonlinear.base_model_fxhx import BaseModelFxHx
+from prg.models.nonlinear.configs import _LV
 from prg.utils.exceptions import NumericalError
 
 __all__ = ["Model_x1_y1_LotkaVolterra_augmented"]

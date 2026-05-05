@@ -1,7 +1,7 @@
 import numpy as np
 import sympy as sp
 
-from prg.models.nonLinear.base_model_gxgy import BaseModelGxGy
+from prg.models.nonlinear.base_model_gxgy import BaseModelGxGy
 from prg.utils.exceptions import NumericalError
 
 __all__ = ["Model_x1_y1_multiplicative"]

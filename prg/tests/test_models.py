@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 from prg.models.linear import ModelFactoryLinear
-from prg.models.nonLinear import ModelFactoryNonLinear
+from prg.models.nonlinear import ModelFactoryNonLinear
 
 
 class TestLinearModels:
