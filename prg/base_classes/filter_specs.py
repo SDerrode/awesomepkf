@@ -14,12 +14,12 @@ Adding a new filter is a single dict entry — no new runner class needed.
 
 from dataclasses import dataclass, field
 
-from prg.classes.Linear_PKF import Linear_PKF
-from prg.classes.NonLinear_EPKF import NonLinear_EPKF
-from prg.classes.NonLinear_PF import NonLinear_PF
-from prg.classes.NonLinear_PPF import NonLinear_PPF
-from prg.classes.NonLinear_UKF import NonLinear_UKF
-from prg.classes.NonLinear_UPKF import NonLinear_UPKF
+from prg.classes.linear_pkf import Linear_PKF
+from prg.classes.nonlinear_epkf import NonLinear_EPKF
+from prg.classes.nonlinear_pf import NonLinear_PF
+from prg.classes.nonlinear_ppf import NonLinear_PPF
+from prg.classes.nonlinear_ukf import NonLinear_UKF
+from prg.classes.nonlinear_upkf import NonLinear_UPKF
 
 __all__ = ["FILTER_SPECS", "FilterSpec"]
 

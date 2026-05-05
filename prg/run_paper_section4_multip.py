@@ -24,10 +24,10 @@ REPO_ROOT   = Path(__file__).resolve().parent.parent
 FIGURES_DIR = REPO_ROOT / "papier_NonLinearPKF" / "figures"
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-from prg.classes.NonLinear_EPKF import NonLinear_EPKF
-from prg.classes.NonLinear_UKF import NonLinear_UKF
-from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.classes.nonlinear_epkf import NonLinear_EPKF
+from prg.classes.nonlinear_ukf import NonLinear_UKF
+from prg.classes.nonlinear_upkf import NonLinear_UPKF
+from prg.classes.param_nonlinear import ParamNonLinear
 from prg.models.nonLinear.model_x1_y1_multiplicative import Model_x1_y1_multiplicative
 from prg.models.nonLinear.model_x1_y1_multiplicative_augmented import Model_x1_y1_multiplicative_augmented
 from prg.utils.utils import compute_errors

@@ -59,10 +59,10 @@ pip install -e ".[dev]"
 ## Quick Start
 
 ```python
-from prg.classes.Linear_PKF import Linear_PKF
-from prg.models.linear.model_x1_y1_AQ_pairwise import Model_x1_y1_AQ_pairwise
+from prg.classes.linear_pkf import Linear_PKF
+from prg.models.linear import ModelFactoryLinear
 
-model = Model_x1_y1_AQ_pairwise()
+model = ModelFactoryLinear.create("model_x1_y1_AQ_pairwise")
 pkf = Linear_PKF(model)
 # ... run the filter step by step
 ```

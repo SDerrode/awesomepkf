@@ -33,14 +33,14 @@ Example
 
 __version__ = "0.1.0"
 
-from prg.classes.Linear_PKF import Linear_PKF
-from prg.classes.NonLinear_EPKF import NonLinear_EPKF
-from prg.classes.NonLinear_PF import NonLinear_PF
-from prg.classes.NonLinear_PPF import NonLinear_PPF
-from prg.classes.NonLinear_UKF import NonLinear_UKF
-from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.classes.ParamLinear import ParamLinear
-from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.classes.linear_pkf import Linear_PKF
+from prg.classes.nonlinear_epkf import NonLinear_EPKF
+from prg.classes.nonlinear_pf import NonLinear_PF
+from prg.classes.nonlinear_ppf import NonLinear_PPF
+from prg.classes.nonlinear_ukf import NonLinear_UKF
+from prg.classes.nonlinear_upkf import NonLinear_UPKF
+from prg.classes.param_linear import ParamLinear
+from prg.classes.param_nonlinear import ParamNonLinear
 from prg.models.linear import ModelFactoryLinear
 from prg.models.nonLinear import ModelFactoryNonLinear
 

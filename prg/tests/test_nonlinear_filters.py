@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
-from prg.classes.NonLinear_EPKF import NonLinear_EPKF
-from prg.classes.NonLinear_UPKF import NonLinear_UPKF
+from prg.classes.nonlinear_epkf import NonLinear_EPKF
+from prg.classes.nonlinear_upkf import NonLinear_UPKF
 from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.tests.conftest import make_param_nonlinear
 from prg.utils.exceptions import ParamError

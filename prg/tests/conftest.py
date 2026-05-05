@@ -2,8 +2,8 @@
 
 import pytest
 
-from prg.classes.ParamLinear import ParamLinear
-from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.classes.param_linear import ParamLinear
+from prg.classes.param_nonlinear import ParamNonLinear
 from prg.models.linear import ModelFactoryLinear
 from prg.models.nonLinear import ModelFactoryNonLinear
 

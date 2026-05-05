@@ -15,10 +15,10 @@ import numpy as np
 from scipy.linalg import cholesky
 
 from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
-from prg.classes.PKF import PKF, PKFStep
+from prg.classes.pkf import PKF, PKFStep
 
 # Local
-from prg.classes.SeedGenerator import SeedGenerator
+from prg.classes.seed_generator import SeedGenerator
 from prg.utils.exceptions import (
     InvertibilityError,
     ParamError,

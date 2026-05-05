@@ -9,11 +9,11 @@ import numpy as np
 from scipy.linalg import LinAlgError, cho_factor, cho_solve
 
 # Local imports
-from prg.classes.HistoryTracker import HistoryTracker
+from prg.classes.history_tracker import HistoryTracker
 from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
-from prg.classes.ParamLinear import ParamLinear
-from prg.classes.ParamNonLinear import ParamNonLinear
-from prg.classes.SeedGenerator import SeedGenerator
+from prg.classes.param_linear import ParamLinear
+from prg.classes.param_nonlinear import ParamNonLinear
+from prg.classes.seed_generator import SeedGenerator
 from prg.utils.exceptions import (
     CovarianceError,
     FilterError,
