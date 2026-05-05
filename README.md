@@ -70,8 +70,8 @@ pkf = Linear_PKF(model)
 Or use the CLI entry points installed with the package:
 
 ```bash
-awesomepkf-simulate --N 2000 --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --sKey 303
-awesomepkf-pkf      --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --plot
+awesomepkf-simulate --N 2000 --linear-model-name "model_x1_y1_AQ_pairwise" --data-filename "testL.csv" --s-key 303
+awesomepkf-pkf      --linear-model-name "model_x1_y1_AQ_pairwise" --data-filename "testL.csv" --plot
 ```
 
 ---
@@ -164,18 +164,18 @@ python3 -m prg.run_paper_section5_enso  # archived version
 ### Simulate Linear Data and Filter with PKF
 
 ```bash
-awesomepkf-simulate --N 2000 --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --verbose 1 --sKey 303
-awesomepkf-pkf      --linearModelName "model_x1_y1_AQ_pairwise" --dataFileName "testL.csv" --verbose 1 --saveHistory --plot
+awesomepkf-simulate --N 2000 --linear-model-name "model_x1_y1_AQ_pairwise" --data-filename "testL.csv" --verbose 1 --s-key 303
+awesomepkf-pkf      --linear-model-name "model_x1_y1_AQ_pairwise" --data-filename "testL.csv" --verbose 1 --save-history --plot
 ```
 
 ### Simulate Non-Linear Data and Filter with EPKF, UPKF and PPF
 
 ```bash
-awesomepkf-simulate --N 1000 --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --verbose 1 --sKey 303
+awesomepkf-simulate --N 1000 --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "testNL.csv" --verbose 1 --s-key 303
 
-awesomepkf-epkf --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv"                      --verbose 1 --saveHistory --plot
-awesomepkf-upkf --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --sigmaSet "wan2000"  --verbose 1 --saveHistory --plot
-awesomepkf-ppf  --nonLinearModelName "model_x2_y1_pairwise" --dataFileName "testNL.csv" --n_particles 300      --verbose 1 --saveHistory --plot
+awesomepkf-epkf --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "testNL.csv"                      --verbose 1 --save-history --plot
+awesomepkf-upkf --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "testNL.csv" --sigma-set "wan2000"  --verbose 1 --save-history --plot
+awesomepkf-ppf  --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "testNL.csv" --n-particles 300      --verbose 1 --save-history --plot
 ```
 
 ---

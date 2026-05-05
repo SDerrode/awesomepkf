@@ -7,7 +7,7 @@ parse_arguments / try-except shell. Each ``run_<filter>.py`` now is a
 
 Direct usage::
 
-    python -m prg.run_filter epkf --nonLinearModelName model_x1_y1_pairwise --N 100
+    python -m prg.run_filter epkf --nonlinear-model-name model_x1_y1_pairwise --N 100
 
 But normally, you would invoke through the per-filter wrappers
 (``python -m prg.run_nonlinear_epkf``) or the entry-point scripts
@@ -53,37 +53,37 @@ def _parse_arguments(filter_name: str) -> tuple[argparse.Namespace, str]:
 
     arg_keys: list[str] = []
     if spec.is_linear:
-        arg_keys.append("linearModelName")
+        arg_keys.append("linear-model-name")
     else:
-        arg_keys.extend(["nonLinearModelName", "linearModelName"])
-    arg_keys.extend(["N", "sKey"])
+        arg_keys.extend(["nonlinear-model-name", "linear-model-name"])
+    arg_keys.extend(["N", "s-key"])
     if "sigmaSet" in spec.requires:
-        arg_keys.append("sigmaSet")
+        arg_keys.append("sigma-set")
     if "n_particles" in spec.requires:
-        arg_keys.append("n_particles")
-    arg_keys.append("dataFileName")
+        arg_keys.append("n-particles")
+    arg_keys.append("data-filename")
     add_arguments(parser, arg_keys)
 
     args = parser.parse_args()
 
-    if args.dataFileName is not None and args.N is not None:
-        parser.error("--N should not be used with --dataFileName")
-    if args.dataFileName is None and args.N is None:
-        parser.error("--N must be used when --dataFileName is not specified")
+    if args.data_filename is not None and args.N is not None:
+        parser.error("--N should not be used with --data-filename")
+    if args.data_filename is None and args.N is None:
+        parser.error("--N must be used when --data-filename is not specified")
 
     if spec.is_linear:
-        model_name = args.linearModelName
+        model_name = args.linear_model_name
     else:
-        if args.linearModelName is not None and args.nonLinearModelName is not None:
+        if args.linear_model_name is not None and args.nonlinear_model_name is not None:
             parser.error(
-                "--nonLinearModelName should not be used with --linearModelName. One or the other!"
+                "--nonlinear-model-name should not be used with --linear-model-name. One or the other!"
             )
-        if args.linearModelName is None and args.nonLinearModelName is None:
-            parser.error("--nonLinearModelName OR --linearModelName must be used.")
+        if args.linear_model_name is None and args.nonlinear_model_name is None:
+            parser.error("--nonlinear-model-name OR --linear-model-name must be used.")
         model_name = (
-            args.nonLinearModelName
-            if args.linearModelName is None
-            else args.linearModelName
+            args.nonlinear_model_name
+            if args.linear_model_name is None
+            else args.linear_model_name
         )
 
     return args, model_name
@@ -125,20 +125,20 @@ def run(filter_name: str) -> None:
     """Parse CLI args and run the named filter (no exception handling)."""
     args, model_name = _parse_arguments(filter_name)
     _setup_logging(args.verbose)
-    mode = "from_file" if args.dataFileName is not None else "simulation"
+    mode = "from_file" if args.data_filename is not None else "simulation"
 
     runner = FilterRunner(
         filter_name=filter_name,
         model_name=model_name,
         mode=mode,
         N=args.N,
-        sKey=args.sKey,
-        data_filename=args.dataFileName,
-        sigmaSet=getattr(args, "sigmaSet", None),
+        sKey=args.s_key,
+        data_filename=args.data_filename,
+        sigmaSet=getattr(args, "sigma_set", None),
         n_particles=getattr(args, "n_particles", None),
         verbose=args.verbose,
         plot=args.plot,
-        save_history=args.saveHistory,
+        save_history=args.save_history,
     )
     runner.run()
 
