@@ -24,9 +24,9 @@ from collections.abc import Generator
 import numpy as np
 from scipy.linalg import cholesky
 
+from prg.classes._base_particle_filter import _BaseParticleFilter
 from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
-from prg.classes.pkf import PKF, PKFStep
-from prg.classes.seed_generator import SeedGenerator
+from prg.classes.pkf import PKFStep
 from prg.utils.exceptions import (
     InvertibilityError,
     ParamError,
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 __all__ = ["NonLinear_PF"]
 
 
-class NonLinear_PF(PKF):
+class NonLinear_PF(_BaseParticleFilter):
     """Bootstrap Particle Filter for classical (non-pairwise) nonlinear models.
 
     Uses the prior transition density as proposal:
@@ -93,95 +93,14 @@ class NonLinear_PF(PKF):
         sKey=None,
         verbose: int = 0,
     ) -> None:
-        super().__init__(param, sKey, verbose)
-
         if getattr(param, "pairwiseModel", False):
             raise ParamError(
                 "NonLinear_PF does not support pairwise models (param.f is None). "
                 "Use NonLinear_PPF instead."
             )
-
-        self.n_particles = n_particles
-        self.resample_threshold = resample_threshold
-        self.resample_method = resample_method
-
-        self.__randParticles = SeedGenerator()
-        self._cached: dict = {}
-
-    # =========================
-    # RESAMPLING
-    # =========================
-
-    def resample(self, weights: np.ndarray, method: str = "stratified") -> np.ndarray:
-        """Resample particles according to normalised weights.
-
-        Parameters
-        ----------
-        weights : np.ndarray, shape (N,)
-            Normalised particle weights (must sum to 1).
-        method : str, optional
-            Resampling method: ``'multinomial'``, ``'systematic'``,
-            ``'stratified'`` (default), ``'residual'``.
-
-        Returns
-        -------
-        indexes : np.ndarray of int, shape (N,)
-            Indices of selected particles.
-
-        Raises
-        ------
-        ParamError
-            If ``method`` is unknown.
-        """
-        N = self.n_particles
-        cumulative_sum = np.cumsum(weights)
-        cumulative_sum[-1] = 1.0
-
-        if method == "multinomial":
-            indexes = np.searchsorted(
-                cumulative_sum, self.__randParticles.rng.random(N)
-            )
-
-        elif method in ["systematic", "stratified"]:
-            if method == "systematic":
-                positions = (np.arange(N) + self.__randParticles.rng.random()) / N
-            else:
-                positions = (np.arange(N) + self.__randParticles.rng.random(N)) / N
-            indexes = np.zeros(N, dtype=int)
-            i = j = 0
-            while i < N:
-                if positions[i] < cumulative_sum[j]:
-                    indexes[i] = j
-                    i += 1
-                else:
-                    j += 1
-
-        elif method == "residual":
-            indexes: list[int] = []
-            num_copies = np.floor(N * weights).astype(int)
-            for i in range(N):
-                indexes += [i] * num_copies[i]
-            residual = weights - num_copies / N
-            residual_sum = residual.sum()
-            if residual_sum > EPS_ABS:
-                residual /= residual_sum
-            else:
-                residual = np.ones(N) / N
-            cumulative_sum_res = np.cumsum(residual)
-            cumulative_sum_res[-1] = 1.0
-            remaining = N - len(indexes)
-            random_vals = self.__randParticles.rng.random(remaining)
-            res_indexes = np.searchsorted(cumulative_sum_res, random_vals)
-            indexes += list(res_indexes)
-            indexes = np.array(indexes)
-
-        else:
-            raise ParamError(
-                f"Unknown resampling method: {method!r}. "
-                f"Expected one of: 'multinomial', 'systematic', 'stratified', 'residual'."
-            )
-
-        return indexes
+        super().__init__(
+            param, n_particles, resample_threshold, resample_method, sKey, verbose
+        )
 
     # =========================
     # PRE-COMPUTATION
@@ -230,40 +149,6 @@ class NonLinear_PF(PKF):
             "log_norm_const": -0.5
             * (self.dim_y * np.log(2 * np.pi) + np.linalg.slogdet(R)[1]),
         }
-
-    # =========================
-    # LOG-WEIGHT NORMALISATION
-    # =========================
-
-    @staticmethod
-    def _safe_normalize_log_weights(log_weights: np.ndarray) -> np.ndarray:
-        """Normalise log-weights in a numerically stable way.
-
-        Handles NaN (likelihood overflow), total degeneracy (all -inf),
-        and extreme underflow after exp.
-        """
-        nan_mask = np.isnan(log_weights)
-        if nan_mask.any():
-            logger.warning("_safe_normalize_log_weights: NaN detected in log_weights")
-            log_weights = log_weights.copy()
-            log_weights[nan_mask] = -np.inf
-
-        finite_mask = np.isfinite(log_weights)
-        if not finite_mask.any():
-            logger.warning("_safe_normalize_log_weights: all weights -inf → uniform")
-            return np.full(len(log_weights), 1.0 / len(log_weights))
-
-        max_lw = np.max(log_weights[finite_mask])
-        log_weights = np.where(finite_mask, log_weights - max_lw, -np.inf)
-
-        weights = np.exp(log_weights)
-        total = weights.sum()
-
-        if not np.isfinite(total) or total <= 0.0:
-            logger.warning("_safe_normalize_log_weights: underflow after exp → uniform")
-            return np.full(len(log_weights), 1.0 / len(log_weights))
-
-        return weights / total
 
     # =========================
     # MAIN FILTER LOOP
@@ -320,7 +205,7 @@ class NonLinear_PF(PKF):
         self._precompute()
 
         # --- Particle initialisation ---
-        particles_current: np.ndarray = self.__randParticles.rng.multivariate_normal(
+        particles_current: np.ndarray = self._randParticles.rng.multivariate_normal(
             self.mz0[: self.dim_x].flatten(),
             self.Pz0[: self.dim_x, : self.dim_x],
             self.n_particles,
@@ -360,7 +245,7 @@ class NonLinear_PF(PKF):
             # PROPAGATION — sample x_i ~ p(x_{k+1} | x_i^k)
             # x_{k+1} = f(x_k, L_Q * z),  z ~ N(0, I)
             # =========================
-            noise = self.__randParticles.rng.standard_normal(
+            noise = self._randParticles.rng.standard_normal(
                 (self.n_particles, self.dim_x, 1)
             )
             process_noise = np.einsum(
