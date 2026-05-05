@@ -381,6 +381,23 @@ class SetLERNER2002(SigmaPointsSet, key="lerner2002"):
         - ``Wm[1:2n+1] = (4 - dim) / 18``
         - ``Wm[2n+1:]  = 1 / 36``
 
+        Note on cross-points
+        --------------------
+        Lerner places the cross points at ``γ·(σ_i ± σ_j)`` directly,
+        without the ``1/√2`` rescaling that appears in the equivalent
+        Stroud E_n^{r²} 5-1 cubature. The 1/36 cross weight is
+        consistent with this scaling: e.g. for ``dim=2`` and standard
+        Gaussian one verifies
+
+        - Σ wᵢ = 1
+        - Σ wᵢ x_i² = 1 (axial 2/3 + cross 1/3)
+        - Σ wᵢ x_i² y_i² = 1 (cross-only contribution: 4·(1/36)·9 = 1)
+        - Σ wᵢ x_i⁴ = 3.
+
+        So the implementation is self-consistent — keep this in mind
+        when comparing with cubature references that fold the 1/√2 into
+        the points and drop the matching factor from the weights.
+
         Parameters
         ----------
         dim : int
@@ -505,8 +522,13 @@ class SetIto2000(SigmaPointsSet, key="ito2000"):
         Initialise the ITO2000 sigma-point set.
 
         Quadrature nodes and weights are computed via
-        :func:`numpy.polynomial.hermite.hermgauss` and assembled
-        by tensor product over all ``dim`` dimensions.
+        :func:`numpy.polynomial.hermite_e.hermegauss` (probabilists'
+        Hermite, weight ``exp(-x²/2)``) and assembled by tensor product
+        over all ``dim`` dimensions. Using the probabilists' variant
+        avoids the missing ``√2`` rescaling that arises with the
+        physicists' rule (``hermgauss``, weight ``exp(-x²)``), under
+        which ``Σwᵢxᵢ² = 1/2`` instead of the required unit second
+        moment for a standard Gaussian.
 
         Parameters
         ----------
@@ -530,7 +552,8 @@ class SetIto2000(SigmaPointsSet, key="ito2000"):
         )
         self.nbSigmaPoint: int = self.p**self.dim
 
-        xi_1d, w_1d = np.polynomial.hermite.hermgauss(self.p)
+        # Probabilists' Hermite: ∫ f(x) exp(-x²/2) dx ≈ Σ wᵢ f(xᵢ)
+        xi_1d, w_1d = np.polynomial.hermite_e.hermegauss(self.p)
 
         # Tensor product of 1D nodes and weights over all dimensions
         self.Xi: np.ndarray = np.array(list(product(xi_1d, repeat=self.dim)))
@@ -538,8 +561,9 @@ class SetIto2000(SigmaPointsSet, key="ito2000"):
             np.array(list(product(w_1d, repeat=self.dim))), axis=1
         )
 
-        # Normalise by pi^(dim/2) — standard Gauss-Hermite convention
-        self.Wm /= np.pi ** (self.dim / 2)
+        # Normalise by (2π)^(dim/2) so ∑wᵢ = 1 against the standard
+        # Gaussian density (1/√(2π))^d · exp(-|x|²/2).
+        self.Wm /= (2.0 * np.pi) ** (self.dim / 2.0)
         self._normalize_weights(self.Wm)
 
         self.Wc: np.ndarray = np.copy(self.Wm)
@@ -549,7 +573,9 @@ class SetIto2000(SigmaPointsSet, key="ito2000"):
         Compute the ``p^dim`` Gauss-Hermite sigma points.
 
         Each point is obtained by mapping a quadrature node through the
-        Cholesky factor of ``P``:  ``x + sqrt(P) @ xi``.
+        Cholesky factor of ``P``:  ``x + sqrt(P) @ xi``. Because the
+        nodes are produced by the probabilists' Hermite quadrature
+        (weight ``exp(-x²/2)``), no extra ``√2`` rescaling is required.
 
         Parameters
         ----------

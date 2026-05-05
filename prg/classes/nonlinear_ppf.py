@@ -302,18 +302,32 @@ class NonLinear_PPF(_BaseParticleFilter):
                 "ij,njk->nik", self._cached["L"], noise
             )
 
-            # Clipping of diverging particles
-            PARTICLE_CLIP = (
-                1e6  # to be adjusted according to the physical scale of the model
-            )
-            n_clipped = np.sum(
+            # Clipping of diverging particles.
+            # Non-finite values are replaced by the per-coordinate median of
+            # the finite particles (previously replaced by 0, which biased the
+            # posterior toward the origin). If no particle is finite, fall back
+            # to the previous Xkp1_predict (also unbiased w.r.t. the prior).
+            finite_mask = np.isfinite(particles_current).all(axis=(1, 2))
+            n_clipped = int(np.sum(
                 ~np.isfinite(particles_current)
-                | (np.abs(particles_current) > PARTICLE_CLIP)
-            )
+                | (np.abs(particles_current) > self.particle_clip)
+            ))
+            if finite_mask.any():
+                replacement = np.median(
+                    particles_current[finite_mask], axis=0
+                )  # (dim_x, 1)
+            else:
+                logger.warning(
+                    "Step %d: every particle is non-finite — falling back to "
+                    "previous predicted mean.",
+                    new_k,
+                )
+                replacement = Xkp1_predict
+            bad_mask = ~np.isfinite(particles_current).all(axis=(1, 2))
+            if bad_mask.any():
+                particles_current[bad_mask] = replacement
             particles_current = np.clip(
-                np.where(np.isfinite(particles_current), particles_current, 0.0),
-                -PARTICLE_CLIP,
-                PARTICLE_CLIP,
+                particles_current, -self.particle_clip, self.particle_clip
             )
 
             # DEBUG — particles_current verification
@@ -356,10 +370,8 @@ class NonLinear_PPF(_BaseParticleFilter):
             # Intra-particle variance = P'_x (constant, analytical)
             P_prime_x = self._cached["L"] @ self._cached["L"].T
 
-            # ESS correction: ~ 1 if ESS is high, avoids over-estimation at low ESS
-            _ess_correction = 1.0 - np.sum(weights**2)
-
-            # Final (exact Rao-Blackwell formula)
+            # Final (exact Rao-Blackwell formula): total variance = between
+            # (variance of conditional means) + within (P'_x).
             PXXkp1_update = var_between + P_prime_x
 
             self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")
