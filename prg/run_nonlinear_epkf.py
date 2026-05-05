@@ -1,10 +1,7 @@
 import argparse
 import sys
 
-from prg.base_classes.nonlinear_epkf_runner_from_file import (
-    NonLinearEPKFRunnerFromFile,
-)
-from prg.base_classes.nonlinear_epkf_runner_simulation import NonLinearEPKFRunnerSim
+from prg.base_classes.filter_runner import FilterRunner
 from prg.utils.exceptions import FilterError, NumericalError, ParamError, PKFError
 from prg.utils.parser import add_arguments
 
@@ -43,26 +40,20 @@ def parse_arguments():
 
 def main() -> None:
     args, model_name = parse_arguments()
+    mode = "from_file" if args.dataFileName is not None else "simulation"
 
     try:
-        if args.dataFileName is not None:
-            runner = NonLinearEPKFRunnerFromFile(
-                model_name=model_name,
-                data_filename=args.dataFileName,
-                verbose=args.verbose,
-                plot=args.plot,
-                save_history=args.saveHistory,
-            )
-        else:
-            runner = NonLinearEPKFRunnerSim(
-                model_name=model_name,
-                N=args.N,
-                sKey=args.sKey,
-                verbose=args.verbose,
-                plot=args.plot,
-                save_history=args.saveHistory,
-            )
-
+        runner = FilterRunner(
+            filter_name="epkf",
+            model_name=model_name,
+            mode=mode,
+            N=args.N,
+            sKey=args.sKey,
+            data_filename=args.dataFileName,
+            verbose=args.verbose,
+            plot=args.plot,
+            save_history=args.saveHistory,
+        )
         runner.run()
 
     except NumericalError as e:

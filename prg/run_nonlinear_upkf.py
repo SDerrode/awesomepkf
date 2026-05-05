@@ -1,10 +1,7 @@
 import argparse
 import sys
 
-from prg.base_classes.nonlinear_upkf_runner_from_file import (
-    NonLinearUPKFRunnerFromFile,
-)
-from prg.base_classes.nonlinear_upkf_runner_simulation import NonLinearUPKFRunnerSim
+from prg.base_classes.filter_runner import FilterRunner
 from prg.utils.exceptions import FilterError, NumericalError, ParamError, PKFError
 from prg.utils.parser import add_arguments
 
@@ -50,28 +47,21 @@ def parse_arguments():
 
 def main() -> None:
     args, model_name = parse_arguments()
+    mode = "from_file" if args.dataFileName is not None else "simulation"
 
     try:
-        if args.dataFileName is not None:
-            runner = NonLinearUPKFRunnerFromFile(
-                model_name=model_name,
-                sigmaSet=args.sigmaSet,
-                data_filename=args.dataFileName,
-                verbose=args.verbose,
-                plot=args.plot,
-                save_history=args.saveHistory,
-            )
-        else:
-            runner = NonLinearUPKFRunnerSim(
-                model_name=model_name,
-                N=args.N,
-                sKey=args.sKey,
-                sigmaSet=args.sigmaSet,
-                verbose=args.verbose,
-                plot=args.plot,
-                save_history=args.saveHistory,
-            )
-
+        runner = FilterRunner(
+            filter_name="upkf",
+            model_name=model_name,
+            mode=mode,
+            N=args.N,
+            sKey=args.sKey,
+            data_filename=args.dataFileName,
+            sigmaSet=args.sigmaSet,
+            verbose=args.verbose,
+            plot=args.plot,
+            save_history=args.saveHistory,
+        )
         runner.run()
 
     except NumericalError as e:

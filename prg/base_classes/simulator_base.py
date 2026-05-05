@@ -66,7 +66,7 @@ class BaseDataSimulator(ABC):
             data_file_name = self.default_filename()
         self.data_file_name = data_file_name
 
-        self.base_dir = str(Path(".") / "data")
+        self.base_dir = "data"
         self.datafile_dir = str(Path(self.base_dir) / "datafile")
 
         self._validate_inputs()
