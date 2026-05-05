@@ -10,6 +10,7 @@ Two execution modes:
 - ``"from_file"``: load observations from a CSV.
 """
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -24,10 +25,25 @@ from prg.utils.exceptions import FilterError, ParamError, PKFError
 from prg.utils.io import file_data_generator
 from prg.utils.plot_settings import WINDOW
 
-__all__ = ["FilterRunner", "Mode"]
+__all__ = ["FilterRunner", "Mode", "RunOptions"]
 
 
 Mode = Literal["simulation", "from_file"]
+
+
+@dataclass(frozen=True)
+class RunOptions:
+    """Output-side runtime options for :class:`FilterRunner`.
+
+    Grouping these into a single argument keeps the runner's
+    constructor signature short and lets callers reuse a configured
+    options object across multiple runs.
+    """
+
+    verbose: int = 1
+    plot: bool = False
+    save_history: bool = False
+    base_dir: str = "."
 
 
 class FilterRunner(BaseRunner):
@@ -71,16 +87,17 @@ class FilterRunner(BaseRunner):
         filter_name: str,
         model_name: str,
         mode: Mode,
+        *,
         N: int | None = None,
         sKey: int | None = None,
         data_filename: str | None = None,
         sigmaSet: str | None = None,
         n_particles: int | None = None,
-        verbose: int = 1,
-        plot: bool = False,
-        save_history: bool = False,
-        base_dir: str = ".",
+        options: RunOptions | None = None,
     ) -> None:
+        if options is None:
+            options = RunOptions()
+
         if filter_name not in FILTER_SPECS:
             raise ParamError(
                 f"Unknown filter {filter_name!r}. "
@@ -118,7 +135,13 @@ class FilterRunner(BaseRunner):
         self.sigmaSet = sigmaSet
         self.n_particles = n_particles
 
-        super().__init__(model_name, verbose, plot, save_history, base_dir)
+        super().__init__(
+            model_name,
+            options.verbose,
+            options.plot,
+            options.save_history,
+            options.base_dir,
+        )
 
         if mode == "from_file":
             kind = "Linear" if self.spec.is_linear else "NonLinear"
