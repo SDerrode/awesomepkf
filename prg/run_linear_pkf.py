@@ -1,8 +1,7 @@
 import argparse
 import sys
 
-from prg.base_classes.linear_pkf_runner_from_file import LinearPKFRunnerFromFile
-from prg.base_classes.linear_pkf_runner_simulation import LinearPKFRunnerSim
+from prg.base_classes.filter_runner import FilterRunner
 from prg.utils.exceptions import FilterError, NumericalError, ParamError, PKFError
 from prg.utils.parser import add_arguments
 
@@ -25,26 +24,20 @@ def parse_arguments() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_arguments()
+    mode = "from_file" if args.dataFileName is not None else "simulation"
 
     try:
-        if args.dataFileName is not None:
-            runner = LinearPKFRunnerFromFile(
-                model_name=args.linearModelName,
-                data_filename=args.dataFileName,
-                verbose=args.verbose,
-                plot=args.plot,
-                save_history=args.saveHistory,
-            )
-        else:
-            runner = LinearPKFRunnerSim(
-                model_name=args.linearModelName,
-                N=args.N,
-                sKey=args.sKey,
-                verbose=args.verbose,
-                plot=args.plot,
-                save_history=args.saveHistory,
-            )
-
+        runner = FilterRunner(
+            filter_name="pkf",
+            model_name=args.linearModelName,
+            mode=mode,
+            N=args.N,
+            sKey=args.sKey,
+            data_filename=args.dataFileName,
+            verbose=args.verbose,
+            plot=args.plot,
+            save_history=args.saveHistory,
+        )
         runner.run()
 
     except NumericalError as e:
