@@ -20,6 +20,9 @@ papier_NonLinearPKF/
 /prg/run_paper_section5_sv.py
 /prg/run_sv_test.py
 
+# GUI work-in-progress (not versioned for now)
+/prg/gui/
+
 # VSCodium / VSCode
 AwesomePKF.code-workspace
 .vscode/
