@@ -24,6 +24,7 @@ class BaseRunner(ABC):
         plot: bool = False,
         save_history: bool = False,
         base_dir: str = ".",
+        model_kwargs: dict | None = None,
         **kwargs,
     ) -> None:
         """
@@ -60,6 +61,7 @@ class BaseRunner(ABC):
         self.plot = plot
         self.save_history = save_history
         self.base_dir = base_dir
+        self.model_kwargs = dict(model_kwargs) if model_kwargs else {}
         self._extra_args = kwargs
 
         self.tracker_dir, self.datafile_dir, self.graph_dir = self._setup_directories()
@@ -127,7 +129,7 @@ class BaseRunner(ABC):
             )
 
         try:
-            model = factory.create(self.model_name)
+            model = factory.create(self.model_name, **self.model_kwargs)
         except PKFError:
             raise
         except Exception as e:

@@ -11,6 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2026-05-05
+
+### Added
+
+- **`model_kwargs` on `FilterRunner`** — constructor-time scalar overrides forwarded to the model factory. Required for parameter sweeps to genuinely vary `q_x`, `q_y`, etc. (the previous post-construction `setattr` path was silently no-op for matrices already baked into `param.mQ`).
+- **Factories accept `**kwargs`** — `ModelFactoryNonLinear.create(name, **kwargs)` forwards to class-discovered constructors; `ModelFactoryLinear.create(name, **kwargs)` raises if any are passed (linear models are config-driven).
+- **Tutorial 06** — [`tutorial_06_filter_runner_and_config.ipynb`](notebooks/tutorial_06_filter_runner_and_config.ipynb): high-level orchestration with `FilterRunner` + `RunOptions`, parameter sweeps via `model_kwargs`, and TOML session-config replay through `awesomepkf-<filter> --config foo.toml`.
+
+### Changed
+
+- **`ipynb/` → `notebooks/`** — directory renamed to the conventional name. README, `pyproject.toml` (`tool.coverage.exclude`), and internal notebook references updated. Notebook `sys.path` insertions are unchanged (depth-relative).
+- **Tutorials 01 and 02** "Going Further" tables list the unified dispatcher entry points (`awesomepkf-<filter> --config session.toml`, `python -m prg.run_<filter>`).
+- **`.gitignore`** — added `/prg/gui` (no trailing slash) so symlinks pointing at the canonical GUI directory are also ignored across worktrees.
+
+### Fixed
+
+- **Tutorial 05** — `prg/models/nonLinear/` (camel-case path used as `Path(...).write_text` target) corrected to `prg/models/nonlinear/`. On case-sensitive filesystems the previous path silently created a parallel directory the factory never scanned.
+- **Tutorials 02 and 04** — model name `model_x1_y1_gordon_classic` corrected to `model_x1_y1_Gordon_classic`.
+
+---
+
 ## [0.4.0] - 2026-04-21
 
 ### Changed

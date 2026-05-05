@@ -98,12 +98,17 @@ class ModelFactoryLinear:
     """Registry-driven factory for linear models."""
 
     @classmethod
-    def create(cls, name: str) -> BaseModelLinear:
+    def create(cls, name: str, **kwargs) -> BaseModelLinear:
         key = name.strip()
         if key not in LINEAR_CONFIGS:
             raise ValueError(
                 f"Unknown model: '{key}'. "
                 f"Available: {cls.list_models()}"
+            )
+        if kwargs:
+            raise ValueError(
+                f"Linear model '{key}' is config-driven and does not accept "
+                f"constructor overrides {sorted(kwargs)}."
             )
         cfg = LINEAR_CONFIGS[key]
         variant = cfg["variant"]

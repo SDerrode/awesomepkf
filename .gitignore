@@ -20,8 +20,11 @@ papier_NonLinearPKF/
 /prg/run_paper_section5_sv.py
 /prg/run_sv_test.py
 
-# GUI work-in-progress (not versioned for now)
+# GUI work-in-progress (not versioned for now). Two patterns:
+#   /prg/gui/   ignores the directory contents (canonical location).
+#   /prg/gui    ignores symlinks to it (worktrees that link to the canonical copy).
 /prg/gui/
+/prg/gui
 
 # VSCodium / VSCode
 AwesomePKF.code-workspace
