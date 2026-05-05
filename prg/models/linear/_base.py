@@ -37,18 +37,30 @@ class BaseModelLinear(DynamicsMixin, SymbolicMixin, PlottingMixin):
         self.augmented = augmented
         self.pairwiseModel = pairwiseModel
 
-        # UPKF specific parameters
+        # ── Unscented-Transform parameters (consumed by UKF / UPKF) ──────
+        # Defaults below are deliberately NON-standard: alpha=0.25 widens the
+        # sigma-point spread compared to Wan & Merwe's alpha=1e-3, and produces
+        # all-positive Wm / Wc for the dimensions of interest in this project
+        # (small dim_x, dim_y). The classical Wan & Merwe choice yields a
+        # negative central weight Wm[0] for n>2, which combined with the
+        # pairwise (UPKF) augmentation can pull predicted covariances
+        # toward indefiniteness.
+        #
+        # Tuning notes:
+        #   - alpha controls the spread (small ⇒ tight cluster around mean,
+        #     large ⇒ wide). Typical range 1e-4 … 1.
+        #   - beta = 2 is optimal for Gaussian priors (Wan & Merwe).
+        #   - kappa = 0 keeps the analytical lambda relation lean.
+        # Override these on subclasses or via param.alpha = ... before
+        # instantiating the filter.
         self.alpha = 0.25
         self.beta = 2.0
         self.kappa = 0.0
-        # Option 1 — classic Wan & Merwe values
-        # self.alpha = 1e-3
-        # self.beta = 2.0
-        # self.kappa = 0.0  # -> lambda_ ≈ -2 + ε, Wm[0] ≈ -1, Wc[0] ≈ 1
-        # Option 2 — cubature (symmetric, all positive weights)
-        # self.alpha = 1.0
-        # self.beta  = 0.0
-        # self.kappa = 0.0   # -> lambda_ = 0, Wm = Wc = 1/(2n)
+        # Alternative presets:
+        #   Wan & Merwe (classic):   alpha=1e-3, beta=2.0, kappa=0.0
+        #     → lambda_ ≈ -dim_x + ε, Wm[0] ≈ 1 − dim_x/(dim_x+ε), often < 0
+        #   Cubature (symmetric):    alpha=1.0,  beta=0.0, kappa=0.0
+        #     → lambda_ = 0, Wm = Wc = 1/(2 dim_x), all positive
 
         self.lambda_ = self.alpha**2 * (self.dim_x + self.kappa) - self.dim_x
 

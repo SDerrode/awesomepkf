@@ -170,6 +170,9 @@ class NonLinear_UPKF(PKF):
             Pkp1_predict = np.einsum(
                 "i,ijk,ilk->jl", self.sigma_point_set_obj.Wc, diffs, diffs
             )
+            # Force exact symmetry — protects the downstream Cholesky / Joseph
+            # form against eps-level asymmetry from the einsum accumulation.
+            Pkp1_predict = 0.5 * (Pkp1_predict + Pkp1_predict.T)
 
             # Validate predicted covariance — raises CovarianceError if invalid
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")

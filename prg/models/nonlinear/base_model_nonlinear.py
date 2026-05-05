@@ -34,7 +34,11 @@ class BaseModelNonLinear:
         self.dim_y = dim_y
         self.dim_xy = dim_x + dim_y
 
-        # Specific UPKF parameters
+        # ── Unscented-Transform parameters (consumed by UKF / UPKF) ─────────
+        # alpha=0.25 deviates from Wan & Merwe's classical 1e-3 to keep the
+        # central weight Wm[0] non-negative for the dimensions used here, which
+        # is important for the pairwise (UPKF) augmentation. See
+        # ``prg/models/linear/_base.py`` for the full rationale and tuning notes.
         self.alpha = 0.25
         self.beta = 2.0
         self.kappa = 0.0

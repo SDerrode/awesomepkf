@@ -132,7 +132,12 @@ class NonLinear_EPKF(PKF):
 
         while N is None or step.k < N:
 
-            # here ykp1 still gives the previous : it is yk indeed!
+            # Pairwise context: the augmented state is z_k = (X_k, Y_k), and
+            # the transition g operates on z_k → z_{k+1}. Hence the Jacobian
+            # is evaluated at z_k = (X_k|k, y_k), where step.ykp1 still
+            # contains the *previous* observation y_k (not y_{k+1}, which is
+            # only consumed below by next(generator)). This is the correct
+            # linearisation point for the EPKF prediction in pairwise models.
             z_iterated[: self.dim_x] = step.Xkp1_update
             z_iterated[self.dim_x :] = step.ykp1
 
@@ -165,6 +170,11 @@ class NonLinear_EPKF(PKF):
 
             accel_xy_xy[: self.dim_x, : self.dim_x] = step.PXXkp1_update
             Pkp1_predict = An @ accel_xy_xy @ An.T + Bn @ self.param.mQ @ Bn.T
+
+            # Symmetrise: A·P·Aᵀ should be symmetric in exact arithmetic but
+            # asymmetry of order machine-eps creeps in. Forcing P = (P+Pᵀ)/2
+            # keeps the downstream Cholesky / Joseph form well-defined.
+            Pkp1_predict = 0.5 * (Pkp1_predict + Pkp1_predict.T)
 
             # Validate predicted covariance — raises CovarianceError if invalid
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")

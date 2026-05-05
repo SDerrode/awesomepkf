@@ -92,6 +92,7 @@ class NonLinear_PF(_BaseParticleFilter):
         resample_method: str = "stratified",
         sKey=None,
         verbose: int = 0,
+        particle_clip: float | None = None,
     ) -> None:
         if getattr(param, "pairwiseModel", False):
             raise ParamError(
@@ -99,7 +100,13 @@ class NonLinear_PF(_BaseParticleFilter):
                 "Use NonLinear_PPF instead."
             )
         super().__init__(
-            param, n_particles, resample_threshold, resample_method, sKey, verbose
+            param,
+            n_particles,
+            resample_threshold,
+            resample_method,
+            sKey,
+            verbose,
+            particle_clip=particle_clip,
         )
 
     # =========================
@@ -297,15 +304,14 @@ class NonLinear_PF(_BaseParticleFilter):
             particles_current = particles_propagated
 
             # Clip diverging particles
-            PARTICLE_CLIP = 1e6
             n_clipped = np.sum(
                 ~np.isfinite(particles_current)
-                | (np.abs(particles_current) > PARTICLE_CLIP)
+                | (np.abs(particles_current) > self.particle_clip)
             )
             particles_current = np.clip(
                 np.where(np.isfinite(particles_current), particles_current, 0.0),
-                -PARTICLE_CLIP,
-                PARTICLE_CLIP,
+                -self.particle_clip,
+                self.particle_clip,
             )
 
             # =========================

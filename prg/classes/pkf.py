@@ -1,6 +1,7 @@
 # Standard library
 from __future__ import annotations
 
+import logging
 from collections.abc import Generator
 from dataclasses import dataclass
 
@@ -22,6 +23,8 @@ from prg.utils.exceptions import (
     ParamError,
     StepValidationError,
 )
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["PKF", "PKFStep"]
 
@@ -342,9 +345,13 @@ class PKF:
         Check whether a matrix is a valid covariance matrix using
         :class:`CovarianceMatrix` diagnostics.
 
-        Skipped entirely for augmented models. Logs a warning on WARNING
-        status and the full diagnostic report at DEBUG level. Attempts
-        regularization on FAIL status before raising.
+        For augmented models, only the cheap NaN/Inf guard runs — the
+        full PSD diagnostics are skipped because the projection / Schur
+        structure can produce semi-definite blocks that the generic
+        diagnostic flags as invalid. For other models, attempts
+        Tikhonov regularisation on FAIL status, mutates ``mat`` in
+        place, and logs the regularisation (``ε`` and min-eigenvalue
+        before/after) before raising on hard failure.
 
         Parameters
         ----------
@@ -358,22 +365,43 @@ class PKF:
         Raises
         ------
         CovarianceError
-            If the matrix is not a valid covariance matrix and regularization fails.
+            If the matrix contains NaN/Inf, or if it is not a valid
+            covariance matrix and regularization fails.
         """
+        # Cheap NaN/Inf guard — applies to ALL models, including augmented:
+        # a NaN/Inf entry is always a real numerical failure that must surface.
+        if not np.all(np.isfinite(mat)):
+            raise CovarianceError(
+                f"Step {k}: {name} contains NaN or Inf entries.",
+                matrix_name=name,
+                step=k,
+            )
+
         if self.param.augmented:
             return
 
         report = CovarianceMatrix(mat).check()
         if not report.is_ok and not report.is_valid:
             try:
-                mat[:] = CovarianceMatrix(mat).regularized()
-            except ValueError as e:
+                result = CovarianceMatrix(mat).regularize()
+            except (ValueError, RuntimeError) as e:
                 raise CovarianceError(
                     f"Step {k}: {name} is not a valid covariance matrix "
                     f"and could not be regularized.",
                     matrix_name=name,
                     step=k,
                 ) from e
+
+            mat[:] = result.matrix_regularized
+            logger.warning(
+                "Step %d: %s regularised in place "
+                "(eps=%.3g, min_eig %.3g → %.3g).",
+                k,
+                name,
+                result.eps_applied,
+                result.min_eigenvalue_before,
+                result.min_eigenvalue_after,
+            )
 
     def _check_invertible(self, mat: np.ndarray, k: int, name: str = "") -> bool:
         """
@@ -462,9 +490,22 @@ class PKF:
         # Validate Sigma22 before inversion — raises InvertibilityError on failure
         self._check_invertible(Sigma22, k, name="Sigma22")
 
-        Sigma22_inv: np.ndarray = np.linalg.inv(Sigma22)
-        Xkp1_update: np.ndarray = mu_x0 + Sigma12 @ Sigma22_inv @ (ykp1 - mu_y0)
-        PXXkp1_update: np.ndarray = Sigma11 - Sigma12 @ Sigma22_inv @ Sigma21
+        # Cholesky-based solve — more stable than forming Σ₂₂⁻¹ explicitly.
+        try:
+            c22, low22 = cho_factor(Sigma22)
+            Xkp1_update: np.ndarray = mu_x0 + Sigma12 @ cho_solve(
+                (c22, low22), ykp1 - mu_y0
+            )
+            PXXkp1_update: np.ndarray = Sigma11 - Sigma12 @ cho_solve(
+                (c22, low22), Sigma21
+            )
+        except (LinAlgError, ValueError) as e:
+            raise CovarianceError(
+                f"Step {k}: Cholesky factorisation failed — Sigma22 may not be "
+                f"positive definite.",
+                matrix_name="Sigma22",
+                step=k,
+            ) from e
 
         # Validate updated covariance — raises CovarianceError on failure
         self._check_covariance(PXXkp1_update, k, name="PXXkp1_update")

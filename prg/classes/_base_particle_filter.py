@@ -29,7 +29,25 @@ __all__ = ["_BaseParticleFilter"]
 
 
 class _BaseParticleFilter(PKF):
-    """Abstract base for particle filters; not instantiated directly."""
+    """Abstract base for particle filters; not instantiated directly.
+
+    Parameters
+    ----------
+    particle_clip : float, optional
+        Per-coordinate magnitude cap applied to particles after the
+        stochastic update — both finite over-shoots and (after a
+        ``where(isfinite, ., 0)`` substitution) NaN/Inf values are
+        bounded by ``±particle_clip``. Should be set to roughly the
+        physical scale of the model. Default ``1e6``.
+    """
+
+    DEFAULT_PARTICLE_CLIP: float = 1e6
+
+    # Number of consecutive total-degeneracy fall-backs (all log-weights -inf
+    # OR underflow after exp) above which we escalate the log severity from
+    # WARNING to ERROR — a steady stream of fall-backs means the filter has
+    # collapsed and the user is silently getting a uniform posterior.
+    DEGENERACY_ESCALATE_AFTER: int = 5
 
     def __init__(
         self,
@@ -39,13 +57,22 @@ class _BaseParticleFilter(PKF):
         resample_method: str = "stratified",
         sKey=None,
         verbose: int = 0,
+        particle_clip: float | None = None,
     ) -> None:
         super().__init__(param, sKey, verbose)
         self.n_particles = n_particles
         self.resample_threshold = resample_threshold
         self.resample_method = resample_method
+        self.particle_clip: float = (
+            self.DEFAULT_PARTICLE_CLIP if particle_clip is None else float(particle_clip)
+        )
+        if self.particle_clip <= 0:
+            raise ParamError(
+                f"particle_clip must be strictly positive, got {self.particle_clip!r}."
+            )
         self._randParticles = SeedGenerator()
         self._cached: dict = {}
+        self._consecutive_degeneracies: int = 0
 
     # =========================
     # RESAMPLING
@@ -133,12 +160,15 @@ class _BaseParticleFilter(PKF):
     # LOG-WEIGHT NORMALISATION
     # =========================
 
-    @staticmethod
-    def _safe_normalize_log_weights(log_weights: np.ndarray) -> np.ndarray:
+    def _safe_normalize_log_weights(self, log_weights: np.ndarray) -> np.ndarray:
         """Normalise log-weights in a numerically stable way.
 
         Handles NaN (likelihood overflow), total degeneracy (all -inf),
-        and extreme underflow after exp.
+        and extreme underflow after exp. Tracks consecutive total
+        degeneracies in ``self._consecutive_degeneracies`` and escalates
+        the log severity once
+        :data:`DEGENERACY_ESCALATE_AFTER` is exceeded — a sustained run of
+        uniform-fall-back means the filter has effectively collapsed.
         """
         nan_mask = np.isnan(log_weights)
         if nan_mask.any():
@@ -148,8 +178,7 @@ class _BaseParticleFilter(PKF):
 
         finite_mask = np.isfinite(log_weights)
         if not finite_mask.any():
-            logger.warning("_safe_normalize_log_weights: all weights -inf → uniform")
-            return np.full(len(log_weights), 1.0 / len(log_weights))
+            return self._degenerate_uniform(log_weights, "all weights -inf")
 
         max_lw = np.max(log_weights[finite_mask])
         log_weights = np.where(finite_mask, log_weights - max_lw, -np.inf)
@@ -158,7 +187,27 @@ class _BaseParticleFilter(PKF):
         total = weights.sum()
 
         if not np.isfinite(total) or total <= 0.0:
-            logger.warning("_safe_normalize_log_weights: underflow after exp → uniform")
-            return np.full(len(log_weights), 1.0 / len(log_weights))
+            return self._degenerate_uniform(log_weights, "underflow after exp")
 
+        # Successful normalisation — reset the run counter.
+        self._consecutive_degeneracies = 0
         return weights / total
+
+    def _degenerate_uniform(self, log_weights: np.ndarray, reason: str) -> np.ndarray:
+        """Return uniform weights and log a degeneracy event.
+
+        Bumps :attr:`_consecutive_degeneracies` and emits at WARNING
+        severity, escalating to ERROR once
+        :data:`DEGENERACY_ESCALATE_AFTER` consecutive events have been
+        seen.
+        """
+        self._consecutive_degeneracies += 1
+        msg = (
+            "_safe_normalize_log_weights: %s → uniform "
+            "(consecutive degeneracies: %d)"
+        )
+        if self._consecutive_degeneracies > self.DEGENERACY_ESCALATE_AFTER:
+            logger.error(msg, reason, self._consecutive_degeneracies)
+        else:
+            logger.warning(msg, reason, self._consecutive_degeneracies)
+        return np.full(len(log_weights), 1.0 / len(log_weights))

@@ -249,6 +249,8 @@ class NonLinear_UKF(PKF):
                 np.einsum("i,ijk,ilk->jl", self.sigma_pred_set.Wc, diffs_f, diffs_f)
                 + self._Q_x
             )  # (dim_x, dim_x)
+            # Force exact symmetry — protects the downstream Cholesky.
+            P_xx_pred = 0.5 * (P_xx_pred + P_xx_pred.T)
 
             # Validation — raises NumericalError if invalid
             self._check_covariance(P_xx_pred, step.k, name="P_xx_pred")
@@ -285,6 +287,8 @@ class NonLinear_UKF(PKF):
                 np.einsum("i,ijk,ilk->jl", self.sigma_upd_set.Wc, diffs_h, diffs_h)
                 + self._R
             )  # (dim_y, dim_y)
+            # Force exact symmetry — Skp1 = P_yy is Cholesky-factored downstream.
+            P_yy = 0.5 * (P_yy + P_yy.T)
 
             # Cross-covariance  P_xy = Σ Wc_i · δx_i δh_iᵀ
             diffs_x = sigma_upd - x_pred  # (n_sigma, dim_x, 1)
