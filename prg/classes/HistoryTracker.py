@@ -286,6 +286,34 @@ class HistoryTracker:
             If strongly negative variances are detected during the
             computation of ±2σ envelopes (via ``_compute_sigma_envelope``).
         """
+        df, xmin, xmax = self._plot_validate_and_select(
+            list_param, list_label, list_covar, window
+        )
+        nb_components = self._plot_components_count(df, list_param)
+
+        df_subset, df_subset_var, list_labels_p, list_labels_e, list_has_var = (
+            self._plot_prepare_dataframes(df, list_param, list_covar, nb_components)
+        )
+
+        fig, axes = self._plot_create_figure(nb_components, title)
+
+        self._plot_components(
+            axes, df_subset, df_subset_var, list_labels_p, list_labels_e,
+            list_has_var, list_label, nb_components,
+        )
+
+        self._plot_format_axes(axes, xmin, xmax)
+        fig.canvas.draw_idle()
+
+        self._plot_save_or_show(fig, show, base_dir, basename)
+        return fig, axes
+
+    # ------------------------------------------------------------------
+    # plot() helpers
+    # ------------------------------------------------------------------
+
+    def _plot_validate_and_select(self, list_param, list_label, list_covar, window):
+        """Validate args and return (df_window, xmin, xmax)."""
         if not (len(list_param) == len(list_label) == len(list_covar)):
             raise ParamError(
                 "list_param, list_label and list_covar must have the same length."
@@ -309,15 +337,21 @@ class HistoryTracker:
                 raise ParamError(
                     f"'{p}' is not a known column: {list(df.columns)}."
                 )
+        return df, xmin, xmax
 
+    @staticmethod
+    def _plot_components_count(df, list_param):
+        """Return the per-record component count (e.g. dim_x for state vectors)."""
         first = df[list_param[0]].iloc[0]
         if not hasattr(first, "shape"):
             raise ParamError(
                 f"The first element of '{list_param[0]}' is not a numpy vector."
             )
+        return first.shape[0]
 
-        nb_components = first.shape[0]
-
+    @staticmethod
+    def _plot_prepare_dataframes(df, list_param, list_covar, nb_components):
+        """Flatten vector-valued cells and pull diagonals from covariance cells."""
         df_subset = pd.DataFrame()
         df_subset_var = pd.DataFrame()
         list_labels_p = []
@@ -328,11 +362,8 @@ class HistoryTracker:
             has_var = e is not None
             list_has_var += [has_var] * nb_components
 
-            list_labels_p_local = []
-            list_labels_e_local = []
-            for component in range(nb_components):
-                list_labels_p_local.append(f"{p}_{component}")
-                list_labels_e_local.append(f"{e}_{component}")
+            list_labels_p_local = [f"{p}_{c}" for c in range(nb_components)]
+            list_labels_e_local = [f"{e}_{c}" for c in range(nb_components)]
             list_labels_p += list_labels_p_local
             list_labels_e += list_labels_e_local
 
@@ -345,6 +376,11 @@ class HistoryTracker:
                     lambda x: pd.Series(x.diagonal())
                 )
 
+        return df_subset, df_subset_var, list_labels_p, list_labels_e, list_has_var
+
+    @staticmethod
+    def _plot_create_figure(nb_components, title):
+        """Create the (fig, axes) layout. ``axes`` is always a list."""
         fig, axes = plt.subplots(
             nb_components,
             1,
@@ -355,7 +391,20 @@ class HistoryTracker:
         if nb_components == 1:
             axes = [axes]
         fig.suptitle(title, y=0.85, fontsize=BIG_SIZE)
+        return fig, axes
 
+    def _plot_components(
+        self,
+        axes,
+        df_subset,
+        df_subset_var,
+        list_labels_p,
+        list_labels_e,
+        list_has_var,
+        list_label,
+        nb_components,
+    ):
+        """Plot each variable component + its ±2σ envelope where available."""
         for i, (col_p, col_e, has_var) in enumerate(
             zip(list_labels_p, list_labels_e, list_has_var, strict=False)
         ):
@@ -363,26 +412,29 @@ class HistoryTracker:
             k = i // nb_components
             df_subset[col_p].plot(ax=axes[j], label=list_label[k], alpha=0.5)
 
-            if has_var and col_e not in df_subset_var:
+            if not has_var:
+                continue
+            if col_e not in df_subset_var:
                 raise ParamError(f"Variance '{col_e}' absent from df_subset_var.")
 
-            if has_var:
-                # Raises NumericalError if strongly negative variances are detected
-                sigma = self._compute_sigma_envelope(df_subset_var[col_e], col_e)
+            # Raises NumericalError if strongly negative variances are detected
+            sigma = self._compute_sigma_envelope(df_subset_var[col_e], col_e)
 
-                y_upper = df_subset[col_p] + 2.0 * sigma
-                y_lower = df_subset[col_p] - 2.0 * sigma
-                last_line = axes[j].lines[-1]
-                color = last_line.get_color()
-                axes[j].fill_between(
-                    df_subset.index,
-                    y_lower,
-                    y_upper,
-                    color=color,
-                    alpha=0.2,
-                    label=f"{list_label[k]} ± 2*" + r"$\sigma$",
-                )
+            y_upper = df_subset[col_p] + 2.0 * sigma
+            y_lower = df_subset[col_p] - 2.0 * sigma
+            color = axes[j].lines[-1].get_color()
+            axes[j].fill_between(
+                df_subset.index,
+                y_lower,
+                y_upper,
+                color=color,
+                alpha=0.2,
+                label=f"{list_label[k]} ± 2*" + r"$\sigma$",
+            )
 
+    @staticmethod
+    def _plot_format_axes(axes, xmin, xmax):
+        """Apply grid, legend, x-axis limits and locator on the bottom axis."""
         for ax in axes:
             ax.grid(True, linestyle="--", alpha=0.6)
         handles, labels = axes[-1].get_legend_handles_labels()
@@ -396,21 +448,20 @@ class HistoryTracker:
         )
         axes[-1].set_xlim(xmin, xmax - 1)
         axes[-1].set_xlabel("n")
-
         axes[-1].minorticks_off()
         axes[-1].xaxis.set_major_locator(mticker.MaxNLocator(nbins=5, integer=True))
-        fig.canvas.draw_idle()
 
+    @staticmethod
+    def _plot_save_or_show(fig, show, base_dir, basename):
+        """Either display the figure interactively or save it as PNG and close."""
         if show:
             plt.show()
-        else:
-            out_dir = Path(base_dir or ".")
-            out_dir.mkdir(parents=True, exist_ok=True)
-            save_path = out_dir / f"{basename}.png"
-            fig.savefig(save_path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
-            plt.close(fig)
-
-        return fig, axes
+            return
+        out_dir = Path(base_dir or ".")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        save_path = out_dir / f"{basename}.png"
+        fig.savefig(save_path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
+        plt.close(fig)
 
     # ------------------------------------------------------------------
     def __len__(self) -> int:
