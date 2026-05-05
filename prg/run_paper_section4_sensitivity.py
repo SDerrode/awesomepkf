@@ -19,7 +19,7 @@ from prg.classes.nonlinear_epkf import NonLinear_EPKF
 from prg.classes.nonlinear_ppf import NonLinear_PPF
 from prg.classes.nonlinear_upkf import NonLinear_UPKF
 from prg.classes.param_nonlinear import ParamNonLinear
-from prg.models.nonLinear import ModelFactoryNonLinear
+from prg.models.nonlinear import ModelFactoryNonLinear
 from prg.utils.metrics import compute_errors
 
 N           = 1000

@@ -5,7 +5,7 @@ import pytest
 
 from prg.classes.nonlinear_epkf import NonLinear_EPKF
 from prg.classes.nonlinear_upkf import NonLinear_UPKF
-from prg.models.nonLinear import ModelFactoryNonLinear
+from prg.models.nonlinear import ModelFactoryNonLinear
 from prg.tests.conftest import make_param_nonlinear
 from prg.utils.exceptions import ParamError
 

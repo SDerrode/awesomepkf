@@ -1,7 +1,7 @@
 from prg.base_classes.simulator_base import BaseDataSimulator
 from prg.classes.param_nonlinear import ParamNonLinear
 from prg.classes.pkf import PKF
-from prg.models.nonLinear import ModelFactoryNonLinear
+from prg.models.nonlinear import ModelFactoryNonLinear
 
 __all__ = ["NonLinearDataSimulator"]
 

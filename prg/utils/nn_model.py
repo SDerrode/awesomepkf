@@ -22,7 +22,7 @@ try:
 except ImportError:
     _TORCH_AVAILABLE = False
 
-from prg.models.nonLinear.base_model_nonLinear import BaseModelNonLinear
+from prg.models.nonlinear.base_model_nonlinear import BaseModelNonLinear
 from prg.utils.exceptions import NumericalError
 
 __all__ = ["NNModel"]

@@ -19,7 +19,7 @@ from prg.classes.param_linear import ParamLinear
 from prg.classes.param_nonlinear import ParamNonLinear
 from prg.classes.sigma_points_set import SigmaPointsSet
 from prg.models.linear import ModelFactoryLinear
-from prg.models.nonLinear import ModelFactoryNonLinear
+from prg.models.nonlinear import ModelFactoryNonLinear
 from prg.utils.exceptions import FilterError, ParamError, PKFError
 from prg.utils.io import file_data_generator
 from prg.utils.plot_settings import WINDOW

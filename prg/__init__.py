@@ -42,7 +42,7 @@ from prg.classes.nonlinear_upkf import NonLinear_UPKF
 from prg.classes.param_linear import ParamLinear
 from prg.classes.param_nonlinear import ParamNonLinear
 from prg.models.linear import ModelFactoryLinear
-from prg.models.nonLinear import ModelFactoryNonLinear
+from prg.models.nonlinear import ModelFactoryNonLinear
 
 __all__ = [
     # Filters

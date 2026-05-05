@@ -14,8 +14,8 @@ def _print_model_list() -> None:
     """Print the available linear and nonlinear models then exit."""
     # Deferred imports: avoid the (slow) factory discovery cost when the
     # user only wants to simulate (the common path).
-    from prg.models.linear import ModelFactoryLinear  # noqa: PLC0415
-    from prg.models.nonLinear import ModelFactoryNonLinear  # noqa: PLC0415
+    from prg.models.linear import ModelFactoryLinear
+    from prg.models.nonlinear import ModelFactoryNonLinear
 
     nl_models = sorted(ModelFactoryNonLinear.list_models())
     lin_models = sorted(ModelFactoryLinear.list_models())

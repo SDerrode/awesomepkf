@@ -3,8 +3,8 @@ import logging
 import numpy as np
 import sympy as sp
 
-from prg.models.nonLinear import ModelFactoryNonLinear
-from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
+from prg.models.nonlinear import ModelFactoryNonLinear
+from prg.models.nonlinear.base_model_fxhx import BaseModelFxHx
 from prg.utils.exceptions import NumericalError
 
 logger = logging.getLogger(__name__)

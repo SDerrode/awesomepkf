@@ -117,7 +117,7 @@ def compute_sv_series(csv_path):
     Returns list of (date_str, x, ytilde) tuples (NaN rows dropped).
     """
     # Deferred: pandas only used by this loader, not by the model code.
-    import pandas as pd  # noqa: PLC0415
+    import pandas as pd
 
     df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
 
@@ -262,7 +262,7 @@ def _plot_real_filter(x_true_list, x_hat_list, P_list, dates, title, out_path,
     sig_arr = np.array([np.sqrt(max(float(p.ravel()[0]), 0)) for p in P_list])
 
     # Deferred: only the SV plot needs date objects.
-    import datetime  # noqa: PLC0415
+    import datetime
 
     date_objs = [datetime.date.fromisoformat(d) for d in dates[:n]]
 

@@ -5,7 +5,7 @@ import pytest
 from prg.classes.param_linear import ParamLinear
 from prg.classes.param_nonlinear import ParamNonLinear
 from prg.models.linear import ModelFactoryLinear
-from prg.models.nonLinear import ModelFactoryNonLinear
+from prg.models.nonlinear import ModelFactoryNonLinear
 
 SEED = 42
 N_SHORT = 100

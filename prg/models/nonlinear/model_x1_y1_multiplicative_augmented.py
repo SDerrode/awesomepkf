@@ -1,8 +1,8 @@
 import numpy as np
 import sympy as sp
 
-from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
-from prg.models.nonLinear.model_x1_y1_multiplicative import Model_x1_y1_multiplicative
+from prg.models.nonlinear.base_model_fxhx import BaseModelFxHx
+from prg.models.nonlinear.model_x1_y1_multiplicative import Model_x1_y1_multiplicative
 from prg.utils.exceptions import NumericalError
 
 __all__ = ["Model_x1_y1_multiplicative_augmented"]
