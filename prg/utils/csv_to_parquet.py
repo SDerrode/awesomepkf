@@ -61,7 +61,7 @@ def detect_encoding(file_path: Path, n_bytes: int = _ENCODING_SAMPLE_BYTES) -> s
     except OSError as e:
         # FIX: raise file access error explicitly
         raise OSError(
-            f"Impossible de lire '{file_path}' pour la détection d'encodage : {e}"
+            f"Cannot read '{file_path}' for encoding detection: {e}"
         ) from e
 
     result = chardet.detect(raw_data)
@@ -70,7 +70,7 @@ def detect_encoding(file_path: Path, n_bytes: int = _ENCODING_SAMPLE_BYTES) -> s
     if not encoding:
         # FIX: visible fallback (warning) instead of silent failure
         warnings.warn(
-            f"Encodage non détecté pour '{file_path}' — fallback sur utf-8.",
+            f"Encoding not detected for '{file_path}' — fallback to utf-8.",
             UserWarning,
             stacklevel=2,
         )
@@ -111,24 +111,24 @@ def csv_to_parquet(
     # FIX: engine validation with a clear message (pandas raises a cryptic error otherwise)
     if engine not in _SUPPORTED_ENGINES:
         raise ValueError(
-            f"Engine {engine!r} non supporté. " f"Choisir parmi : {_SUPPORTED_ENGINES}"
+            f"Engine {engine!r} not supported. " f"Choose from: {_SUPPORTED_ENGINES}"
         )
 
     # FIX: explicit check for source file existence
     if not csv_path.exists():
-        raise FileNotFoundError(f"Fichier CSV introuvable : '{csv_path}'")
+        raise FileNotFoundError(f"CSV file not found: '{csv_path}'")
 
     encoding = detect_encoding(csv_path)
-    print(f"  Encodage détecté : {encoding}")
+    print(f"  Detected encoding: {encoding}")
 
     df = pd.read_csv(csv_path, encoding=encoding)
-    print(f"  Lignes / colonnes : {df.shape[0]:,} × {df.shape[1]}")
+    print(f"  Rows / columns: {df.shape[0]:,} × {df.shape[1]}")
 
     # Create output directory if needed
     parquet_path.parent.mkdir(parents=True, exist_ok=True)
 
     df.to_parquet(parquet_path, engine=engine, index=False)
-    print(f"  ✔ Parquet écrit : '{parquet_path}'")
+    print(f"  Parquet written: '{parquet_path}'")
 
 
 # ---------------------------------------------------------------------------
@@ -138,17 +138,17 @@ def csv_to_parquet(
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="Convertit un fichier CSV en Parquet.",
+        description="Convert a CSV file to Parquet.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    p.add_argument("csv_file", help="Fichier CSV source")
-    p.add_argument("parquet_file", help="Fichier Parquet de sortie")
+    p.add_argument("csv_file", help="Source CSV file")
+    p.add_argument("parquet_file", help="Output Parquet file")
     # FIX: --engine exposed as CLI argument (the original did not allow choosing it)
     p.add_argument(
         "--engine",
         choices=_SUPPORTED_ENGINES,
         default="pyarrow",
-        help="Moteur Parquet à utiliser",
+        help="Parquet engine to use",
     )
     return p
 
@@ -158,9 +158,9 @@ if __name__ == "__main__":
 
     # FIX: explicit user feedback on success or failure
     try:
-        print(f"Conversion : '{args.csv_file}' → '{args.parquet_file}'")
+        print(f"Conversion: '{args.csv_file}' -> '{args.parquet_file}'")
         csv_to_parquet(args.csv_file, args.parquet_file, engine=args.engine)
-        print("Conversion terminée avec succès.")
+        print("Conversion completed successfully.")
     except Exception as e:
-        print(f"❌ Erreur : {e}", file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

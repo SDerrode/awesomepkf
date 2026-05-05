@@ -96,18 +96,18 @@ class NonLinear_EPKF(PKF):
         Raises
         ------
         ParamError
-            Si ``N`` n'est pas un entier strictement positif ou ``None``
-            (levée par :meth:`_validate_N` dans le parent).
+            If ``N`` is not a strictly positive integer or ``None``
+            (raised by :meth:`_validate_N` in the parent).
         ParamError
-            Si un Jacobien retourne une matrice de forme inattendue.
+            If a Jacobian returns a matrix of unexpected shape.
         InvertibilityError
-            Si la matrice de covariance d'innovation ``Skp1`` n'est pas
-            inversible lors de l'étape de mise à jour.
+            If the innovation covariance matrix ``Skp1`` is not
+            invertible during the update step.
         NumericalError
-            Si la matrice de covariance prédite ``Pkp1_predict`` n'est pas
-            valide (levée par :meth:`_check_covariance`).
+            If the predicted covariance matrix ``Pkp1_predict`` is not
+            valid (raised by :meth:`_check_covariance`).
         FilterError
-            Si une erreur inattendue survient pendant l'étape de mise à jour.
+            If an unexpected error occurs during the update step.
         """
         self._validate_N(N)
         self.history.clear()
@@ -148,7 +148,7 @@ class NonLinear_EPKF(PKF):
                     f"Step {step.k}: unexpected error during prediction step."
                 ) from e
 
-            # Validate Jacobian shapes — erreur de paramétrage du modèle
+            # Validate Jacobian shapes — model parametrisation error
             if An.ndim == 2:
                 if An.shape != expected_shape or Bn.shape != expected_shape:
                     raise ParamError(
@@ -166,16 +166,16 @@ class NonLinear_EPKF(PKF):
             accel_xy_xy[: self.dim_x, : self.dim_x] = step.PXXkp1_update
             Pkp1_predict = An @ accel_xy_xy @ An.T + Bn @ self.param.mQ @ Bn.T
 
-            # Validate predicted covariance — lève CovarianceError si invalide
+            # Validate predicted covariance — raises CovarianceError if invalid
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
 
             # Consume the next observation
             try:
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
-                return  # Data generator exhausted — arrêt normal, pas une erreur
+                return  # Data generator exhausted — normal stop, not an error
 
-            # Update step — les exceptions custom remontent naturellement
+            # Update step — custom exceptions propagate naturally
             try:
                 step = self._nextUpdating(
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict

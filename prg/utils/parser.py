@@ -16,105 +16,105 @@ def int_ge_1(value: str) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Configuration des options optionnelles
+# Optional options configuration
 # ---------------------------------------------------------------------------
 
 _OPTION_CONFIG: dict = {
     "N": {
         "type": int_ge_1,
         "default": None,
-        "help": "Nombre d'échantillons à traiter (default: None)",
+        "help": "Number of samples to process (default: None)",
     },
     "n_particles": {
         "type": int_ge_1,
         "default": 300,
-        "help": "Nombre de particules à utiliser (default: 300)",
+        "help": "Number of particles to use (default: 300)",
     },
     "sKey": {
         "type": int,
         "default": None,
-        "help": "Graine du générateur aléatoire (default: None)",
+        "help": "Random generator seed (default: None)",
     },
     "linearModelName": {
         "type": str,
         "default": None,
-        "help": "Modèle linéaire à utiliser (default: None)",
+        "help": "Linear model to use (default: None)",
     },
     "sigmaSet": {
         "choices": ["wan2000", "cpkf", "lerner2002", "ito2000"],
         "default": "wan2000",
-        "help": "Ensemble de sigma points pour UPKF (default: wan2000)",
+        "help": "Sigma points set for UPKF (default: wan2000)",
     },
     "nonLinearModelName": {
         "type": str,
         "default": None,
-        "help": "Modèle non-linéaire à utiliser (default: None)",
+        "help": "Nonlinear model to use (default: None)",
     },
     "dataFileName": {
         "type": str,
         "default": None,
-        "help": "Chemin du fichier de trajectoires (default: None)",
+        "help": "Path to the trajectory file (default: None)",
     },
     "withoutX": {
         "action": "store_true",
-        "help": "Ne pas sauvegarder l'état vrai X (default: False)",
+        "help": "Do not save the true state X (default: False)",
     },
     "filter": {
         "choices": ["EPKF", "UPKF", "PPF", "UKF", "PKF"],
         "default": None,
-        "help": "Type de filtre à utiliser (default: None)",
+        "help": "Filter type to use (default: None)",
     },
 }
 
 
 # ---------------------------------------------------------------------------
-# API publique
+# Public API
 # ---------------------------------------------------------------------------
 
 
 def add_arguments(parser: argparse.ArgumentParser, list_options: list[str]) -> None:
     """
-    Ajoute des arguments à un ``ArgumentParser``.
+    Add arguments to an ``ArgumentParser``.
 
     Parameters
     ----------
     parser : argparse.ArgumentParser
-        Le parseur à enrichir.
+        The parser to enrich.
     list_options : list[str]
-        Noms des options optionnelles à ajouter (clés de ``_OPTION_CONFIG``).
+        Names of the optional options to add (keys of ``_OPTION_CONFIG``).
 
     Raises
     ------
-    None — les clés inconnues émettent un ``UserWarning`` au lieu d'être
-    ignorées silencieusement.
+    None — unknown keys emit a ``UserWarning`` instead of being
+    silently ignored.
     """
 
-    # --- Options toujours disponibles ---
+    # --- Always-available options ---
     parser.add_argument(
         "--verbose",
         type=int,
         choices=range(0, 3),
         default=0,
-        help="Niveau de verbosité (0=silencieux, 2=maximum, default=0)",
+        help="Verbosity level (0=silent, 2=maximum, default=0)",
     )
     parser.add_argument(
         "--plot",
         action="store_true",
-        help="Affiche et sauvegarde les signaux sur disque (default: False)",  # FIX: was "True if not specified" → inverted
+        help="Display and save signals to disk (default: False)",  # FIX: was "True if not specified" → inverted
     )
     parser.add_argument(
         "--saveHistory",
         action="store_true",
-        help="Sauvegarde la trace des paramètres sur disque (default: False)",
+        help="Save the parameter trace to disk (default: False)",
     )
 
-    # --- Options optionnelles configurables ---
+    # --- Configurable optional options ---
     for opt in list_options:
         if opt not in _OPTION_CONFIG:
             # FIX: unknown option → explicit warning instead of silently ignoring
             warnings.warn(
-                f"add_arguments : option inconnue {opt!r} ignorée "
-                f"(options disponibles : {list(_OPTION_CONFIG)})",
+                f"add_arguments: unknown option {opt!r} ignored "
+                f"(available options: {list(_OPTION_CONFIG)})",
                 UserWarning,
                 stacklevel=2,
             )

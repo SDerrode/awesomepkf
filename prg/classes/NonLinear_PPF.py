@@ -480,27 +480,27 @@ class NonLinear_PPF(PKF):
                 print(f"  L (Cholesky):\n{self._cached['L']}")
 
             # =========================
-            # POSTERIOR ESTIMATE — Rao-Blackwellisé
+            # POSTERIOR ESTIMATE — Rao-Blackwellised
             # =========================
-            # On utilise les moyennes conditionnelles mu'_x (pas les particules bruitées)
-            # pour éviter que la variance de P'_x soit comptée deux fois dans PXXkp1_update.
+            # We use the conditional means mu'_x (not the noisy particles)
+            # to avoid the variance of P'_x being counted twice in PXXkp1_update.
             mu_prime_x_temp: np.ndarray = mu_prime_x_all.squeeze(-1)  # (N, dim_x)
 
             Xkp1_update: np.ndarray = np.average(
                 mu_prime_x_temp, axis=0, weights=weights
             )[:, None]
 
-            # Variance entre les moyennes conditionnelles (entre-particules)
+            # Between-particle variance of the conditional means
             dx_mu = mu_prime_x_temp - Xkp1_update.T  # (N, dim_x)
             var_between = (weights[:, None] * dx_mu).T @ dx_mu  # (dim_x, dim_x)
 
-            # Variance intra-particule = P'_x (constante, analytique)
+            # Intra-particle variance = P'_x (constant, analytical)
             P_prime_x = self._cached["L"] @ self._cached["L"].T
 
-            # Correction ESS : ≈ 1 si ESS élevé, évite la sur-estimation à faible ESS
+            # ESS correction: ~ 1 if ESS is high, avoids over-estimation at low ESS
             _ess_correction = 1.0 - np.sum(weights**2)
 
-            # Après (formule Rao-Blackwell exacte)
+            # Final (exact Rao-Blackwell formula)
             PXXkp1_update = var_between + P_prime_x
 
             self._check_covariance(PXXkp1_update, step.k, name="PXXkp1_update")

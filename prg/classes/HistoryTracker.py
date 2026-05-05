@@ -56,7 +56,7 @@ class HistoryTracker:
             If ``verbose`` does not belong to ``{0, 1, 2}``.
         """
         if verbose not in (0, 1, 2):
-            raise ParamError("verbose doit être 0, 1 ou 2.")
+            raise ParamError("verbose must be 0, 1 or 2.")
         self._history: list[dict[str, Any]] = []
         self.verbose = verbose
 
