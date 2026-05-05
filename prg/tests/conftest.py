@@ -4,8 +4,7 @@ import pytest
 
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
-from prg.models.linear.model_x1_y1_AQ_pairwise import Model_x1_y1_AQ_pairwise
-from prg.models.linear.model_x2_y2_AQ_pairwise import Model_x2_y2_AQ_pairwise
+from prg.models.linear import ModelFactoryLinear
 from prg.models.nonLinear.model_x1_y1_pairwise import Model_x1_y1_pairwise as NL_x1y1
 from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
 
@@ -32,12 +31,12 @@ def make_param_nonlinear(model, verbose=0):
 
 @pytest.fixture(scope="session")
 def model_x1y1():
-    return Model_x1_y1_AQ_pairwise()
+    return ModelFactoryLinear.create("model_x1_y1_AQ_pairwise")
 
 
 @pytest.fixture(scope="session")
 def model_x2y2():
-    return Model_x2_y2_AQ_pairwise()
+    return ModelFactoryLinear.create("model_x2_y2_AQ_pairwise")
 
 
 @pytest.fixture(scope="session")
