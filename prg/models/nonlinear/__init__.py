@@ -148,26 +148,45 @@ class ModelFactoryNonLinear:
 
     @classmethod
     def create(cls, name: str, **kwargs):
+        """Build a nonlinear model.
+
+        For class-based models, ``kwargs`` is forwarded to ``__init__``
+        (only the names the constructor actually accepts; unknown names
+        fall through to a post-construction soft attribute override).
+        For config-driven models, ``kwargs`` cannot influence
+        construction, but surviving keys are still applied as plain
+        attributes after build. This lets the Sensitivity tab sweep
+        universal UPKF / UKF tuning knobs (alpha / beta / kappa) on any
+        model without surfacing config/class distinctions to the user.
+        """
         # 1. Registry first (config-driven, no constructor knobs)
         if name in NONLINEAR_CONFIGS:
-            if kwargs:
-                raise ValueError(
-                    f"Model '{name}' is config-driven and does not accept "
-                    f"constructor overrides {sorted(kwargs)}."
-                )
             spec = NONLINEAR_CONFIGS[name]
             builder_cls = _GENERIC_BUILDERS[spec.form]
             instance = builder_cls(spec)
             instance.MODEL_NAME = name
+            for k, v in kwargs.items():
+                if hasattr(instance, k):
+                    setattr(instance, k, v)
             return instance
 
-        # 2. Fall back to class-based discovery (kwargs forwarded to __init__)
+        # 2. Fall back to class-based discovery
         cls._discover_models()
         if name not in cls._registry:
             raise ValueError(
                 f"Unknown model: '{name}'. Available: {cls.list_models()}"
             )
-        return cls._registry[name](**kwargs)
+        model_cls = cls._registry[name]
+        # Only forward kwargs the constructor accepts; the rest become
+        # post-construction soft attribute overrides.
+        sig = inspect.signature(model_cls.__init__)
+        ctor_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters and k != "self"}
+        leftover    = {k: v for k, v in kwargs.items() if k not in ctor_kwargs}
+        instance = model_cls(**ctor_kwargs)
+        for k, v in leftover.items():
+            if hasattr(instance, k):
+                setattr(instance, k, v)
+        return instance
 
     @classmethod
     def list_models(cls) -> list[str]:

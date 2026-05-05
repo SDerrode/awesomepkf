@@ -117,9 +117,15 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
                 f"got {getattr(self._shx, 'shape', type(self._shx))}"
             )
 
-        # Symbolic Jacobians
-        self._sA = self._sfx.jacobian(self._sx)  # (nx, nx) : df/dx
-        self._sH = self._shx.jacobian(self._sx)  # (ny, nx) : dh/dx
+        # Symbolic Jacobians, evaluated at the linearization point used by
+        # the EKF/EPKF prediction: noise = 0 (its mean). For models with
+        # multiplicative noise (e.g. (1 + x**2) * t), the raw Jacobian still
+        # contains noise symbols that lambdify cannot resolve at numeric
+        # eval time; substituting them out keeps ``_A_num`` / ``_H_num``
+        # purely state-driven.
+        zero_noise = {s: 0 for s in tuple(self._st) + tuple(self._su)}
+        self._sA = self._sfx.jacobian(self._sx).subs(zero_noise)  # (nx, nx) : df/dx
+        self._sH = self._shx.jacobian(self._sx).subs(zero_noise)  # (ny, nx) : dh/dx
 
         # Symbol tuples for lambdify
         sx_t = tuple(self._sx)
