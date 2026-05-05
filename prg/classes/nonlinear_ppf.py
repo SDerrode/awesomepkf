@@ -9,19 +9,14 @@ from __future__ import annotations
 import logging
 from collections.abc import Generator
 
-# Stdlib
-# Third-party
 import numpy as np
 from scipy.linalg import cholesky
 
+from prg.classes._base_particle_filter import _BaseParticleFilter
 from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
-from prg.classes.pkf import PKF, PKFStep
-
-# Local
-from prg.classes.seed_generator import SeedGenerator
+from prg.classes.pkf import PKFStep
 from prg.utils.exceptions import (
     InvertibilityError,
-    ParamError,
     StepValidationError,
 )
 from prg.utils.numerics import EPS_ABS
@@ -32,7 +27,7 @@ logger = logging.getLogger(__name__)
 __all__ = ["NonLinear_PPF"]
 
 
-class NonLinear_PPF(PKF):
+class NonLinear_PPF(_BaseParticleFilter):
     """Nonlinear Pairwise Particle Filter.
 
     Implements a particle filter for nonlinear systems with additive Gaussian
@@ -83,108 +78,6 @@ class NonLinear_PPF(PKF):
         Constants pre-computed by ``_precompute()``: ``R``, ``R_inv``,
         ``MRinv``, ``L`` (Cholesky of P'_x), ``log_norm_const``.
     """
-
-    def __init__(
-        self,
-        param,
-        n_particles: int = 300,
-        resample_threshold: float = 0.5,
-        resample_method: str = "stratified",
-        sKey=None,
-        verbose: int = 0,
-    ) -> None:
-        super().__init__(param, sKey, verbose)
-
-        self.n_particles = n_particles
-        self.resample_threshold = resample_threshold
-        self.resample_method = resample_method
-
-        # Random number generator
-        self.__randParticles = SeedGenerator()
-
-        # Dictionary of pre-computed constants
-        self._cached: dict = {}
-
-    # =========================
-    # UNIFIED RESAMPLING
-    # =========================
-    def resample(self, weights: np.ndarray, method: str = "stratified") -> np.ndarray:
-        """Resamples particles according to normalised weights.
-
-        Parameters
-        ----------
-        weights : np.ndarray, shape (N,)
-            Normalised particle weights (must sum to 1).
-        method : str, optional
-            Resampling method:
-
-            - ``'multinomial'``  : independent multinomial sampling.
-            - ``'systematic'``   : systematic resampling (a single
-              uniform random draw).
-            - ``'stratified'``   : stratified resampling (one draw
-              per stratum). Default method.
-            - ``'residual'``     : residual resampling (deterministic
-              copies + stochastic residual).
-
-        Returns
-        -------
-        indexes : np.ndarray of int, shape (N,)
-            Indices of the selected particles.
-
-        Raises
-        ------
-        ParamError
-            If ``method`` is not one of the accepted values.
-        """
-        N = self.n_particles
-        cumulative_sum = np.cumsum(weights)
-        cumulative_sum[-1] = 1.0
-
-        if method == "multinomial":
-            indexes = np.searchsorted(
-                cumulative_sum, self.__randParticles.rng.random(N)
-            )
-        elif method in ["systematic", "stratified"]:
-            if method == "systematic":
-                positions = (np.arange(N) + self.__randParticles.rng.random()) / N
-            else:
-                positions = (np.arange(N) + self.__randParticles.rng.random(N)) / N
-
-            indexes = np.zeros(N, dtype=int)
-            i = j = 0
-            while i < N:
-                if positions[i] < cumulative_sum[j]:
-                    indexes[i] = j
-                    i += 1
-                else:
-                    j += 1
-
-        elif method == "residual":
-            indexes: list[int] = []
-            num_copies = np.floor(N * weights).astype(int)
-            for i in range(N):
-                indexes += [i] * num_copies[i]
-            residual = weights - num_copies / N
-            residual_sum = residual.sum()
-            if residual_sum > EPS_ABS:
-                residual /= residual_sum
-            else:
-                residual = np.ones(N) / N
-            cumulative_sum_res = np.cumsum(residual)
-            cumulative_sum_res[-1] = 1.0
-            remaining = N - len(indexes)
-            random_vals = self.__randParticles.rng.random(remaining)
-            res_indexes = np.searchsorted(cumulative_sum_res, random_vals)
-            indexes += list(res_indexes)
-            indexes = np.array(indexes)
-
-        else:
-            raise ParamError(
-                f"Unknown resampling method: {method!r}. "
-                f"Expected one of: 'multinomial', 'systematic', 'stratified', 'residual'."
-            )
-
-        return indexes
 
     def _precompute(self) -> None:
         """Pre-computes and caches the numerical constants of the filter.
@@ -238,47 +131,6 @@ class NonLinear_PPF(PKF):
             "log_norm_const": -0.5
             * (self.dim_y * np.log(2 * np.pi) + np.linalg.slogdet(R)[1]),
         }
-
-    @staticmethod
-    def _safe_normalize_log_weights(log_weights: np.ndarray) -> np.ndarray:
-        """Normalises log-weights in a numerically stable way.
-
-        Handles: nan (likelihood overflow), all at -inf (total degeneracy),
-        extreme underflow after exp.
-        """
-
-        # nan → -inf (overflow in the quadratic term)
-        nan_mask = np.isnan(log_weights)
-        if nan_mask.any():
-            logger.warning(
-                "Entering _safe_normalize_log_weights(...) - if nan_mask.any()"
-            )
-            log_weights = log_weights.copy()
-            log_weights[nan_mask] = -np.inf
-
-        # Total degeneracy: all particles incompatible → uniform weights
-        finite_mask = np.isfinite(log_weights)
-        if not finite_mask.any():
-            logger.warning(
-                "Entering _safe_normalize_log_weights(...) - if not finite_mask.any()"
-            )
-            return np.full(len(log_weights), 1.0 / len(log_weights))
-
-        # Stable log-sum-exp: subtract only the finite max
-        max_lw = np.max(log_weights[finite_mask])
-        log_weights = np.where(finite_mask, log_weights - max_lw, -np.inf)
-
-        weights = np.exp(log_weights)
-        total = weights.sum()
-
-        # Extreme underflow after exp
-        if not np.isfinite(total) or total <= 0.0:
-            logger.warning(
-                "Entering _safe_normalize_log_weights(...) - if not np.isfinite(total) or total <= 0.0"
-            )
-            return np.full(len(log_weights), 1.0 / len(log_weights))
-
-        return weights / total
 
     def process_filter(
         self,
@@ -338,7 +190,7 @@ class NonLinear_PPF(PKF):
         self._precompute()
 
         # Initialisation of particles and weights
-        particles_current: np.ndarray = self.__randParticles.rng.multivariate_normal(
+        particles_current: np.ndarray = self._randParticles.rng.multivariate_normal(
             self.mz0[: self.dim_x].flatten(),
             self.Pz0[: self.dim_x, : self.dim_x],
             self.n_particles,
@@ -443,7 +295,7 @@ class NonLinear_PPF(PKF):
             mu_prime_x_all = (
                 muxy[:, : self.dim_x, :] + self._cached["MRinv"] @ innovations
             )
-            noise = self.__randParticles.rng.standard_normal(
+            noise = self._randParticles.rng.standard_normal(
                 (self.n_particles, self.dim_x, 1)
             )
             particles_current = mu_prime_x_all + np.einsum(
