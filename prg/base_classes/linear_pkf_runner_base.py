@@ -1,14 +1,11 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-from prg.classes.ParamNonLinear import ParamNonLinear
-from prg.classes.ParamLinear import ParamLinear
-from prg.classes.Linear_PKF import Linear_PKF
-from prg.models.nonLinear import ModelFactoryNonLinear
-from prg.models.linear import ModelFactoryLinear
 from prg.base_classes.runner_base import BaseRunner
-from prg.utils.plot_settings import WINDOW
+from prg.classes.Linear_PKF import Linear_PKF
+from prg.classes.ParamLinear import ParamLinear
+from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.models.linear import ModelFactoryLinear
+from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.utils.exceptions import PKFError
+from prg.utils.plot_settings import WINDOW
 
 __all__ = ["BaseLinearPKFRunner"]
 

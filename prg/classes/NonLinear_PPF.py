@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 ####################################################################
 Pairwise Particle Filter implementation
@@ -9,27 +6,27 @@ Pairwise Particle Filter implementation
 
 from __future__ import annotations
 
-# Stdlib
-from typing import Generator, Optional
+import logging
+from collections.abc import Generator
 
+# Stdlib
 # Third-party
 import numpy as np
 from rich import print
 from scipy.linalg import cholesky
 
+from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.classes.PKF import PKF, PKFStep
+
 # Local
 from prg.classes.SeedGenerator import SeedGenerator
-from prg.classes.PKF import PKF, PKFStep
-from prg.utils.numerics import EPS_ABS
-from prg.utils.utils import rich_show_fields
-from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
 from prg.utils.exceptions import (
     InvertibilityError,
     ParamError,
     StepValidationError,
 )
-
-import logging
+from prg.utils.numerics import EPS_ABS
+from prg.utils.utils import rich_show_fields
 
 logger = logging.getLogger(__name__)
 
@@ -234,14 +231,14 @@ class NonLinear_PPF(PKF):
         else:
             P_prime_x = P_prime_x_base
 
-        self._cached = dict(
-            R=R,
-            R_inv=R_inv,
-            MRinv=M @ R_inv,
-            L=cholesky(P_prime_x, lower=True),
-            log_norm_const=-0.5
+        self._cached = {
+            "R": R,
+            "R_inv": R_inv,
+            "MRinv": M @ R_inv,
+            "L": cholesky(P_prime_x, lower=True),
+            "log_norm_const": -0.5
             * (self.dim_y * np.log(2 * np.pi) + np.linalg.slogdet(R)[1]),
-        )
+        }
 
     @staticmethod
     def _safe_normalize_log_weights(log_weights: np.ndarray) -> np.ndarray:
@@ -286,12 +283,10 @@ class NonLinear_PPF(PKF):
 
     def process_filter(
         self,
-        N: Optional[int] = None,
-        data_generator: Optional[
-            Generator[tuple[int, Optional[np.ndarray], np.ndarray], None, None]
-        ] = None,
+        N: int | None = None,
+        data_generator: Generator[tuple[int, np.ndarray | None, np.ndarray], None, None] | None = None,
     ) -> Generator[
-        tuple[int, Optional[np.ndarray], np.ndarray, np.ndarray, np.ndarray],
+        tuple[int, np.ndarray | None, np.ndarray, np.ndarray, np.ndarray],
         None,
         None,
     ]:

@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 ####################################################################
 Extended Pairwise Kalman filter (EPKF) implementation
@@ -8,7 +5,9 @@ Extended Pairwise Kalman filter (EPKF) implementation
 """
 
 from __future__ import annotations
-from typing import Generator, Optional
+
+from collections.abc import Generator
+
 import numpy as np
 
 from prg.classes.PKF import PKF
@@ -32,7 +31,7 @@ class NonLinear_EPKF(PKF):
     def __init__(
         self,
         param,
-        sKey: Optional[int] = None,
+        sKey: int | None = None,
         verbose: int = 0,
     ) -> None:
         """
@@ -52,12 +51,10 @@ class NonLinear_EPKF(PKF):
 
     def process_filter(
         self,
-        N: Optional[int] = None,
-        data_generator: Optional[
-            Generator[tuple[int, np.ndarray, np.ndarray], None, None]
-        ] = None,
+        N: int | None = None,
+        data_generator: Generator[tuple[int, np.ndarray, np.ndarray], None, None] | None = None,
     ) -> Generator[
-        tuple[int, Optional[np.ndarray], np.ndarray, np.ndarray, np.ndarray]
+        tuple[int, np.ndarray | None, np.ndarray, np.ndarray, np.ndarray]
     ]:
         """
         Run the EPKF filter as a generator.

@@ -1,15 +1,12 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 from abc import ABC, abstractmethod
-from typing import Dict, Type
-import numpy as np
 from itertools import product
 
-from prg.utils.numerics import EPS_ABS
-from prg.utils.exceptions import CovarianceError, ParamError
+import numpy as np
 
-__all__ = ["SigmaPointsSet", "SetWAN2000", "SetCPKF", "SetLERNER2002", "SetIto2000"]
+from prg.utils.exceptions import CovarianceError, ParamError
+from prg.utils.numerics import EPS_ABS
+
+__all__ = ["SetCPKF", "SetIto2000", "SetLERNER2002", "SetWAN2000", "SigmaPointsSet"]
 
 
 class SigmaPointsSet(ABC):
@@ -31,7 +28,7 @@ class SigmaPointsSet(ABC):
         Dimension of the state space.
     """
 
-    registry: Dict[str, Type["SigmaPointsSet"]] = {}
+    registry: dict[str, type["SigmaPointsSet"]] = {}
 
     def __init_subclass__(cls, *, key: str, **kwargs) -> None:
         """

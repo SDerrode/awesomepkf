@@ -1,12 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
-from typing import Optional
 
-from prg.utils.utils import file_data_generator
 from prg.base_classes.nonlinear_epkf_runner_base import BaseNonLinearEPKFRunner
 from prg.utils.exceptions import FilterError, PKFError
+from prg.utils.utils import file_data_generator
 
 __all__ = ["NonLinearEPKFRunnerFromFile"]
 
@@ -19,7 +15,7 @@ class NonLinearEPKFRunnerFromFile(BaseNonLinearEPKFRunner):
     def __init__(
         self,
         model_name: str,
-        data_filename: Optional[str],
+        data_filename: str | None,
         verbose: int = 0,
         plot: bool = False,
         save_history: bool = False,

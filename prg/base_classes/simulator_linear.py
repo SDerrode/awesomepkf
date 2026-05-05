@@ -1,10 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 from prg.base_classes.simulator_base import BaseDataSimulator
-from prg.models.linear import ModelFactoryLinear
 from prg.classes.Linear_PKF import Linear_PKF
 from prg.classes.ParamLinear import ParamLinear
+from prg.models.linear import ModelFactoryLinear
 
 __all__ = ["LinearDataSimulator"]
 

@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 ####################################################################
 Unscented Kalman Filter (UKF) — nonlinear, additive noise
@@ -23,7 +20,8 @@ Differences compared to the UPKF:
 """
 
 from __future__ import annotations
-from typing import Generator, Optional
+
+from collections.abc import Generator
 
 import numpy as np
 
@@ -89,7 +87,7 @@ class NonLinear_UKF(PKF):
         self,
         param,
         sigmaSet: str,
-        sKey: Optional[int] = None,
+        sKey: int | None = None,
         verbose: int = 0,
     ) -> None:
 
@@ -127,10 +125,8 @@ class NonLinear_UKF(PKF):
 
     def process_filter(
         self,
-        N: Optional[int] = None,
-        data_generator: Optional[
-            Generator[tuple[int, np.ndarray, np.ndarray], None, None]
-        ] = None,
+        N: int | None = None,
+        data_generator: Generator[tuple[int, np.ndarray, np.ndarray], None, None] | None = None,
     ) -> Generator[tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
         """
         Runs the UKF filter as a generator.
@@ -185,8 +181,8 @@ class NonLinear_UKF(PKF):
         Pkp1_predict = self.zeros_dim_xy_xy.copy()
 
         # Zero noise vectors — allocated once at the first step
-        zeros_x: Optional[np.ndarray] = None
-        zeros_y: Optional[np.ndarray] = None
+        zeros_x: np.ndarray | None = None
+        zeros_y: np.ndarray | None = None
 
         # --- Main loop ----------------------------------------------------
         while N is None or step.k < N:

@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 from prg.models.linear.base_model_linear import LinearAmQ
 from prg.models.linear.model_x2_y2_AQ_pairwise import Model_x2_y2_AQ_pairwise
 

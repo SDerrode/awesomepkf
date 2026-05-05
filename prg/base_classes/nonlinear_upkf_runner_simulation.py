@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-from typing import Optional
 
 from prg.base_classes.nonlinear_upkf_runner_base import BaseNonLinearUPKFRunner
 from prg.utils.exceptions import FilterError, ParamError, PKFError
@@ -18,8 +14,8 @@ class NonLinearUPKFRunnerSim(BaseNonLinearUPKFRunner):
         self,
         model_name: str,
         N: int,
-        sKey: Optional[int],
-        sigmaSet: Optional[str],
+        sKey: int | None,
+        sigmaSet: str | None,
         verbose: int,
         plot: bool,
         save_history: bool,

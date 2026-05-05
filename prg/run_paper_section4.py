@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Reproduce all experiments from Section 4 of the paper
 "Non-linear Gaussian pairwise Kalman filters".
@@ -21,9 +19,11 @@ Usage (from repo root):
 
 import os
 import time
+
+import matplotlib as mpl
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
+
+mpl.use("Agg")
 import matplotlib.pyplot as plt
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
@@ -40,15 +40,14 @@ WINDOW      = {"xmin": 0, "xmax": N}
 DPI         = 150
 
 # ── Imports ────────────────────────────────────────────────────────────────────
-from prg.models.nonLinear import ModelFactoryNonLinear
-from prg.models.linear    import ModelFactoryLinear
-from prg.classes.ParamNonLinear import ParamNonLinear
-from prg.classes.ParamLinear    import ParamLinear
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
+from prg.classes.NonLinear_PPF import NonLinear_PPF
 from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.classes.NonLinear_PPF  import NonLinear_PPF
+from prg.classes.ParamLinear import ParamLinear
+from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.models.linear import ModelFactoryLinear
+from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.utils.utils import compute_errors
-
 
 # ==============================================================================
 # Helpers
@@ -74,7 +73,7 @@ def _build_param(model_name: str):
 def _run_filter(filt, N):
     """Run a filter for N steps; return (x_true, x_hat, P_xx, innov, S)."""
     x_true_list, x_hat_list, P_list, i_list, S_list = [], [], [], [], []
-    for k, xt, yk, xp, xu in filt.process_filter(N=N):
+    for _k, xt, _yk, _xp, xu in filt.process_filter(N=N):
         step = filt.history.last()
         if xt is not None:
             x_true_list.append(xt)
@@ -89,8 +88,7 @@ def _run_filter(filt, N):
 
 
 def _compute_metrics(filt, x_true_list, x_hat_list, P_list, i_arr, S_list):
-    err = compute_errors(filt, x_true_list, x_hat_list, P_list, i_arr, S_list)
-    return err
+    return compute_errors(filt, x_true_list, x_hat_list, P_list, i_arr, S_list)
 
 
 def _plot_filter(history, title, params, labels, covars, out_path):
@@ -99,7 +97,7 @@ def _plot_filter(history, title, params, labels, covars, out_path):
 
     fig, ax = plt.subplots(figsize=(8, 3))
     colors = ["tab:blue", "tab:orange", "tab:green"]
-    for param_key, label, covar_key, col in zip(params, labels, covars, colors):
+    for param_key, label, covar_key, col in zip(params, labels, covars, colors, strict=False):
         series = np.array([v.ravel()[0] for v in df[param_key]])
         ax.plot(series, label=label, color=col, linewidth=0.8)
         if covar_key is not None and covar_key in df.columns:
@@ -131,7 +129,7 @@ def main():
 
     # ── Build models ───────────────────────────────────────────────────────────
     model_pw, param_pw   = _build_param(model_name)
-    model_aug, param_aug = _build_param(model_name_aug)
+    _model_aug, param_aug = _build_param(model_name_aug)
 
     # Show Q
     print(f"\nQ (pairwise model) =\n{np.round(param_pw.mQ, 4)}")
@@ -152,20 +150,19 @@ def main():
     ]
 
     def _shared_generator():
-        for item in shared_data:
-            yield item
+        yield from shared_data
 
     # ── UPKF on same data ──────────────────────────────────────────────────────
     print("Running UPKF …")
     upkf = NonLinear_UPKF(param=param_pw, sigmaSet=SIGMA_SET, sKey=SKEY, verbose=0)
-    x_true_u, x_hat_u, P_u, i_u, S_u = _run_filter(
+    _x_true_u, _x_hat_u, _P_u, _i_u, _S_u = _run_filter(
         upkf, N
     )
     # Re-run on shared trajectory
     upkf2 = NonLinear_UPKF(param=param_pw, sigmaSet=SIGMA_SET, sKey=SKEY, verbose=0)
     xt2, xh2, pp2, ii2, ss2 = [], [], [], [], []
     _t0 = time.perf_counter()
-    for k, xt, yk, xp, xu in upkf2.process_filter(N=N, data_generator=_shared_generator()):
+    for _k, xt, _yk, _xp, xu in upkf2.process_filter(N=N, data_generator=_shared_generator()):
         step = upkf2.history.last()
         if xt is not None:
             xt2.append(xt)
@@ -184,7 +181,7 @@ def main():
     ppf = NonLinear_PPF(param=param_pw, n_particles=N_PARTICLES, sKey=SKEY, verbose=0)
     xt3, xh3, pp3 = [], [], []
     _t0 = time.perf_counter()
-    for k, xt, yk, xp, xu in ppf.process_filter(N=N, data_generator=_shared_generator()):
+    for _k, xt, _yk, _xp, xu in ppf.process_filter(N=N, data_generator=_shared_generator()):
         step = ppf.history.last()
         if xt is not None:
             xt3.append(xt)
@@ -237,13 +234,13 @@ def main():
 
     try:
         from prg.classes.NonLinear_EPKF import NonLinear_EPKF as _EPKF
-        from prg.classes.NonLinear_UKF  import NonLinear_UKF  as _UKF
+        from prg.classes.NonLinear_UKF import NonLinear_UKF as _UKF
 
         dim_x_pw = param_pw.dim_x  # = 1; augmented state is [x, y]
 
         ekf_aug = _EPKF(param=param_aug, sKey=SKEY, verbose=0)
         xta, xha, ppa = [], [], []
-        for k, xt, yk, xp, xu in ekf_aug.process_filter(N=N, data_generator=_shared_generator()):
+        for _k, xt, _yk, _xp, xu in ekf_aug.process_filter(N=N, data_generator=_shared_generator()):
             step = ekf_aug.history.last()
             if xt is not None:
                 xta.append(xt)
@@ -256,7 +253,7 @@ def main():
 
         ukf_aug = _UKF(param=param_aug, sigmaSet=SIGMA_SET, sKey=SKEY, verbose=0)
         xtu, xhu, ppu = [], [], []
-        for k, xt, yk, xp, xu in ukf_aug.process_filter(N=N, data_generator=_shared_generator()):
+        for _k, xt, _yk, _xp, xu in ukf_aug.process_filter(N=N, data_generator=_shared_generator()):
             step = ukf_aug.history.last()
             if xt is not None:
                 xtu.append(xt)

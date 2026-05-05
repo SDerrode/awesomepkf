@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -363,8 +360,7 @@ class BaseModelFxHx(BaseModelNonLinear, ABC):
             hx_val = self._hx(fx_val, u, dt)
             if x.ndim == 2:
                 return np.vstack((fx_val, hx_val))
-            else:
-                return np.concatenate((fx_val, hx_val), axis=1)
+            return np.concatenate((fx_val, hx_val), axis=1)
         except NumericalError:
             raise
         except ValueError as e:

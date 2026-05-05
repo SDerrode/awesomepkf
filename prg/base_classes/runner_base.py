@@ -1,9 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
 from abc import ABC, abstractmethod
-from typing import Tuple, Type
 
 from prg.utils.exceptions import FilterError, ParamError, PKFError
 
@@ -73,7 +69,7 @@ class BaseRunner(ABC):
 
     # ----------------------------------------------------------
 
-    def _setup_directories(self) -> Tuple[str, str, str]:
+    def _setup_directories(self) -> tuple[str, str, str]:
         base_dir = os.path.join(self.base_dir, "data")
 
         tracker_dir = os.path.join(base_dir, "historyTracker")
@@ -94,7 +90,7 @@ class BaseRunner(ABC):
         pass
 
     @abstractmethod
-    def _get_param_class(self) -> Type:
+    def _get_param_class(self) -> type:
         """Return the Param class (ParamLinear / ParamNonLinear)."""
         pass
 

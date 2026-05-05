@@ -1,11 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
 from abc import ABC, abstractmethod
 
-from prg.utils.utils import save_dataframe_to_csv, data_to_dataframe
 from prg.utils.exceptions import FilterError, ParamError, PKFError
+from prg.utils.utils import data_to_dataframe, save_dataframe_to_csv
 
 __all__ = ["BaseDataSimulator"]
 

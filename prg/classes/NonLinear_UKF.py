@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 ####################################################################
 Unscented Kalman Filter (UKF) — nonlinear, additive noise
@@ -22,7 +19,8 @@ Differences compared to the UPKF:
 """
 
 from __future__ import annotations
-from typing import Generator, Optional
+
+from collections.abc import Generator
 
 import numpy as np
 
@@ -76,7 +74,7 @@ class NonLinear_UKF(PKF):
         self,
         param,
         sigmaSet: str,
-        sKey: Optional[int] = None,
+        sKey: int | None = None,
         verbose: int = 0,
     ) -> None:
 
@@ -127,7 +125,7 @@ class NonLinear_UKF(PKF):
             _Byy = _B[self.dim_x :, self.dim_x :]   # obs-noise input      (dim_y, dim_y)
             self._Q_x: np.ndarray = _Bxx @ _mQ[: self.dim_x, : self.dim_x] @ _Bxx.T
             self._R:   np.ndarray = _Byy @ _mQ[self.dim_x :, self.dim_x :] @ _Byy.T
-            self._M:   Optional[np.ndarray] = (
+            self._M:   np.ndarray | None = (
                 _Bxx @ _mQ[: self.dim_x, self.dim_x :] @ _Byy.T
             )
         else:
@@ -144,7 +142,7 @@ class NonLinear_UKF(PKF):
         # where F = A[:dim_x, :dim_x].  This identity holds for both classic
         # (A_yx = H @ F) and augmented (A_yx = H_aug @ A_pairwise) models.
         # For nonlinear models (no A attribute), param.h is used directly.
-        self._H_obs: Optional[np.ndarray] = None
+        self._H_obs: np.ndarray | None = None
         if hasattr(self.param, "A"):
             _F_blk = self.param.A[: self.dim_x, : self.dim_x]  # (dim_x, dim_x)
             _A_yx  = self.param.A[self.dim_x :, : self.dim_x]  # (dim_y, dim_x)
@@ -159,10 +157,8 @@ class NonLinear_UKF(PKF):
 
     def process_filter(
         self,
-        N: Optional[int] = None,
-        data_generator: Optional[
-            Generator[tuple[int, np.ndarray, np.ndarray], None, None]
-        ] = None,
+        N: int | None = None,
+        data_generator: Generator[tuple[int, np.ndarray, np.ndarray], None, None] | None = None,
     ) -> Generator[tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
         """
         Runs the UKF filter as a generator.
@@ -219,8 +215,8 @@ class NonLinear_UKF(PKF):
         Pkp1_predict = self.zeros_dim_xy_xy.copy()
 
         # Zero noise vectors — allocated once at the first step
-        zeros_x: Optional[np.ndarray] = None
-        zeros_y: Optional[np.ndarray] = None
+        zeros_x: np.ndarray | None = None
+        zeros_y: np.ndarray | None = None
 
         # --- Main loop ----------------------------------------------------
         while N is None or step.k < N:

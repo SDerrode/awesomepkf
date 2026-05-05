@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 matrix_diagnostics.py
 =====================
@@ -20,7 +18,6 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Optional
 
 import numpy as np
 
@@ -64,7 +61,7 @@ class CheckResult:
     def __str__(self) -> str:
         thr = f"  (threshold: {self.threshold})" if self.threshold is not None else ""
         val = f"  [value: {self.value:.6g}]" if self.value is not None else ""
-        return f"  {str(self.status):<14}  {self.name}{val}{thr}\n    → {self.message}"
+        return f"  {self.status!s:<14}  {self.name}{val}{thr}\n    → {self.message}"
 
 
 # ==========================================================
@@ -149,7 +146,7 @@ class InvertibleTolerances:
     det_fail: float = 1e-15
 
     # Expected rank (None = n)
-    expected_rank: Optional[int] = None
+    expected_rank: int | None = None
     # rank_tol : None = automatic relative threshold from numpy (recommended)
     #            float = minimum absolute threshold (floor only)
     rank_tol: float = None  # ← was 1e-10, too restrictive
@@ -411,7 +408,7 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
     # Regularisation
     # -------------------------------------------------------
 
-    def regularize(self, eps: float | None = None) -> "RegularizationResult":
+    def regularize(self, eps: float | None = None) -> RegularizationResult:
         """
         Tikhonov regularisation: M_reg = (M + M.T)/2 + ε * I.
 

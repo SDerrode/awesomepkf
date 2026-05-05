@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-from typing import Optional
 
 from prg.base_classes.linear_pkf_runner_base import BaseLinearPKFRunner
 from prg.utils.exceptions import FilterError, ParamError, PKFError
@@ -18,7 +14,7 @@ class LinearPKFRunnerSim(BaseLinearPKFRunner):
         self,
         model_name: str,
         N: int,
-        sKey: Optional[int],
+        sKey: int | None,
         verbose: int,
         plot: bool,
         save_history: bool,

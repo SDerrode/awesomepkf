@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Section 5 (alternative) — Real data experiment: S&P 500 Stochastic Volatility.
 
@@ -37,14 +35,15 @@ Usage
   python3 -m prg.run_paper_section5_sv
 """
 
-import os
 import math
-import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+import os
 
+import matplotlib as mpl
+import numpy as np
+
+mpl.use("Agg")
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
 import yfinance as yf
 
 # ── paths ──────────────────────────────────────────────────────────────────────
@@ -78,13 +77,12 @@ DPI         = 150
 MU_W = -(np.euler_gamma + np.log(2))   # ≈ −1.2704
 
 # ── Module imports ────────────────────────────────────────────────────────────
-from prg.utils.nn_model         import NNModel
-from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
+from prg.classes.NonLinear_PPF import NonLinear_PPF
 from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.classes.NonLinear_PPF  import NonLinear_PPF
-from prg.utils.utils            import compute_errors
-
+from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.utils.nn_model import NNModel
+from prg.utils.utils import compute_errors
 
 # ==============================================================================
 # 1. Data download and preparation
@@ -156,9 +154,8 @@ def compute_sv_series(csv_path):
     df = df.dropna(subset=["x", "ytilde"])
     df = df[np.isfinite(df["x"]) & np.isfinite(df["ytilde"])]
 
-    rows = [(str(idx.date()), float(row["x"]), float(row["ytilde"]))
+    return [(str(idx.date()), float(row["x"]), float(row["ytilde"]))
             for idx, row in df.iterrows()]
-    return rows
 
 
 def load_and_split(rows):
@@ -240,7 +237,7 @@ def _make_gen(test_data):
 def _run_real_filter(filt, test_data):
     gen = _make_gen(test_data)
     x_true_list, x_hat_list, P_list, i_list, S_list = [], [], [], [], []
-    for k, xt, yk, xp, xu in filt.process_filter(
+    for _k, xt, _yk, _xp, xu in filt.process_filter(
             N=len(test_data), data_generator=gen()):
         step = filt.history.last()
         if xt is not None:
@@ -313,7 +310,7 @@ def persistence_baseline(test_data):
 
 def _compute_mse_mae(x_true_list, x_hat_list):
     err = np.array([xt.ravel()[0] - xh.ravel()[0]
-                    for xt, xh in zip(x_true_list, x_hat_list)])
+                    for xt, xh in zip(x_true_list, x_hat_list, strict=False)])
     return float(np.mean(err**2)), float(np.mean(np.abs(err)))
 
 
@@ -380,7 +377,7 @@ def main():
     print("    PPF  …")
     ppf = NonLinear_PPF(param=param, n_particles=N_PARTICLES, sKey=SKEY, verbose=0)
     xt_p, xh_p, pp_p = [], [], []
-    for k, xt, yk, xp, xu in ppf.process_filter(
+    for _k, xt, _yk, _xp, xu in ppf.process_filter(
             N=len(test_list), data_generator=_make_gen(test_list)()):
         step = ppf.history.last()
         if xt is not None:

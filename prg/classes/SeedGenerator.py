@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 Module SeedGenerator
 --------------------
@@ -9,9 +6,10 @@ using numpy.random.SeedSequence and secrets for the initial seed.
 """
 
 from __future__ import annotations
+
 import secrets
 import threading
-from typing import Optional
+
 import numpy as np
 
 from prg.utils.exceptions import ParamError
@@ -27,11 +25,11 @@ class SeedGenerator:
     Allows creating independent sub-generators from a main (master) seed.
     """
 
-    def __init__(self, seed_key: Optional[int] = None, verbose: int = 0) -> None:
+    def __init__(self, seed_key: int | None = None, verbose: int = 0) -> None:
         """
         Parameters
         ----------
-        seed_key : Optional[int]
+        seed_key : int | None
             Initial seed (any integer, positive or negative). If None, a strong seed is generated via secrets.
         verbose : int
             Verbosity level (0, 1 or 2).

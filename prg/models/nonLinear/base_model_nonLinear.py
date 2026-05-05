@@ -1,14 +1,13 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-import numpy as np
+import contextlib
 import os
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 from prg.classes.SeedGenerator import SeedGenerator
 from prg.utils.exceptions import NumericalError
 from prg.utils.generate_matrix_cov import generate_block_matrix
-from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
+from prg.utils.plot_settings import BIG_SIZE, DPI, FACECOLOR
 
 __all__ = ["BaseModelNonLinear", "NumericalError"]  # re-exported for convenience
 
@@ -252,7 +251,7 @@ class BaseModelNonLinear:
         ----------
         sym   : if True, centres the colormap on 0 (useful for signed values).
         """
-        kwargs = dict(cmap=cmap, levels=20)
+        kwargs = {"cmap": cmap, "levels": 20}
         if sym:
             vmax = np.nanmax(np.abs(data))
             if vmax > 0:
@@ -393,7 +392,7 @@ class BaseModelNonLinear:
             self._contourf_ax(ax, Z1, Z2, lam, title, cmap="RdBu_r", sym=True)
             # Stability boundary |Re(λ)| = 1
             for level, ls in [(-1.0, "--"), (1.0, "--")]:
-                try:
+                with contextlib.suppress(Exception):
                     ax.contour(
                         Z1,
                         Z2,
@@ -403,8 +402,6 @@ class BaseModelNonLinear:
                         linestyles=ls,
                         linewidths=1.2,
                     )
-                except Exception:
-                    pass
 
         model_name = getattr(self, "MODEL_NAME", self.__class__.__name__)
         fig.suptitle(

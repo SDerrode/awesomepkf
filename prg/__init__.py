@@ -35,28 +35,28 @@ __version__ = "0.1.0"
 
 from prg.classes.Linear_PKF import Linear_PKF
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
-from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.classes.NonLinear_UKF import NonLinear_UKF
-from prg.classes.NonLinear_PPF import NonLinear_PPF
 from prg.classes.NonLinear_PF import NonLinear_PF
+from prg.classes.NonLinear_PPF import NonLinear_PPF
+from prg.classes.NonLinear_UKF import NonLinear_UKF
+from prg.classes.NonLinear_UPKF import NonLinear_UPKF
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.models.linear import ModelFactoryLinear
 from prg.models.nonLinear import ModelFactoryNonLinear
 
 __all__ = [
-    "__version__",
     # Filters
     "Linear_PKF",
-    "NonLinear_EPKF",
-    "NonLinear_UPKF",
-    "NonLinear_UKF",
-    "NonLinear_PPF",
-    "NonLinear_PF",
-    # Parameters
-    "ParamLinear",
-    "ParamNonLinear",
     # Model factories
     "ModelFactoryLinear",
     "ModelFactoryNonLinear",
+    "NonLinear_EPKF",
+    "NonLinear_PF",
+    "NonLinear_PPF",
+    "NonLinear_UKF",
+    "NonLinear_UPKF",
+    # Parameters
+    "ParamLinear",
+    "ParamNonLinear",
+    "__version__",
 ]

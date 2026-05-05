@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 prg/exceptions.py
 -----------------
@@ -18,12 +15,12 @@ PKFError
 """
 
 __all__ = [
+    "CovarianceError",
+    "FilterError",
+    "InvertibilityError",
+    "NumericalError",
     "PKFError",
     "ParamError",
-    "NumericalError",
-    "CovarianceError",
-    "InvertibilityError",
-    "FilterError",
     "StepValidationError",
 ]
 

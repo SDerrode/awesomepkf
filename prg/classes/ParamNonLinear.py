@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 from typing import Any
 
 import numpy as np
@@ -79,9 +76,8 @@ class ParamNonLinear:
         # EPKF-specific parameters
         self.jacobiens_g = kwargs["jacobiens_g"]
 
-        if __debug__:
-            if not self.augmented:
-                self._check_covariance_matrices()
+        if __debug__ and not self.augmented:
+            self._check_covariance_matrices()
 
     # ------------------------------------------------------------------
     def __repr__(self) -> str:
@@ -148,21 +144,19 @@ class ParamNonLinear:
             If ``new_Q`` is not positive definite (non-augmented model).
         """
         new_Q = np.array(new_Q, dtype=float)
-        if __debug__:
-            if new_Q.shape != (self.dim_xy, self.dim_xy):
-                raise ParamError(
-                    f"mQ must have shape ({self.dim_xy}, {self.dim_xy}), "
-                    f"got {new_Q.shape}."
-                )
+        if __debug__ and new_Q.shape != (self.dim_xy, self.dim_xy):
+            raise ParamError(
+                f"mQ must have shape ({self.dim_xy}, {self.dim_xy}), "
+                f"got {new_Q.shape}."
+            )
         self._mQ = new_Q
-        if __debug__:
-            if not self.augmented:
-                report = CovarianceMatrix(self._mQ).check()
-                if not report.is_valid:
-                    raise CovarianceError(
-                        "Matrix 'mQ' is not positive semi-definite after update.",
-                        matrix_name="mQ",
-                    )
+        if __debug__ and not self.augmented:
+            report = CovarianceMatrix(self._mQ).check()
+            if not report.is_valid:
+                raise CovarianceError(
+                    "Matrix 'mQ' is not positive semi-definite after update.",
+                    matrix_name="mQ",
+                )
 
     # ------------------------------------------------------------------
     # Summary

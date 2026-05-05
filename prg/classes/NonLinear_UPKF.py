@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 ####################################################################
 Unscented Pairwise Kalman filter (UPKF) implementation
@@ -8,7 +5,9 @@ Unscented Pairwise Kalman filter (UPKF) implementation
 """
 
 from __future__ import annotations
-from typing import Generator, Optional
+
+from collections.abc import Generator
+
 import numpy as np
 
 from prg.classes.PKF import PKF
@@ -34,7 +33,7 @@ class NonLinear_UPKF(PKF):
         self,
         param,
         sigmaSet: str,
-        sKey: Optional[int] = None,
+        sKey: int | None = None,
         verbose: int = 0,
     ) -> None:
         """
@@ -72,10 +71,8 @@ class NonLinear_UPKF(PKF):
 
     def process_filter(
         self,
-        N: Optional[int] = None,
-        data_generator: Optional[
-            Generator[tuple[int, np.ndarray, np.ndarray], None, None]
-        ] = None,
+        N: int | None = None,
+        data_generator: Generator[tuple[int, np.ndarray, np.ndarray], None, None] | None = None,
     ) -> Generator[tuple[int, np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
         """
         Runs the UPKF filter as a generator.

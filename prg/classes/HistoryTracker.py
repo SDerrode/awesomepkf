@@ -1,22 +1,18 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
 import pickle
-from typing import Any, Optional
-import numpy as np
-import pandas as pd
+from dataclasses import asdict, dataclass, is_dataclass
+from typing import Any
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
-
-from dataclasses import dataclass, is_dataclass, asdict
-
+import numpy as np
+import pandas as pd
 from rich.console import Console
 
-from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
-from prg.utils.utils import rich_show_fields, compute_errors
+from prg.utils.exceptions import NumericalError, ParamError
 from prg.utils.numerics import EPS_ABS, EPS_REL
-from prg.utils.exceptions import ParamError, NumericalError
+from prg.utils.plot_settings import BIG_SIZE, DPI, FACECOLOR
+from prg.utils.utils import compute_errors, rich_show_fields
 
 __all__ = ["HistoryTracker"]
 
@@ -86,7 +82,7 @@ class HistoryTracker:
     def as_dataframe(self) -> pd.DataFrame:
         return pd.DataFrame(self._history)
 
-    def last(self) -> Optional[dict[str, Any]]:
+    def last(self) -> dict[str, Any] | None:
         return self._history[-1] if self._history else None
 
     def clear(self) -> None:
@@ -149,7 +145,7 @@ class HistoryTracker:
         _console = Console(force_terminal=True, color_system="truecolor")
 
         if ListeD is None or ListeE is None:
-            for a, b, c in zip(ListeA, ListeB, ListeC):
+            for a, b, c in zip(ListeA, ListeB, ListeC, strict=False):
                 reportError = compute_errors(
                     model,
                     df[a].to_numpy(),
@@ -172,7 +168,7 @@ class HistoryTracker:
                         title=f"{a} vs {b}",
                     )
         else:
-            for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE):
+            for a, b, c, d, e in zip(ListeA, ListeB, ListeC, ListeD, ListeE, strict=False):
                 reportError = compute_errors(
                     model,
                     df[a].to_numpy(),
@@ -327,7 +323,7 @@ class HistoryTracker:
         list_labels_e = []
         list_has_var = []
 
-        for p, e in zip(list_param, list_covar):
+        for p, e in zip(list_param, list_covar, strict=False):
             has_var = e is not None
             list_has_var += [has_var] * nb_components
 
@@ -360,7 +356,7 @@ class HistoryTracker:
         fig.suptitle(title, y=0.85, fontsize=BIG_SIZE)
 
         for i, (col_p, col_e, has_var) in enumerate(
-            zip(list_labels_p, list_labels_e, list_has_var)
+            zip(list_labels_p, list_labels_e, list_has_var, strict=False)
         ):
             j = i % nb_components
             k = i // nb_components
@@ -389,7 +385,7 @@ class HistoryTracker:
         for ax in axes:
             ax.grid(True, linestyle="--", alpha=0.6)
         handles, labels = axes[-1].get_legend_handles_labels()
-        unique = dict(zip(labels, handles))
+        unique = dict(zip(labels, handles, strict=False))
         axes[-1].legend(
             unique.values(),
             unique.keys(),
@@ -444,7 +440,7 @@ class A:
         self.verbose = verbose
         self.history = HistoryTracker(verbose=verbose)
 
-    def iterate_gen(self, n: Optional[int] = None):
+    def iterate_gen(self, n: int | None = None):
         k = 0
         while n is None or k < n:
             new_x = np.cos(self.x)

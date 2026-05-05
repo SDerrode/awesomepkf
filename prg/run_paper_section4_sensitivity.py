@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Multi-seed sensitivity analysis for Section 4 of the paper
 "Non-linear extensions to Gaussian pairwise Kalman filters".
@@ -9,16 +8,18 @@ for EPKF, UPKF and PPF (addresses reviewer concern on result robustness).
 Usage (from repo root):
     python3 -m prg.run_paper_section4_sensitivity
 """
-import numpy as np
-import sys
 import os
+import sys
+
+import numpy as np
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from prg.models.nonLinear import ModelFactoryNonLinear
-from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
+from prg.classes.NonLinear_PPF import NonLinear_PPF
 from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.classes.NonLinear_PPF  import NonLinear_PPF
+from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.utils.utils import compute_errors
 
 N           = 1000
@@ -37,7 +38,7 @@ def _run_filter(filt, N, data_gen=None):
     kwargs = {"N": N}
     if data_gen is not None:
         kwargs["data_generator"] = data_gen
-    for k, xt, yk, xp, xu in filt.process_filter(**kwargs):
+    for _k, xt, _yk, _xp, xu in filt.process_filter(**kwargs):
         step = filt.history.last()
         if xt is not None:
             x_true_list.append(xt)

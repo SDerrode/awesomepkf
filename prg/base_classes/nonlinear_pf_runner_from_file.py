@@ -1,12 +1,8 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
-from typing import Optional
 
-from prg.utils.utils import file_data_generator
 from prg.base_classes.nonlinear_pf_runner_base import BaseNonLinearPFRunner
 from prg.utils.exceptions import FilterError, PKFError
+from prg.utils.utils import file_data_generator
 
 __all__ = ["NonLinearPFRunnerFromFile"]
 
@@ -20,7 +16,7 @@ class NonLinearPFRunnerFromFile(BaseNonLinearPFRunner):
         self,
         model_name: str,
         n_particles: int,
-        data_filename: Optional[str],
+        data_filename: str | None,
         verbose: int = 0,
         plot: bool = False,
         save_history: bool = False,
