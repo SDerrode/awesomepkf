@@ -148,8 +148,6 @@ class ParamLinear:
         self._mz0 = np.array(mz0, dtype=float)
         self._Pz0 = np.array(Pz0, dtype=float)
 
-        # self._update_Sigma_from_A_B_mQ()
-
     def constructorFrom_Sigma(
         self,
         sxx: np.ndarray,
@@ -203,45 +201,6 @@ class ParamLinear:
         self._mz0 = np.zeros((self.dim_xy, 1))
         self._Pz0 = self._Q1.copy()
 
-    def _update_Sigma_from_A_B_mQ(self) -> None:
-        """
-        Raises
-        ------
-        NumericalError
-            If the relative error between ``mQ`` and ``Q1 - A @ Q2^T`` exceeds
-            the ``EPS_REL`` threshold.
-        """
-
-        return
-
-        # self._Q1 = solve_discrete_lyapunov(self._A, self._mQ)
-        # self._Q2 = self._A @ self._Q1
-        # self._Sigma = np.block([[self._Q1, self._Q2.T], [self._Q2, self._Q1]])
-
-        # if __debug__:
-        #     Q_est = self._Q1 - self._A @ self._Q2.T
-        #     diff = self._mQ - Q_est
-        #     rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + EPS_ABS)
-        #     if rel_error > EPS_REL:
-        #         raise NumericalError(
-        #             f"Inconsistency detected: Q != Q1 - A Q2^T "
-        #             f"(relative error = {rel_error:.2e}).",
-        #             matrix_name="mQ",
-        #         )
-
-        # # Sub-blocks
-        # self._a = self._Sigma[self.dim_xy : self.dim_xy + self.dim_x, : self.dim_x]
-        # self._b = self._Sigma[self.dim_x : self.dim_xy, : self.dim_x]
-        # self._c = self._Sigma[
-        #     self.dim_xy + self.dim_x : 2 * self.dim_xy, self.dim_x : self.dim_xy
-        # ]
-        # self._d = self._Sigma[self.dim_xy + self.dim_x : 2 * self.dim_xy, : self.dim_x]
-        # self._e = self._Sigma[
-        #     self.dim_xy : self.dim_xy + self.dim_x, self.dim_x : self.dim_xy
-        # ]
-        # self._sxx = self._Sigma[: self.dim_x, : self.dim_x]
-        # self._syy = self._Sigma[self.dim_x : self.dim_xy, self.dim_x : self.dim_xy]
-
     # ------------------------------------------------------------------
     # Consistency checks
     # ------------------------------------------------------------------
@@ -258,18 +217,6 @@ class ParamLinear:
         listMatrix = []
         if not self.augmented:
             listMatrix = [("mQ", self._mQ), ("Pz0", self._Pz0)]
-
-        # if self.augmented:
-        #     listMatrix = [("Q1", self._Q1), ("sxx", self._sxx), ("syy", self._syy)]
-        # else:
-        #     listMatrix = [
-        #         # ("Q1", self._Q1),
-        #         # ("sxx", self._sxx),
-        #         # ("syy", self._syy),
-        #         ("mQ", self._mQ),
-        #         # ("Sigma", self._Sigma),
-        #         ("Pz0", self._Pz0),
-        #     ]
 
         for name, arr in listMatrix:
             report = CovarianceMatrix(arr).check()
@@ -291,13 +238,10 @@ class ParamLinear:
         """
         Raises
         ------
-        NumericalError
-            If the update of Sigma from A fails.
         CovarianceError
             If the consistency check fails after the update.
         """
         self._A = np.array(new_A, dtype=float)
-        self._update_Sigma_from_A_B_mQ()
         if __debug__:
             self._check_consistency()
 
@@ -310,13 +254,10 @@ class ParamLinear:
         """
         Raises
         ------
-        NumericalError
-            If the update of Sigma from B fails.
         CovarianceError
             If the consistency check fails after the update.
         """
         self._B = np.array(new_B, dtype=float)
-        self._update_Sigma_from_A_B_mQ()
         if __debug__:
             self._check_consistency()
 
@@ -329,13 +270,10 @@ class ParamLinear:
         """
         Raises
         ------
-        NumericalError
-            If the update of Sigma from mQ fails.
         CovarianceError
             If the consistency check fails after the update.
         """
         self._mQ = np.array(new_Q, dtype=float)
-        self._update_Sigma_from_A_B_mQ()
         if __debug__:
             self._check_consistency()
 
@@ -346,34 +284,6 @@ class ParamLinear:
     @property
     def Pz0(self) -> np.ndarray:
         return self._Pz0
-
-    # @property
-    # def sxx(self) -> np.ndarray:
-    #     return self._sxx
-
-    # @property
-    # def syy(self) -> np.ndarray:
-    #     return self._syy
-
-    # @property
-    # def a(self) -> np.ndarray:
-    #     return self._a
-
-    # @property
-    # def b(self) -> np.ndarray:
-    #     return self._b
-
-    # @property
-    # def c(self) -> np.ndarray:
-    #     return self._c
-
-    # @property
-    # def d(self) -> np.ndarray:
-    #     return self._d
-
-    # @property
-    # def e(self) -> np.ndarray:
-    #     return self._e
 
     # ------------------------------------------------------------------
     # Summary
