@@ -20,6 +20,9 @@ from dataclasses import dataclass, field
 import numpy as np
 import sympy as sp
 
+from prg.utils.generate_matrix_cov import generate_block_matrix
+from prg.utils.numerics import EPS_REL
+
 __all__ = ["NONLINEAR_CONFIGS", "NonLinearSpec"]
 
 
@@ -52,8 +55,6 @@ def _sm_sinus(sx, st, su):
 
 
 def _sm_expsaturant(sx, st, su):
-    from prg.utils.numerics import EPS_REL
-
     x, t, u = sx[0], st[0], su[0]
     sfx = 0.5 * x + 2.0 * (1 - sp.exp(-0.1 * x)) + t
     shx = sp.log(1 + sp.Max(sp.Abs(x), EPS_REL)) + u
@@ -86,8 +87,6 @@ def _sm_rapport(sx, st, su):
 
 def _init_rapport(model) -> None:
     """Rapport_classic uses two different val_max values for mQ and Pz0."""
-    from prg.utils.generate_matrix_cov import generate_block_matrix
-
     rng = model._randMatrices.rng
     model.mQ = generate_block_matrix(rng, model.dim_x, model.dim_y, 0.1)
     model.mz0 = rng.standard_normal((model.dim_xy, 1))

@@ -102,6 +102,12 @@ class HistoryTracker:
         """
         Reloads a HistoryTracker from a pickle file.
 
+        .. warning::
+           Uses ``pickle.load``, which executes arbitrary code on
+           deserialisation. Only call this on files you produced
+           yourself via ``save_pickle()``. Do not load history files
+           from untrusted sources.
+
         Parameters
         ----------
         path : str
@@ -123,7 +129,9 @@ class HistoryTracker:
         if not p.exists():
             raise FileNotFoundError(f"File not found: {path}")
         with p.open("rb") as f:
-            data = pickle.load(f)
+            # noqa: S301 — local research artifacts written by save_pickle();
+            # caller responsibility (see docstring warning).
+            data = pickle.load(f)  # noqa: S301
         if not isinstance(data, list):
             raise TypeError("The file does not contain a list of records.")
         tracker = cls()
