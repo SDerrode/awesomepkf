@@ -1,6 +1,10 @@
+import logging
+
 import numpy as np
 
 from prg.utils.numerics import EIG_TOL_FAIL, EIG_TOL_WARN
+
+logger = logging.getLogger(__name__)
 
 
 def check_eigvals(eigvals: np.ndarray) -> None:
@@ -27,8 +31,9 @@ def check_eigvals(eigvals: np.ndarray) -> None:
             f"negative eigenvalues = {eigvals[eigvals < EIG_TOL_FAIL]}"
         )
     if np.any(eigvals < EIG_TOL_WARN):
-        print(
-            f"Near-zero eigenvalues detected (below EIG_TOL_WARN): - {eigvals[eigvals < EIG_TOL_WARN]} — likely numerical noise."
+        logger.warning(
+            "Near-zero eigenvalues detected (below EIG_TOL_WARN): - %s — likely numerical noise.",
+            eigvals[eigvals < EIG_TOL_WARN],
         )
 
 
