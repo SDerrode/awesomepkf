@@ -11,18 +11,18 @@ from prg.utils.parser import add_arguments
 
 
 def _print_model_list() -> None:
-    """Affiche les modèles linéaires et non-linéaires disponibles puis quitte."""
+    """Print the available linear and nonlinear models then exit."""
     from prg.models.linear import ModelFactoryLinear
     from prg.models.nonLinear import ModelFactoryNonLinear
 
     nl_models = sorted(ModelFactoryNonLinear.list_models())
     lin_models = sorted(ModelFactoryLinear.list_models())
 
-    print("\nModèles non-linéaires disponibles :")
+    print("\nAvailable nonlinear models:")
     for name in nl_models:
         print(f"  {name}")
 
-    print("\nModèles linéaires disponibles :")
+    print("\nAvailable linear models:")
     for name in lin_models:
         print(f"  {name}")
 
@@ -35,35 +35,33 @@ def parse_arguments():
     parser.add_argument(
         "--list-models",
         action="store_true",
-        help="Affiche les modèles disponibles et quitte",
+        help="Print the available models and exit",
     )
 
     add_arguments(
         parser,
         [
-            "linearModelName",
-            "nonLinearModelName",
+            "linear-model-name",
+            "nonlinear-model-name",
             "N",
-            "sKey",
-            "dataFileName",
-            "withoutX",
+            "s-key",
+            "data-filename",
+            "without-x",
         ],
     )
 
     args = parser.parse_args()
 
-    # Traitement immédiat de --list-models (avant toute validation)
     if args.list_models:
         _print_model_list()
         sys.exit(0)
 
-    # Validation logique
-    if args.linearModelName is not None and args.nonLinearModelName is not None:
+    if args.linear_model_name is not None and args.nonlinear_model_name is not None:
         parser.error(
-            "--nonLinearModelName should not be used with --linearModelName. One or the other!"
+            "--nonlinear-model-name should not be used with --linear-model-name. One or the other!"
         )
-    if args.linearModelName is None and args.nonLinearModelName is None:
-        parser.error("--nonLinearModelName OR --linearModelName must be used.")
+    if args.linear_model_name is None and args.nonlinear_model_name is None:
+        parser.error("--nonlinear-model-name OR --linear-model-name must be used.")
 
     return args
 
@@ -76,40 +74,37 @@ def parse_arguments():
 def main() -> None:
     args = parse_arguments()
 
-    if args.linearModelName and args.nonLinearModelName:
+    if args.linear_model_name and args.nonlinear_model_name:
         raise ValueError(
-            "Please provide only one of --linearModelName or --nonLinearModelName"
+            "Please provide only one of --linear-model-name or --nonlinear-model-name"
         )
 
-    if args.linearModelName:
+    if args.linear_model_name:
         simulator = LinearDataSimulator(
-            model_name=args.linearModelName,
+            model_name=args.linear_model_name,
             N=args.N,
-            sKey=args.sKey,
-            data_file_name=args.dataFileName,
+            sKey=args.s_key,
+            data_file_name=args.data_filename,
             verbose=args.verbose,
-            withoutX=args.withoutX,
+            withoutX=args.without_x,
         )
 
-    elif args.nonLinearModelName:
+    elif args.nonlinear_model_name:
         simulator = NonLinearDataSimulator(
-            model_name=args.nonLinearModelName,
+            model_name=args.nonlinear_model_name,
             N=args.N,
-            sKey=args.sKey,
-            data_file_name=args.dataFileName,
+            sKey=args.s_key,
+            data_file_name=args.data_filename,
             verbose=args.verbose,
-            withoutX=args.withoutX,
+            withoutX=args.without_x,
         )
 
     else:
         raise ValueError(
-            "Please provide either --linearModelName or --nonLinearModelName"
+            "Please provide either --linear-model-name or --nonlinear-model-name"
         )
 
-    try:
-        simulator.run()
-    except RuntimeError:
-        raise
+    simulator.run()
 
 
 if __name__ == "__main__":

@@ -25,37 +25,37 @@ _OPTION_CONFIG: dict = {
         "default": None,
         "help": "Number of samples to process (default: None)",
     },
-    "n_particles": {
+    "n-particles": {
         "type": int_ge_1,
         "default": 300,
         "help": "Number of particles to use (default: 300)",
     },
-    "sKey": {
+    "s-key": {
         "type": int,
         "default": None,
         "help": "Random generator seed (default: None)",
     },
-    "linearModelName": {
+    "linear-model-name": {
         "type": str,
         "default": None,
         "help": "Linear model to use (default: None)",
     },
-    "sigmaSet": {
+    "sigma-set": {
         "choices": ["wan2000", "cpkf", "lerner2002", "ito2000"],
         "default": "wan2000",
         "help": "Sigma points set for UPKF (default: wan2000)",
     },
-    "nonLinearModelName": {
+    "nonlinear-model-name": {
         "type": str,
         "default": None,
         "help": "Nonlinear model to use (default: None)",
     },
-    "dataFileName": {
+    "data-filename": {
         "type": str,
         "default": None,
         "help": "Path to the trajectory file (default: None)",
     },
-    "withoutX": {
+    "without-x": {
         "action": "store_true",
         "help": "Do not save the true state X (default: False)",
     },
@@ -103,7 +103,7 @@ def add_arguments(parser: argparse.ArgumentParser, list_options: list[str]) -> N
         help="Display and save signals to disk (default: False)",  # FIX: was "True if not specified" → inverted
     )
     parser.add_argument(
-        "--saveHistory",
+        "--save-history",
         action="store_true",
         help="Save the parameter trace to disk (default: False)",
     )
