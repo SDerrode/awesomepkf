@@ -21,8 +21,8 @@ from prg.classes.sigma_points_set import SigmaPointsSet
 from prg.models.linear import ModelFactoryLinear
 from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.utils.exceptions import FilterError, ParamError, PKFError
+from prg.utils.io import file_data_generator
 from prg.utils.plot_settings import WINDOW
-from prg.utils.utils import file_data_generator
 
 __all__ = ["FilterRunner", "Mode"]
 

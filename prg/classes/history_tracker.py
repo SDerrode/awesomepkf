@@ -9,10 +9,11 @@ import numpy as np
 import pandas as pd
 from rich.console import Console
 
+from prg.utils.display import rich_show_fields
 from prg.utils.exceptions import NumericalError, ParamError
+from prg.utils.metrics import compute_errors
 from prg.utils.numerics import EPS_ABS, EPS_REL
 from prg.utils.plot_settings import BIG_SIZE, DPI, FACECOLOR
-from prg.utils.utils import compute_errors, rich_show_fields
 
 __all__ = ["HistoryTracker"]
 

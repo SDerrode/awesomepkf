@@ -62,8 +62,8 @@ from prg.classes.nonlinear_epkf import NonLinear_EPKF
 from prg.classes.nonlinear_ppf import NonLinear_PPF
 from prg.classes.nonlinear_upkf import NonLinear_UPKF
 from prg.classes.param_nonlinear import ParamNonLinear
+from prg.utils.metrics import compute_errors
 from prg.utils.nn_model import NNModel
-from prg.utils.utils import compute_errors
 
 # ==============================================================================
 # 1. Data download and preparation

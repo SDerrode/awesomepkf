@@ -20,7 +20,7 @@ from prg.classes.nonlinear_ppf import NonLinear_PPF
 from prg.classes.nonlinear_upkf import NonLinear_UPKF
 from prg.classes.param_nonlinear import ParamNonLinear
 from prg.models.nonLinear import ModelFactoryNonLinear
-from prg.utils.utils import compute_errors
+from prg.utils.metrics import compute_errors
 
 N           = 1000
 N_PARTICLES = 500

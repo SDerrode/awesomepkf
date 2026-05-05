@@ -14,6 +14,7 @@ from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
 from prg.classes.param_linear import ParamLinear
 from prg.classes.param_nonlinear import ParamNonLinear
 from prg.classes.seed_generator import SeedGenerator
+from prg.utils.display import rich_show_fields
 from prg.utils.exceptions import (
     CovarianceError,
     FilterError,
@@ -21,7 +22,6 @@ from prg.utils.exceptions import (
     ParamError,
     StepValidationError,
 )
-from prg.utils.utils import rich_show_fields
 
 __all__ = ["PKF", "PKFStep"]
 
