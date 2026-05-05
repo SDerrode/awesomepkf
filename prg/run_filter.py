@@ -47,7 +47,13 @@ def _setup_logging(verbose: int) -> None:
 
 
 def _parse_arguments(filter_name: str) -> tuple[argparse.Namespace, str]:
-    spec = FILTER_SPECS[filter_name]
+    try:
+        spec = FILTER_SPECS[filter_name]
+    except KeyError as e:
+        raise ParamError(
+            f"Unknown filter {filter_name!r}. "
+            f"Available: {sorted(FILTER_SPECS)}."
+        ) from e
     kind = "Linear" if spec.is_linear else "NonLinear"
     parser = argparse.ArgumentParser(description=f"Run {kind} {spec.acronym}")
 
@@ -94,11 +100,14 @@ def _parse_arguments(filter_name: str) -> tuple[argparse.Namespace, str]:
 # ----------------------------------------------------------------------
 
 
+# Order matters: most specific first. ParamError, NumericalError and
+# FilterError all inherit from PKFError, so PKFError must come last among
+# the PKF-family entries — otherwise the others are unreachable.
 _ERROR_TABLE: tuple[tuple[type[Exception], str, int], ...] = (
+    (ParamError,     "PARAMETER ERROR", 2),
     (NumericalError, "NUMERICAL ERROR", 1),
     (FilterError,    "FILTER ERROR",    1),
     (PKFError,       "PKF ERROR",       1),
-    (ParamError,     "PARAMETER ERROR", 2),
     (ValueError,     "PARAMETER ERROR", 2),
     (RuntimeError,   "RUNTIME ERROR",   3),
 )
