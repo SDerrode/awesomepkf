@@ -201,6 +201,12 @@ awesomepkf-ppf  --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "t
 |   |   |-- simulator_linear.py
 |   |   `-- simulator_nonlinear.py
 |   |-- classes/
+|   |   |-- history_tracker/
+|   |   |   |-- __init__.py
+|   |   |   |-- _core.py
+|   |   |   |-- _demo.py
+|   |   |   |-- _metrics_mixin.py
+|   |   |   `-- _plot_mixin.py
 |   |   |-- matrix_diagnostics/
 |   |   |   |-- __init__.py
 |   |   |   |-- base.py
@@ -212,7 +218,6 @@ awesomepkf-ppf  --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "t
 |   |   |   `-- tolerances.py
 |   |   |-- __init__.py
 |   |   |-- _base_particle_filter.py
-|   |   |-- history_tracker.py
 |   |   |-- linear_pkf.py
 |   |   |-- nonlinear_epkf.py
 |   |   |-- nonlinear_pf.py
@@ -259,7 +264,8 @@ awesomepkf-ppf  --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "t
 |   |   |-- test_linear_pkf.py
 |   |   |-- test_models.py
 |   |   |-- test_nonlinear_filters.py
-|   |   `-- test_particle_filters.py
+|   |   |-- test_particle_filters.py
+|   |   `-- test_simulators.py
 |   |-- utils/
 |   |   |-- __init__.py
 |   |   |-- csv_to_parquet.py
