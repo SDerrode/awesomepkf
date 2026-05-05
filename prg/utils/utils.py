@@ -28,7 +28,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
-from prg.classes.MatrixDiagnostics import InvertibleMatrix
+from prg.classes.matrix_diagnostics import InvertibleMatrix
 from prg.utils.numerics import EPS_ABS, EPS_REL
 
 __all__ = [

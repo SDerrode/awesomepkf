@@ -15,7 +15,7 @@ import numpy as np
 from rich import print
 from scipy.linalg import cholesky
 
-from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
 from prg.classes.PKF import PKF, PKFStep
 
 # Local

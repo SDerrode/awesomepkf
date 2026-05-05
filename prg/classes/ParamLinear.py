@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 from scipy.linalg import cho_factor, cho_solve
 
-from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
+from prg.classes.matrix_diagnostics import CovarianceMatrix, StabilityMatrix
 from prg.utils.exceptions import CovarianceError, NumericalError, ParamError
 
 __all__ = ["ParamLinear"]

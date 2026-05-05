@@ -24,7 +24,7 @@ from collections.abc import Generator
 import numpy as np
 from scipy.linalg import cholesky
 
-from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
 from prg.classes.PKF import PKF, PKFStep
 from prg.classes.SeedGenerator import SeedGenerator
 from prg.utils.exceptions import (

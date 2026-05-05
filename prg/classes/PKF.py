@@ -10,7 +10,7 @@ from scipy.linalg import LinAlgError, cho_factor, cho_solve
 
 # Local imports
 from prg.classes.HistoryTracker import HistoryTracker
-from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.classes.SeedGenerator import SeedGenerator
