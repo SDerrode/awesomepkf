@@ -101,7 +101,11 @@ class NNModel(BaseModelNonLinear):
         self.pairwiseModel = True
 
         torch.manual_seed(seed)
-        np.random.seed(seed)
+        # Seed numpy's global RNG so any np.random.* call elsewhere in the
+        # NN training pipeline (e.g. inside torch internals or downstream
+        # transforms) is reproducible. Generator-based local RNG would not
+        # propagate to those callers.
+        np.random.seed(seed)  # noqa: NPY002 — reproducibility of global RNG is intentional
 
         # ── Load data & build training pairs ──────────────────────────
         data = self._load_csv(csv_path)  # (T, dim_xy)

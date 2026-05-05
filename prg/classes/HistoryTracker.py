@@ -122,7 +122,7 @@ class HistoryTracker:
         if not p.exists():
             raise FileNotFoundError(f"File not found: {path}")
         with p.open("rb") as f:
-            data = pickle.load(f)  # noqa: S301 — local research artifacts only
+            data = pickle.load(f)
         if not isinstance(data, list):
             raise TypeError("The file does not contain a list of records.")
         tracker = cls()

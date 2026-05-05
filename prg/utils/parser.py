@@ -3,14 +3,14 @@ import warnings
 
 
 def int_ge_1(value: str) -> int:
-    """Convertit *value* en ``int`` et vérifie qu'il est ≥ 1."""
+    """Parse *value* as ``int`` and verify it is ≥ 1."""
     try:
         ivalue = int(value)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"{value!r} n'est pas un entier valide")
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(f"{value!r} is not a valid integer") from e
 
     if ivalue < 1:
-        raise argparse.ArgumentTypeError(f"{value} doit être un entier ≥ 1")
+        raise argparse.ArgumentTypeError(f"{value} must be an integer ≥ 1")
 
     return ivalue
 
