@@ -26,24 +26,24 @@ mpl.rcParams["figure.dpi"] = DPI
 mpl.rcParams["figure.facecolor"] = FACECOLOR
 
 # --------------------------------------------------
-# Cycle couleurs / styles
-# FIX : matplotlib.cycler au lieu de plt.cycler
+# Color / style cycle
+# FIX: matplotlib.cycler instead of plt.cycler
 # --------------------------------------------------
 mpl.rcParams["axes.prop_cycle"] = mpl.cycler(
     color=["r", "g", "b"], linestyle=["-", "--", ":"]
 )
 
 # --------------------------------------------------
-# Tailles de police
+# Font sizes
 # --------------------------------------------------
 SMALL_SIZE = 6
 MEDIUM_SIZE = 8
 BIG_SIZE = 10
 
 mpl.rc("font", size=SMALL_SIZE)  # default text size
-mpl.rc("axes", titlesize=SMALL_SIZE)  # titre des axes
-mpl.rc("axes", labelsize=MEDIUM_SIZE)  # labels x et y
-mpl.rc("xtick", labelsize=SMALL_SIZE)  # labels des ticks x
-mpl.rc("ytick", labelsize=SMALL_SIZE)  # labels des ticks y
+mpl.rc("axes", titlesize=SMALL_SIZE)  # axis titles
+mpl.rc("axes", labelsize=MEDIUM_SIZE)  # x and y labels
+mpl.rc("xtick", labelsize=SMALL_SIZE)  # x tick labels
+mpl.rc("ytick", labelsize=SMALL_SIZE)  # y tick labels
 mpl.rc("legend", fontsize=SMALL_SIZE)  # legend
-mpl.rc("figure", titlesize=BIG_SIZE)  # titre de la figure
+mpl.rc("figure", titlesize=BIG_SIZE)  # figure title

@@ -84,8 +84,8 @@ class ParamLinear:
             )
         else:
             raise ParamError(
-                f"Le modèle n'est pas bien paramétré : {list(kwargs.keys())}. "
-                f"Attendu 12 ou 14 clés, reçu {len(kwargs.keys())}."
+                f"The model is not properly parametrised: {list(kwargs.keys())}. "
+                f"Expected 12 or 14 keys, got {len(kwargs.keys())}."
             )
 
         # Common parameters
@@ -139,7 +139,7 @@ class ParamLinear:
         if not stab.is_valid():
             stab.summary()
             raise NumericalError(
-                "La matrice A n'est pas stable (valeurs propres hors du disque unité).",
+                "Matrix A is not stable (eigenvalues outside the unit disc).",
                 matrix_name="A",
             )
 
@@ -224,8 +224,8 @@ class ParamLinear:
         #     rel_error = np.linalg.norm(diff) / (np.linalg.norm(self._mQ) + EPS_ABS)
         #     if rel_error > EPS_REL:
         #         raise NumericalError(
-        #             f"Incohérence détectée : Q ≉ Q1 - A Q2^T "
-        #             f"(erreur relative = {rel_error:.2e}).",
+        #             f"Inconsistency detected: Q != Q1 - A Q2^T "
+        #             f"(relative error = {rel_error:.2e}).",
         #             matrix_name="mQ",
         #         )
 

@@ -168,7 +168,7 @@ class NNModel(BaseModelNonLinear):
         else:
             tried = "\n  ".join(str(p) for p in candidates)
             raise FileNotFoundError(
-                f"NNModel: fichier introuvable. Chemins testés :\n  {tried}"
+                f"NNModel: file not found. Paths tested:\n  {tried}"
             )
         data = np.loadtxt(path, delimiter=",", skiprows=1)
         if data.ndim == 1:
@@ -336,7 +336,7 @@ class NNModel(BaseModelNonLinear):
 
 
 # ======================================================================
-# Programme principal de test
+# Main test program
 # ======================================================================
 if __name__ == "__main__":
     import argparse
@@ -360,10 +360,10 @@ if __name__ == "__main__":
                         help="Output directory for the figure")
     args = parser.parse_args()
 
-    # ── 1. Entraînement ───────────────────────────────────────────────
+    # ── 1. Training ───────────────────────────────────────────────────
     print(f"\n{'='*60}")
-    print(f"  Fichier  : {args.csv}")
-    print(f"  Couches  : {args.hidden}   epochs={args.epochs}   lr={args.lr}")
+    print(f"  File     : {args.csv}")
+    print(f"  Layers   : {args.hidden}   epochs={args.epochs}   lr={args.lr}")
     print(f"{'='*60}\n")
 
     model = NNModel(
@@ -375,14 +375,14 @@ if __name__ == "__main__":
         verbose=max(1, args.epochs // 5),
     )
 
-    print(f"\nmQ estimée :\n{model.mQ}")
+    print(f"\nEstimated mQ:\n{model.mQ}")
     print(f"mz0 = {model.mz0.ravel()}")
 
-    # ── 2. Données brutes ─────────────────────────────────────────────
+    # ── 2. Raw data ───────────────────────────────────────────────────
     data = NNModel._load_csv(args.csv)          # (T, 2)
     X_data, Y_data = data[:, 0], data[:, 1]
 
-    # Plage d'évaluation : légèrement élargie autour des données
+    # Evaluation range: slightly enlarged around the data
     x_min, x_max = X_data.min(), X_data.max()
     y_min, y_max = Y_data.min(), Y_data.max()
     margin_x = 0.1 * (x_max - x_min)
@@ -392,13 +392,13 @@ if __name__ == "__main__":
     XG, YG = np.meshgrid(xg, yg)                 # (n, n)
     Z_grid = np.stack([XG.ravel(), YG.ravel()], axis=1)   # (n², 2)
 
-    # ── 3. Évaluation de g_nn et du Jacobien sur la grille ───────────
+    # ── 3. Evaluate g_nn and the Jacobian on the grid ────────────────
     G_grid = model._forward_np(Z_grid)            # (n², 2)
     GX = G_grid[:, 0].reshape(args.n_grid, args.n_grid)   # g_x(x,y)
     GY = G_grid[:, 1].reshape(args.n_grid, args.n_grid)   # g_y(x,y)
 
-    # Jacobien : An[i] = [[∂gx/∂x, ∂gx/∂y], [∂gy/∂x, ∂gy/∂y]]
-    print("\nCalcul du Jacobien sur la grille…")
+    # Jacobian: An[i] = [[∂gx/∂x, ∂gx/∂y], [∂gy/∂x, ∂gy/∂y]]
+    print("\nComputing Jacobian over the grid...")
     n2 = Z_grid.shape[0]
     AN = np.empty((n2, 2, 2))
     for i in range(n2):
@@ -407,18 +407,18 @@ if __name__ == "__main__":
     dgx_dy = AN[:, 0, 1].reshape(args.n_grid, args.n_grid)
     dgy_dx = AN[:, 1, 0].reshape(args.n_grid, args.n_grid)
     dgy_dy = AN[:, 1, 1].reshape(args.n_grid, args.n_grid)
-    print("Jacobien calculé.")
+    print("Jacobian computed.")
 
     # ── 4. Figure ─────────────────────────────────────────────────────
     Path(args.out).mkdir(parents=True, exist_ok=True)
     fig = plt.figure(figsize=(18, 10), facecolor=FACECOLOR)
-    fig.suptitle("NNModel — fonction apprise et jacobienne", fontsize=BIG_SIZE + 2,
+    fig.suptitle("NNModel — learned function and Jacobian", fontsize=BIG_SIZE + 2,
                  fontweight="bold")
 
     def _add_data_scatter(ax, alpha=0.15):
-        """Superpose les données brutes (x_k, y_k) sur un axe 2D."""
+        """Overlay raw data (x_k, y_k) on a 2D axis."""
         ax.scatter(X_data, Y_data, s=4, c="white", alpha=alpha, zorder=5,
-                   label="données")
+                   label="data")
 
     def _cbar(fig, ax, im, title):
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
@@ -439,7 +439,7 @@ if __name__ == "__main__":
     ax2.set_xlabel(r"$x_k$"); ax2.set_ylabel(r"$y_k$"); ax2.set_zlabel(r"$y_{k+1}$")
     ax2.view_init(30, -60)
 
-    # ── Cartes 2D de g_x et g_y avec scatter des données
+    # ── 2D maps of g_x and g_y with data scatter
     ax3 = fig.add_subplot(2, 4, 3)
     im3 = ax3.contourf(XG, YG, GX, levels=25, cmap="viridis")
     _add_data_scatter(ax3)
@@ -450,7 +450,7 @@ if __name__ == "__main__":
     _add_data_scatter(ax4)
     _cbar(fig, ax4, im4, r"$g_y(x,y)$")
 
-    # ── Ligne 2 : 4 entrées du Jacobien An
+    # ── Row 2: 4 entries of Jacobian An
     panels = [
         (fig.add_subplot(2, 4, 5), dgx_dx, r"$\partial g_x/\partial x$", "RdBu_r"),
         (fig.add_subplot(2, 4, 6), dgx_dy, r"$\partial g_x/\partial y$", "RdBu_r"),
@@ -468,4 +468,4 @@ if __name__ == "__main__":
     out_path = str(Path(args.out) / "nn_model_test.png")
     plt.savefig(out_path, dpi=DPI, bbox_inches="tight", facecolor=FACECOLOR)
     plt.close(fig)
-    print(f"\nFigure sauvegardée → {out_path}")
+    print(f"\nFigure saved -> {out_path}")

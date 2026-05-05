@@ -307,17 +307,17 @@ class PKF:
 
         while N is None or k < N:
 
-            # ── Tirage du bruit ──────────────────────────────────────────────
+            # ── Noise sampling ───────────────────────────────────────────────
             if self.param.augmented:
-                # Bruit d'état seul (dim_x composantes)
+                # State noise only (dim_x components)
                 noise_z[: self.dim_x, 0] = (
                     self.__randSimulation.rng.multivariate_normal(
                         mean=zerosvector_x,
                         cov=self.param.mQ[: self.dim_x, : self.dim_x],
                     )
                 )
-                # Bruit d'observation = dernières dim_y composantes du bruit d'état
-                # (modèle augmenté : v^y est une fonction de v^x)
+                # Observation noise = last dim_y components of the state noise
+                # (augmented model: v^y is a function of v^x)
                 noise_z[self.dim_x :, 0] = noise_z[
                     self.dim_x - self.dim_y : self.dim_x, 0
                 ]
