@@ -9,7 +9,13 @@ Direct usage::
 
     python -m prg.run_filter epkf --nonlinear-model-name model_x1_y1_pairwise --N 100
 
-But normally, you would invoke through the per-filter wrappers
+You can also load a saved GUI session config (TOML) — the model name,
+sigma set, particle count, and parameter overrides are taken from the
+config; data-source flags (``--N``, ``--data-filename``) remain CLI-only::
+
+    python -m prg.run_filter --config foo.toml --N 1000
+
+Normally, you would invoke through the per-filter wrappers
 (``python -m prg.run_nonlinear_epkf``) or the entry-point scripts
 (``awesomepkf-epkf``).
 """
@@ -17,6 +23,7 @@ But normally, you would invoke through the per-filter wrappers
 import argparse
 import logging
 import sys
+from pathlib import Path
 
 from prg.base_classes.filter_runner import FilterRunner, RunOptions
 from prg.base_classes.filter_specs import FILTER_SPECS
@@ -70,12 +77,46 @@ def _parse_arguments(filter_name: str) -> tuple[argparse.Namespace, str]:
     arg_keys.append("data-filename")
     add_arguments(parser, arg_keys)
 
+    # ── Optional GUI session config (TOML) ────────────────────────────
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Path to a GUI session TOML (overrides model / sigma-set / "
+             "particles / parameter overrides; data-source args still CLI-only).",
+    )
+
     args = parser.parse_args()
 
     if args.data_filename is not None and args.N is not None:
         parser.error("--N should not be used with --data-filename")
     if args.data_filename is None and args.N is None:
         parser.error("--N must be used when --data-filename is not specified")
+
+    # ── Apply --config if present ────────────────────────────────────
+    args._config_overrides = {}  # default no-op
+    if args.config is not None:
+        from prg.gui.session import load_config
+
+        cfg = load_config(args.config)
+        if cfg.filter_name != filter_name:
+            parser.error(
+                f"--config filter {cfg.filter_name!r} does not match "
+                f"the dispatcher's filter {filter_name!r}.",
+            )
+        # Model name from config overrides whatever CLI provided.
+        if spec.is_linear:
+            args.linear_model_name = cfg.model_name
+        else:
+            args.linear_model_name    = None
+            args.nonlinear_model_name = cfg.model_name
+        # Sigma set / particles only if filter accepts them and CLI did not override.
+        if "sigmaSet" in spec.requires and cfg.sigma_set:
+            args.sigma_set = cfg.sigma_set
+        if "n_particles" in spec.requires and cfg.n_particles:
+            args.n_particles = cfg.n_particles
+        # Numeric overrides applied later, on the runner.param.
+        args._config_overrides = dict(cfg.overrides)
 
     if spec.is_linear:
         model_name = args.linear_model_name
@@ -152,6 +193,11 @@ def run(filter_name: str) -> None:
         n_particles=getattr(args, "n_particles", None),
         options=options,
     )
+    # Apply scalar overrides loaded from --config (if any).
+    for key, val in getattr(args, "_config_overrides", {}).items():
+        if hasattr(runner.param, key):
+            setattr(runner.param, key, val)
+
     runner.run()
 
 
