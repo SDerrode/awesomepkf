@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.1] - 2026-05-05
+
+### Fixed
+
+- **EPKF crash on `BaseModelFxHx` models with multiplicative noise** — the symbolic Jacobians ``df/dx`` and ``dh/dx`` were lambdified over state variables only. For additive-noise models the Jacobians contain no noise symbols, so this happened to work; for multiplicative-noise models such as ``model_x1_y1_multiplicative_augmented`` the noise symbols survived in the Jacobian and ``np.array(..., dtype=float)`` raised ``TypeError: Cannot convert expression to float`` at the first prediction step. The Jacobians are now substituted at the linearization point ``noise = 0`` (the noise mean) before lambdify, which is the correct linearization for the EKF/EPKF and a no-op for additive-noise models. **No paper result is impacted**: this combination is not exercised by any of the ``run_paper_section*.py`` scripts (UKF runs on the augmented model, sigma-point based; EPKF/UPKF run on the pairwise version which uses ``BaseModelGxGy``).
+
+### Changed
+
+- **Soft post-construction kwargs in both factories** — ``ModelFactoryLinear.create`` and ``ModelFactoryNonLinear.create`` no longer raise on extra kwargs. Class-based nonlinear models receive the constructor-accepted subset; everything else (including kwargs that survive on config-driven models) becomes a post-construction ``setattr`` for attributes that already exist on the instance. Lets the Sensitivity tab sweep universal UPKF / UKF tuning knobs (``alpha`` / ``beta`` / ``kappa``) on any model without surfacing the config/class distinction.
+
+---
+
 ## [2.1.0] - 2026-05-05
 
 ### Added

@@ -99,16 +99,20 @@ class ModelFactoryLinear:
 
     @classmethod
     def create(cls, name: str, **kwargs) -> BaseModelLinear:
+        """Build a linear model.
+
+        Linear models are entirely config-driven: there is no constructor
+        scalar to override at build time. ``kwargs`` is therefore not
+        consumed during construction; the runner applies surviving keys as
+        plain attributes on the resulting instance (this is how the
+        Sensitivity tab sweeps universal UPKF / UKF tuning knobs such as
+        ``alpha`` / ``beta`` / ``kappa`` on linear models).
+        """
         key = name.strip()
         if key not in LINEAR_CONFIGS:
             raise ValueError(
                 f"Unknown model: '{key}'. "
                 f"Available: {cls.list_models()}"
-            )
-        if kwargs:
-            raise ValueError(
-                f"Linear model '{key}' is config-driven and does not accept "
-                f"constructor overrides {sorted(kwargs)}."
             )
         cfg = LINEAR_CONFIGS[key]
         variant = cfg["variant"]
@@ -119,6 +123,11 @@ class ModelFactoryLinear:
             )
         instance = _BUILDERS[variant](cfg)
         instance.MODEL_NAME = key
+        # Soft post-construction overrides (only attributes that already exist
+        # on the instance are touched; unknown names are silently ignored).
+        for k, v in kwargs.items():
+            if hasattr(instance, k):
+                setattr(instance, k, v)
         return instance
 
     @classmethod
