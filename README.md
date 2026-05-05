@@ -211,6 +211,7 @@ awesomepkf-ppf  --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "t
 |   |   |   |-- status.py
 |   |   |   `-- tolerances.py
 |   |   |-- __init__.py
+|   |   |-- _base_particle_filter.py
 |   |   |-- history_tracker.py
 |   |   |-- linear_pkf.py
 |   |   |-- nonlinear_epkf.py
@@ -234,14 +235,15 @@ awesomepkf-ppf  --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "t
 |   |   |   |-- _symbolic.py
 |   |   |   |-- base_model_linear.py
 |   |   |   `-- configs.py
-|   |   |-- nonLinear/
+|   |   |-- nonlinear/
 |   |   |   |-- __init__.py
+|   |   |   |-- _latex_helpers.py
 |   |   |   |-- base_model_fxhx.py
 |   |   |   |-- base_model_gxgy.py
-|   |   |   |-- base_model_nonLinear.py
+|   |   |   |-- base_model_nonlinear.py
 |   |   |   |-- configs.py
-|   |   |   |-- model_x1_y1_LotkaVolterra_augmented.py
 |   |   |   |-- model_x1_y1_augmented.py
+|   |   |   |-- model_x1_y1_lotkavolterra_augmented.py
 |   |   |   |-- model_x1_y1_markov_naive.py
 |   |   |   |-- model_x1_y1_multiplicative.py
 |   |   |   |-- model_x1_y1_multiplicative_augmented.py
@@ -253,19 +255,23 @@ awesomepkf-ppf  --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "t
 |   |-- tests/
 |   |   |-- __init__.py
 |   |   |-- conftest.py
+|   |   |-- test_cli.py
 |   |   |-- test_linear_pkf.py
 |   |   |-- test_models.py
-|   |   `-- test_nonlinear_filters.py
+|   |   |-- test_nonlinear_filters.py
+|   |   `-- test_particle_filters.py
 |   |-- utils/
 |   |   |-- __init__.py
 |   |   |-- csv_to_parquet.py
+|   |   |-- display.py
 |   |   |-- exceptions.py
 |   |   |-- generate_matrix_cov.py
+|   |   |-- io.py
+|   |   |-- metrics.py
 |   |   |-- nn_model.py
 |   |   |-- numerics.py
 |   |   |-- parser.py
-|   |   |-- plot_settings.py
-|   |   `-- utils.py
+|   |   `-- plot_settings.py
 |   |-- __init__.py
 |   |-- run_filter.py
 |   |-- run_linear_pkf.py
