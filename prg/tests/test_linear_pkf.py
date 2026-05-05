@@ -52,7 +52,7 @@ class TestLinearPKFOutputShapes:
     def test_output_tuple_shapes_x2y2(self, param_x2y2):
         pkf = Linear_PKF(param_x2y2, sKey=SEED)
         results = pkf.process_N_data(N=10)
-        for k, x_true, y_obs, x_pred, x_upd in results:
+        for _k, x_true, y_obs, x_pred, x_upd in results:
             assert x_true.shape == (param_x2y2.dim_x, 1)
             assert y_obs.shape  == (param_x2y2.dim_y, 1)
             assert x_pred.shape == (param_x2y2.dim_x, 1)
@@ -78,7 +78,7 @@ class TestLinearPKFCalibration:
     def _compute_mean_nees(self, results, dim_x):
         """Compute NEES from (x_true - x_update) using the history dataframe."""
         errors = []
-        for k, x_true, y_obs, x_pred, x_upd in results:
+        for _k, x_true, _y_obs, _x_pred, x_upd in results:
             if x_true is not None:
                 err = float(np.sum((x_true - x_upd) ** 2))
                 errors.append(err)

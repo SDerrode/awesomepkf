@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import numpy as np
+
 from prg.models.linear.base_model_linear import LinearSigma
 
 __all__ = ["Model_x3_y1_Sigma_pairwise"]

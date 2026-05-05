@@ -1,21 +1,19 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 # Standard library
 from __future__ import annotations
-from typing import Generator, Optional
+
+from collections.abc import Generator
 from dataclasses import dataclass
 
 # Third-party
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve, LinAlgError
+from scipy.linalg import LinAlgError, cho_factor, cho_solve
 
 # Local imports
 from prg.classes.HistoryTracker import HistoryTracker
-from prg.classes.SeedGenerator import SeedGenerator
+from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
-from prg.classes.MatrixDiagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.classes.SeedGenerator import SeedGenerator
 from prg.utils.exceptions import (
     CovarianceError,
     FilterError,
@@ -25,7 +23,7 @@ from prg.utils.exceptions import (
 )
 from prg.utils.utils import rich_show_fields
 
-__all__ = ["PKFStep", "PKF"]
+__all__ = ["PKF", "PKFStep"]
 
 
 @dataclass(slots=True, frozen=True)
@@ -66,17 +64,17 @@ class PKFStep:
     """
 
     k: int
-    xkp1: Optional[np.ndarray]
+    xkp1: np.ndarray | None
     ykp1: np.ndarray
     Xkp1_predict: np.ndarray
     PXXkp1_predict: np.ndarray
 
     # Optional fields — None at the prediction-only step
-    ikp1: Optional[np.ndarray] = None
-    Skp1: Optional[np.ndarray] = None
-    Kkp1: Optional[np.ndarray] = None
-    Xkp1_update: Optional[np.ndarray] = None
-    PXXkp1_update: Optional[np.ndarray] = None
+    ikp1: np.ndarray | None = None
+    Skp1: np.ndarray | None = None
+    Kkp1: np.ndarray | None = None
+    Xkp1_update: np.ndarray | None = None
+    PXXkp1_update: np.ndarray | None = None
 
 
 class PKF:
@@ -107,7 +105,7 @@ class PKF:
     def __init__(
         self,
         param: ParamLinear | ParamNonLinear,
-        sKey: Optional[int] = None,
+        sKey: int | None = None,
         verbose: int = 0,
     ) -> None:
         """
@@ -201,9 +199,9 @@ class PKF:
 
     def process_N_data(
         self,
-        N: Optional[int],
-        data_generator: Optional[Generator] = None,
-    ) -> list[tuple[int, Optional[np.ndarray], np.ndarray, np.ndarray, np.ndarray]]:
+        N: int | None,
+        data_generator: Generator | None = None,
+    ) -> list[tuple[int, np.ndarray | None, np.ndarray, np.ndarray, np.ndarray]]:
         """
         Run the filter for ``N`` steps and return all outputs as a list.
 
@@ -235,7 +233,7 @@ class PKF:
         return list(result)
 
     @staticmethod
-    def _validate_N(N: Optional[int]) -> None:
+    def _validate_N(N: int | None) -> None:
         """
         Validate the ``N`` parameter shared by all filter variants.
 
@@ -257,7 +255,7 @@ class PKF:
     # ------------------------------------------------------------------
 
     def _data_generation(
-        self, N: Optional[int] = None
+        self, N: int | None = None
     ) -> Generator[tuple[int, np.ndarray, np.ndarray], None, None]:
         """
         Simulate state-space data and yield one step at a time.
@@ -379,17 +377,16 @@ class PKF:
             return
 
         report = CovarianceMatrix(mat).check()
-        if not report.is_ok:
-            if not report.is_valid:
-                try:
-                    mat[:] = CovarianceMatrix(mat).regularized()
-                except ValueError as e:
-                    raise CovarianceError(
-                        f"Step {k}: {name} is not a valid covariance matrix "
-                        f"and could not be regularized.",
-                        matrix_name=name,
-                        step=k,
-                    ) from e
+        if not report.is_ok and not report.is_valid:
+            try:
+                mat[:] = CovarianceMatrix(mat).regularized()
+            except ValueError as e:
+                raise CovarianceError(
+                    f"Step {k}: {name} is not a valid covariance matrix "
+                    f"and could not be regularized.",
+                    matrix_name=name,
+                    step=k,
+                ) from e
 
     def _check_invertible(self, mat: np.ndarray, k: int, name: str = "") -> bool:
         """
@@ -420,13 +417,12 @@ class PKF:
         """
         report = InvertibleMatrix(mat).check()
 
-        if not report.is_ok:
-            if not report.is_valid:
-                raise InvertibilityError(
-                    f"Step {k}: matrix {name} is not invertible (FAIL).",
-                    matrix_name=name,
-                    step=k,
-                )
+        if not report.is_ok and not report.is_valid:
+            raise InvertibilityError(
+                f"Step {k}: matrix {name} is not invertible (FAIL).",
+                matrix_name=name,
+                step=k,
+            )
 
         return report.is_valid
 
@@ -436,7 +432,7 @@ class PKF:
 
     def _firstEstimate(
         self,
-        generator: Generator[tuple[int, Optional[np.ndarray], np.ndarray], None, None],
+        generator: Generator[tuple[int, np.ndarray | None, np.ndarray], None, None],
     ) -> PKFStep:
         """
         Compute the initial filter estimate from the first data point.
@@ -518,7 +514,7 @@ class PKF:
     def _nextUpdating(
         self,
         k: int,
-        xkp1: Optional[np.ndarray],
+        xkp1: np.ndarray | None,
         ykp1: np.ndarray,
         Zkp1_predict: np.ndarray,
         Pkp1_predict: np.ndarray,

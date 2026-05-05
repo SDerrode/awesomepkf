@@ -1,14 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import numpy as np
 import sympy as sp
-
 
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
 from prg.models.nonLinear.model_x2_y2_pairwise import Model_x2_y2_pairwise
 from prg.utils.exceptions import NumericalError
-
 
 __all__ = ["Model_x2_y2_augmented"]
 

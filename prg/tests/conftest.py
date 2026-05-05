@@ -2,13 +2,12 @@
 
 import pytest
 
-from prg.models.linear.model_x1_y1_AQ_pairwise import Model_x1_y1_AQ_pairwise
-from prg.models.linear.model_x2_y2_AQ_pairwise import Model_x2_y2_AQ_pairwise
-from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
-from prg.models.nonLinear.model_x1_y1_pairwise import Model_x1_y1_pairwise as NL_x1y1
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
-
+from prg.models.linear.model_x1_y1_AQ_pairwise import Model_x1_y1_AQ_pairwise
+from prg.models.linear.model_x2_y2_AQ_pairwise import Model_x2_y2_AQ_pairwise
+from prg.models.nonLinear.model_x1_y1_pairwise import Model_x1_y1_pairwise as NL_x1y1
+from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
 
 SEED = 42
 N_SHORT = 100

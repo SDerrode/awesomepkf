@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 Neural-network based nonlinear model.
 
@@ -11,8 +8,9 @@ via BaseModelNonLinear.
 Noise model is additive:  g(z, noise, dt) = g_nn(z) + B · noise,  B = I.
 """
 
-import numpy as np
 from pathlib import Path
+
+import numpy as np
 
 try:
     import torch
@@ -277,12 +275,11 @@ class NNModel(BaseModelNonLinear):
                 noise = np.vstack((nx, ny))             # (dim_xy, 1)
                 out = self._forward_np(z).reshape(self.dim_xy, 1)
                 return out + noise
-            else:
-                N = x.shape[0]
-                z = np.concatenate((x, y), axis=1)[:, :, 0]   # (N, dim_xy)
-                noise = np.concatenate((nx, ny), axis=1)       # (N, dim_xy, 1)
-                out = self._forward_np(z).reshape(N, self.dim_xy, 1)
-                return out + noise
+            N = x.shape[0]
+            z = np.concatenate((x, y), axis=1)[:, :, 0]   # (N, dim_xy)
+            noise = np.concatenate((nx, ny), axis=1)       # (N, dim_xy, 1)
+            out = self._forward_np(z).reshape(N, self.dim_xy, 1)
+            return out + noise
         except Exception as e:
             raise NumericalError(
                 f"[NNModel] _g: {type(e).__name__}: {e}"
@@ -303,14 +300,13 @@ class NNModel(BaseModelNonLinear):
                 z = np.vstack((x, y))[:, 0]             # (dim_xy,)
                 An = self._jacobian_np(z)                # (dim_xy, dim_xy)
                 return An, self._Bn
-            else:
-                N = x.shape[0]
-                z = np.concatenate((x, y), axis=1)[:, :, 0]  # (N, dim_xy)
-                An = np.empty((N, self.dim_xy, self.dim_xy))
-                for i in range(N):
-                    An[i] = self._jacobian_np(z[i])
-                Bn = np.tile(self._Bn, (N, 1, 1))
-                return An, Bn
+            N = x.shape[0]
+            z = np.concatenate((x, y), axis=1)[:, :, 0]  # (N, dim_xy)
+            An = np.empty((N, self.dim_xy, self.dim_xy))
+            for i in range(N):
+                An[i] = self._jacobian_np(z[i])
+            Bn = np.tile(self._Bn, (N, 1, 1))
+            return An, Bn
         except Exception as e:
             raise NumericalError(
                 f"[NNModel] _jacobiens_g: {type(e).__name__}: {e}"
@@ -341,8 +337,10 @@ class NNModel(BaseModelNonLinear):
 if __name__ == "__main__":
     import argparse
     import os
+
     import matplotlib.pyplot as plt
-    from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
+
+    from prg.utils.plot_settings import BIG_SIZE, DPI, FACECOLOR
 
     parser = argparse.ArgumentParser(description="Test NNModel on a 2-D CSV file.")
     parser.add_argument(

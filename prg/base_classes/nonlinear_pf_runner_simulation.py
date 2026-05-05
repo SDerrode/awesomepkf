@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
-from typing import Optional
 
 from prg.base_classes.nonlinear_pf_runner_base import BaseNonLinearPFRunner
 from prg.utils.exceptions import FilterError, ParamError, PKFError
@@ -18,8 +14,8 @@ class NonLinearPFRunnerSim(BaseNonLinearPFRunner):
         self,
         model_name: str,
         N: int,
-        sKey: Optional[int],
-        n_particles: Optional[int],
+        sKey: int | None,
+        n_particles: int | None,
         verbose: int,
         plot: bool,
         save_history: bool,

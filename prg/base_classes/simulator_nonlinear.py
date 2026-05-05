@@ -1,10 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 from prg.base_classes.simulator_base import BaseDataSimulator
-from prg.models.nonLinear import ModelFactoryNonLinear
-from prg.classes.PKF import PKF
 from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.classes.PKF import PKF
+from prg.models.nonLinear import ModelFactoryNonLinear
 
 __all__ = ["NonLinearDataSimulator"]
 

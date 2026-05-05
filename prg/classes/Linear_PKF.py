@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 ####################################################################
 Linear Pairwise Kalman filter (PKF) implementation
@@ -8,14 +5,15 @@ Linear Pairwise Kalman filter (PKF) implementation
 """
 
 from __future__ import annotations
-from typing import Generator, Optional
+
+from collections.abc import Generator
+
 import numpy as np
 
-from prg.classes.PKF import PKF
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.classes.PKF import PKF
 from prg.utils.exceptions import FilterError, InvertibilityError, NumericalError
-
 
 __all__ = ["Linear_PKF"]
 
@@ -42,7 +40,7 @@ class Linear_PKF(PKF):
     def __init__(
         self,
         param: ParamLinear | ParamNonLinear,
-        sKey: Optional[int] = None,
+        sKey: int | None = None,
         verbose: int = 0,
     ) -> None:
         """
@@ -66,12 +64,10 @@ class Linear_PKF(PKF):
 
     def process_filter(
         self,
-        N: Optional[int] = None,
-        data_generator: Optional[
-            Generator[tuple[int, np.ndarray, np.ndarray], None, None]
-        ] = None,
+        N: int | None = None,
+        data_generator: Generator[tuple[int, np.ndarray, np.ndarray], None, None] | None = None,
     ) -> Generator[
-        tuple[int, Optional[np.ndarray], np.ndarray, np.ndarray, np.ndarray],
+        tuple[int, np.ndarray | None, np.ndarray, np.ndarray, np.ndarray],
         None,
         None,
     ]:

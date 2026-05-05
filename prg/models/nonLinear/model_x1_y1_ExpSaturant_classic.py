@@ -1,12 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import numpy as np
 import sympy as sp
 
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
-from prg.utils.numerics import EPS_REL
 from prg.utils.exceptions import NumericalError
+from prg.utils.numerics import EPS_REL
 
 __all__ = ["Model_x1_y1_ExpSaturant_classic"]
 

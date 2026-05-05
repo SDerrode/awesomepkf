@@ -3,12 +3,12 @@
 import numpy as np
 import pytest
 
-from prg.models.linear.model_x1_y1_AQ_pairwise import Model_x1_y1_AQ_pairwise
 from prg.models.linear.model_x1_y1_AQ_classic import Model_x1_y1_AQ_classic
+from prg.models.linear.model_x1_y1_AQ_pairwise import Model_x1_y1_AQ_pairwise
 from prg.models.linear.model_x2_y2_AQ_pairwise import Model_x2_y2_AQ_pairwise
 from prg.models.linear.model_x3_y1_AQ_pairwise import Model_x3_y1_AQ_pairwise
-from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
 from prg.models.nonLinear.model_x1_y1_pairwise import Model_x1_y1_pairwise as NL_x1y1
+from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
 
 
 class TestLinearModels:

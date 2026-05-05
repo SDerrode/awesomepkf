@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Reproduce the multiplicative noise experiment from Section 4 of the paper
 "Non-linear Gaussian pairwise Kalman filters".
@@ -15,21 +13,23 @@ Usage (from repo root):
 """
 
 import os
+
+import matplotlib as mpl
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
+
+mpl.use("Agg")
 import matplotlib.pyplot as plt
 
 REPO_ROOT   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIGURES_DIR = os.path.join(REPO_ROOT, "papier_NonLinearPKF", "figures")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
-from prg.models.nonLinear.model_x1_y1_multiplicative          import Model_x1_y1_multiplicative
-from prg.models.nonLinear.model_x1_y1_multiplicative_augmented import Model_x1_y1_multiplicative_augmented
-from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
+from prg.classes.NonLinear_UKF import NonLinear_UKF
 from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.classes.NonLinear_UKF  import NonLinear_UKF
+from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.models.nonLinear.model_x1_y1_multiplicative import Model_x1_y1_multiplicative
+from prg.models.nonLinear.model_x1_y1_multiplicative_augmented import Model_x1_y1_multiplicative_augmented
 from prg.utils.utils import compute_errors
 
 N         = 1000
@@ -68,7 +68,7 @@ def _run(filt, N, data_gen=None):
 
 
 def run_one(q_y, seed):
-    mod_pw, param_pw, mod_aug, param_aug = _build_params(q_y)
+    mod_pw, param_pw, _mod_aug, param_aug = _build_params(q_y)
     dim_x_pw = mod_pw.dim_x  # = 1
 
     # ── EPKF (simulate trajectory) ───────────────────────────────────────────
@@ -85,7 +85,7 @@ def run_one(q_y, seed):
 
     # ── UKF-aug ──────────────────────────────────────────────────────────────
     ukf = NonLinear_UKF(param=param_aug, sigmaSet=SIGMA_SET, sKey=seed, verbose=0)
-    xt_a, xh_a, pp_a, ii_a, ss_a = _run(ukf, N, iter(shared))
+    xt_a, xh_a, pp_a, _ii_a, _ss_a = _run(ukf, N, iter(shared))
     # extract only x component (augmented state = [x, y])
     xh_x = [xh[:dim_x_pw] for xh in xh_a]
     pp_x = [p[:dim_x_pw, :dim_x_pw] for p in pp_a]

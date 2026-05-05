@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 Numerical constants and tolerances used throughout the PKF codebase.
 
@@ -34,15 +31,15 @@ COND_FAIL : float
 import numpy as np
 
 __all__ = [
-    "FLOAT_DTYPE",
+    "COND_FAIL",
+    "COND_WARN",
+    "EIG_TOL_FAIL",
+    "EIG_TOL_WARN",
     "EPS",
-    "SQRT_EPS",
     "EPS_ABS",
     "EPS_REL",
-    "EIG_TOL_WARN",
-    "EIG_TOL_FAIL",
-    "COND_WARN",
-    "COND_FAIL",
+    "FLOAT_DTYPE",
+    "SQRT_EPS",
 ]
 
 # ---------------------------------------------------------------------------

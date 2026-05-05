@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 csv_to_parquet.py
 -----------------
@@ -18,7 +15,6 @@ from pathlib import Path
 
 import chardet
 import pandas as pd
-
 
 # ---------------------------------------------------------------------------
 # Constants

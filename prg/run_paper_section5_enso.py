@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Reproduce all experiments from Section 5 of the paper
 "Non-linear Gaussian pairwise Kalman filters".
@@ -24,9 +22,10 @@ import os
 import re
 import urllib.request
 
+import matplotlib as mpl
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
+
+mpl.use("Agg")
 import matplotlib.pyplot as plt
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -59,13 +58,12 @@ NINO_URL = "https://www.cpc.ncep.noaa.gov/data/indices/ersst5.nino.mth.91-20.asc
 SOI_URL  = "https://www.cpc.ncep.noaa.gov/data/indices/soi"
 
 # ── Module imports ────────────────────────────────────────────────────────────
-from prg.utils.nn_model         import NNModel
-from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
+from prg.classes.NonLinear_PPF import NonLinear_PPF
 from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.classes.NonLinear_PPF  import NonLinear_PPF
-from prg.utils.utils            import compute_errors
-
+from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.utils.nn_model import NNModel
+from prg.utils.utils import compute_errors
 
 # ==============================================================================
 # 1. Data download and preparation
@@ -234,7 +232,7 @@ def _run_real_filter(filt, test_data):
     """Run a filter on real test data; return (x_true, x_hat, P, innov, S)."""
     gen = _make_gen(test_data)
     x_true_list, x_hat_list, P_list, i_list, S_list = [], [], [], [], []
-    for k, xt, yk, xp, xu in filt.process_filter(
+    for _k, xt, _yk, _xp, xu in filt.process_filter(
             N=len(test_data), data_generator=gen()):
         step = filt.history.last()
         if xt is not None:
@@ -336,7 +334,7 @@ def main():
     print("    PPF  …")
     ppf = NonLinear_PPF(param=param, n_particles=N_PARTICLES, sKey=SKEY, verbose=0)
     xt_p, xh_p, pp_p = [], [], []
-    for k, xt, yk, xp, xu in ppf.process_filter(
+    for _k, xt, _yk, _xp, xu in ppf.process_filter(
             N=len(test_data), data_generator=_make_gen(test_data)()):
         step = ppf.history.last()
         if xt is not None:

@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import numpy as np
+
 from prg.models.linear.base_model_linear import LinearAmQ
 
 __all__ = ["Model_x1_y1_AQ_pairwise"]

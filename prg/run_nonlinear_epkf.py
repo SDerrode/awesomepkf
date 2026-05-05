@@ -1,15 +1,12 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import argparse
 import sys
 
-from prg.base_classes.nonlinear_epkf_runner_simulation import NonLinearEPKFRunnerSim
 from prg.base_classes.nonlinear_epkf_runner_from_file import (
     NonLinearEPKFRunnerFromFile,
 )
+from prg.base_classes.nonlinear_epkf_runner_simulation import NonLinearEPKFRunnerSim
+from prg.utils.exceptions import FilterError, NumericalError, ParamError, PKFError
 from prg.utils.parser import add_arguments
-from prg.utils.exceptions import NumericalError, FilterError, PKFError, ParamError
 
 
 def parse_arguments():
@@ -69,22 +66,22 @@ def main() -> None:
         runner.run()
 
     except NumericalError as e:
-        print(f"[ERREUR NUMÉRIQUE] {e}", file=sys.stderr)
+        print(f"[NUMERICAL ERROR] {e}", file=sys.stderr)
         sys.exit(1)
     except FilterError as e:
-        print(f"[ERREUR FILTRE] {e}", file=sys.stderr)
+        print(f"[FILTER ERROR] {e}", file=sys.stderr)
         sys.exit(1)
     except PKFError as e:
-        print(f"[ERREUR PKF] {e}", file=sys.stderr)
+        print(f"[PKF ERROR] {e}", file=sys.stderr)
         sys.exit(1)
     except ParamError as e:
-        print(f"[ERREUR PARAMÈTRE] {e}", file=sys.stderr)
+        print(f"[PARAMETER ERROR] {e}", file=sys.stderr)
         sys.exit(2)
     except ValueError as e:
-        print(f"[ERREUR PARAMÈTRE] {e}", file=sys.stderr)
+        print(f"[PARAMETER ERROR] {e}", file=sys.stderr)
         sys.exit(2)
     except RuntimeError as e:
-        print(f"[ERREUR EXÉCUTION] {e}", file=sys.stderr)
+        print(f"[RUNTIME ERROR] {e}", file=sys.stderr)
         sys.exit(3)
 
 

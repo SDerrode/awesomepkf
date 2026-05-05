@@ -71,10 +71,42 @@ awesomepkf-pf          = "prg.run_nonlinear_pf:main"
 Homepage   = "https://github.com/sderrode/awesomepkf"
 Repository = "https://github.com/sderrode/awesomepkf"
 
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
 [tool.ruff.lint]
-# E402: imports not at top — intentional in paper/section scripts (deferred imports)
-# E702: multiple statements on one line — used in paper scripts and matplotlib calls
-ignore = ["E402", "E702"]
+select = [
+    "E",      # pycodestyle errors
+    "F",      # pyflakes
+    "W",      # pycodestyle warnings
+    "I",      # isort
+    "UP",     # pyupgrade — modernise vers Python ≥ 3.10
+    "B",      # flake8-bugbear
+    "SIM",    # flake8-simplify
+    "PTH",    # flake8-use-pathlib
+    "RUF",    # ruff-specific
+    "PERF",   # perflint
+    "NPY",    # numpy-specific
+    "ICN",    # import conventions
+    "RET",    # return-related
+    "C4",     # comprehensions
+]
+ignore = [
+    "E402",     # imports not at top — intentional in paper/section scripts
+    "E702",     # multiple statements on one line — used in paper scripts and matplotlib calls
+    "E501",     # line too long — géré par formatter, tolérance pour formules math
+    "RUF001",   # ambiguous unicode in strings — math symbols (×, ρ) intentionnels
+    "RUF002",   # idem dans docstrings
+    "RUF003",   # idem dans commentaires
+    "B008",     # function call in default arg — fréquent avec np.array
+    "SIM108",   # ternary if/else — pas toujours plus lisible
+    "PERF203",  # try/except in loop — parfois inévitable
+]
+
+[tool.ruff.lint.per-file-ignores]
+"prg/tests/*" = ["B011"]                     # tests peuvent utiliser assert False
+"prg/run_paper_section*.py" = ["PLR0915"]   # scripts de papier longs par nature
 
 [tool.hatch.build.targets.wheel]
 packages = ["prg"]

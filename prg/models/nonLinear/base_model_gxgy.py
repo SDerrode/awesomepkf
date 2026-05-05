@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -304,8 +301,7 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
             gy_val = self._gy(x, y, t, u, dt)
             if x.ndim == 2:
                 return np.vstack((gx_val, gy_val))
-            else:
-                return np.concatenate((gx_val, gy_val), axis=1)
+            return np.concatenate((gx_val, gy_val), axis=1)
         except NumericalError:
             raise
         except ValueError as e:
@@ -418,7 +414,7 @@ class BaseModelGxGy(BaseModelNonLinear, ABC):
             x*exp(A + vx)), falls back to sp.latex(expr) directly.
             """
             noise_syms = {sp.Symbol(n, real=True) for n in vx_names + vy_names}
-            zero_subs = {s: 0 for s in noise_syms}
+            zero_subs = dict.fromkeys(noise_syms, 0)
             det = expr.subs(zero_subs)  # deterministic part
             noise = sp.expand(expr - det)  # noise contribution
 

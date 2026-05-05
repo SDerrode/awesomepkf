@@ -1,18 +1,17 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 from __future__ import annotations
+
 import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 import sympy as sp
-from scipy.linalg import cho_factor, cho_solve, LinAlgError
+from scipy.linalg import LinAlgError, cho_factor, cho_solve
 
 from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
 from prg.classes.SeedGenerator import SeedGenerator
-from prg.utils.generate_matrix_cov import generate_block_matrix
 from prg.utils.exceptions import NumericalError
-from prg.utils.plot_settings import DPI, FACECOLOR, BIG_SIZE
+from prg.utils.generate_matrix_cov import generate_block_matrix
+from prg.utils.plot_settings import BIG_SIZE, DPI, FACECOLOR
 
 __all__ = ["BaseModelLinear", "LinearAmQ", "LinearSigma"]
 
@@ -76,10 +75,9 @@ class BaseModelLinear:
         try:
             if z.ndim == 2:
                 return self.A @ z + self.B @ noise_z
-            else:
-                return np.einsum("ij,njk->nik", self.A, z) + np.einsum(
-                    "ij,njk->nik", self.B, noise_z
-                )
+            return np.einsum("ij,njk->nik", self.A, z) + np.einsum(
+                "ij,njk->nik", self.B, noise_z
+            )
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{self.__class__.__name__}] g: matrix multiplication error: {e}"
@@ -107,10 +105,9 @@ class BaseModelLinear:
         try:
             if x.ndim == 2:
                 return A_xx @ x + B_xx @ noise_x
-            else:
-                return np.einsum("ij,njk->nik", A_xx, x) + np.einsum(
-                    "ij,njk->nik", B_xx, noise_x
-                )
+            return np.einsum("ij,njk->nik", A_xx, x) + np.einsum(
+                "ij,njk->nik", B_xx, noise_x
+            )
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{self.__class__.__name__}] _fx: matrix multiplication error: {e}"
@@ -138,10 +135,9 @@ class BaseModelLinear:
         try:
             if x.ndim == 2:
                 return A_yx @ x + B_yy @ noise_y
-            else:
-                return np.einsum("ij,njk->nik", A_yx, x) + np.einsum(
-                    "ij,njk->nik", B_yy, noise_y
-                )
+            return np.einsum("ij,njk->nik", A_yx, x) + np.einsum(
+                "ij,njk->nik", B_yy, noise_y
+            )
         except (ValueError, np.exceptions.AxisError) as e:
             raise NumericalError(
                 f"[{self.__class__.__name__}] _hx: matrix multiplication error: {e}"

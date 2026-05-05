@@ -26,7 +26,7 @@ def check_eigvals(eigvals: np.ndarray) -> None:
             f"Matrix is not positive semi-definite: "
             f"negative eigenvalues = {eigvals[eigvals < EIG_TOL_FAIL]}"
         )
-    elif np.any(eigvals < EIG_TOL_WARN):
+    if np.any(eigvals < EIG_TOL_WARN):
         print(
             f"Near-zero eigenvalues detected (below EIG_TOL_WARN): - {eigvals[eigvals < EIG_TOL_WARN]} — likely numerical noise."
         )

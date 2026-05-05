@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import numpy as np
 import sympy as sp
 
@@ -73,12 +70,11 @@ class Model_x2_y1_classic(BaseModelFxHx):
             x1, x2 = x[0, 0], x[1, 0]
             r = float(np.maximum(np.sqrt(x1**2 + x2**2), self.R_MIN))
             return np.array([[x1 / r, x2 / r]], dtype=float)  # (1, 2)
-        else:
-            x1 = x[:, 0, 0]
-            x2 = x[:, 1, 0]
-            r = np.maximum(np.sqrt(x1**2 + x2**2), self.R_MIN)
-            N = x.shape[0]
-            out = np.empty((N, self.dim_y, self.dim_x))
-            out[:, 0, 0] = x1 / r
-            out[:, 0, 1] = x2 / r
-            return out
+        x1 = x[:, 0, 0]
+        x2 = x[:, 1, 0]
+        r = np.maximum(np.sqrt(x1**2 + x2**2), self.R_MIN)
+        N = x.shape[0]
+        out = np.empty((N, self.dim_y, self.dim_x))
+        out[:, 0, 0] = x1 / r
+        out[:, 0, 1] = x2 / r
+        return out

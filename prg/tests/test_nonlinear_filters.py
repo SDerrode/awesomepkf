@@ -5,9 +5,9 @@ import pytest
 
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
 from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.utils.exceptions import ParamError
-from prg.tests.conftest import make_param_nonlinear
 from prg.models.nonLinear.model_x1_y1_pairwise import Model_x1_y1_pairwise as NL_x1y1
+from prg.tests.conftest import make_param_nonlinear
+from prg.utils.exceptions import ParamError
 
 SEED = 42
 N_SHORT = 50
@@ -29,7 +29,7 @@ class TestEPKF:
     def test_output_shapes(self, param_nl_x2y1):
         epkf = NonLinear_EPKF(param_nl_x2y1, sKey=SEED)
         results = epkf.process_N_data(N=10)
-        for k, x_true, y_obs, x_pred, x_upd in results:
+        for _k, x_true, y_obs, x_pred, x_upd in results:
             assert x_true.shape == (param_nl_x2y1.dim_x, 1)
             assert y_obs.shape  == (param_nl_x2y1.dim_y, 1)
             assert x_pred.shape == (param_nl_x2y1.dim_x, 1)
@@ -60,7 +60,7 @@ class TestUPKF:
     def test_output_shapes_wan2000(self, param_nl_x2y1):
         upkf = NonLinear_UPKF(param_nl_x2y1, sigmaSet="wan2000", sKey=SEED)
         results = upkf.process_N_data(N=10)
-        for k, x_true, y_obs, x_pred, x_upd in results:
+        for _k, _x_true, _y_obs, x_pred, x_upd in results:
             assert x_pred.shape == (param_nl_x2y1.dim_x, 1)
             assert x_upd.shape  == (param_nl_x2y1.dim_x, 1)
 

@@ -1,13 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import argparse
 import sys
 
 from prg.base_classes.simulator_linear import LinearDataSimulator
 from prg.base_classes.simulator_nonlinear import NonLinearDataSimulator
 from prg.utils.parser import add_arguments
-
 
 # =============================================================
 # Parser
@@ -16,8 +12,8 @@ from prg.utils.parser import add_arguments
 
 def _print_model_list() -> None:
     """Affiche les modèles linéaires et non-linéaires disponibles puis quitte."""
-    from prg.models.nonLinear import ModelFactoryNonLinear
     from prg.models.linear import ModelFactoryLinear
+    from prg.models.nonLinear import ModelFactoryNonLinear
 
     nl_models = sorted(ModelFactoryNonLinear.list_models())
     lin_models = sorted(ModelFactoryLinear.list_models())

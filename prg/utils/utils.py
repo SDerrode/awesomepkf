@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 utils.py — Utility functions for Kalman filters (PKF/UKF/EKF).
 
@@ -13,34 +11,35 @@ Provides tools for:
 """
 
 from __future__ import annotations
+
+import csv  # Used in read_unknown_file
+import math  # Used in format_value
+from collections.abc import Generator  # FIX: Any added (was used but not imported); List/Optional removed (legacy)
+from dataclasses import asdict, is_dataclass  # Used in rich_show_fields
+from pathlib import Path  # Used in save_dataframe_to_csv
 from typing import (
     Any,
-    Generator,
-)  # FIX: Any added (was used but not imported); List/Optional removed (legacy)
+)
 
-import math  # Used in format_value
-import csv  # Used in read_unknown_file
 import chardet  # Used in read_unknown_file
-from pathlib import Path  # Used in save_dataframe_to_csv
 import numpy as np
 import pandas as pd
-from dataclasses import is_dataclass, asdict  # Used in rich_show_fields
-from rich.table import Table
 from rich.console import Console
+from rich.table import Table
 from rich.text import Text
 
-from prg.utils.numerics import EPS_ABS, EPS_REL
 from prg.classes.MatrixDiagnostics import InvertibleMatrix
+from prg.utils.numerics import EPS_ABS, EPS_REL
 
 __all__ = [
+    "check_equality",
+    "compute_errors",
+    "data_to_dataframe",
+    "file_data_generator",
+    "name_analysis",
+    "read_unknown_file",
     "rich_show_fields",
     "save_dataframe_to_csv",
-    "data_to_dataframe",
-    "compute_errors",
-    "read_unknown_file",
-    "file_data_generator",
-    "check_equality",
-    "name_analysis",
 ]
 
 # FIX: force_terminal=True removed — avoids spurious ANSI sequences in file/pipe logs
@@ -191,18 +190,16 @@ def data_to_dataframe(
     """
     data = []
     for idx, x, y in listData:
-        if __debug__:
-            if not hasattr(x, "flatten") or not hasattr(y, "flatten"):
-                raise TypeError(f"Elements at index {idx} are not numpy arrays.")
+        if __debug__ and (not hasattr(x, "flatten") or not hasattr(y, "flatten")):
+            raise TypeError(f"Elements at index {idx} are not numpy arrays.")
         x_values = x.flatten()
         y_values = y.flatten()
-        if __debug__:
-            if len(x_values) != dim_x or len(y_values) != dim_y:
-                raise ValueError(
-                    f"Unexpected sizes at index {idx}: "
-                    f"X={len(x_values)} (expected {dim_x}), "
-                    f"Y={len(y_values)} (expected {dim_y})"
-                )
+        if __debug__ and (len(x_values) != dim_x or len(y_values) != dim_y):
+            raise ValueError(
+                f"Unexpected sizes at index {idx}: "
+                f"X={len(x_values)} (expected {dim_x}), "
+                f"Y={len(y_values)} (expected {dim_y})"
+            )
         if withoutX:
             data.append([*y_values])
         else:
@@ -318,7 +315,7 @@ def compute_errors(
     errors_flat = errors.flatten()
     mse_total = float(np.mean(errors_flat**2))
     mae_total = float(np.mean(np.abs(errors_flat)))
-    # rmse = float(np.sqrt(mse_total))  # noqa: F841 — available for callers
+    # rmse = float(np.sqrt(mse_total))
 
     report = {
         "mse_total": mse_total,
@@ -415,7 +412,7 @@ def read_unknown_file(
         return pd.read_excel(filepath)
     if ext in (".csv", ".txt", ".dat", ".tsv", ""):
 
-        with open(filepath, "r", encoding=encoding) as f:
+        with open(filepath, encoding=encoding) as f:
             sample_lines = [next(f, "") for _ in range(min(nrows_detect, 10))]
         sample = "".join(sample_lines)
 
@@ -598,7 +595,7 @@ def check_equality(**kwargs: np.ndarray) -> None:
 
     if len(set(shapes)) != 1:
         _warnings.warn(
-            f"Matrices have different shapes: {dict(zip(names, shapes))}",
+            f"Matrices have different shapes: {dict(zip(names, shapes, strict=False))}",
             UserWarning,
             stacklevel=2,
         )
@@ -606,7 +603,7 @@ def check_equality(**kwargs: np.ndarray) -> None:
 
     ref, ref_name = matrices[0], names[0]
 
-    for name, M in zip(names[1:], matrices[1:]):
+    for name, M in zip(names[1:], matrices[1:], strict=False):
         if not np.allclose(ref, M, atol=EPS_ABS, rtol=EPS_REL):
             diff_norm = float(np.linalg.norm(ref - M))
             _warnings.warn(

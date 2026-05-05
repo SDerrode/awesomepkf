@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Reproduce the back-action experiment from Section 4 of the paper
 "Non-linear Gaussian pairwise Kalman filters".
@@ -17,20 +15,22 @@ Usage (from repo root):
 """
 
 import os
+
+import matplotlib as mpl
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
+
+mpl.use("Agg")
 import matplotlib.pyplot as plt
 
 REPO_ROOT   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIGURES_DIR = os.path.join(REPO_ROOT, "papier_NonLinearPKF", "figures")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
-from prg.models.nonLinear.model_x1_y1_pairwise_param import Model_x1_y1_pairwise_param
-from prg.models.nonLinear.model_x1_y1_markov_naive  import Model_x1_y1_markov_naive
-from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
 from prg.classes.NonLinear_UPKF import NonLinear_UPKF
+from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.models.nonLinear.model_x1_y1_markov_naive import Model_x1_y1_markov_naive
+from prg.models.nonLinear.model_x1_y1_pairwise_param import Model_x1_y1_pairwise_param
 from prg.utils.utils import compute_errors
 
 # ── Experiment parameters ──────────────────────────────────────────────────────

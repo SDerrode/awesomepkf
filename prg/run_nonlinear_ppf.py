@@ -1,17 +1,13 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import argparse
+import logging
 import sys
 
-from prg.base_classes.nonlinear_ppf_runner_simulation import NonLinearPPFRunnerSim
 from prg.base_classes.nonlinear_ppf_runner_from_file import (
     NonLinearPPFRunnerFromFile,
 )
+from prg.base_classes.nonlinear_ppf_runner_simulation import NonLinearPPFRunnerSim
+from prg.utils.exceptions import FilterError, NumericalError, ParamError, PKFError
 from prg.utils.parser import add_arguments
-from prg.utils.exceptions import NumericalError, FilterError, PKFError, ParamError
-
-import logging
 
 
 def setup_logging(verbose: int):
