@@ -5,8 +5,7 @@ import pytest
 from prg.classes.ParamLinear import ParamLinear
 from prg.classes.ParamNonLinear import ParamNonLinear
 from prg.models.linear import ModelFactoryLinear
-from prg.models.nonLinear.model_x1_y1_pairwise import Model_x1_y1_pairwise as NL_x1y1
-from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
+from prg.models.nonLinear import ModelFactoryNonLinear
 
 SEED = 42
 N_SHORT = 100
@@ -41,12 +40,12 @@ def model_x2y2():
 
 @pytest.fixture(scope="session")
 def model_nl_x2y1():
-    return Model_x2_y1_pairwise()
+    return ModelFactoryNonLinear.create("model_x2_y1_pairwise")
 
 
 @pytest.fixture(scope="session")
 def model_nl_x1y1():
-    return NL_x1y1()
+    return ModelFactoryNonLinear.create("model_x1_y1_pairwise")
 
 
 @pytest.fixture(scope="session")
