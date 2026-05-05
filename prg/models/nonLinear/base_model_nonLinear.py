@@ -150,6 +150,60 @@ class BaseModelNonLinear:
         return lambda *args: constant
 
     # ------------------------------------------------------------------
+    def _safe_eval(self, label, lambda_fn, build_args, output_shape, x):
+        """
+        Shared try/except + 2D/3D dispatch for lambdified evaluators.
+
+        Wraps the FloatingPointError → NumericalError pattern that was
+        duplicated 8 times across BaseModelFxHx and BaseModelGxGy.
+
+        Parameters
+        ----------
+        label : str
+            Method name shown in error messages (e.g. ``"_eval_fx"``).
+        lambda_fn : callable
+            Output of ``sp.lambdify(...)`` (after ``_wrap_lambdify``).
+        build_args : Callable[[int | None], tuple]
+            Returns the positional arguments for ``lambda_fn`` at batch
+            index ``i`` (3D case) or ``None`` (2D case).
+        output_shape : tuple[int, ...]
+            Shape of one evaluation result (e.g. ``(dim_x, 1)``).
+        x : np.ndarray
+            Drives 2D vs 3D dispatch via ``x.ndim``.
+
+        Returns
+        -------
+        np.ndarray
+            Shape ``output_shape`` if 2D, ``(N, *output_shape)`` if 3D.
+
+        Raises
+        ------
+        NumericalError
+            On ``FloatingPointError``, ``ValueError`` or ``IndexError``.
+        """
+        try:
+            with np.errstate(all="raise"):
+                if x.ndim == 2:
+                    return np.array(
+                        lambda_fn(*build_args(None)), dtype=float
+                    ).reshape(output_shape)
+                N = x.shape[0]
+                out = np.empty((N, *output_shape))
+                for i in range(N):
+                    out[i] = np.array(
+                        lambda_fn(*build_args(i)), dtype=float
+                    ).reshape(output_shape)
+                return out
+        except FloatingPointError as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] {label}: numerical error: {e}"
+            ) from e
+        except (ValueError, IndexError) as e:
+            raise NumericalError(
+                f"[{self.__class__.__name__}] {label}: shape error: {e}"
+            ) from e
+
+    # ------------------------------------------------------------------
     def get_params(self) -> dict:
         return {
             "dim_x": self.dim_x,
