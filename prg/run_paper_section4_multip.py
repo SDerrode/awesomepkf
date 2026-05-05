@@ -12,7 +12,7 @@ Usage (from repo root):
     python3 -m prg.run_paper_section4_multip
 """
 
-import os
+from pathlib import Path
 
 import matplotlib as mpl
 import numpy as np
@@ -20,9 +20,9 @@ import numpy as np
 mpl.use("Agg")
 import matplotlib.pyplot as plt
 
-REPO_ROOT   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FIGURES_DIR = os.path.join(REPO_ROOT, "papier_NonLinearPKF", "figures")
-os.makedirs(FIGURES_DIR, exist_ok=True)
+REPO_ROOT   = Path(__file__).resolve().parent.parent
+FIGURES_DIR = REPO_ROOT / "papier_NonLinearPKF" / "figures"
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
 from prg.classes.NonLinear_UKF import NonLinear_UKF
@@ -194,10 +194,10 @@ def main():
         fontsize=10,
     )
     fig.tight_layout()
-    out = os.path.join(FIGURES_DIR, "multip_mse_nees_vs_sigma.png")
-    fig.savefig(out, dpi=150, bbox_inches="tight")
+    out = FIGURES_DIR / "multip_mse_nees_vs_sigma.png"
+    fig.savefig(str(out), dpi=150, bbox_inches="tight")
     plt.close(fig)
-    print(f"\nFigure saved → {os.path.relpath(out, REPO_ROOT)}")
+    print(f"\nFigure saved → {out.relative_to(REPO_ROOT)}")
     print("Done.")
 
 

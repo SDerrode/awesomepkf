@@ -18,9 +18,9 @@ Usage (from repo root):
     python3 -m prg.run_paper_section5
 """
 
-import os
 import re
 import urllib.request
+from pathlib import Path
 
 import matplotlib as mpl
 import numpy as np
@@ -29,15 +29,15 @@ mpl.use("Agg")
 import matplotlib.pyplot as plt
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-REPO_ROOT   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR    = os.path.join(REPO_ROOT, "data", "datafile", "realdata", "enso")
-FIGURES_DIR = os.path.join(REPO_ROOT, "papier_NonLinearPKF", "figures")
-os.makedirs(DATA_DIR, exist_ok=True)
-os.makedirs(FIGURES_DIR, exist_ok=True)
+REPO_ROOT   = Path(__file__).resolve().parent.parent
+DATA_DIR    = REPO_ROOT / "data" / "datafile" / "realdata" / "enso"
+FIGURES_DIR = REPO_ROOT / "papier_NonLinearPKF" / "figures"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-ENSO_CSV  = os.path.join(DATA_DIR, "enso_nino34_soi.csv")
-TRAIN_CSV = os.path.join(DATA_DIR, "enso_train.csv")
-TEST_CSV  = os.path.join(DATA_DIR, "enso_test.csv")
+ENSO_CSV  = DATA_DIR / "enso_nino34_soi.csv"
+TRAIN_CSV = DATA_DIR / "enso_train.csv"
+TEST_CSV  = DATA_DIR / "enso_test.csv"
 
 # ── Experiment parameters ─────────────────────────────────────────────────────
 TRAIN_END   = 2005     # last training year (inclusive)
@@ -128,8 +128,8 @@ def _parse_soi(text):
 
 def download_enso_data():
     """Download Niño 3.4 + SOI from NOAA and cache locally (one-time)."""
-    if os.path.exists(ENSO_CSV):
-        print(f"  Data cache found: {os.path.relpath(ENSO_CSV, REPO_ROOT)}")
+    if ENSO_CSV.exists():
+        print(f"  Data cache found: {ENSO_CSV.relative_to(REPO_ROOT)}")
         return
 
     print("  Downloading Niño 3.4 SST (ERSSTv5) from NOAA …")
@@ -146,18 +146,18 @@ def download_enso_data():
     common_keys = sorted(set(nino34) & set(soi))
     rows = [(yr, mo, nino34[(yr, mo)], soi[(yr, mo)]) for yr, mo in common_keys]
 
-    with open(ENSO_CSV, "w") as f:
+    with ENSO_CSV.open("w") as f:
         f.write("year,month,X0,Y0\n")
         for yr, mo, x, y in rows:
             f.write(f"{yr},{mo},{x:.4f},{y:.4f}\n")
     print(f"  Saved {len(rows)} months "
-          f"({rows[0][0]}-{rows[-1][0]}) → {os.path.relpath(ENSO_CSV, REPO_ROOT)}")
+          f"({rows[0][0]}-{rows[-1][0]}) → {ENSO_CSV.relative_to(REPO_ROOT)}")
 
 
 def load_and_split():
     """Load full ENSO CSV, split into train/test, save NNModel-ready CSVs."""
     all_rows = []
-    with open(ENSO_CSV) as f:
+    with ENSO_CSV.open() as f:
         next(f)   # skip header
         for line in f:
             yr, mo, x, y = line.strip().split(",")
@@ -211,9 +211,9 @@ def plot_nn_functions(model, train_data, out_path, n_grid=50):
         ax.view_init(30, -60)
 
     fig.tight_layout()
-    fig.savefig(out_path, dpi=DPI, bbox_inches="tight")
+    fig.savefig(str(out_path), dpi=DPI, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Saved → {os.path.relpath(out_path, REPO_ROOT)}")
+    print(f"  Saved → {Path(out_path).relative_to(REPO_ROOT)}")
 
 
 # ==============================================================================
@@ -272,9 +272,9 @@ def _plot_real_filter(x_true_list, x_hat_list, P_list, test_dates, title, out_pa
     ax.legend(fontsize=7)
     ax.set_title(title, fontsize=9)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=DPI, bbox_inches="tight")
+    fig.savefig(str(out_path), dpi=DPI, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Saved → {os.path.relpath(out_path, REPO_ROOT)}")
+    print(f"  Saved → {Path(out_path).relative_to(REPO_ROOT)}")
 
 
 # ==============================================================================
@@ -308,7 +308,7 @@ def main():
     print("\n[3] Generating 3D figure of learned dynamics …")
     plot_nn_functions(
         nn_model, train_data,
-        os.path.join(FIGURES_DIR, "nn_gx_gy_enso.png"),
+        str(FIGURES_DIR / "nn_gx_gy_enso.png"),
     )
 
     # ── 4. Build PKF param from NN model ─────────────────────────────────────
@@ -376,17 +376,17 @@ def main():
     _plot_real_filter(
         xt_e, xh_e, pp_e, test_dates,
         "EPKF — Niño 3.4 reconstruction (2006–2025)",
-        os.path.join(FIGURES_DIR, "epkf_enso.png"),
+        str(FIGURES_DIR / "epkf_enso.png"),
     )
     _plot_real_filter(
         xt_u, xh_u, pp_u, test_dates,
         "UPKF — Niño 3.4 reconstruction (2006–2025)",
-        os.path.join(FIGURES_DIR, "upkf_enso.png"),
+        str(FIGURES_DIR / "upkf_enso.png"),
     )
     _plot_real_filter(
         xt_p, xh_p, pp_p, test_dates,
         "PPF — Niño 3.4 reconstruction (2006–2025)",
-        os.path.join(FIGURES_DIR, "ppf_enso.png"),
+        str(FIGURES_DIR / "ppf_enso.png"),
     )
 
     print("\nDone.")

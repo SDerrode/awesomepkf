@@ -36,7 +36,7 @@ Usage
 """
 
 import math
-import os
+from pathlib import Path
 
 import matplotlib as mpl
 import numpy as np
@@ -47,15 +47,15 @@ import matplotlib.pyplot as plt
 import yfinance as yf
 
 # ── paths ──────────────────────────────────────────────────────────────────────
-REPO_ROOT   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR    = os.path.join(REPO_ROOT, "data", "datafile", "realdata", "sv_sp500")
-FIGURES_DIR = os.path.join(REPO_ROOT, "papier_NonLinearPKF", "figures")
-os.makedirs(DATA_DIR, exist_ok=True)
-os.makedirs(FIGURES_DIR, exist_ok=True)
+REPO_ROOT   = Path(__file__).resolve().parent.parent
+DATA_DIR    = REPO_ROOT / "data" / "datafile" / "realdata" / "sv_sp500"
+FIGURES_DIR = REPO_ROOT / "papier_NonLinearPKF" / "figures"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-RAW_CSV   = os.path.join(DATA_DIR, "sp500_ohlcv.csv")
-TRAIN_CSV = os.path.join(DATA_DIR, "sv_train.csv")
-TEST_CSV  = os.path.join(DATA_DIR, "sv_test.csv")
+RAW_CSV   = DATA_DIR / "sp500_ohlcv.csv"
+TRAIN_CSV = DATA_DIR / "sv_train.csv"
+TEST_CSV  = DATA_DIR / "sv_test.csv"
 
 # ── Experiment parameters ─────────────────────────────────────────────────────
 TICKER      = "^GSPC"
@@ -90,8 +90,8 @@ from prg.utils.utils import compute_errors
 
 def download_sp500():
     """Download S&P 500 OHLCV from Yahoo Finance and cache."""
-    if os.path.exists(RAW_CSV):
-        print(f"  Cache found: {os.path.relpath(RAW_CSV, REPO_ROOT)}")
+    if RAW_CSV.exists():
+        print(f"  Cache found: {RAW_CSV.relative_to(REPO_ROOT)}")
         return
 
     print(f"  Downloading {TICKER} ({FULL_START} → {FULL_END}) via yfinance …")
@@ -104,7 +104,7 @@ def download_sp500():
 
     df = df[["Open", "High", "Low", "Close"]].dropna()
     df.to_csv(RAW_CSV)
-    print(f"  Saved {len(df)} rows → {os.path.relpath(RAW_CSV, REPO_ROOT)}")
+    print(f"  Saved {len(df)} rows → {RAW_CSV.relative_to(REPO_ROOT)}")
 
 
 def compute_sv_series(csv_path):
@@ -218,9 +218,9 @@ def plot_nn_functions(model, train_data, out_path, n_grid=50):
         ax.view_init(30, -60)
 
     fig.tight_layout()
-    fig.savefig(out_path, dpi=DPI, bbox_inches="tight")
+    fig.savefig(str(out_path), dpi=DPI, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Saved → {os.path.relpath(out_path, REPO_ROOT)}")
+    print(f"  Saved → {Path(out_path).relative_to(REPO_ROOT)}")
 
 
 # ==============================================================================
@@ -278,9 +278,9 @@ def _plot_real_filter(x_true_list, x_hat_list, P_list, dates, title, out_path,
     ax.legend(fontsize=7)
     ax.set_title(title, fontsize=9)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=DPI, bbox_inches="tight")
+    fig.savefig(str(out_path), dpi=DPI, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Saved → {os.path.relpath(out_path, REPO_ROOT)}")
+    print(f"  Saved → {Path(out_path).relative_to(REPO_ROOT)}")
 
 
 # ==============================================================================
@@ -350,7 +350,7 @@ def main():
     print("\n[3] Generating 3-D figure of learned dynamics …")
     plot_nn_functions(
         nn_model, train_data,
-        os.path.join(FIGURES_DIR, "nn_gx_gy_sv.png"),
+        str(FIGURES_DIR / "nn_gx_gy_sv.png"),
     )
 
     # ── 4. Build PKF param from NN model ─────────────────────────────────────
@@ -441,13 +441,13 @@ def main():
     print("\n[6] Generating filtering figures …")
     _plot_real_filter(xt_e, xh_e, pp_e, dates_test,
                       "EPKF — S&P 500 log-variance reconstruction (2016–2023)",
-                      os.path.join(FIGURES_DIR, "epkf_sv.png"))
+                      str(FIGURES_DIR / "epkf_sv.png"))
     _plot_real_filter(xt_u, xh_u, pp_u, dates_test,
                       "UPKF — S&P 500 log-variance reconstruction (2016–2023)",
-                      os.path.join(FIGURES_DIR, "upkf_sv.png"))
+                      str(FIGURES_DIR / "upkf_sv.png"))
     _plot_real_filter(xt_p, xh_p, pp_p, dates_test,
                       "PPF — S&P 500 log-variance reconstruction (2016–2023)",
-                      os.path.join(FIGURES_DIR, "ppf_sv.png"))
+                      str(FIGURES_DIR / "ppf_sv.png"))
 
     print("\nDone.")
 

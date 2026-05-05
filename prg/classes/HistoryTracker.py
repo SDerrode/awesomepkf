@@ -462,8 +462,8 @@ class A:
 # ======================================================================
 if __name__ == "__main__":
     verbose = 1
-    graph_dir = Path(".") / "data" / "plot"
-    tracker_dir = Path(".") / "data" / "historyTracker"
+    graph_dir = Path("data") / "plot"
+    tracker_dir = Path("data") / "historyTracker"
     graph_dir.mkdir(parents=True, exist_ok=True)
     tracker_dir.mkdir(parents=True, exist_ok=True)
 
