@@ -15,9 +15,9 @@ from typing import Literal
 
 from prg.base_classes.filter_specs import FILTER_SPECS, FilterSpec
 from prg.base_classes.runner_base import BaseRunner
-from prg.classes.ParamLinear import ParamLinear
-from prg.classes.ParamNonLinear import ParamNonLinear
-from prg.classes.SigmaPointsSet import SigmaPointsSet
+from prg.classes.param_linear import ParamLinear
+from prg.classes.param_nonlinear import ParamNonLinear
+from prg.classes.sigma_points_set import SigmaPointsSet
 from prg.models.linear import ModelFactoryLinear
 from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.utils.exceptions import FilterError, ParamError, PKFError

@@ -1,6 +1,6 @@
 """
 ####################################################################
-Linear Pairwise Kalman filter (PKF) implementation
+Extended Pairwise Kalman filter (EPKF) implementation
 ####################################################################
 """
 
@@ -10,47 +10,38 @@ from collections.abc import Generator
 
 import numpy as np
 
-from prg.classes.ParamLinear import ParamLinear
-from prg.classes.ParamNonLinear import ParamNonLinear
-from prg.classes.PKF import PKF
-from prg.utils.exceptions import FilterError, InvertibilityError, NumericalError
+from prg.classes.pkf import PKF
+from prg.utils.exceptions import (
+    FilterError,
+    InvertibilityError,
+    NumericalError,
+    ParamError,
+)
 
-__all__ = ["Linear_PKF"]
+__all__ = ["NonLinear_EPKF"]
 
 
-class Linear_PKF(PKF):
+class NonLinear_EPKF(PKF):
     """
-    Linear Pairwise Kalman Filter (PKF).
+    Extended Pairwise Kalman Filter (EPKF).
 
-    Implements the coupled Kalman filter for linear state-space models.
-    The transition and observation models are assumed to be linear, allowing
-    the Jacobians to be replaced by the constant matrices ``A`` and ``B``
-    from the parameter object.
-
-    The filter operates as a generator: it consumes observations one by one
-    and yields the filter outputs at each time step.
-
-    Attributes
-    ----------
-    param : ParamLinear | ParamNonLinear
-        Object holding the model parameters (transition matrices,
-        noise covariances, etc.).
+    Extends :class:`PKF` by introducing the EPKF.
     """
 
     def __init__(
         self,
-        param: ParamLinear | ParamNonLinear,
+        param,
         sKey: int | None = None,
         verbose: int = 0,
     ) -> None:
         """
-        Initialise the Linear PKF filter.
+        Initialise the EPKF filter.
 
         Parameters
         ----------
         param : ParamLinear | ParamNonLinear
-            Object holding the model parameters (transition matrices ``A``,
-            ``B``, noise covariance ``Q``, etc.).
+            Object holding the model parameters (transition function,
+            Jacobians, noise covariances, etc.).
         sKey : int, optional
             Random seed for reproducibility (default ``None``).
         verbose : int, optional
@@ -58,26 +49,17 @@ class Linear_PKF(PKF):
         """
         super().__init__(param, sKey, verbose)
 
-        self._A: np.ndarray = self.param.A
-        self._AT: np.ndarray = self.param.A.T
-        self._BmQBT: np.ndarray = self.param.B @ self.param.mQ @ self.param.B.T
-
     def process_filter(
         self,
         N: int | None = None,
         data_generator: Generator[tuple[int, np.ndarray, np.ndarray], None, None] | None = None,
     ) -> Generator[
-        tuple[int, np.ndarray | None, np.ndarray, np.ndarray, np.ndarray],
-        None,
-        None,
+        tuple[int, np.ndarray | None, np.ndarray, np.ndarray, np.ndarray]
     ]:
         """
-        Run the Linear PKF filter as a generator.
+        Run the EPKF filter as a generator.
 
-        At each time step, the method performs a prediction step using the
-        constant linear matrices ``A`` and ``B``, then an update step upon
-        receiving a new observation, and yields the current filter outputs.
-
+        At each time step, the method yields the current filter outputs.
         Data is consumed either from ``data_generator`` if provided, or from
         the internal :meth:`_data_generation` method.
 
@@ -92,7 +74,7 @@ class Linear_PKF(PKF):
 
             - ``k``          : int         — time step index
             - ``x_true``     : np.ndarray  — ground truth state, shape ``(dim_x, 1)``;
-                               may be ``None`` if no ground truth is available
+                            may be ``None`` if no ground truth is available
             - ``y_observed`` : np.ndarray  — observation vector, shape ``(dim_y, 1)``
 
             If ``None``, the internal generator is used.
@@ -116,6 +98,8 @@ class Linear_PKF(PKF):
         ParamError
             If ``N`` is not a strictly positive integer or ``None``
             (raised by :meth:`_validate_N` in the parent).
+        ParamError
+            If a Jacobian returns a matrix of unexpected shape.
         InvertibilityError
             If the innovation covariance matrix ``Skp1`` is not
             invertible during the update step.
@@ -128,37 +112,59 @@ class Linear_PKF(PKF):
         self._validate_N(N)
         self.history.clear()
 
-        # print(f"self.param.pairwiseModel:={self.param.pairwiseModel:}")
-        # print(f"self.param.augmented:={self.param.augmented:}")
-
         generator = (
             data_generator if data_generator is not None else self._data_generation()
         )
 
         # --- First estimate -----------------------------------------------------------
+
         step = self._firstEstimate(generator)
+
         if step.xkp1 is None:
             self.ground_truth = False
 
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
         # --- Subsequent steps ---------------------------------------------------------
-        P_augmented: np.ndarray = self.zeros_dim_xy_xy.copy()
-        z_augmented: np.ndarray = self.zeros_dim_xy_1.copy()
+        accel_xy_xy: np.ndarray = self.zeros_dim_xy_xy.copy()
+        z_iterated: np.ndarray = np.zeros((self.dim_xy, 1))
+        expected_shape = (self.dim_xy, self.dim_xy)
 
         while N is None or step.k < N:
 
-            # Assemble augmented state vector [X_update ; y]
-            z_augmented[: self.dim_x] = step.Xkp1_update
-            z_augmented[self.dim_x :] = step.ykp1
+            # here ykp1 still gives the previous : it is yk indeed!
+            z_iterated[: self.dim_x] = step.Xkp1_update
+            z_iterated[self.dim_x :] = step.ykp1
 
-            # Prediction step
-            Zkp1_predict: np.ndarray = self.param.g(
-                z_augmented, self.zeros_dim_xy_1, self.dt
-            )
-            # Embed the state covariance into the augmented covariance matrix
-            P_augmented[: self.dim_x, : self.dim_x] = step.PXXkp1_update
-            Pkp1_predict: np.ndarray = self._A @ P_augmented @ self._AT + self._BmQBT
+            # Prediction
+            try:
+                Zkp1_predict = self.param.g(z_iterated, self.zeros_dim_xy_1, self.dt)
+                An, Bn = self.param.jacobiens_g(
+                    z_iterated, self.zeros_dim_xy_1, self.dt
+                )
+
+            except Exception as e:
+                raise FilterError(
+                    f"Step {step.k}: unexpected error during prediction step."
+                ) from e
+
+            # Validate Jacobian shapes — model parametrisation error
+            if An.ndim == 2:
+                if An.shape != expected_shape or Bn.shape != expected_shape:
+                    raise ParamError(
+                        f"Jacobian returned matrices of wrong shape: "
+                        f"An={An.shape}, Bn={Bn.shape}, expected {expected_shape}."
+                    )
+            else:
+                if An.shape[1:] != expected_shape or Bn.shape[1:] != expected_shape:
+                    raise ParamError(
+                        f"Jacobian returned matrices of wrong shape: "
+                        f"An={An.shape}, Bn={Bn.shape}, "
+                        f"expected (N, {self.dim_xy}, {self.dim_xy})."
+                    )
+
+            accel_xy_xy[: self.dim_x, : self.dim_x] = step.PXXkp1_update
+            Pkp1_predict = An @ accel_xy_xy @ An.T + Bn @ self.param.mQ @ Bn.T
 
             # Validate predicted covariance — raises CovarianceError if invalid
             self._check_covariance(Pkp1_predict, step.k, name="Pkp1_predict")
@@ -175,7 +181,6 @@ class Linear_PKF(PKF):
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict
                 )
             except (InvertibilityError, NumericalError):
-                # Known numerical errors — let them propagate as-is
                 raise
             except Exception as e:
                 raise FilterError(

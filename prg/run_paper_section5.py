@@ -77,10 +77,10 @@ DPI         = 150
 MU_W = -(np.euler_gamma + np.log(2))   # ≈ −1.2704
 
 # ── Module imports ────────────────────────────────────────────────────────────
-from prg.classes.NonLinear_EPKF import NonLinear_EPKF
-from prg.classes.NonLinear_PPF import NonLinear_PPF
-from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.classes.nonlinear_epkf import NonLinear_EPKF
+from prg.classes.nonlinear_ppf import NonLinear_PPF
+from prg.classes.nonlinear_upkf import NonLinear_UPKF
+from prg.classes.param_nonlinear import ParamNonLinear
 from prg.utils.nn_model import NNModel
 from prg.utils.utils import compute_errors
 

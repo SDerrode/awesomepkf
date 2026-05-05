@@ -1,6 +1,6 @@
 from prg.base_classes.simulator_base import BaseDataSimulator
-from prg.classes.Linear_PKF import Linear_PKF
-from prg.classes.ParamLinear import ParamLinear
+from prg.classes.linear_pkf import Linear_PKF
+from prg.classes.param_linear import ParamLinear
 from prg.models.linear import ModelFactoryLinear
 
 __all__ = ["LinearDataSimulator"]

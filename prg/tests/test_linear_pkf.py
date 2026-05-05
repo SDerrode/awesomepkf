@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from prg.classes.Linear_PKF import Linear_PKF
+from prg.classes.linear_pkf import Linear_PKF
 from prg.utils.exceptions import ParamError
 
 SEED = 42

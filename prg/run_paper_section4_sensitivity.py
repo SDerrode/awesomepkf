@@ -15,10 +15,10 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from prg.classes.NonLinear_EPKF import NonLinear_EPKF
-from prg.classes.NonLinear_PPF import NonLinear_PPF
-from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.classes.ParamNonLinear import ParamNonLinear
+from prg.classes.nonlinear_epkf import NonLinear_EPKF
+from prg.classes.nonlinear_ppf import NonLinear_PPF
+from prg.classes.nonlinear_upkf import NonLinear_UPKF
+from prg.classes.param_nonlinear import ParamNonLinear
 from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.utils.utils import compute_errors
 

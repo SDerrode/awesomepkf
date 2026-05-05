@@ -10,8 +10,8 @@ from collections.abc import Generator
 
 import numpy as np
 
-from prg.classes.PKF import PKF
-from prg.classes.SigmaPointsSet import SigmaPointsSet
+from prg.classes.pkf import PKF
+from prg.classes.sigma_points_set import SigmaPointsSet
 from prg.utils.exceptions import (
     FilterError,
     InvertibilityError,

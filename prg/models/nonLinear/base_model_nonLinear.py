@@ -4,7 +4,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from prg.classes.SeedGenerator import SeedGenerator
+from prg.classes.seed_generator import SeedGenerator
 from prg.utils.exceptions import NumericalError
 from prg.utils.generate_matrix_cov import generate_block_matrix
 from prg.utils.plot_settings import BIG_SIZE, DPI, FACECOLOR
