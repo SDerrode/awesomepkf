@@ -120,174 +120,164 @@ def _plot_filter(history, title, params, labels, covars, out_path):
 # Main
 # ==============================================================================
 
-def main():
-    print("\n" + "=" * 65)
-    print("  Section 4 — Pairwise model : model_x1_y1_pairwise")
-    print("=" * 65)
-
-    model_name     = "model_x1_y1_pairwise"
-    model_name_aug = "model_x1_y1_augmented"
-
-    # ── Build models ───────────────────────────────────────────────────────────
-    model_pw, param_pw   = _build_param(model_name)
-    _model_aug, param_aug = _build_param(model_name_aug)
-
-    # Show Q
-    print(f"\nQ (pairwise model) =\n{np.round(param_pw.mQ, 4)}")
-    print(f"\nLatex Q:\n{model_pw.latex_model()}\n")
-
-    # ── Simulate ONCE with EPKF to get the shared trajectory ──────────────────
+def _run_epkf_first(param_pw):
+    """Run EPKF and capture the simulated trajectory to share with UPKF/PPF."""
     print("Running EPKF …")
     epkf = NonLinear_EPKF(param=param_pw, sKey=SKEY, verbose=0)
-    _t0 = time.perf_counter()
+    t0 = time.perf_counter()
     x_true_e, x_hat_e, P_e, i_e, S_e = _run_filter(epkf, N)
-    t_epkf = time.perf_counter() - _t0
+    elapsed = time.perf_counter() - t0
     err_e = _compute_metrics(epkf, x_true_e, x_hat_e, P_e, i_e, S_e)
 
-    # Save the shared simulated data as a list of (k, x, y) for UPKF and PPF
     shared_data = [
-        (step["k"], step["xkp1"], step["ykp1"])
-        for step in epkf.history._history
+        (step["k"], step["xkp1"], step["ykp1"]) for step in epkf.history._history
     ]
+    return epkf, err_e, elapsed, shared_data
 
-    def _shared_generator():
-        yield from shared_data
 
-    # ── UPKF on same data ──────────────────────────────────────────────────────
+def _run_upkf_on_shared(param_pw, shared_data):
+    """Re-run UPKF on the trajectory simulated by EPKF."""
     print("Running UPKF …")
     upkf = NonLinear_UPKF(param=param_pw, sigmaSet=SIGMA_SET, sKey=SKEY, verbose=0)
-    _x_true_u, _x_hat_u, _P_u, _i_u, _S_u = _run_filter(
-        upkf, N
-    )
-    # Re-run on shared trajectory
-    upkf2 = NonLinear_UPKF(param=param_pw, sigmaSet=SIGMA_SET, sKey=SKEY, verbose=0)
-    xt2, xh2, pp2, ii2, ss2 = [], [], [], [], []
-    _t0 = time.perf_counter()
-    for _k, xt, _yk, _xp, xu in upkf2.process_filter(N=N, data_generator=_shared_generator()):
-        step = upkf2.history.last()
-        if xt is not None:
-            xt2.append(xt)
-        xh2.append(xu)
-        pp2.append(step["PXXkp1_update"])
-        if step["ikp1"] is not None:
-            ii2.append(step["ikp1"].ravel())
-        if step["Skp1"] is not None:
-            ss2.append(step["Skp1"])
-    t_upkf = time.perf_counter() - _t0
-    i_arr2 = np.array(ii2) if ii2 else None
-    err_u = _compute_metrics(upkf2, xt2, xh2, pp2, i_arr2, ss2 if ss2 else None)
 
-    # ── PPF on same data ───────────────────────────────────────────────────────
+    xt, xh, pp, ii, ss = [], [], [], [], []
+    t0 = time.perf_counter()
+    for _k, xt_k, _yk, _xp, xu in upkf.process_filter(
+        N=N, data_generator=iter(shared_data)
+    ):
+        step = upkf.history.last()
+        if xt_k is not None:
+            xt.append(xt_k)
+        xh.append(xu)
+        pp.append(step["PXXkp1_update"])
+        if step["ikp1"] is not None:
+            ii.append(step["ikp1"].ravel())
+        if step["Skp1"] is not None:
+            ss.append(step["Skp1"])
+    elapsed = time.perf_counter() - t0
+    i_arr = np.array(ii) if ii else None
+    err = _compute_metrics(upkf, xt, xh, pp, i_arr, ss if ss else None)
+    return upkf, err, elapsed
+
+
+def _run_ppf_on_shared(param_pw, shared_data):
+    """Run PPF on the shared EPKF trajectory."""
     print("Running PPF  …")
     ppf = NonLinear_PPF(param=param_pw, n_particles=N_PARTICLES, sKey=SKEY, verbose=0)
-    xt3, xh3, pp3 = [], [], []
-    _t0 = time.perf_counter()
-    for _k, xt, _yk, _xp, xu in ppf.process_filter(N=N, data_generator=_shared_generator()):
+    xt, xh, pp = [], [], []
+    t0 = time.perf_counter()
+    for _k, xt_k, _yk, _xp, xu in ppf.process_filter(
+        N=N, data_generator=iter(shared_data)
+    ):
         step = ppf.history.last()
-        if xt is not None:
-            xt3.append(xt)
-        xh3.append(xu)
-        pp3.append(step["PXXkp1_update"])
-    t_ppf = time.perf_counter() - _t0
-    # NIS is not meaningful for PPF (no analytic S matrix) → omit
-    err_p = _compute_metrics(ppf, xt3, xh3, pp3, None, None)
+        if xt_k is not None:
+            xt.append(xt_k)
+        xh.append(xu)
+        pp.append(step["PXXkp1_update"])
+    elapsed = time.perf_counter() - t0
+    # NIS is not meaningful for PPF (no analytic S matrix) → omit.
+    err = _compute_metrics(ppf, xt, xh, pp, None, None)
+    return ppf, err, elapsed
 
-    # ── Table 1 ────────────────────────────────────────────────────────────────
+
+def _print_table1(err_e, err_u, err_p, t_epkf, t_upkf, t_ppf):
+    """Print Table 1 (MSE / MAE / NEES / NIS) and timing block."""
     print("\n" + "─" * 55)
     print("  Table 1 — EPKF / UPKF / PPF")
     print("─" * 55)
-    header = f"{'':20s}  {'EPKF':>8}  {'UPKF':>8}  {'PPF':>8}"
-    print(header)
+    print(f"{'':20s}  {'EPKF':>8}  {'UPKF':>8}  {'PPF':>8}")
+
+    def _fmt(v):
+        return f"{v:.4f}" if isinstance(v, float) else str(v)
+
     for key, label in [
         ("mse_total",  "MSE "),
         ("mae_total",  "MAE "),
         ("nees_mean",  "NEES mean"),
         ("nis_mean",   "NIS mean"),
     ]:
-        ve = err_e[key]; vu = err_u[key]; vp = err_p[key]
-        def _fmt(v):
-            return f"{v:.4f}" if isinstance(v, float) else str(v)
+        ve, vu, vp = err_e[key], err_u[key], err_p[key]
         print(f"  {label:18s}  {_fmt(ve):>8}  {_fmt(vu):>8}  {_fmt(vp):>8}")
 
-    # ── Timing ────────────────────────────────────────────────────────────────
     print(f"\n  CPU time (N={N} steps):")
     print(f"    EPKF : {t_epkf*1e3:.1f} ms  ({t_epkf/N*1e3:.3f} ms/step)")
     print(f"    UPKF : {t_upkf*1e3:.1f} ms  ({t_upkf/N*1e3:.3f} ms/step)")
     print(f"    PPF  : {t_ppf*1e3:.1f} ms  ({t_ppf/N*1e3:.3f} ms/step)  [{N_PARTICLES} particles]")
 
-    # ── LaTeX snippet for Table 1 ──────────────────────────────────────────────
     print("\nLaTeX Table 1:")
+
+    def _fmtl(v):
+        return f"{v:.4f}" if isinstance(v, float) else "na"
+
     for key, label in [
         ("mse_total",  r"\textbf{MSE}"),
         ("mae_total",  r"\textbf{MAE}"),
         ("nees_mean",  r"\textbf{NEES mean}"),
         ("nis_mean",   r"\textbf{NIS mean}"),
     ]:
-        ve = err_e[key]; vu = err_u[key]; vp = err_p[key]
-        def _fmtl(v):
-            return f"{v:.4f}" if isinstance(v, float) else "na"
+        ve, vu, vp = err_e[key], err_u[key], err_p[key]
         print(f"  {label:30s} & {_fmtl(ve):8} & {_fmtl(vu):8} & {_fmtl(vp):8} \\\\")
 
-    # ── Augmented EKF / UKF (Table 2) ─────────────────────────────────────────
+
+def _run_aug_filter(filter_cls, param_aug, dim_x_pw, shared_data, **kwargs):
+    """Generic helper for the EKF-aug / UKF-aug runs (Table 2)."""
+    flt = filter_cls(param=param_aug, sKey=SKEY, verbose=0, **kwargs)
+    xt, xh, pp = [], [], []
+    for _k, xt_k, _yk, _xp, xu in flt.process_filter(
+        N=N, data_generator=iter(shared_data)
+    ):
+        step = flt.history.last()
+        if xt_k is not None:
+            xt.append(xt_k)
+        xh.append(xu)
+        pp.append(step["PXXkp1_update"])
+    # Augmented state is [x, y] — only the x component matters for MSE/MAE.
+    xh_x = [v[:dim_x_pw] for v in xh]
+    pp_x = [p[:dim_x_pw, :dim_x_pw] for p in pp]
+    return compute_errors(flt, xt, xh_x, pp_x)
+
+
+def _print_table2(param_pw, param_aug, shared_data):
+    """Run EKF-aug / UKF-aug and print Table 2."""
     print("\n" + "─" * 55)
     print("  Table 2 — Augmented EKF / UKF")
     print("─" * 55)
 
     try:
         dim_x_pw = param_pw.dim_x  # = 1; augmented state is [x, y]
+        err_ekf_aug = _run_aug_filter(
+            NonLinear_EPKF, param_aug, dim_x_pw, shared_data
+        )
+        err_ukf_aug = _run_aug_filter(
+            NonLinear_UKF, param_aug, dim_x_pw, shared_data, sigmaSet=SIGMA_SET
+        )
 
-        ekf_aug = NonLinear_EPKF(param=param_aug, sKey=SKEY, verbose=0)
-        xta, xha, ppa = [], [], []
-        for _k, xt, _yk, _xp, xu in ekf_aug.process_filter(N=N, data_generator=_shared_generator()):
-            step = ekf_aug.history.last()
-            if xt is not None:
-                xta.append(xt)
-            xha.append(xu)
-            ppa.append(step["PXXkp1_update"])
-        # Extract X component only (augmented state = [x, y]; x_true has shape (dim_x_pw,1))
-        xha_x = [xh[:dim_x_pw] for xh in xha]
-        ppa_x = [p[:dim_x_pw, :dim_x_pw] for p in ppa]
-        err_ekf_aug = compute_errors(ekf_aug, xta, xha_x, ppa_x)
-
-        ukf_aug = NonLinear_UKF(param=param_aug, sigmaSet=SIGMA_SET, sKey=SKEY, verbose=0)
-        xtu, xhu, ppu = [], [], []
-        for _k, xt, _yk, _xp, xu in ukf_aug.process_filter(N=N, data_generator=_shared_generator()):
-            step = ukf_aug.history.last()
-            if xt is not None:
-                xtu.append(xt)
-            xhu.append(xu)
-            ppu.append(step["PXXkp1_update"])
-        xhu_x = [xh[:dim_x_pw] for xh in xhu]
-        ppu_x = [p[:dim_x_pw, :dim_x_pw] for p in ppu]
-        err_ukf_aug = compute_errors(ukf_aug, xtu, xhu_x, ppu_x)
-
-        header2 = f"{'':20s}  {'EKF-aug':>8}  {'UKF-aug':>8}"
-        print(header2)
+        print(f"{'':20s}  {'EKF-aug':>8}  {'UKF-aug':>8}")
         for key, label in [("mse_total", "MSE "), ("mae_total", "MAE ")]:
-            ve2 = err_ekf_aug[key]; vu2 = err_ukf_aug[key]
-            print(f"  {label:18s}  {ve2:.4f}    {vu2:.4f}")
+            print(f"  {label:18s}  {err_ekf_aug[key]:.4f}    {err_ukf_aug[key]:.4f}")
 
         print("\nLaTeX Table 2:")
         for key, label in [
             ("mse_total", r"\textbf{MSE}"),
             ("mae_total", r"\textbf{MAE}"),
         ]:
-            ve2 = err_ekf_aug[key]; vu2 = err_ukf_aug[key]
-            print(f"  {label:30s} & {ve2:.4f}   & {vu2:.4f}   \\\\")
-
+            print(
+                f"  {label:30s} & {err_ekf_aug[key]:.4f}   "
+                f"& {err_ukf_aug[key]:.4f}   \\\\"
+            )
     except Exception as exc:
         print(f"  [WARN] Augmented model failed: {exc}")
 
-    # ── Figures ────────────────────────────────────────────────────────────────
-    print("\nGenerating figures …")
 
+def _generate_figures(epkf, upkf, ppf):
+    """Produce the 4 PNGs that go into the paper."""
+    print("\nGenerating figures …")
     _plot_filter(
         epkf.history,
         "Simulated observations",
         ["ykp1"], ["Observation y"], [None],
         str(FIGURES_DIR / "epkf_observations_x1_y1_Retroactions.png"),
     )
-
     _plot_filter(
         epkf.history,
         "EPKF filtering",
@@ -296,16 +286,14 @@ def main():
         [None, "PXXkp1_update"],
         str(FIGURES_DIR / "epkf_x1_y1_Retroactions.png"),
     )
-
     _plot_filter(
-        upkf2.history,
+        upkf.history,
         "UPKF filtering",
         ["xkp1", "Xkp1_update"],
         ["x true", "x̂ UPKF"],
         [None, "PXXkp1_update"],
         str(FIGURES_DIR / "upkf_x1_y1_Retroactions.png"),
     )
-
     _plot_filter(
         ppf.history,
         "PPF filtering",
@@ -314,6 +302,26 @@ def main():
         [None, "PXXkp1_update"],
         str(FIGURES_DIR / "ppf_x1_y1_Retroactions.png"),
     )
+
+
+def main():
+    print("\n" + "=" * 65)
+    print("  Section 4 — Pairwise model : model_x1_y1_pairwise")
+    print("=" * 65)
+
+    model_pw, param_pw = _build_param("model_x1_y1_pairwise")
+    _model_aug, param_aug = _build_param("model_x1_y1_augmented")
+
+    print(f"\nQ (pairwise model) =\n{np.round(param_pw.mQ, 4)}")
+    print(f"\nLatex Q:\n{model_pw.latex_model()}\n")
+
+    epkf, err_e, t_epkf, shared_data = _run_epkf_first(param_pw)
+    upkf, err_u, t_upkf = _run_upkf_on_shared(param_pw, shared_data)
+    ppf,  err_p, t_ppf  = _run_ppf_on_shared(param_pw, shared_data)
+
+    _print_table1(err_e, err_u, err_p, t_epkf, t_upkf, t_ppf)
+    _print_table2(param_pw, param_aug, shared_data)
+    _generate_figures(epkf, upkf, ppf)
 
     print("\nDone.")
 
