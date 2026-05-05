@@ -2,7 +2,7 @@ from typing import Any
 
 import numpy as np
 
-from prg.classes.MatrixDiagnostics import CovarianceMatrix
+from prg.classes.matrix_diagnostics import CovarianceMatrix
 from prg.utils.exceptions import CovarianceError, ParamError
 
 __all__ = ["ParamNonLinear"]

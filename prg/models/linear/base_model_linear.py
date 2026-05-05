@@ -7,7 +7,7 @@ import numpy as np
 import sympy as sp
 from scipy.linalg import LinAlgError, cho_factor, cho_solve
 
-from prg.classes.MatrixDiagnostics import CovarianceMatrix, StabilityMatrix
+from prg.classes.matrix_diagnostics import CovarianceMatrix, StabilityMatrix
 from prg.classes.SeedGenerator import SeedGenerator
 from prg.utils.exceptions import NumericalError
 from prg.utils.generate_matrix_cov import generate_block_matrix
