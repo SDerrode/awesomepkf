@@ -293,8 +293,6 @@ class PKF:
             Zkp1_simul[:, 0] = self.__randSimulation.rng.multivariate_normal(
                 mean=self.mz0[:, 0], cov=self.Pz0
             )
-        # print(f"Zkp1_simul={Zkp1_simul}")
-        # input("ATTENTE")
 
         Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
         k = 0
@@ -329,19 +327,8 @@ class PKF:
 
             # ── Propagation ──────────────────────────────────────────────────
             Zkp1_simul = self.param.g(Zkp1_simul, noise_z, self.dt)
-            # if self.param.pairwiseModel:
-            #     Zkp1_simul = self.param.g(Zkp1_simul, noise_z, self.dt)
-            # else:
-            #     Xkp1_simul, _ = np.split(Zkp1_simul, [self.dim_x])
-            #     noise_x, noise_y = np.split(noise_z, [self.dim_x])
-            #     fx_val = self.param.f(Xkp1_simul, noise_x, self.dt)
-            #     hx_val = self.param.h(Xkp1_simul, noise_y, self.dt)
-            #     Zkp1_simul = np.vstack([fx_val, hx_val])
 
-            # print(Zkp1_simul)
-            # input("ATTENTE")
-
-            # ── Émission ─────────────────────────────────────────────────────
+            # ── Emission ─────────────────────────────────────────────────────
             Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])
             k += 1
             yield k, Xkp1_simul, Ykp1_simul
