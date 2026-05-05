@@ -18,7 +18,7 @@ import argparse
 import logging
 import sys
 
-from prg.base_classes.filter_runner import FilterRunner
+from prg.base_classes.filter_runner import FilterRunner, RunOptions
 from prg.base_classes.filter_specs import FILTER_SPECS
 from prg.utils.exceptions import FilterError, NumericalError, ParamError, PKFError
 from prg.utils.parser import add_arguments
@@ -136,18 +136,21 @@ def run(filter_name: str) -> None:
     _setup_logging(args.verbose)
     mode = "from_file" if args.data_filename is not None else "simulation"
 
+    options = RunOptions(
+        verbose=args.verbose,
+        plot=args.plot,
+        save_history=args.save_history,
+    )
     runner = FilterRunner(
-        filter_name=filter_name,
-        model_name=model_name,
-        mode=mode,
+        filter_name,
+        model_name,
+        mode,
         N=args.N,
         sKey=args.s_key,
         data_filename=args.data_filename,
         sigmaSet=getattr(args, "sigma_set", None),
         n_particles=getattr(args, "n_particles", None),
-        verbose=args.verbose,
-        plot=args.plot,
-        save_history=args.save_history,
+        options=options,
     )
     runner.run()
 
