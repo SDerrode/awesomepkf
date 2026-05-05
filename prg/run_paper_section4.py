@@ -42,6 +42,7 @@ DPI         = 150
 # ── Imports ────────────────────────────────────────────────────────────────────
 from prg.classes.nonlinear_epkf import NonLinear_EPKF
 from prg.classes.nonlinear_ppf import NonLinear_PPF
+from prg.classes.nonlinear_ukf import NonLinear_UKF
 from prg.classes.nonlinear_upkf import NonLinear_UPKF
 from prg.classes.param_linear import ParamLinear
 from prg.classes.param_nonlinear import ParamNonLinear
@@ -233,12 +234,9 @@ def main():
     print("─" * 55)
 
     try:
-        from prg.classes.nonlinear_epkf import NonLinear_EPKF as _EPKF
-        from prg.classes.nonlinear_ukf import NonLinear_UKF as _UKF
-
         dim_x_pw = param_pw.dim_x  # = 1; augmented state is [x, y]
 
-        ekf_aug = _EPKF(param=param_aug, sKey=SKEY, verbose=0)
+        ekf_aug = NonLinear_EPKF(param=param_aug, sKey=SKEY, verbose=0)
         xta, xha, ppa = [], [], []
         for _k, xt, _yk, _xp, xu in ekf_aug.process_filter(N=N, data_generator=_shared_generator()):
             step = ekf_aug.history.last()
@@ -251,7 +249,7 @@ def main():
         ppa_x = [p[:dim_x_pw, :dim_x_pw] for p in ppa]
         err_ekf_aug = compute_errors(ekf_aug, xta, xha_x, ppa_x)
 
-        ukf_aug = _UKF(param=param_aug, sigmaSet=SIGMA_SET, sKey=SKEY, verbose=0)
+        ukf_aug = NonLinear_UKF(param=param_aug, sigmaSet=SIGMA_SET, sKey=SKEY, verbose=0)
         xtu, xhu, ppu = [], [], []
         for _k, xt, _yk, _xp, xu in ukf_aug.process_filter(N=N, data_generator=_shared_generator()):
             step = ukf_aug.history.last()
