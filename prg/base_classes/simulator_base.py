@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from prg.utils.exceptions import FilterError, ParamError, PKFError
-from prg.utils.utils import data_to_dataframe, save_dataframe_to_csv
+from prg.utils.io import data_to_dataframe, save_dataframe_to_csv
 
 __all__ = ["BaseDataSimulator"]
 

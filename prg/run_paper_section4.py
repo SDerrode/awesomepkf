@@ -47,7 +47,7 @@ from prg.classes.param_linear import ParamLinear
 from prg.classes.param_nonlinear import ParamNonLinear
 from prg.models.linear import ModelFactoryLinear
 from prg.models.nonLinear import ModelFactoryNonLinear
-from prg.utils.utils import compute_errors
+from prg.utils.metrics import compute_errors
 
 # ==============================================================================
 # Helpers

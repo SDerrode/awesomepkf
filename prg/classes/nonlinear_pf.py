@@ -27,13 +27,13 @@ from scipy.linalg import cholesky
 from prg.classes._base_particle_filter import _BaseParticleFilter
 from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
 from prg.classes.pkf import PKFStep
+from prg.utils.display import rich_show_fields
 from prg.utils.exceptions import (
     InvertibilityError,
     ParamError,
     StepValidationError,
 )
 from prg.utils.numerics import EPS_ABS
-from prg.utils.utils import rich_show_fields
 
 logger = logging.getLogger(__name__)
 
