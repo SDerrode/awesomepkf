@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "awesomepkf"
-version = "2.1.1"
+version = "2.1.2"
 description = "Pairwise Kalman Filter (PKF) and variants (EPKF, UPKF, PPF) for linear and nonlinear state estimation"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -51,11 +51,13 @@ nn = [
 gui = [
     "PyQt6>=6.6",
     "tomli-w>=1.0",
+    # pytest-qt requires a Qt binding at import time; pair it with PyQt6
+    # so installing [dev] alone (no GUI) does not break ``pytest`` collection.
+    "pytest-qt>=4.4",
 ]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
-    "pytest-qt>=4.4",
 ]
 all = [
     "torch>=2.0",
