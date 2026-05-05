@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.2] - 2026-05-05
+
+### Fixed
+
+- **CI lint** — replaced the ``zero_noise = {s: 0 for s in ...}`` dict comprehension introduced in v2.1.1 with ``dict.fromkeys(..., 0)`` (ruff C420).
+- **CI tests on every Python version** — moved ``pytest-qt`` from the ``[dev]`` extras group to ``[gui]``. ``pytest-qt`` requires a Qt binding (PyQt6 / PySide6) at *import time*; with the binding only available under ``[gui]``, ``pip install -e .[dev]`` (used by CI) was triggering ``ERROR: pytest-qt requires either PySide6, PyQt5 or PyQt6 installed`` and aborting collection. ``[dev]`` is now self-sufficient for the public test suite; GUI test collection requires ``[gui,dev]`` (or ``[all]``).
+
+---
+
 ## [2.1.1] - 2026-05-05
 
 ### Fixed
