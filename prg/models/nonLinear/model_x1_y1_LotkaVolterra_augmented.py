@@ -1,10 +1,9 @@
 import numpy as np
 import sympy as sp
 
+from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
-from prg.models.nonLinear.model_x1_y1_LotkaVolterra_pairwise import (
-    Model_x1_y1_LotkaVolterra_pairwise,
-)
+from prg.models.nonLinear.configs import _LV
 from prg.utils.exceptions import NumericalError
 
 __all__ = ["Model_x1_y1_LotkaVolterra_augmented"]
@@ -30,7 +29,7 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
     """
 
     def __init__(self):
-        self.mod = Model_x1_y1_LotkaVolterra_pairwise()
+        self.mod = ModelFactoryNonLinear.create("model_x1_y1_LotkaVolterra_pairwise")
         dim_x  = self.mod.dim_x   # 1
         dim_y  = self.mod.dim_y   # 1
         dim_xy = self.mod.dim_xy  # 2
@@ -43,8 +42,8 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
         )
 
         try:
-            x_eq = self.mod.GAMMA / self.mod.DELTA
-            y_eq = self.mod.ALPHA / self.mod.BETA
+            x_eq = _LV["GAMMA"] / _LV["DELTA"]
+            y_eq = _LV["ALPHA"] / _LV["BETA"]
 
             # Convertit le bruit log-normal du modele pairwise en bruit additif
             # pour le schema d Euler : var_additif = equilibre^2 * sigma2_log.
@@ -84,11 +83,11 @@ class Model_x1_y1_LotkaVolterra_augmented(BaseModelFxHx):
         Le Jacobien d(sfx)/d(sx) ne depend pas de st -> _eval_A fonctionne.
         """
         xA, xB = sx[0], sx[1]
-        A  = self.mod.ALPHA
-        B  = self.mod.BETA
-        G  = self.mod.GAMMA
-        D  = self.mod.DELTA
-        DT = self.mod.DT
+        A  = _LV["ALPHA"]
+        B  = _LV["BETA"]
+        G  = _LV["GAMMA"]
+        D  = _LV["DELTA"]
+        DT = _LV["DT"]
 
         sfx = sp.Matrix([
             (1 + A * DT) * xA - B * DT * xA * xB + st[0],

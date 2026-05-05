@@ -1,8 +1,8 @@
 import numpy as np
 import sympy as sp
 
+from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
-from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
 from prg.utils.exceptions import NumericalError
 
 __all__ = ["Model_x2_y1_augmented"]
@@ -19,7 +19,7 @@ class Model_x2_y1_augmented(BaseModelFxHx):
 
     def __init__(self):
 
-        self.mod = Model_x2_y1_pairwise()
+        self.mod = ModelFactoryNonLinear.create("model_x2_y1_pairwise")
 
         dim_x = self.mod.dim_x
         dim_y = self.mod.dim_y

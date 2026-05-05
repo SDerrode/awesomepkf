@@ -4,8 +4,7 @@ import numpy as np
 import pytest
 
 from prg.models.linear import ModelFactoryLinear
-from prg.models.nonLinear.model_x1_y1_pairwise import Model_x1_y1_pairwise as NL_x1y1
-from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
+from prg.models.nonLinear import ModelFactoryNonLinear
 
 
 class TestLinearModels:
@@ -56,31 +55,31 @@ class TestLinearModels:
 class TestNonlinearModels:
 
     def test_x2y1_dimensions(self):
-        m = Model_x2_y1_pairwise()
+        m = ModelFactoryNonLinear.create("model_x2_y1_pairwise")
         assert m.dim_x == 2
         assert m.dim_y == 1
         assert m.dim_xy == 3
 
     def test_x1y1_dimensions(self):
-        m = NL_x1y1()
+        m = ModelFactoryNonLinear.create("model_x1_y1_pairwise")
         assert m.dim_x == 1
         assert m.dim_y == 1
         assert m.dim_xy == 2
 
     def test_transition_callable(self):
-        m = Model_x2_y1_pairwise()
+        m = ModelFactoryNonLinear.create("model_x2_y1_pairwise")
         z = np.zeros((m.dim_xy, 1))
         noise = np.zeros((m.dim_xy, 1))
         result = m.g(z, noise, dt=1)
         assert result.shape == (m.dim_xy, 1)
 
     def test_prior_shapes(self):
-        m = Model_x2_y1_pairwise()
+        m = ModelFactoryNonLinear.create("model_x2_y1_pairwise")
         assert m.mz0.shape == (m.dim_xy, 1)
         assert m.Pz0.shape == (m.dim_xy, m.dim_xy)
 
     def test_get_params_keys(self):
-        m = Model_x2_y1_pairwise()
+        m = ModelFactoryNonLinear.create("model_x2_y1_pairwise")
         p = m.get_params()
         for key in ("dim_x", "dim_y", "mQ", "mz0", "Pz0", "augmented", "pairwiseModel"):
             assert key in p, f"Missing key: {key}"

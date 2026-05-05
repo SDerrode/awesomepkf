@@ -5,7 +5,7 @@ import pytest
 
 from prg.classes.NonLinear_EPKF import NonLinear_EPKF
 from prg.classes.NonLinear_UPKF import NonLinear_UPKF
-from prg.models.nonLinear.model_x1_y1_pairwise import Model_x1_y1_pairwise as NL_x1y1
+from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.tests.conftest import make_param_nonlinear
 from prg.utils.exceptions import ParamError
 
@@ -66,8 +66,8 @@ class TestUPKF:
 
     def test_epkf_upkf_close_estimates(self):
         """EPKF and UPKF should give close estimates on a mildly nonlinear model."""
-        p_e = make_param_nonlinear(NL_x1y1())
-        p_u = make_param_nonlinear(NL_x1y1())
+        p_e = make_param_nonlinear(ModelFactoryNonLinear.create("model_x1_y1_pairwise"))
+        p_u = make_param_nonlinear(ModelFactoryNonLinear.create("model_x1_y1_pairwise"))
         epkf = NonLinear_EPKF(p_e, sKey=SEED)
         upkf = NonLinear_UPKF(p_u, sigmaSet="wan2000", sKey=SEED)
 
