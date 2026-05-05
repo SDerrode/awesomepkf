@@ -3,56 +3,53 @@
 import numpy as np
 import pytest
 
-from prg.models.linear.model_x1_y1_AQ_classic import Model_x1_y1_AQ_classic
-from prg.models.linear.model_x1_y1_AQ_pairwise import Model_x1_y1_AQ_pairwise
-from prg.models.linear.model_x2_y2_AQ_pairwise import Model_x2_y2_AQ_pairwise
-from prg.models.linear.model_x3_y1_AQ_pairwise import Model_x3_y1_AQ_pairwise
+from prg.models.linear import ModelFactoryLinear
 from prg.models.nonLinear.model_x1_y1_pairwise import Model_x1_y1_pairwise as NL_x1y1
 from prg.models.nonLinear.model_x2_y1_pairwise import Model_x2_y1_pairwise
 
 
 class TestLinearModels:
 
-    @pytest.mark.parametrize("ModelCls, dim_x, dim_y", [
-        (Model_x1_y1_AQ_pairwise, 1, 1),
-        (Model_x1_y1_AQ_classic,  1, 1),
-        (Model_x2_y2_AQ_pairwise, 2, 2),
-        (Model_x3_y1_AQ_pairwise, 3, 1),
+    @pytest.mark.parametrize("model_name, dim_x, dim_y", [
+        ("model_x1_y1_AQ_pairwise", 1, 1),
+        ("model_x1_y1_AQ_classic",  1, 1),
+        ("model_x2_y2_AQ_pairwise", 2, 2),
+        ("model_x3_y1_AQ_pairwise", 3, 1),
     ])
-    def test_dimensions(self, ModelCls, dim_x, dim_y):
-        m = ModelCls()
+    def test_dimensions(self, model_name, dim_x, dim_y):
+        m = ModelFactoryLinear.create(model_name)
         assert m.dim_x == dim_x
         assert m.dim_y == dim_y
         assert m.dim_xy == dim_x + dim_y
 
-    @pytest.mark.parametrize("ModelCls", [
-        Model_x1_y1_AQ_pairwise,
-        Model_x2_y2_AQ_pairwise,
-        Model_x3_y1_AQ_pairwise,
+    @pytest.mark.parametrize("model_name", [
+        "model_x1_y1_AQ_pairwise",
+        "model_x2_y2_AQ_pairwise",
+        "model_x3_y1_AQ_pairwise",
     ])
-    def test_matrix_shapes(self, ModelCls):
-        m = ModelCls()
+    def test_matrix_shapes(self, model_name):
+        m = ModelFactoryLinear.create(model_name)
         dxy = m.dim_xy
         assert m.A.shape  == (dxy, dxy)
         assert m.B.shape  == (dxy, dxy)
         assert m.mQ.shape == (dxy, dxy)
 
-    @pytest.mark.parametrize("ModelCls", [
-        Model_x1_y1_AQ_pairwise,
-        Model_x2_y2_AQ_pairwise,
-        Model_x3_y1_AQ_pairwise,
+    @pytest.mark.parametrize("model_name", [
+        "model_x1_y1_AQ_pairwise",
+        "model_x2_y2_AQ_pairwise",
+        "model_x3_y1_AQ_pairwise",
     ])
-    def test_mQ_positive_semidefinite(self, ModelCls):
-        m = ModelCls()
+    def test_mQ_positive_semidefinite(self, model_name):
+        m = ModelFactoryLinear.create(model_name)
         eigvals = np.linalg.eigvalsh(m.mQ)
         assert np.all(eigvals >= -1e-10), f"mQ not PSD: min eigenvalue = {eigvals.min()}"
 
     def test_pairwise_flag(self):
-        m = Model_x1_y1_AQ_pairwise()
+        m = ModelFactoryLinear.create("model_x1_y1_AQ_pairwise")
         assert m.pairwiseModel is True
 
     def test_classic_flag(self):
-        m = Model_x1_y1_AQ_classic()
+        m = ModelFactoryLinear.create("model_x1_y1_AQ_classic")
         assert m.pairwiseModel is False
 
 
