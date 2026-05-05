@@ -12,7 +12,6 @@ from collections.abc import Generator
 # Stdlib
 # Third-party
 import numpy as np
-from rich import print
 from scipy.linalg import cholesky
 
 from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
@@ -407,13 +406,15 @@ class NonLinear_PPF(PKF):
             # DEBUG — muxy verification
             if np.any(~np.isfinite(muxy)):
                 bad = (~np.isfinite(muxy)).any(axis=(1, 2))
-                print(
-                    f"[DEBUG] Step {new_k}: muxy NaN/Inf in {bad.sum()}/{self.n_particles} particles"
+                logger.debug(
+                    "Step %d: muxy NaN/Inf in %d/%d particles",
+                    new_k, bad.sum(), self.n_particles,
                 )
-                print(
-                    f"  particles_previous range: [{particles_previous.min():.3g}, {particles_previous.max():.3g}]"
+                logger.debug(
+                    "  particles_previous range: [%.3g, %.3g]",
+                    particles_previous.min(), particles_previous.max(),
                 )
-                print(f"  step.ykp1: {step.ykp1.flatten()}")
+                logger.debug("  step.ykp1: %s", step.ykp1.flatten())
 
             # =========================
             # INNOVATION
@@ -466,18 +467,24 @@ class NonLinear_PPF(PKF):
             # DEBUG — particles_current verification
             if np.any(~np.isfinite(particles_current)):
                 bad = (~np.isfinite(particles_current)).any(axis=(1, 2))
-                print(
-                    f"[DEBUG] Step {new_k}: particles_current NaN/Inf in {bad.sum()}/{self.n_particles} particles"
+                logger.debug(
+                    "Step %d: particles_current NaN/Inf in %d/%d particles",
+                    new_k, bad.sum(), self.n_particles,
                 )
-                print(f"  mu_prime_x_all finite: {np.all(np.isfinite(mu_prime_x_all))}")
-                print(
-                    f"  mu_prime_x_all range:  [{np.nanmin(mu_prime_x_all):.3g}, {np.nanmax(mu_prime_x_all):.3g}]"
+                logger.debug(
+                    "  mu_prime_x_all finite: %s",
+                    np.all(np.isfinite(mu_prime_x_all)),
                 )
-                print(f"  MRinv:\n{self._cached['MRinv']}")
-                print(
-                    f"  innovations range: [{np.nanmin(innovations):.3g}, {np.nanmax(innovations):.3g}]"
+                logger.debug(
+                    "  mu_prime_x_all range:  [%.3g, %.3g]",
+                    np.nanmin(mu_prime_x_all), np.nanmax(mu_prime_x_all),
                 )
-                print(f"  L (Cholesky):\n{self._cached['L']}")
+                logger.debug("  MRinv:\n%s", self._cached['MRinv'])
+                logger.debug(
+                    "  innovations range: [%.3g, %.3g]",
+                    np.nanmin(innovations), np.nanmax(innovations),
+                )
+                logger.debug("  L (Cholesky):\n%s", self._cached['L'])
 
             # =========================
             # POSTERIOR ESTIMATE — Rao-Blackwellised
@@ -508,10 +515,13 @@ class NonLinear_PPF(PKF):
             ess_before_resample = 1.0 / np.sum(weights**2)
             max_innovation = np.abs(innovations).max()
             logger.debug(
-                f"Step {new_k}: ESS={ess_before_resample:.1f}/{self.n_particles}, "
-                f"n_clipped={n_clipped}, "
-                f"max_innov={max_innovation:.3g}, "
-                f"Xupdate={Xkp1_update.flatten()}"
+                "Step %d: ESS=%.1f/%d, n_clipped=%d, max_innov=%.3g, Xupdate=%s",
+                new_k,
+                ess_before_resample,
+                self.n_particles,
+                n_clipped,
+                max_innovation,
+                Xkp1_update.flatten(),
             )
 
             # =========================

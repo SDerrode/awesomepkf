@@ -8,9 +8,12 @@ via BaseModelNonLinear.
 Noise model is additive:  g(z, noise, dt) = g_nn(z) + B · noise,  B = I.
 """
 
+import logging
 from pathlib import Path
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 try:
     import torch
@@ -200,8 +203,10 @@ class NNModel(BaseModelNonLinear):
                 epoch_loss += loss.item()
                 n_batches += 1
             if verbose and epoch % verbose == 0:
-                print(f"  [NNModel] epoch {epoch:4d}/{epochs}  "
-                      f"loss = {epoch_loss / n_batches:.6e}")
+                logger.info(
+                    "[NNModel] epoch %4d/%d  loss = %.6e",
+                    epoch, epochs, epoch_loss / n_batches,
+                )
 
         self._net.eval()
 

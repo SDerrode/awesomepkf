@@ -1,9 +1,13 @@
+import logging
+
 import numpy as np
 import sympy as sp
 
 from prg.models.nonLinear import ModelFactoryNonLinear
 from prg.models.nonLinear.base_model_fxhx import BaseModelFxHx
 from prg.utils.exceptions import NumericalError
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["Model_x2_y1_augmented"]
 
@@ -90,8 +94,8 @@ class Model_x2_y1_augmented(BaseModelFxHx):
         residual_hx = shx.free_symbols - expected_hx
 
         if residual_fx:
-            print(f"[WARN] sfx contient des symboles non attendus : {residual_fx}")
+            logger.warning("sfx contains unexpected symbols : %s", residual_fx)
         if residual_hx:
-            print(f"[WARN] shx contient des symboles non attendus : {residual_hx}")
+            logger.warning("shx contains unexpected symbols : %s", residual_hx)
 
         return sfx, shx
