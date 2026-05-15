@@ -102,6 +102,7 @@ Interactive Jupyter notebooks are available in the [`notebooks/`](notebooks/) di
 | 04 | [`tutorial_04_particle_filters.ipynb`](notebooks/tutorial_04_particle_filters.ipynb) | Particle filters (PPF and PF): tuning the number of particles, resampling, comparison with EPKF/UPKF |
 | 05 | [`tutorial_05_new_model_lotkavolterra.ipynb`](notebooks/tutorial_05_new_model_lotkavolterra.ipynb) | How to add a new nonlinear pairwise model: Lotka-Volterra prey-predator (dim_x=1, dim_y=1), augmented version, filtering with EPKF/UPKF/PPF |
 | 06 | [`tutorial_06_filter_runner_and_config.ipynb`](notebooks/tutorial_06_filter_runner_and_config.ipynb) | High-level orchestration with `FilterRunner` and `RunOptions`; parameter sweeps via `model_kwargs`; saving and replaying experiments through TOML session configs |
+| 07 | [`tutorial_07_smoothers.ipynb`](notebooks/tutorial_07_smoothers.ipynb) | The 5 smoothers (`Linear_PKS`, `NonLinear_EPKS`/`UPKS`/`UKS`/`PPS`) — RTS-style backward recursion and FFBSm; ±2σ envelope shrinkage, Joseph form, Monte-Carlo convergence of PPS to PKS, decision rule for choosing among the five |
 
 ---
 

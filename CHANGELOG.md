@@ -11,6 +11,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.7.0] - 2026-05-15
+
+MINOR release: adds the smoother tutorial and links it from the four
+related forward-filter tutorials. Closes the documentation gap left
+open by the v2.2.0–v2.6.3 sequence (5 smoothers shipped, 0 tutorials
+until now).
+
+### Added
+- **`notebooks/tutorial_07_smoothers.ipynb`** — comprehensive
+  walkthrough of the five smoothers, 28 cells (13 code + 15 markdown),
+  ~5 MB executed with embedded plots. Sections:
+  - The smoother family (summary table, shared API)
+  - §1 Linear PKS on `model_x1_y1_AQ_pairwise` — exact RTS with ±2σ
+    envelope shrinkage
+  - §2 EPKS and UPKS on `model_x2_y1_pairwise` — mild non-linearity,
+    overlay shows the two coincide
+  - §3 UKS on `model_x1_y1_Sinus_classic` — strong non-linearity,
+    structural `(p, p)` gain shape callout
+  - §4 PPS (FFBSm) on `model_x2_y1_pairwise` — smoothed-particle
+    cloud, effective sample size diagnostic
+  - §5 Monte-Carlo convergence PPS → PKS on linear-Gaussian model
+    (14-orders-of-magnitude separation log-log plot)
+  - §6 Joseph form demonstration (standard vs Joseph agree to ~1e-15)
+  - §7 Decision rule (which smoother for which scenario)
+  - §8 Going Further (pointers to report Sections 2–7 and the
+    `generate_comparison.py` reproducibility script)
+- "Going Further" tables of tutorials 01, 02, 03, 04 now each carry a
+  pointer to tutorial 07 with a one-line API hint
+  (`from prg.classes.linear_pks import Linear_PKS`, etc.).
+- README "Tutorials" table extended with row 07.
+
+### Tests
+- 247 tests still pass; no `prg/` code changes.
+
+---
+
 ## [2.6.3] - 2026-05-15
 
 PATCH release — documentation: adds a comparative analysis section
