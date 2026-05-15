@@ -11,6 +11,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.6.1] - 2026-05-15
+
+PATCH release: documentation-only. Audit pass over the companion
+LaTeX report ``Report/NonLinearSmoothingReport/`` (separate doc tree,
+not under git) which gained Section 6 (PPS / FFBSm) along with v2.6.0.
+
+The report fixes do not touch any code or test; the audit caught a
+LaTeX-vs-Markdown bug in Section 6.4 (the complexity table was written
+in Markdown syntax inside a ``.tex`` file, rendering as literal ``|``
+characters), a missing float wrapper on the Monte-Carlo convergence
+table in Section 6.7, and several notation drift items across
+Sections 2 / 4 / 5 / 6 (raw ``X, Y, Z, Q_x, W^x`` instead of the
+project's ``\mX, \mY, \mZ, \QQ, \Vx{n}`` macros; raw
+``\widehat{\mathbf{C}}_n`` instead of the ``\hmC_n`` macro; the
+``Lisseur PPF particulaire`` title was renamed ``Lisseur PPS
+particulaire`` to match the class name and all internal references).
+Sections 6.2 in particular saw a math-notation overhaul: missing
+``_{n+1}`` time-subscripts on ``\mB, \calQ`` were restored,
+``\Sigma_{xx}`` is now explicitly defined as
+``[\calQ_{n+1}]_{xx}`` rather than left implicit, and the bracket
+projection convention is unified on lowercase ``_{xx}``.
+
+This release exists solely to make the audit traceable from
+``git log`` and to bump the version stamp.
+
+### Tests
+- Same as v2.6.0: 244 tests pass. No test changes.
+
+---
+
 ## [2.6.0] - 2026-05-15
 
 ### Added
