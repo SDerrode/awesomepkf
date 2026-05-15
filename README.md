@@ -9,6 +9,7 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
 and **pairwise Kalman smoothers** for offline post-processing:
 
 - **Linear Pairwise Kalman Smoother (PKS)** — RTS-style backward pass on the joint `(X, Y)` Markov chain.
+- **Extended Pairwise Kalman Smoother (EPKS)** — same recursion with the per-step Jacobian replacing the constant transition matrix.
 
 ---
 
@@ -25,6 +26,7 @@ and **pairwise Kalman smoothers** for offline post-processing:
         - [Pairwise Particle Filter (PPF)](#pairwise-particle-filter-ppf)
     - [Smoothers](#smoothers)
         - [Linear Pairwise Kalman Smoother (PKS)](#linear-pairwise-kalman-smoother-pks)
+        - [Extended Pairwise Kalman Smoother (EPKS)](#extended-pairwise-kalman-smoother-epks)
     - [Tutorials](#tutorials)
     - [Usage Examples](#usage-examples)
         - [Simulate Linear Data and Filter with PKF](#simulate-linear-data-and-filter-with-pkf)
@@ -155,6 +157,26 @@ results = pks.process_N_data_smoother(N=500)
 ```
 
 Implementation: [`prg/classes/linear_pks.py`](prg/classes/linear_pks.py). Tests: [`prg/tests/test_linear_pks.py`](prg/tests/test_linear_pks.py) (40 tests, including PSD shrinkage, Joseph equivalence, augmented-state RTS equivalence, and full exception/logging coverage).
+
+### Extended Pairwise Kalman Smoother (EPKS)
+
+The EPKS extends the linear PKS to non-linear pairwise models via first-order linearisation. The forward pass is the standard [EPKF](#extended-pairwise-kalman-filter-epkf); the backward pass uses the *per-step* Jacobian `F_{n+1}` (evaluated at the filtered state) in place of the constant `A` matrix. PSD shrinkage of the linearised covariance is preserved; on average the MSE also shrinks, but the linearisation bias breaks the per-trajectory guarantee of the linear case.
+
+```python
+from prg.classes.nonlinear_epks import NonLinear_EPKS
+from prg.classes.param_nonlinear import ParamNonLinear
+from prg.models.nonlinear import ModelFactoryNonLinear
+
+model  = ModelFactoryNonLinear.create("model_x2_y1_pairwise")
+params = model.get_params().copy()
+dim_x  = params.pop("dim_x");  dim_y = params.pop("dim_y")
+param  = ParamNonLinear(0, dim_x, dim_y, **params)
+
+epks = NonLinear_EPKS(param, sKey=42, joseph=False)
+results = epks.process_N_data_smoother(N=300)
+```
+
+Implementation: [`prg/classes/nonlinear_epks.py`](prg/classes/nonlinear_epks.py). Tests: [`prg/tests/test_nonlinear_epks.py`](prg/tests/test_nonlinear_epks.py) (25 tests). Note: not suitable for augmented models (rank-deficient predicted covariance fails the backward Cholesky).
 
 ---
 

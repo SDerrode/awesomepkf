@@ -11,6 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.3.0] - 2026-05-15
+
+### Added
+
+- **`NonLinear_EPKS` — Extended Pairwise Kalman Smoother** ([`prg/classes/nonlinear_epks.py`](prg/classes/nonlinear_epks.py)). Two-pass smoother extending `NonLinear_EPKF`. The backward pass reuses the linear PKS recursion with the per-step Jacobian `F_{n+1}` (evaluated at the filtered point `(X_{n|n}, y_n)`) replacing the constant `A` matrix. Jacobians are recomputed in the backward pass rather than stored — adds one extra `param.jacobiens_g` call per step, but requires no API change on the parent `NonLinear_EPKF`. Joseph form available via the `joseph=True` flag, mathematically equivalent (~1e-16 in double precision) and more useful here than in the linear case (per-step Jacobians can be locally ill-conditioned).
+- **EPKS report section** (`Report/NonLinearSmoothingReport/Sections/Section3_EPKS.tex`) with derivation, Joseph form, augmented-state EKF equivalence remark, and a dedicated §3.6 explaining why PSD shrinkage of the *linearised* covariance does not translate to systematic per-trajectory MSE reduction (linearisation bias).
+- **EPKS figure generator** (`Report/.../Figures/generate_epks_figure.py`) with the same auto-detected repo-root mechanism as the linear PKS script.
+
+### Caveats
+- **Not suitable for augmented nonlinear models.** When `param.augmented=True`, the joint predicted covariance `P^{ZZ}_{n+1|n}` is structurally rank-deficient (Y is a noise-free function of X), and the backward Cholesky fails with `CovarianceError`. The EPKS in this release targets the pairwise (non-augmented) family. Documented in the §3.5 of the report.
+
+### Tests
+- **+25 tests in `prg/tests/test_nonlinear_epks.py`**: shapes, terminal equality, PSD shrinkage on linearised covariance, Joseph form equivalence and shrinkage, edge cases (N=1, generator semantics, double-call, external `data_generator`, missing ground truth), exception policy (`ParamError`, `PKFError` root), `caplog`-based INFO/DEBUG emission assertions, and a regression test that the EPKS MSE does not significantly degrade vs the EPKF (ratio < 1.02 on 20 seeds × N=300 of `model_x2_y1_pairwise`).
+- Total: 158 tests pass (up from 133).
+
+---
+
 ## [2.2.0] - 2026-05-15
 
 ### Added
