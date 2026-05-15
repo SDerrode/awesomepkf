@@ -203,6 +203,16 @@ class NonLinear_PPF(_BaseParticleFilter):
         if step.xkp1 is None:
             self.ground_truth = False
 
+        # Particle smoothers (e.g. NonLinear_PPS / FFBSm) need access to the
+        # per-step particle cloud + weights. ``store_particles=True`` attaches
+        # them to each history record via the public ``update_record`` API.
+        if self.store_particles:
+            self.history.update_record(
+                len(self.history) - 1,
+                particles=particles_current.copy(),
+                weights=weights.copy(),
+            )
+
         yield step.k, step.xkp1, step.ykp1, step.Xkp1_predict, step.Xkp1_update
 
         # --- Subsequent steps ---------------------------------------------------------
@@ -422,6 +432,13 @@ class NonLinear_PPF(_BaseParticleFilter):
                 ) from e
 
             self.history.record(step)
+
+            if self.store_particles:
+                self.history.update_record(
+                    len(self.history) - 1,
+                    particles=particles_current.copy(),
+                    weights=weights.copy(),
+                )
 
             if self.verbose > 1:
                 rich_show_fields(step, title=f"Step {new_k} Update")

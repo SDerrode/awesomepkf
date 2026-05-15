@@ -58,6 +58,7 @@ class _BaseParticleFilter(PKF):
         sKey=None,
         verbose: int = 0,
         particle_clip: float | None = None,
+        store_particles: bool = False,
     ) -> None:
         super().__init__(param, sKey, verbose)
         self.n_particles = n_particles
@@ -70,6 +71,12 @@ class _BaseParticleFilter(PKF):
             raise ParamError(
                 f"particle_clip must be strictly positive, got {self.particle_clip!r}."
             )
+        # If True, the per-step particle cloud and weights are appended to
+        # each history record (post-resampling) via
+        # ``HistoryTracker.update_record``. Required by particle smoothers
+        # (FFBSm). Off by default to avoid history bloat for regular PF/PPF
+        # users — particle clouds are ``(n_particles, dim_x, 1)`` arrays.
+        self.store_particles: bool = bool(store_particles)
         self._randParticles = SeedGenerator()
         self._cached: dict = {}
         self._consecutive_degeneracies: int = 0
