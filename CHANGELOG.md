@@ -11,6 +11,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.6.2] - 2026-05-15
+
+PATCH release: cross-cutting parity pass over the **5 smoothers** (the
+v2.5.1 parity pass only covered the 4 Kalman-family classes; the PPS
+added in v2.6.0 was outside its scope). Applies an audit punch list of
+18 items — 4 HIGH, 8 MED, 6 LOW — against ``NonLinear_PPS`` and its
+tests, plus one substantive robustness fix.
+
+### Fixed (HIGH)
+- **PSD safety check on the smoothed sample covariance** (`nonlinear_pps.py`
+  ``_record_smoothed``). The PPS now calls ``self._check_covariance(cov,
+  k, name="PXXkp1_smooth")`` before writing the result to the history,
+  matching the four Kalman smoothers. A degenerate particle cloud
+  (catastrophic ESS) producing a non-PSD weighted sample covariance is
+  now caught (and Tikhonov-regularised if the parent's diagnostic
+  decides to) rather than silently written.
+- **``# NOTE:`` import block** on un-imported but re-raised exceptions,
+  paritising the comment block present in the four Kalman smoothers.
+- **``Raises`` section reformatted per-exception** in
+  ``process_smoother`` (was a bundled one-line item). Now each of
+  ``ParamError``, ``InvertibilityError``, ``CovarianceError``,
+  ``StepValidationError``, ``NumericalError``, ``FilterError`` is
+  listed with its trigger condition.
+- **Terminal-step Rao-Blackwell caveat** explicitly documented in the
+  class docstring (was only in the CHANGELOG): ``Xkp1_smooth[N]`` uses
+  the raw cloud weighted by ``weights``, while PPF's ``Xkp1_update``
+  uses ``Σ w_i μ'_x,i``. Both target the same posterior but differ by
+  Monte-Carlo variance.
+
+### Documentation (MED)
+- ``Complexity`` heading renamed ``Cost`` for parity with UPKS / UKS
+  docstrings.
+- ``Numerical safeguards`` section added (LSE + degenerate-uniform
+  fallback + PSD diagnostic now form a structured triple).
+- ``verbose > 1`` ``rich_show_fields`` per-step display added, parallel
+  to the four Kalman smoothers.
+- ``process_N_data_smoother`` docstring expanded with the
+  Exception-handling policy paragraph + ``Raises`` block (was a
+  one-liner).
+- ``History schema additions`` section now documents the ``particles``
+  / ``weights`` keys added by the forward (PPF, with
+  ``store_particles=True``), in addition to ``Xkp1_smooth``,
+  ``PXXkp1_smooth``, ``w_smooth`` added by the backward.
+
+### Tests
+- **+3 tests in ``test_nonlinear_pps.py``**:
+  - ``test_pkferror_root_catches_smoother_errors`` — name-paritised
+    with the four Kalman smoothers.
+  - ``test_singular_mQ_xx_raises_covariance_error`` — verifies the
+    construction-time ``CovarianceError`` path with structured
+    ``step=-1`` and ``matrix_name="mQ[:p,:p]"``.
+  - ``test_degenerate_weight_fallback_logs_warning`` — monkeypatches
+    ``logsumexp`` to force the weight-degeneracy fallback path and
+    verifies the WARNING log + uniform-weights recovery.
+
+### Code cleanup (LOW)
+- Pairwise quadratic form in the backward kernel fused into a single
+  ``np.einsum`` with ``optimize=True`` (was two sequential einsums).
+- Per-iteration ``np.tile + np.concatenate`` hoisted into a
+  pre-allocated ``z_buffer`` written by slice assignment.
+- New ``_propagate_particles_at`` helper, paritising the
+  ``_propagate_sigma_at`` / ``_propagate_sigma_f_at`` factoring of
+  UPKS and UKS.
+- Class docstring now cross-references
+  ``Report/NonLinearSmoothingReport/Sections/Section6_PPS.tex``.
+- ``ParamLinear`` / ``ParamNonLinear`` imports added for type hints
+  (parity with the four Kalman smoothers; harmless previously, just
+  inconsistent).
+- ``test_nonlinear_pps.py`` gains a rationale comment explaining why
+  the ``test_terminal_gain_is_zero_placeholder`` analog is absent
+  (``Gk_smooth`` doesn't exist in particle smoothers — the
+  ``w_smooth[N] == weights[N]`` invariant covers the equivalent
+  boundary condition).
+
+### Tests
+- 247 tests pass (up from 244): +3 PPS exception-policy/logging tests,
+  same parity invariants now enforced across all 5 smoothers.
+
+---
+
 ## [2.6.1] - 2026-05-15
 
 PATCH release: documentation-only. Audit pass over the companion

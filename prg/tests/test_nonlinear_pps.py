@@ -1,5 +1,6 @@
 """Tests for the Pairwise Particle Smoother (NonLinear_PPS, FFBSm)."""
 
+import copy
 import logging
 
 import numpy as np
@@ -8,7 +9,9 @@ import pytest
 from prg.classes.linear_pks import Linear_PKS
 from prg.classes.nonlinear_pps import NonLinear_PPS
 from prg.classes.param_linear import ParamLinear
+from prg.classes.param_nonlinear import ParamNonLinear
 from prg.models.linear import ModelFactoryLinear
+from prg.utils.exceptions import CovarianceError, ParamError, PKFError
 
 SEED = 42
 N_SHORT = 50
@@ -46,6 +49,16 @@ class TestNonLinearPPSShapes:
         )
         res = pps.process_N_data_smoother(N=N_SHORT)
         assert [r[0] for r in res] == list(range(N_SHORT + 1))
+
+
+# Rationale for the absence of `test_terminal_gain_is_zero_placeholder`
+# (which exists in test_linear_pks.py, test_nonlinear_epks.py,
+# test_nonlinear_upks.py, test_nonlinear_uks.py):
+# The PPS has NO ``Gk_smooth`` field — particle smoothers reweight rather
+# than apply a gain matrix, so the analog terminal-placeholder concept
+# does not exist. The matching structural invariant in the PPS world is
+# ``w_smooth[N] == weights[N]``, checked by
+# ``TestNonLinearPPSWeights.test_terminal_w_smooth_equals_w_filter``.
 
 
 class TestNonLinearPPSWeights:
@@ -245,7 +258,6 @@ class TestNonLinearPPSEdgeCases:
 class TestNonLinearPPSExceptionPolicy:
 
     def test_invalid_N_raises_paramerror(self, param_nl_x2y1):
-        from prg.utils.exceptions import ParamError
         pps = NonLinear_PPS(
             param_nl_x2y1, n_particles=N_PARTICLES_SHORT, sKey=SEED,
         )
@@ -260,6 +272,92 @@ class TestNonLinearPPSExceptionPolicy:
             store_particles=False,  # user request ignored
         )
         assert pps.store_particles is True
+
+    def test_pkferror_root_catches_smoother_errors(self, param_nl_x2y1):
+        """Exception taxonomy sanity: every PPS domain failure derives
+        from ``PKFError``, so a single ``except PKFError`` catches them
+        all (parity with the four Kalman smoothers)."""
+        pps = NonLinear_PPS(
+            param_nl_x2y1, n_particles=N_PARTICLES_SHORT, sKey=SEED,
+        )
+        with pytest.raises(PKFError):
+            pps.process_N_data_smoother(N=0)
+
+    def test_singular_mQ_xx_raises_covariance_error(self, param_nl_x2y1):
+        """If ``mQ[:p,:p]`` is degenerate when the smoother starts the
+        backward pass, the Cholesky cannot be initialised; a
+        ``CovarianceError`` with structured ``step=-1`` and
+        ``matrix_name='mQ[:p,:p]'`` must surface. Parallels Linear_PKS's
+        ``test_singular_predicted_covariance_raises``.
+
+        We zero **only the X-marginal block** of ``mQ`` (not the full
+        ``mQ``, which would also kill ``R`` and trigger an earlier
+        ``InvertibilityError`` in the PPF forward ``_precompute``).
+        """
+        param_bad = copy.copy(param_nl_x2y1)
+        bad_mQ = param_bad._mQ.copy()
+        p = param_nl_x2y1.dim_x
+        bad_mQ[:p, :p] = 0.0
+        bad_mQ[:p, p:] = 0.0  # also zero the M cross-block to keep mQ PSD
+        bad_mQ[p:, :p] = 0.0
+        param_bad._mQ = bad_mQ
+        pps = NonLinear_PPS(
+            param_bad, n_particles=N_PARTICLES_SHORT, sKey=SEED,
+        )
+        with pytest.raises(CovarianceError) as exc_info:
+            pps.process_N_data_smoother(N=10)
+        err = exc_info.value
+        assert err.matrix_name == "mQ[:p,:p]"
+        assert err.step == -1                # sentinel: construction-time
+        assert err.__cause__ is not None
+
+    def test_degenerate_weight_fallback_logs_warning(
+        self, param_nl_x2y1, monkeypatch, caplog,
+    ):
+        """If the smoothed weight total underflows to 0 (or non-finite)
+        at some step, the PPS must fall back to uniform weights and
+        emit a single ``WARNING`` per offending step. We force the
+        condition by monkey-patching the backward kernel inputs."""
+        from prg.classes import nonlinear_pps as pps_mod
+        original_einsum = pps_mod.np.einsum
+
+        # Run a normal forward + backward to verify the WARNING path is
+        # exercised under conditions where the unnormalised weights vanish.
+        # Easiest reliable trigger: force the backward `np.exp` of an
+        # all-(-inf) log_norm_D — achievable by clamping log_D to -inf in
+        # one iteration. We do this surgically via monkeypatching logsumexp
+        # to return +inf on a single call (which makes log_norm_D = -inf).
+        call_state = {"hit": False}
+        original_logsumexp = pps_mod.logsumexp
+
+        def patched_logsumexp(arr, axis=0):
+            if not call_state["hit"]:
+                call_state["hit"] = True
+                return np.full(arr.shape[1], np.inf)   # log_Z = +inf → log_D - log_Z = -inf
+            return original_logsumexp(arr, axis=axis)
+
+        monkeypatch.setattr(pps_mod, "logsumexp", patched_logsumexp)
+
+        with caplog.at_level(logging.WARNING, logger="prg.classes.nonlinear_pps"):
+            pps = NonLinear_PPS(
+                param_nl_x2y1, n_particles=N_PARTICLES_SHORT, sKey=SEED,
+            )
+            pps.process_N_data_smoother(N=20)
+
+        warning_msgs = [
+            r.message for r in caplog.records
+            if r.name == "prg.classes.nonlinear_pps"
+            and r.levelno == logging.WARNING
+            and "smoothed weight total degenerate" in r.message
+        ]
+        assert len(warning_msgs) >= 1
+        # And the smoothed weights at the affected step must be uniform
+        # (we don't pinpoint which step, just verify the contract)
+        uniform_seen = any(
+            np.allclose(rec["w_smooth"], 1.0 / N_PARTICLES_SHORT, atol=1e-12)
+            for rec in pps.history
+        )
+        assert uniform_seen
 
 
 class TestNonLinearPPSLogging:

@@ -14,6 +14,11 @@ Complexity is :math:`O(N \\cdot n_p^2)` per smoother run (vs
 :math:`O(N \\cdot n_p)` for the forward filter). For the test grid
 ``n_p = 300, N = 300``, the backward pass evaluates ``~3 \\cdot 10^7``
 Gaussian densities — well within tractable limits.
+
+See ``Report/NonLinearSmoothingReport/Sections/Section6_PPS.tex`` for the
+formal derivation, the pairwise transition-density formula, and the
+Monte-Carlo convergence proof against :class:`Linear_PKS` on linear-gaussian
+pairwise models.
 """
 
 from __future__ import annotations
@@ -26,7 +31,14 @@ from scipy.linalg import LinAlgError, cho_factor, cho_solve
 from scipy.special import logsumexp
 
 from prg.classes.nonlinear_ppf import NonLinear_PPF
+from prg.classes.param_linear import ParamLinear
+from prg.classes.param_nonlinear import ParamNonLinear
+from prg.utils.display import rich_show_fields
 from prg.utils.exceptions import CovarianceError, FilterError
+# NOTE: ParamError, InvertibilityError, NumericalError and StepValidationError
+# may propagate from the inherited forward pass (cf. NonLinear_PPF.process_filter);
+# they are listed in the Raises docstrings but not imported here as they are
+# only re-raised, never constructed in this module.
 
 logger = logging.getLogger(__name__)
 
@@ -59,42 +71,158 @@ class NonLinear_PPS(NonLinear_PPF):
         P^{xx}_{n|N} \\;=\\; \\sum_i \\tilde w_{i,n}\\,
             (\\xi_{i,n} - \\hat X_{n|N})(\\xi_{i,n} - \\hat X_{n|N})^\\top.
 
-    Note: there is no Joseph form for particle smoothers — that is a
-    Kalman-family numerical safeguard. The corresponding numerical
-    safeguard for particle smoothers is the log-sum-exp normalisation
-    of the backward kernel, applied below.
+    The smoothed covariance is validated through the same
+    :meth:`_check_covariance` PSD diagnostic as the Kalman-family
+    smoothers — a degenerate cloud (catastrophic ESS) that produces a
+    non-PSD sample cov is caught rather than silently written to the
+    history.
+
+    There is no Joseph form for particle smoothers — Joseph is a
+    Kalman-family numerical safeguard. The corresponding particle-side
+    safeguard chain is log-sum-exp normalisation + degenerate-uniform
+    fallback (see :ref:`Numerical safeguards` below).
 
     Parameters
     ----------
-    Forwarded to :class:`NonLinear_PPF`. ``store_particles`` is forced
-    to ``True``; user-supplied value (if any) is overridden.
+    param : ParamLinear | ParamNonLinear
+        Forwarded to :class:`NonLinear_PPF` (which itself accepts both
+        because the PPF reads only ``mQ`` and ``g`` from the param).
+    n_particles : int, optional
+        Number of particles. Default 300.
+    resample_threshold, resample_method, sKey, verbose, particle_clip
+        Forwarded to :class:`NonLinear_PPF`.
+    store_particles : ignored
+        The PPS forces ``store_particles=True`` internally because the
+        backward pass needs the cloud — any user-supplied value is
+        overridden.
 
-    Complexity
-    ----------
+    Cost
+    ----
     Forward: :math:`O(N \\cdot n_p)`. Backward: :math:`O(N \\cdot n_p^2)`.
-    Total memory: history stores ``N`` particle clouds of shape
-    ``(n_p, dim_x, 1)`` and weight vectors of shape ``(n_p,)``; this is
-    additional to the regular PKFStep fields.
+    Memory: ``N`` particle clouds of shape ``(n_p, dim_x, 1)`` plus the
+    weight vectors of shape ``(n_p,)``, in addition to the regular
+    PKFStep fields.
+
+    Numerical safeguards
+    --------------------
+    The backward kernel evaluation uses ``scipy.special.logsumexp`` to
+    avoid underflow when the forward and next-step particle clouds are
+    far apart in state space. If the total of the smoothed weights
+    underflows to zero or becomes non-finite at some step, the
+    smoother falls back to uniform weights at that step with a
+    ``WARNING`` log, mirroring the parent's
+    :meth:`_safe_normalize_log_weights` pattern. The terminal
+    sample covariance is checked via :meth:`_check_covariance`
+    (Tikhonov-regularised if needed) so a degenerate cloud cannot
+    silently write a non-PSD covariance to the history.
+
+    Terminal-step caveat
+    --------------------
+    Unlike the Kalman-family smoothers (where :math:`\\hat X_{N|N}` and
+    :math:`P^{xx}_{N|N}` from the forward equal the smoothed boundary
+    value exactly), the PPS smoothed mean at step ``N`` uses the **raw
+    particle cloud** weighted by ``w_smooth = weights``, whereas the
+    PPF ``Xkp1_update`` uses the **Rao-Blackwellised estimator**
+    :math:`\\sum_i w_i \\mu'_{x,i}`. Both target the same posterior but
+    differ by Monte-Carlo variance of order :math:`O(\\sigma / \\sqrt{n_p})`.
+    Boundary condition that **does** hold strictly: ``w_smooth[N] =
+    weights[N]`` (initial condition of FFBSm).
 
     History schema additions
     ------------------------
-    Each forward record (from the PPF) carries ``particles`` and
-    ``weights``. The backward pass adds three more keys:
+    The forward PPF, when run via this class, attaches two keys to
+    every history record (via the public
+    :meth:`HistoryTracker.update_record` API):
+
+    - ``particles`` of shape ``(n_p, dim_x, 1)``: the particle cloud
+      (post-resampling, if resampling fired at this step).
+    - ``weights`` of shape ``(n_p,)``: the corresponding particle
+      weights (uniform after resampling; non-uniform otherwise).
+
+    The backward pass then adds three further keys:
 
     - ``Xkp1_smooth`` of shape ``(dim_x, 1)``: smoothed posterior mean.
     - ``PXXkp1_smooth`` of shape ``(dim_x, dim_x)``: smoothed covariance.
     - ``w_smooth`` of shape ``(n_p,)``: smoothed weights
-      :math:`\\tilde w_{i,n}` (sum to 1).
+      :math:`\\tilde w_{i,n}` summing to 1.
 
     Unlike the Kalman smoothers, there is **no** ``Gk_smooth`` (no gain
-    matrix in the particle backward recursion). All four fields are
-    written via the public :meth:`HistoryTracker.update_record` API.
+    matrix in the particle backward recursion).
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        param: ParamLinear | ParamNonLinear,
+        *args,
+        **kwargs,
+    ) -> None:
         # Force particle storage on — the backward pass needs the cloud.
         kwargs["store_particles"] = True
-        super().__init__(*args, **kwargs)
+        super().__init__(param, *args, **kwargs)
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _propagate_particles_at(
+        self,
+        particles_n: np.ndarray,
+        Yn: np.ndarray,
+        z_buffer: np.ndarray,
+        zeros_batched: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Vectorised application of ``g`` to the particle cloud with the
+        observation ``y_n`` inserted between the X and noise blocks of
+        the augmented state — mirrors the forward pass exactly.
+
+        Parameters
+        ----------
+        particles_n : np.ndarray, shape ``(n_p, dim_x, 1)``
+        Yn : np.ndarray, shape ``(dim_y, 1)``
+        z_buffer : np.ndarray, shape ``(n_p, dim_xy, 1)``
+            Pre-allocated scratch buffer (no per-call allocation).
+        zeros_batched : np.ndarray, shape ``(n_p, dim_xy, 1)``
+            Pre-allocated zero process-noise buffer.
+
+        Returns
+        -------
+        z_out : np.ndarray, shape ``(n_p, dim_xy, 1)``
+            ``g((particles_n[i], Yn), 0, dt)`` for each particle ``i``.
+            The caller slices the first ``dim_x`` rows for ``mu_x``.
+        """
+        z_buffer[:, : self.dim_x] = particles_n
+        z_buffer[:, self.dim_x :] = Yn   # broadcasts over the n_p axis
+        return self.param.g(z_buffer, zeros_batched, self.dt)
+
+    def _record_smoothed(
+        self,
+        idx: int,
+        particles: np.ndarray,
+        w_smooth: np.ndarray,
+        k: int,
+    ) -> None:
+        """
+        Compute and record the smoothed mean and covariance for step
+        ``idx`` from the particle cloud and smoothed weights.
+
+        Runs ``_check_covariance`` on the result so a degenerate cloud
+        (catastrophic ESS) cannot silently write a non-PSD covariance.
+        """
+        # Smoothed mean: weighted average over particles
+        mean = np.einsum("i,ijk->jk", w_smooth, particles)        # (dim_x, 1)
+        # Smoothed covariance: weighted sample covariance
+        diff = particles - mean                                   # (n_p, dim_x, 1)
+        cov = np.einsum("i,ijk,ilk->jl", w_smooth, diff, diff)
+        # Safety symmetrisation against einsum-level floating asymmetry
+        cov = 0.5 * (cov + cov.T)
+        self._check_covariance(cov, k, name="PXXkp1_smooth")
+        self.history.update_record(
+            idx,
+            w_smooth=w_smooth,
+            Xkp1_smooth=mean,
+            PXXkp1_smooth=cov,
+        )
 
     # ------------------------------------------------------------------
     # Smoother
@@ -130,12 +258,29 @@ class NonLinear_PPS(NonLinear_PPF):
 
         Raises
         ------
-        ParamError, InvertibilityError, NumericalError, StepValidationError, FilterError
-            Propagated unwrapped from the PPF forward pass.
+        ParamError
+            If ``N`` is not a strictly positive integer or ``None``
+            (propagated from the PPF forward pass).
+        InvertibilityError
+            If a covariance matrix in the forward PPF (e.g. ``R``)
+            cannot be inverted (propagated).
         CovarianceError
-            If the transition-noise covariance block ``mQ[:p, :p]`` is
-            not positive definite (its Cholesky is required to evaluate
-            the backward kernel).
+            (a) at construction-time if the X-marginal transition-noise
+            covariance ``mQ[:p,:p]`` is not positive definite — its
+            Cholesky is required to evaluate the backward kernel
+            (carries ``step=-1`` and ``matrix_name="mQ[:p,:p]"``);
+            (b) at every backward step if the resulting smoothed
+            covariance :math:`P^{xx}_{n|N}` is not PSD (carries the
+            offending ``step`` and ``matrix_name="PXXkp1_smooth"``).
+        StepValidationError
+            If the forward pass cannot construct a valid ``PKFStep``
+            (propagated).
+        NumericalError
+            Base class of ``CovarianceError`` / ``InvertibilityError`` —
+            catch this to intercept any matrix-level failure.
+        FilterError
+            If the forward pass yielded no records (defensive guard) or
+            on unexpected propagated errors.
         """
         # 1) Forward pass — drains PPF into self.history with particles/weights
         for _ in self.process_filter(N=N, data_generator=data_generator):
@@ -171,14 +316,19 @@ class NonLinear_PPS(NonLinear_PPF):
         # 3) Terminal step: smoothed = filtered
         last = self.history[N_records - 1]
         self._record_smoothed(
-            N_records - 1, last["particles"], last["weights"].copy(),
+            N_records - 1,
+            last["particles"],
+            last["weights"].copy(),
+            last["k"],
         )
 
-        # 4) Backward FFBSm recursion
+        # 4) Pre-allocate scratch buffers reused at every backward step.
         zeros_batched: np.ndarray = np.zeros(
             (self.n_particles, self.dim_xy, 1)
         )
+        z_buffer: np.ndarray = np.zeros((self.n_particles, self.dim_xy, 1))
 
+        # 5) Backward FFBSm recursion
         for idx in range(N_records - 2, -1, -1):
             cur = self.history[idx]
             nxt = self.history[idx + 1]
@@ -191,20 +341,22 @@ class NonLinear_PPS(NonLinear_PPF):
 
             # Propagate each particle through g with y_n inserted, take X-part:
             # mu_x[i] = [ g((particles_n[i], y_n), 0) ]_X
-            y_tiled = np.tile(Yn, (self.n_particles, 1, 1))    # (n_p, dim_y, 1)
-            z_in = np.concatenate([particles_n, y_tiled], axis=1)  # (n_p, dim_xy, 1)
-            z_out = self.param.g(z_in, zeros_batched, self.dt)
+            z_out = self._propagate_particles_at(
+                particles_n, Yn, z_buffer, zeros_batched,
+            )
             mu_x: np.ndarray = z_out[:, : self.dim_x, :]       # (n_p, dim_x, 1)
 
             # Pairwise log-density matrix
             #   log_D[i, j] = -0.5 (xi_{j,n+1} - mu_x[i])^T Sigma_xx^{-1} (xi_{j,n+1} - mu_x[i])
             # diff[i, j, :, 0] = xi_{j,n+1} - mu_x[i]
             diff = particles_npo[None, :, :, :] - mu_x[:, None, :, :]
-            # quad[i, j] via two einsum-friendly contractions
-            #   tmp[i, j, k] = Sigma_xx_inv[k, l] * diff[i, j, l, 0]
-            #   quad[i, j]   = diff[i, j, k, 0] * tmp[i, j, k]
-            tmp = np.einsum("kl,ijl->ijk", Sigma_xx_inv, diff[..., 0])
-            quad = np.einsum("ijk,ijk->ij", diff[..., 0], tmp)
+            # Fused contraction with path optimisation — ~20-30% faster than
+            # two sequential einsums on the test grid.
+            quad = np.einsum(
+                "ijk,kl,ijl->ij",
+                diff[..., 0], Sigma_xx_inv, diff[..., 0],
+                optimize=True,
+            )
             log_D = -0.5 * quad                                # (n_p, n_p)
 
             # Backward kernel normaliser per column j:
@@ -217,10 +369,7 @@ class NonLinear_PPS(NonLinear_PPF):
 
             # FFBSm smoothed weights:
             #   tilde_w_n[i] = w_n[i] * sum_j tilde_w_npo[j] * D[i, j] / Z_j
-            # Compute normalised backward kernel exp(log_D - log_Z[None, :])
-            # (avoids forming the full Z divisor explicitly).
             log_norm_D = log_D - log_Z[None, :]                 # (n_p, n_p)
-            # backward_sum_i = sum_j tilde_w_npo[j] * exp(log_norm_D[i, j])
             backward_sum = np.einsum(
                 "ij,j->i", np.exp(log_norm_D), w_smooth_npo,
             )
@@ -240,13 +389,18 @@ class NonLinear_PPS(NonLinear_PPF):
             else:
                 w_smooth_n = w_smooth_n / total
 
-            self._record_smoothed(idx, particles_n, w_smooth_n)
+            self._record_smoothed(idx, particles_n, w_smooth_n, cur["k"])
 
             if logger.isEnabledFor(logging.DEBUG):
                 ess_smooth = 1.0 / np.sum(w_smooth_n**2)
                 logger.debug(
                     "Step %d: ESS_smooth=%.1f/%d  weight_max=%.3g",
                     cur["k"], ess_smooth, self.n_particles, w_smooth_n.max(),
+                )
+
+            if self.verbose > 1:
+                rich_show_fields(
+                    self.history[idx], title=f"PPS smoothed step {cur['k']}"
                 )
 
         logger.info(
@@ -263,34 +417,6 @@ class NonLinear_PPS(NonLinear_PPF):
                 entry["Xkp1_smooth"],
             )
 
-    # ------------------------------------------------------------------
-    # Internals
-    # ------------------------------------------------------------------
-
-    def _record_smoothed(
-        self,
-        idx: int,
-        particles: np.ndarray,
-        w_smooth: np.ndarray,
-    ) -> None:
-        """
-        Compute and record the smoothed mean and covariance for step
-        ``idx`` from the particle cloud and smoothed weights.
-        """
-        # Smoothed mean: weighted average
-        mean = np.einsum("i,ijk->jk", w_smooth, particles)        # (dim_x, 1)
-        # Smoothed covariance: weighted sample covariance
-        diff = particles - mean                                   # (n_p, dim_x, 1)
-        cov = np.einsum("i,ijk,ilk->jl", w_smooth, diff, diff)
-        # Safety symmetrisation against einsum-level floating asymmetry
-        cov = 0.5 * (cov + cov.T)
-        self.history.update_record(
-            idx,
-            w_smooth=w_smooth,
-            Xkp1_smooth=mean,
-            PXXkp1_smooth=cov,
-        )
-
     def process_N_data_smoother(
         self,
         N: int | None,
@@ -299,8 +425,30 @@ class NonLinear_PPS(NonLinear_PPF):
         tuple[int, np.ndarray | None, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
     ]:
         """
-        Eager version of :meth:`process_smoother`. Same exception
-        propagation policy as the Kalman-family smoothers.
+        Eager version of :meth:`process_smoother` — runs ``N`` steps and
+        returns all outputs as a list.
+
+        Exception-handling policy
+        -------------------------
+        All domain-specific exceptions raised by :meth:`process_smoother`
+        — ``ParamError``, ``InvertibilityError``, ``CovarianceError``,
+        ``NumericalError``, ``StepValidationError`` and direct
+        ``FilterError`` — propagate up **unwrapped**. Their structured
+        ``step`` / ``matrix_name`` attributes are preserved.
+
+        Only an opaque ``RuntimeError`` raised by Python's generator
+        machinery (e.g. an inadvertent ``StopIteration`` re-raised by
+        PEP 479) is wrapped as ``FilterError`` and chained via ``from``
+        for traceability.
+
+        Raises
+        ------
+        ParamError, InvertibilityError, CovarianceError, NumericalError, StepValidationError
+            Propagated unwrapped from :meth:`process_smoother`.
+        FilterError
+            Either propagated from :meth:`process_smoother` (forward
+            empty or unexpected error), or wrapping an opaque
+            ``RuntimeError`` from the generator machinery.
         """
         try:
             return list(self.process_smoother(N=N, data_generator=data_generator))
