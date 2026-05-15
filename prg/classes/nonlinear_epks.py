@@ -60,15 +60,19 @@ class NonLinear_EPKS(NonLinear_EPKF):
     joseph : bool, optional
         If ``True``, use the Joseph form of the covariance update
         (explicitly symmetric / PSD-preserving for any gain). Default
-        ``False``. The two forms agree to ``~1e-13`` in double precision
-        when the EPKF's per-step Jacobian is well-conditioned.
+        ``False``. The two forms agree empirically to ``~1e-10`` on the
+        test fixtures (enforced by
+        :class:`TestNonLinearEPKSJosephForm.JOSEPH_EQ_TOL`).
 
     History schema additions
     ------------------------
     Each forward record is augmented with three keys by the backward
-    pass: ``Xkp1_smooth``, ``PXXkp1_smooth``, ``Gk_smooth`` (the same
-    schema as :class:`Linear_PKS`). The smoothing gain ``Gk_smooth`` has
-    shape ``(dim_x, dim_xy)``.
+    pass: ``Xkp1_smooth`` of shape ``(dim_x, 1)``, ``PXXkp1_smooth`` of
+    shape ``(dim_x, dim_x)``, and ``Gk_smooth`` of shape
+    ``(dim_x, dim_xy)``. At the terminal step ``n = N`` the smoothing
+    gain is undefined; a zero matrix of the correct shape is stored as
+    a placeholder. All three fields are written via the public
+    :meth:`HistoryTracker.update_record` API.
     """
 
     def __init__(
@@ -265,7 +269,7 @@ class NonLinear_EPKS(NonLinear_EPKF):
                 i,
                 Xkp1_smooth=Xs_n,
                 PXXkp1_smooth=Ps_n,
-                Gk_smooth=Gn.copy(),
+                Gk_smooth=Gn,
             )
 
             if logger.isEnabledFor(logging.DEBUG):

@@ -59,9 +59,27 @@ class Linear_PKS(Linear_PKF):
       (shape :math:`(p + p + q) \\times (p + p + q)`).
 
     The two forms are mathematically equivalent at the optimal gain and
-    coincide to machine precision (``~1e-15`` in double precision) for the
-    linear case. The Joseph variant becomes valuable for the nonlinear
-    extensions (EPKF / UPKF) where matrices become less well-conditioned.
+    agree empirically to ``~1e-10`` in double precision on the test
+    fixtures (test tolerance enforced by
+    :class:`TestLinearPKSJosephForm.JOSEPH_EQ_TOL`). The Joseph variant
+    becomes valuable for the nonlinear extensions (EPKF / UPKF) where
+    matrices become less well-conditioned.
+
+    Parameters
+    ----------
+    param : ParamLinear | ParamNonLinear
+        Forwarded to :class:`Linear_PKF`. Although the class is named
+        "linear", the parent accepts non-linear param objects too — only
+        the constant ``A`` matrix from the param is used.
+    sKey : int, optional
+        Random seed for reproducibility (default ``None``).
+    verbose : int, optional
+        Verbosity level (0, 1, 2; default 0). ``verbose > 1`` displays
+        each smoothed history record via :func:`rich_show_fields`.
+    joseph : bool, optional
+        If ``True``, use the Joseph form of the covariance update
+        (explicitly symmetric / PSD-preserving for any gain). Default
+        ``False`` (standard RTS form).
 
     History schema additions
     ------------------------
@@ -264,7 +282,7 @@ class Linear_PKS(Linear_PKF):
                 i,
                 Xkp1_smooth=Xs_n,
                 PXXkp1_smooth=Ps_n,
-                Gk_smooth=Gn.copy(),
+                Gk_smooth=Gn,
             )
 
             # Per-step DEBUG trace — gated to avoid formatting cost when off

@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from prg.classes.nonlinear_uks import NonLinear_UKS
+from prg.utils.exceptions import CovarianceError
 
 SEED = 42
 N_SHORT = 100
@@ -39,6 +40,16 @@ class TestNonLinearUKSShapes:
         uks = NonLinear_UKS(param_nl_classic_x2y1, sigmaSet=SIGMA_SET, sKey=SEED)
         res = uks.process_N_data_smoother(N=N_SHORT)
         assert [r[0] for r in res] == list(range(N_SHORT + 1))
+
+    def test_terminal_gain_is_zero_placeholder(self, param_nl_classic_x2y1):
+        """Like the pairwise smoothers, the terminal-step gain is stored as
+        a zero placeholder of the right shape. Cross-cutting parity check."""
+        uks = NonLinear_UKS(param_nl_classic_x2y1, sigmaSet=SIGMA_SET, sKey=SEED)
+        uks.process_N_data_smoother(N=N_SHORT)
+        assert np.allclose(uks.history[-1]["Gk_smooth"], 0.0)
+        assert uks.history[-1]["Gk_smooth"].shape == (
+            param_nl_classic_x2y1.dim_x, param_nl_classic_x2y1.dim_x,
+        )
 
 
 class TestNonLinearUKSGainShape:
@@ -124,6 +135,22 @@ class TestNonLinearUKSJosephForm:
         uks = NonLinear_UKS(param_nl_classic_x2y1, sigmaSet=SIGMA_SET, sKey=SEED)
         assert uks.joseph is False
 
+    @pytest.mark.parametrize(
+        "param_fixture", ["param_nl_classic_x1y1", "param_nl_classic_x2y1"],
+    )
+    def test_joseph_psd_shrinkage(self, param_fixture, request):
+        """Joseph form preserves the sigma-point covariance PSD shrinkage."""
+        param = request.getfixturevalue(param_fixture)
+        uks = NonLinear_UKS(param, sigmaSet=SIGMA_SET, sKey=SEED, joseph=True)
+        uks.process_N_data_smoother(N=N_SHORT)
+        for rec in uks.history:
+            D = rec["PXXkp1_update"] - rec["PXXkp1_smooth"]
+            D = 0.5 * (D + D.T)
+            min_eig = np.linalg.eigvalsh(D).min()
+            assert min_eig > -PSD_TOL, (
+                f"Step {rec['k']}: P_f - P_s not PSD under Joseph (min eig {min_eig})"
+            )
+
 
 class TestNonLinearUKSPairwiseGuard:
     """The classical UKS must refuse a pairwise model (inherited from
@@ -208,6 +235,39 @@ class TestNonLinearUKSExceptionPolicy:
         uks = NonLinear_UKS(param_nl_classic_x2y1, sigmaSet=SIGMA_SET, sKey=SEED)
         with pytest.raises(ParamError):
             uks.process_N_data_smoother(N=0)
+
+    def test_singular_predicted_covariance_raises(
+        self, param_nl_classic_x2y1, monkeypatch,
+    ):
+        """Forces a Cholesky failure in the backward pass by monkey-patching
+        ``cho_factor``, and verifies the resulting ``CovarianceError``
+        carries the structured ``(step, matrix_name)`` attributes and a
+        chained ``__cause__``. Parallels Linear_PKS's
+        ``test_singular_predicted_covariance_raises``."""
+        from prg.classes import nonlinear_uks as uks_mod
+
+        original_cho_factor = uks_mod.cho_factor
+        call_count = {"n": 0}
+
+        def patched_cho_factor(M):
+            call_count["n"] += 1
+            # Let the forward pass succeed; raise only inside the backward.
+            # `cho_factor` is invoked by the parent for sigma-point Cholesky
+            # so we let several calls through before failing.
+            if call_count["n"] < 8:
+                return original_cho_factor(M)
+            raise np.linalg.LinAlgError("forced failure for test")
+
+        monkeypatch.setattr(uks_mod, "cho_factor", patched_cho_factor)
+
+        uks = NonLinear_UKS(param_nl_classic_x2y1, sigmaSet=SIGMA_SET, sKey=SEED)
+        with pytest.raises(CovarianceError) as exc_info:
+            uks.process_N_data_smoother(N=20)
+        err = exc_info.value
+        assert err.matrix_name == "PXXkp1_predict"
+        assert err.step >= 0
+        assert err.__cause__ is not None
+        assert isinstance(err.__cause__, np.linalg.LinAlgError)
 
 
 class TestNonLinearUKSLogging:

@@ -67,6 +67,27 @@ class NonLinear_UPKS(NonLinear_UPKF):
     verbose : int, optional
     joseph : bool, optional
         If ``True``, use the Joseph form of the covariance update.
+        Empirically equivalent to the standard form to ``~1e-10`` on the
+        test fixtures.
+
+    Cost
+    ----
+    The backward pass regenerates and propagates a new set of sigma
+    points at every step (the forward does not store them). Total cost
+    is therefore roughly twice the forward UPKF — ``2 N \\cdot n_\\sigma``
+    calls to ``param.g``, where ``n_\\sigma`` depends on the chosen
+    sigma-point set (typically ``2 \\cdot (2 p + q) + 1`` for
+    ``wan2000``).
+
+    History schema additions
+    ------------------------
+    Each forward record is augmented with three keys by the backward
+    pass: ``Xkp1_smooth`` of shape ``(dim_x, 1)``, ``PXXkp1_smooth`` of
+    shape ``(dim_x, dim_x)``, and ``Gk_smooth`` of shape
+    ``(dim_x, dim_xy)``. At the terminal step ``n = N`` the smoothing
+    gain is undefined; a zero matrix of the correct shape is stored as
+    a placeholder. All three fields are written via the public
+    :meth:`HistoryTracker.update_record` API.
     """
 
     def __init__(
@@ -90,7 +111,7 @@ class NonLinear_UPKS(NonLinear_UPKF):
         Pf_n: np.ndarray,
         Yn: np.ndarray,
         Pa_base: np.ndarray,
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Regenerate sigma points around ``(X_{n|n}, 0_{noise})``, propagate
         them through ``g`` with the observation ``y_n`` inserted, and
@@ -107,9 +128,6 @@ class NonLinear_UPKS(NonLinear_UPKF):
             X-side of the cross-covariance.
         sigma_propag : np.ndarray, shape ``(n_sigma, dim_xy, 1)``
             Sigma points after propagation through ``g``.
-        Pa : np.ndarray
-            The augmented covariance matrix that was used (returned for
-            potential diagnostic use).
         """
         n_aug: int = 2 * self.dim_x + self.dim_y
 
@@ -139,7 +157,7 @@ class NonLinear_UPKS(NonLinear_UPKF):
         sigma_propag = self.param.g(z_batch, noise_batch, self.dt)
 
         sigma_X = sigma_stack[:, : self.dim_x, :]
-        return sigma_X, sigma_propag, Pa
+        return sigma_X, sigma_propag
 
     # ------------------------------------------------------------------
     # Smoother
@@ -240,7 +258,7 @@ class NonLinear_UPKS(NonLinear_UPKF):
 
             # Regenerate + propagate sigma points at step n's linearisation
             # point (same as the forward).
-            sigma_X, sigma_propag, _ = self._propagate_sigma_at(
+            sigma_X, sigma_propag = self._propagate_sigma_at(
                 Xf_n, Pf_n, Yn, Pa_base
             )
 
@@ -303,7 +321,7 @@ class NonLinear_UPKS(NonLinear_UPKF):
                 i,
                 Xkp1_smooth=Xs_n,
                 PXXkp1_smooth=Ps_n,
-                Gk_smooth=Gn.copy(),
+                Gk_smooth=Gn,
             )
 
             if logger.isEnabledFor(logging.DEBUG):

@@ -11,6 +11,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.1] - 2026-05-15
+
+PATCH release: cross-cutting parity pass over the four smoother classes
+(`Linear_PKS`, `NonLinear_EPKS`, `NonLinear_UPKS`, `NonLinear_UKS`)
+following an independent code audit. No API changes, no math changes,
+no behaviour changes — pure consistency cleanup.
+
+### Documentation parity
+- All four smoothers now have a uniform docstring structure: prose intro,
+  ``Parameters`` section, ``Cost`` section (for UPKS/UKS, mentioning the
+  per-step sigma-point regeneration overhead), and ``History schema
+  additions`` section. Linear_PKS now exposes its ``Parameters``;
+  UPKS and UKS now document the ``Xkp1_smooth / PXXkp1_smooth /
+  Gk_smooth`` schema with their respective shapes — including the
+  UKS-specific ``(dim_x, dim_x)`` gain shape (vs ``(dim_x, dim_xy)``
+  for the pairwise variants) which is the defining structural difference.
+- Joseph form precision claims aligned across all four docstrings to
+  match the actual test tolerance (``~1e-10``) — previously claimed
+  ``~1e-13`` / ``~1e-15`` machine precision, which was never enforced.
+- UKS ``Raises`` section reformatted per-exception (one item per
+  exception with a clear description), matching the PKS/EPKS/UPKS style.
+
+### Test parity
+- **+5 new tests across the three nonlinear smoothers** restoring
+  feature parity with ``test_linear_pks.py``:
+  - ``test_joseph_psd_shrinkage`` added to EPKS, UPKS, UKS (verifies that
+    the Joseph form preserves the same PSD invariant as the standard form).
+  - ``test_singular_predicted_covariance_raises`` added to UPKS and UKS
+    via ``monkeypatch`` on ``cho_factor``: forces a backward Cholesky
+    failure and verifies the structured ``CovarianceError`` (``matrix_name``,
+    ``step``, chained ``__cause__``).
+  - ``test_terminal_gain_is_zero_placeholder`` added to UKS (the pairwise
+    smoothers already had it).
+- Test name uniformisation: ``test_pkferror_base_class_catches_smoother_errors``
+  renamed to ``test_pkferror_root_catches_smoother_errors`` in Linear_PKS
+  to match the three nonlinear smoothers.
+
+### Code cleanup
+- Removed redundant ``Gn.copy()`` / ``Cn.copy()`` defensive calls in the
+  four ``update_record(..., Gk_smooth=Gn)`` invocations — ``Gn`` is
+  freshly produced by ``cho_solve`` at each iteration and never aliased
+  back into the loop, so the copy was a no-op.
+- UPKS ``_propagate_sigma_at`` no longer returns the unused ``Pa``
+  augmented covariance (3-tuple → 2-tuple). Caller unpacks
+  ``sigma_X, sigma_propag`` directly.
+- UKS receives the missing ``# NOTE:`` comment block (parallel to the
+  three other smoothers) documenting the exception types that propagate
+  unwrapped from the forward but are not constructed locally.
+
+### Tests
+- 225 tests pass (up from 216): +9 tests for parity, no removed tests.
+
+---
+
 ## [2.5.0] - 2026-05-15
 
 ### Added

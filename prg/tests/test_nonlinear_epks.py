@@ -108,6 +108,20 @@ class TestNonLinearEPKSJosephForm:
         epks = NonLinear_EPKS(param_nl_x2y1, sKey=SEED)
         assert epks.joseph is False
 
+    @pytest.mark.parametrize("param_fixture", ["param_nl_x1y1", "param_nl_x2y1"])
+    def test_joseph_psd_shrinkage(self, param_fixture, request):
+        """Joseph form preserves the linearised-covariance PSD shrinkage."""
+        param = request.getfixturevalue(param_fixture)
+        epks = NonLinear_EPKS(param, sKey=SEED, joseph=True)
+        epks.process_N_data_smoother(N=N_SHORT)
+        for rec in epks.history:
+            D = rec["PXXkp1_update"] - rec["PXXkp1_smooth"]
+            D = 0.5 * (D + D.T)
+            min_eig = np.linalg.eigvalsh(D).min()
+            assert min_eig > -PSD_TOL, (
+                f"Step {rec['k']}: P_f - P_s not PSD under Joseph (min eig {min_eig})"
+            )
+
 
 class TestNonLinearEPKSEdgeCases:
 

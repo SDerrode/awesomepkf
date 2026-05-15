@@ -458,7 +458,7 @@ class TestLinearPKSExceptionPolicy:
         with pytest.raises(ParamError):
             pks.process_N_data_smoother(N=-1)
 
-    def test_pkferror_base_class_catches_smoother_errors(self, param_x1y1):
+    def test_pkferror_root_catches_smoother_errors(self, param_x1y1):
         """All smoother errors derive from ``PKFError``, so catching the
         root class is sufficient to intercept any domain failure."""
         from prg.utils.exceptions import PKFError

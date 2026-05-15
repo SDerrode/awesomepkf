@@ -23,6 +23,10 @@ from prg.classes.param_linear import ParamLinear
 from prg.classes.param_nonlinear import ParamNonLinear
 from prg.utils.display import rich_show_fields
 from prg.utils.exceptions import CovarianceError, FilterError
+# NOTE: ParamError, InvertibilityError, NumericalError and StepValidationError
+# may propagate from the inherited forward pass (cf. NonLinear_UKF.process_filter);
+# they are listed in the Raises docstrings but not imported here as they are
+# only re-raised, never constructed in this module.
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +71,29 @@ class NonLinear_UKS(NonLinear_UKF):
         :math:`(I_p, -C_n)\\, \\Omega_n\\, (I_p, -C_n)^\\top + C_n P^{xx}_{n+1|N} C_n^\\top`
         with :math:`\\Omega_n` the joint covariance of
         :math:`(X_n, X_{n+1})` conditional on :math:`y_{1:n}`. Default
-        ``False``. Mathematically equivalent at the optimal gain.
+        ``False``. Empirically equivalent to the standard form to
+        ``~1e-10`` on the test fixtures.
+
+    Cost
+    ----
+    The backward pass regenerates sigma points (dimension ``dim_x``
+    only, not augmented with the observation or process noise — much
+    cheaper than the UPKS regeneration). Total cost is roughly the
+    forward UKF + one extra Cholesky of size ``dim_x`` and
+    ``n_\\sigma`` calls to ``param.f`` per backward step.
+
+    History schema additions
+    ------------------------
+    Each forward record is augmented with three keys by the backward
+    pass: ``Xkp1_smooth`` of shape ``(dim_x, 1)``, ``PXXkp1_smooth`` of
+    shape ``(dim_x, dim_x)``, and ``Gk_smooth`` of shape
+    ``(dim_x, dim_x)``. **Note the shape difference with the pairwise
+    smoothers**: the UKS gain is square ``dim_x × dim_x``, not
+    ``dim_x × dim_xy`` — a direct consequence of the X-only Markov
+    structure (no future-observation contribution in the residual). At
+    the terminal step ``n = N`` the gain is undefined; a zero matrix
+    of the correct shape is stored as a placeholder. All three fields
+    are written via the public :meth:`HistoryTracker.update_record` API.
     """
 
     def __init__(
@@ -141,15 +167,29 @@ class NonLinear_UKS(NonLinear_UKF):
 
         Raises
         ------
-        ParamError, InvertibilityError, NumericalError, StepValidationError
-            Propagated unwrapped from the UKF forward pass.
+        ParamError
+            If ``N`` is not a strictly positive integer or ``None``
+            (propagated from the forward pass via ``_validate_N``), or
+            if the constructor-time sigma-point set name was unknown
+            (propagated from :class:`NonLinear_UKF`).
+        InvertibilityError
+            If the forward-pass innovation covariance is not invertible
+            (propagated).
         CovarianceError
-            (a) forward covariance check failure; (b) backward Cholesky
-            failure of :math:`P^{xx}_{n+1|n}`; (c) PSD violation of
-            :math:`P^{xx}_{n|N}`. The exception carries ``step`` and
-            ``matrix_name``.
+            (a) from forward covariance checks; (b) from backward
+            Cholesky failure of :math:`P^{xx}_{n+1|n}`; (c) from PSD
+            violation of :math:`P^{xx}_{n|N}`. In cases (b) and (c) the
+            exception carries ``step`` and ``matrix_name`` attributes.
+        StepValidationError
+            If the forward pass cannot construct a valid ``PKFStep``
+            (propagated).
+        NumericalError
+            Base class of ``CovarianceError`` / ``InvertibilityError`` —
+            catch this to intercept any matrix-level failure regardless
+            of subtype.
         FilterError
-            Empty-history guard or unexpected forward error.
+            If the forward pass yielded no records (defensive guard) or
+            on unexpected propagated errors.
         """
         # 1) Forward pass — UKF populates self.history
         for _ in self.process_filter(N=N, data_generator=data_generator):
@@ -245,7 +285,7 @@ class NonLinear_UKS(NonLinear_UKF):
                 i,
                 Xkp1_smooth=Xs_n,
                 PXXkp1_smooth=Ps_n,
-                Gk_smooth=Cn.copy(),
+                Gk_smooth=Cn,
             )
 
             if logger.isEnabledFor(logging.DEBUG):

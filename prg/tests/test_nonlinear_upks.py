@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from prg.classes.nonlinear_upks import NonLinear_UPKS
+from prg.utils.exceptions import CovarianceError
 
 SEED = 42
 N_SHORT = 100
@@ -99,6 +100,20 @@ class TestNonLinearUPKSJosephForm:
     def test_joseph_flag_default_false(self, param_nl_x2y1):
         upks = NonLinear_UPKS(param_nl_x2y1, sigmaSet=SIGMA_SET, sKey=SEED)
         assert upks.joseph is False
+
+    @pytest.mark.parametrize("param_fixture", ["param_nl_x1y1", "param_nl_x2y1"])
+    def test_joseph_psd_shrinkage(self, param_fixture, request):
+        """Joseph form preserves the sigma-point covariance PSD shrinkage."""
+        param = request.getfixturevalue(param_fixture)
+        upks = NonLinear_UPKS(param, sigmaSet=SIGMA_SET, sKey=SEED, joseph=True)
+        upks.process_N_data_smoother(N=N_SHORT)
+        for rec in upks.history:
+            D = rec["PXXkp1_update"] - rec["PXXkp1_smooth"]
+            D = 0.5 * (D + D.T)
+            min_eig = np.linalg.eigvalsh(D).min()
+            assert min_eig > -PSD_TOL, (
+                f"Step {rec['k']}: P_f - P_s not PSD under Joseph (min eig {min_eig})"
+            )
 
 
 class TestNonLinearUPKSSigmaPointSets:
@@ -210,6 +225,37 @@ class TestNonLinearUPKSExceptionPolicy:
         from prg.utils.exceptions import PKFError
         with pytest.raises(PKFError):
             NonLinear_UPKS(param_nl_x2y1, sigmaSet="bogus", sKey=SEED)
+
+    def test_singular_predicted_covariance_raises(
+        self, param_nl_x2y1, monkeypatch,
+    ):
+        """Forces a Cholesky failure in the backward pass by monkey-patching
+        ``cho_factor`` and verifies the resulting ``CovarianceError``
+        carries the structured ``(step, matrix_name)`` attributes and a
+        chained ``__cause__``. Parallels Linear_PKS's
+        ``test_singular_predicted_covariance_raises``."""
+        from prg.classes import nonlinear_upks as upks_mod
+
+        original_cho_factor = upks_mod.cho_factor
+        call_count = {"n": 0}
+
+        def patched_cho_factor(M):
+            call_count["n"] += 1
+            # Let the forward pass succeed; raise inside the backward.
+            if call_count["n"] < 8:
+                return original_cho_factor(M)
+            raise np.linalg.LinAlgError("forced failure for test")
+
+        monkeypatch.setattr(upks_mod, "cho_factor", patched_cho_factor)
+
+        upks = NonLinear_UPKS(param_nl_x2y1, sigmaSet=SIGMA_SET, sKey=SEED)
+        with pytest.raises(CovarianceError) as exc_info:
+            upks.process_N_data_smoother(N=20)
+        err = exc_info.value
+        assert err.matrix_name == "PZZkp1_predict"
+        assert err.step >= 0
+        assert err.__cause__ is not None
+        assert isinstance(err.__cause__, np.linalg.LinAlgError)
 
 
 class TestNonLinearUPKSLogging:
