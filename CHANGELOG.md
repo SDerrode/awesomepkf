@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.0] - 2026-05-15
+
+### Added
+
+- **`NonLinear_UKS` — Unscented Kalman Smoother (classical)** ([`prg/classes/nonlinear_uks.py`](prg/classes/nonlinear_uks.py)). Two-pass smoother extending `NonLinear_UKF`. Unlike the pairwise smoothers, the classical UKS operates on the X-only Markov chain (FxHx model): the smoothing gain is `(dim_x, dim_x)` (not `(dim_x, dim_xy)`) and sigma-points are generated in dimension `dim_x` only. Cross-covariance is estimated from sigma points regenerated at `(X_{n|n}, P^{xx}_{n|n})` and propagated through `f`; the predicted covariance is read from the forward record (already includes the additive `Q_x` term). Joseph form available via `joseph=True`. Compatible with all registered sigma-point sets.
+- **UKS report section** (`Report/NonLinearSmoothingReport/Sections/Section5_UKS.tex`) with the classical RTS derivation in sigma-point form, comparison with the pairwise variants, and discussion of MSE sensitivity to the model's degree of nonlinearity (Sinus_classic vs x2y1_classic).
+- **UKS figure generator** (`Report/.../Figures/generate_uks_figure.py`).
+
+### Caveats
+- **Pairwise models rejected.** The constructor inherited from `NonLinear_UKF` raises `FilterError` if `param.pairwiseModel=True`. Use the UPKS for pairwise models.
+- **MSE improvement depends strongly on the curvature of `f` and `h`.** On `model_x1_y1_Sinus_classic` (strongly nonlinear), MSE ratio ≈ 0.91. On the milder `model_x2_y1_classic`, the ratio is ≈ 1.00 (trace ratio still ≈ 0.92, but the linearisation-bias on the empirical MSE absorbs the gain).
+
+### Tests
+- **+29 tests in `prg/tests/test_nonlinear_uks.py`**: shapes (including the dedicated test verifying `Gk_smooth` is `(dim_x, dim_x)`), terminal equality, PSD shrinkage, Joseph form equivalence, sigma-set parametric coverage, **pairwise-model guard**, edge cases, exception policy, `caplog`-based INFO/DEBUG emission, regression test on Sinus_classic (ratio < 0.97).
+- Total: 216 tests pass (up from 187).
+
+---
+
 ## [2.4.0] - 2026-05-15
 
 ### Added

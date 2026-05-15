@@ -11,6 +11,7 @@ and **pairwise Kalman smoothers** for offline post-processing:
 - **Linear Pairwise Kalman Smoother (PKS)** — RTS-style backward pass on the joint `(X, Y)` Markov chain.
 - **Extended Pairwise Kalman Smoother (EPKS)** — same recursion with the per-step Jacobian replacing the constant transition matrix.
 - **Unscented Pairwise Kalman Smoother (UPKS)** — sigma-point cross-covariance in the backward pass; supports the same sigma-point sets as the UPKF (`wan2000`, `cpkf`, `lerner2002`, `ito2000`).
+- **Unscented Kalman Smoother (UKS)** — classical (non-pairwise) sigma-point smoother for FxHx models with Markov-in-X assumption; gain `(dim_x, dim_x)`.
 
 ---
 
@@ -29,6 +30,7 @@ and **pairwise Kalman smoothers** for offline post-processing:
         - [Linear Pairwise Kalman Smoother (PKS)](#linear-pairwise-kalman-smoother-pks)
         - [Extended Pairwise Kalman Smoother (EPKS)](#extended-pairwise-kalman-smoother-epks)
         - [Unscented Pairwise Kalman Smoother (UPKS)](#unscented-pairwise-kalman-smoother-upks)
+        - [Unscented Kalman Smoother (UKS)](#unscented-kalman-smoother-uks)
     - [Tutorials](#tutorials)
     - [Usage Examples](#usage-examples)
         - [Simulate Linear Data and Filter with PKF](#simulate-linear-data-and-filter-with-pkf)
@@ -199,6 +201,26 @@ results = upks.process_N_data_smoother(N=300)
 ```
 
 Implementation: [`prg/classes/nonlinear_upks.py`](prg/classes/nonlinear_upks.py). Tests: [`prg/tests/test_nonlinear_upks.py`](prg/tests/test_nonlinear_upks.py) (29 tests, parametrised over all sigma-point sets). Same caveats as the EPKS regarding augmented models.
+
+### Unscented Kalman Smoother (UKS)
+
+The UKS is the classical (non-pairwise) sigma-point smoother — equivalent to the UPKS when applied to a model that is Markov in X alone (FxHx structure). The gain is `(dim_x, dim_x)` (vs `(dim_x, dim_x + dim_y)` for the pairwise variants), and the sigma-point dimension is `dim_x` only. The smoother refuses pairwise models at construction time (FilterError).
+
+```python
+from prg.classes.nonlinear_uks import NonLinear_UKS
+from prg.classes.param_nonlinear import ParamNonLinear
+from prg.models.nonlinear import ModelFactoryNonLinear
+
+model  = ModelFactoryNonLinear.create("model_x1_y1_Sinus_classic")
+params = model.get_params().copy()
+dim_x  = params.pop("dim_x");  dim_y = params.pop("dim_y")
+param  = ParamNonLinear(0, dim_x, dim_y, **params)
+
+uks = NonLinear_UKS(param, sigmaSet="wan2000", sKey=42, joseph=False)
+results = uks.process_N_data_smoother(N=300)
+```
+
+Implementation: [`prg/classes/nonlinear_uks.py`](prg/classes/nonlinear_uks.py). Tests: [`prg/tests/test_nonlinear_uks.py`](prg/tests/test_nonlinear_uks.py) (29 tests).
 
 ---
 
