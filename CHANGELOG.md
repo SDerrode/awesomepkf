@@ -11,6 +11,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.6.3] - 2026-05-15
+
+PATCH release — documentation: adds a comparative analysis section
+(Section 7) to the companion LaTeX report, with a single auto-running
+reproducibility script.
+
+### Added (report tree only — separate doc dir, not under git here)
+
+- **Section 7 "Comparaison des cinq lisseurs"** in
+  ``Report/NonLinearSmoothingReport/Sections/Section7_Comparison.tex``,
+  ~5 PDF pages, covering:
+  - §7.1 Applicability matrix per model class (linear-pairwise,
+    NL-pairwise, NL-classical) explaining why no single experiment
+    can run all 5 smoothers head-to-head.
+  - §7.2 Cross-model × smoother MSE-ratio table averaged over 20 seeds.
+  - §7.3 Single-trajectory overlay of the 4 smoothers applicable to
+    a linear-pairwise model (PKS = EPKS = UPKS to 3 decimals;
+    PPS within MC noise).
+  - §7.4 Monte-Carlo convergence of PPS → PKS in log-log axes; EPKS
+    and UPKS shown as horizontal reference lines at machine precision
+    (~1e-16 to 1e-18). The 14-orders-of-magnitude separation between
+    PPS and the Kalman family on linear-Gaussian models is the
+    pedagogical highlight.
+  - §7.5 Wall-clock timing table (forward / backward / total).
+  - §7.6 Decision rule for choosing among the 5 smoothers.
+  - §7.7 Reproducibility instructions.
+- **`Report/.../Figures/generate_comparison.py`** — single 350-line
+  script orchestrating the four experiments. Emits:
+  - ``comparison_overlay.png``, ``comparison_mc_convergence.png``
+  - ``comparison_cross_model.tex``, ``comparison_timing.tex`` —
+    bare ``\begin{tabular}...\end{tabular}`` snippets to be
+    ``\input``-ed in the section (the (β) strategy from the design
+    proposal: numbers stay in sync with experiments automatically).
+  - ``comparison_results.json`` for traceability across machines.
+- All script outputs are parametrised via CLI arguments
+  (``--N-overlay``, ``--N-mc``, ``--N-table``, ``--seed``,
+  ``--n-seeds-table``, ``--n-particles``, ``--n-particles-list``,
+  ``--n-reps-timing``). Defaults reproduce the numbers in the report.
+
+### Validation
+- 247 tests still pass; no code changes in ``prg/``.
+
+---
+
 ## [2.6.2] - 2026-05-15
 
 PATCH release: cross-cutting parity pass over the **5 smoothers** (the
