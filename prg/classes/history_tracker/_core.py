@@ -8,6 +8,7 @@ The plotting and metrics methods live in two mixins:
 from __future__ import annotations
 
 import pickle
+from collections.abc import Iterator
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
@@ -95,6 +96,56 @@ class HistoryTracker(_PlotMixin, _MetricsMixin):
 
     def clear(self) -> None:
         self._history.clear()
+
+    # ------------------------------------------------------------------
+    # Indexed read / update access (public)
+    # ------------------------------------------------------------------
+
+    def __getitem__(self, idx: int) -> dict[str, Any]:
+        """
+        Return the record at index ``idx`` (negative indices supported).
+
+        The returned object is the live dict; callers that need a snapshot
+        must call ``.copy()`` explicitly. Use :meth:`update_record` for
+        in-place additions/overwrites that document intent.
+
+        Raises
+        ------
+        IndexError
+            If ``idx`` is out of range.
+        TypeError
+            If ``idx`` is not an integer.
+        """
+        if not isinstance(idx, int):
+            raise TypeError(
+                f"HistoryTracker indices must be integers, got "
+                f"{type(idx).__name__}."
+            )
+        return self._history[idx]
+
+    def __iter__(self) -> Iterator[dict[str, Any]]:
+        """Iterate over records in chronological insertion order."""
+        return iter(self._history)
+
+    def update_record(self, idx: int, **fields: Any) -> None:
+        """
+        Add or overwrite fields on the record at index ``idx`` in place.
+
+        Intended for two-pass algorithms (e.g. RTS smoothers) that augment
+        each forward-filter record with derived quantities. Field keys must
+        be strings; values are stored as-is (no copy — callers should pass
+        copies if mutation downstream is a concern).
+
+        Raises
+        ------
+        IndexError
+            If ``idx`` is out of range.
+        TypeError
+            If any key is not a string.
+        """
+        if not all(isinstance(k, str) for k in fields):
+            raise TypeError("All field names must be strings.")
+        self._history[idx].update(fields)
 
     # ------------------------------------------------------------------
     # Persistence
