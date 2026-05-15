@@ -10,6 +10,7 @@ and **pairwise Kalman smoothers** for offline post-processing:
 
 - **Linear Pairwise Kalman Smoother (PKS)** — RTS-style backward pass on the joint `(X, Y)` Markov chain.
 - **Extended Pairwise Kalman Smoother (EPKS)** — same recursion with the per-step Jacobian replacing the constant transition matrix.
+- **Unscented Pairwise Kalman Smoother (UPKS)** — sigma-point cross-covariance in the backward pass; supports the same sigma-point sets as the UPKF (`wan2000`, `cpkf`, `lerner2002`, `ito2000`).
 
 ---
 
@@ -27,6 +28,7 @@ and **pairwise Kalman smoothers** for offline post-processing:
     - [Smoothers](#smoothers)
         - [Linear Pairwise Kalman Smoother (PKS)](#linear-pairwise-kalman-smoother-pks)
         - [Extended Pairwise Kalman Smoother (EPKS)](#extended-pairwise-kalman-smoother-epks)
+        - [Unscented Pairwise Kalman Smoother (UPKS)](#unscented-pairwise-kalman-smoother-upks)
     - [Tutorials](#tutorials)
     - [Usage Examples](#usage-examples)
         - [Simulate Linear Data and Filter with PKF](#simulate-linear-data-and-filter-with-pkf)
@@ -177,6 +179,26 @@ results = epks.process_N_data_smoother(N=300)
 ```
 
 Implementation: [`prg/classes/nonlinear_epks.py`](prg/classes/nonlinear_epks.py). Tests: [`prg/tests/test_nonlinear_epks.py`](prg/tests/test_nonlinear_epks.py) (25 tests). Note: not suitable for augmented models (rank-deficient predicted covariance fails the backward Cholesky).
+
+### Unscented Pairwise Kalman Smoother (UPKS)
+
+The UPKS replaces the first-order linearisation of the EPKS with **sigma-point propagation**: the cross-covariance `Cov(X_n, Z_{n+1} | y_{1:n})` and the predicted joint covariance `P^{ZZ}_{n+1|n}` are estimated from sigma points regenerated at the filtered state. Supports the same sigma-point sets as the UPKF (`wan2000`, `cpkf`, `lerner2002`, `ito2000`), selected via the `sigmaSet` constructor argument.
+
+```python
+from prg.classes.nonlinear_upks import NonLinear_UPKS
+from prg.classes.param_nonlinear import ParamNonLinear
+from prg.models.nonlinear import ModelFactoryNonLinear
+
+model  = ModelFactoryNonLinear.create("model_x2_y1_pairwise")
+params = model.get_params().copy()
+dim_x  = params.pop("dim_x");  dim_y = params.pop("dim_y")
+param  = ParamNonLinear(0, dim_x, dim_y, **params)
+
+upks = NonLinear_UPKS(param, sigmaSet="wan2000", sKey=42, joseph=False)
+results = upks.process_N_data_smoother(N=300)
+```
+
+Implementation: [`prg/classes/nonlinear_upks.py`](prg/classes/nonlinear_upks.py). Tests: [`prg/tests/test_nonlinear_upks.py`](prg/tests/test_nonlinear_upks.py) (29 tests, parametrised over all sigma-point sets). Same caveats as the EPKS regarding augmented models.
 
 ---
 

@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.4.0] - 2026-05-15
+
+### Added
+
+- **`NonLinear_UPKS` — Unscented Pairwise Kalman Smoother** ([`prg/classes/nonlinear_upks.py`](prg/classes/nonlinear_upks.py)). Two-pass smoother extending `NonLinear_UPKF`. The backward pass regenerates sigma points at each step's filtered linearisation point `(X_{n|n}, y_n)` with augmented covariance `diag(P^{xx}_{n|n}, mQ)`, propagates them through `g` (with `y_n` inserted between state and noise blocks, mirroring the forward), and estimates the cross-covariance `Cov(X_n, Z_{n+1} | y_{1:n})` and the predicted joint covariance `P^{ZZ}_{n+1|n}` from the sample weighted moments (using `Wc` weights). Joseph form available via `joseph=True`. Compatible with all four registered sigma-point sets (`wan2000`, `cpkf`, `lerner2002`, `ito2000`).
+- **UPKS report section** (`Report/NonLinearSmoothingReport/Sections/Section4_UPKS.tex`) with the sigma-point cross-covariance derivation, Joseph form, and §4.4 documenting the auto-consistency of the backward-recomputed `Zhat_{n+1|n}` and its alignment with the forward.
+- **UPKS figure generator** (`Report/.../Figures/generate_upks_figure.py`) with the same auto-detected repo-root mechanism as the other smoothers; parametrised by `--sigma-set` to compare sigma-point variants.
+
+### Caveats
+- **Not suitable for augmented models.** Same rank-deficient predicted covariance issue as the EPKS.
+- **Sigma-set invariance** on mildly nonlinear models: the three commonly-used sigma sets (`wan2000`, `cpkf`, `lerner2002`) produce numerically identical MSE statistics (3 significant digits) on `model_x2_y1_pairwise` and `model_x1_y1_pairwise`. Differences become observable on more strongly nonlinear transitions.
+
+### Tests
+- **+29 tests in `prg/tests/test_nonlinear_upks.py`**: shapes, terminal equality, PSD shrinkage on the sigma-point covariance, Joseph form equivalence, **sigma-set parametric coverage (3 sets)** including a `ParamError` on unknown set name, edge cases (`N=1`, generator semantics, double-call, external `data_generator`, missing ground truth), exception policy (`ParamError`, `PKFError` root), `caplog`-based INFO/DEBUG emission, and a regression test (UPKS MSE not significantly degrading vs UPKF, ratio < 1.02 on 20 seeds × N=300).
+- Total: 187 tests pass (up from 158).
+
+---
+
 ## [2.3.0] - 2026-05-15
 
 ### Added
