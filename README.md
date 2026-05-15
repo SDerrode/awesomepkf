@@ -6,6 +6,10 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
 - **Unscented Pairwise Kalman Filter (UPKF)**, with multiple variants depending on the choice of sigma points
 - **Pairwise Particle Filter (PPF)**
 
+and **pairwise Kalman smoothers** for offline post-processing:
+
+- **Linear Pairwise Kalman Smoother (PKS)** — RTS-style backward pass on the joint `(X, Y)` Markov chain.
+
 ---
 
 ## Table of Contents
@@ -19,6 +23,8 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
         - [Extended Pairwise Kalman Filter (EPKF)](#extended-pairwise-kalman-filter-epkf)
         - [Unscented Pairwise Kalman Filter (UPKF)](#unscented-pairwise-kalman-filter-upkf)
         - [Pairwise Particle Filter (PPF)](#pairwise-particle-filter-ppf)
+    - [Smoothers](#smoothers)
+        - [Linear Pairwise Kalman Smoother (PKS)](#linear-pairwise-kalman-smoother-pks)
     - [Tutorials](#tutorials)
     - [Usage Examples](#usage-examples)
         - [Simulate Linear Data and Filter with PKF](#simulate-linear-data-and-filter-with-pkf)
@@ -119,6 +125,36 @@ Each filter has two types of programs:
 ### Pairwise Particle Filter (PPF)
 
 - **run_nonlinear_ppf.py** – filter non-linear data either from simulated data or from a previously saved file (e.g., generated with `run_simulator.py`)  
+
+---
+
+## Smoothers
+
+Smoothers are **two-pass, offline** estimators that condition on the *entire* observation sequence `y_{1:N}`. They produce posterior means and covariances `p(X_n | y_{1:N})` that are at least as good (in PSD sense) as the corresponding forward filter outputs `p(X_n | y_{1:n})`.
+
+### Linear Pairwise Kalman Smoother (PKS)
+
+The linear PKS runs the [PKF forward](#pairwise-kalman-filter-pkf), then a backward Rauch-Tung-Striebel recursion at the **joint** `(X, Y)` level. The pairwise model is Markov in `Z = (X, Y)` (not in `X` alone), so the smoothing gain `G_n` has shape `(dim_x, dim_x + dim_y)`. Equivalently, the linear PKS is the classical RTS smoother applied to the augmented state `Z' = (X, Y)` with degenerate observation `Y_n = (0, I) Z'_n` (`R^aug = 0`).
+
+```python
+from prg.classes.linear_pks import Linear_PKS
+from prg.classes.param_linear import ParamLinear
+from prg.models.linear import ModelFactoryLinear
+
+model  = ModelFactoryLinear.create("model_x1_y1_AQ_pairwise")
+params = model.get_params().copy()
+dim_x  = params.pop("dim_x");  dim_y = params.pop("dim_y")
+param  = ParamLinear(0, dim_x, dim_y, **params)
+
+pks = Linear_PKS(param, sKey=42, joseph=False)
+# joseph=True selects the explicitly PSD-preserving Joseph form
+# (mathematically equivalent at the optimal gain, useful for ill-conditioned cases).
+
+results = pks.process_N_data_smoother(N=500)
+# each tuple: (k, x_true, y_obs, X_predict, X_update, X_smooth)
+```
+
+Implementation: [`prg/classes/linear_pks.py`](prg/classes/linear_pks.py). Tests: [`prg/tests/test_linear_pks.py`](prg/tests/test_linear_pks.py) (40 tests, including PSD shrinkage, Joseph equivalence, augmented-state RTS equivalence, and full exception/logging coverage).
 
 ---
 

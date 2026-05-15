@@ -11,6 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2026-05-15
+
+### Added
+
+- **`Linear_PKS` — linear pairwise Kalman smoother** ([`prg/classes/linear_pks.py`](prg/classes/linear_pks.py)). Two-pass RTS-style smoother extending `Linear_PKF`. The backward pass operates at the **joint** `(X, Y)` level: the pairwise model is Markov in `Z = (X, Y)` (not in `X` alone — the `A^{yx}` block couples `Y_{n+1}` directly to `X_n`), so the smoothing gain `G_n` is a `(dim_x, dim_xy)` matrix mapping the joint `Z`-residual to the `X`-correction. New API: `process_smoother(N, data_generator)` generator and `process_N_data_smoother(N, ...)` eager wrapper, both yielding `(k, x_true, y, X_predict, X_update, X_smooth)`.
+- **Joseph form of the smoother covariance update** (`joseph=True` flag). Explicitly symmetric and PSD-preserving form `P^{xx}_{n|N} = (I, -G_n) Omega_n (I, -G_n)^T + G_n^x P^{xx}_{n+1|N} (G_n^x)^T`, analog of the paper's `PKFJoseph` proposition for the forward step. Agrees with the standard form to machine precision (`~1e-15`) on the linear case; becomes useful for the upcoming nonlinear extensions (EPKF / UPKF smoothers).
+- **`HistoryTracker` public API for indexed access and in-place updates** — `__getitem__`, `__iter__`, `update_record(idx, **fields)`. Two-pass algorithms (smoothers) can now augment forward-pass records without touching the private `_history` list. Backward-compatible: existing callers using `record()` / `last()` / `as_dataframe()` are unaffected.
+- **Linear smoother report** (in a separate doc tree, see `Report/NonLinearSmoothingReport/`) with derivation, Joseph form proof, and reproducibility script for the comparison figures.
+
+### Logging & verbose
+- Module logger `prg.classes.linear_pks` emits `INFO` at backward-pass entry/exit (with `N_records` and `joseph` mode) and `DEBUG` per step (gain norm + traces, gated by `isEnabledFor` to skip formatting cost when off).
+- `verbose > 1` calls `rich_show_fields` on each smoothed record, mirroring the forward-pass display.
+
+### Exception policy
+- `CovarianceError` is raised with `(step, matrix_name)` attributes on backward Cholesky failure of `P^{ZZ}_{n+1|n}` or PSD violation of the smoothed covariance. The standard project taxonomy (`ParamError`, `InvertibilityError`, `NumericalError`, `StepValidationError`, `FilterError`) propagates unwrapped through `process_smoother` and `process_N_data_smoother`.
+
+### Tests
+- **+40 tests in `prg/tests/test_linear_pks.py`** covering shapes, terminal equality, PSD shrinkage of `P^{xx}_{n|n} - P^{xx}_{n|N}`, Joseph form equivalence and shrinkage, augmented-state RTS equivalence (with a standalone reference smoother implementation in the test file), MSE regression on `x1y1` and `x2y2` pairwise models, edge cases (`N=1`, generator semantics, double-call, external `data_generator`, missing ground truth, singular predicted covariance), `HistoryTracker` public-API contracts, full exception taxonomy (`PKFError` root, `ParamError` for invalid `N`), and `caplog`-based assertions on `INFO`/`DEBUG` log emission.
+- Total: 133 tests pass (up from 93).
+
+---
+
 ## [2.1.2] - 2026-05-05
 
 ### Fixed
