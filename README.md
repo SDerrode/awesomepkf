@@ -12,6 +12,7 @@ and **pairwise Kalman smoothers** for offline post-processing:
 - **Extended Pairwise Kalman Smoother (EPKS)** — same recursion with the per-step Jacobian replacing the constant transition matrix.
 - **Unscented Pairwise Kalman Smoother (UPKS)** — sigma-point cross-covariance in the backward pass; supports the same sigma-point sets as the UPKF (`wan2000`, `cpkf`, `lerner2002`, `ito2000`).
 - **Unscented Kalman Smoother (UKS)** — classical (non-pairwise) sigma-point smoother for FxHx models with Markov-in-X assumption; gain `(dim_x, dim_x)`.
+- **Pairwise Particle Smoother (PPS)** — FFBSm (Forward Filtering, Backward Smoothing) on top of the PPF; reweights the forward particle cloud via a backward weight recursion. No closed-form gain.
 
 ---
 
@@ -31,6 +32,7 @@ and **pairwise Kalman smoothers** for offline post-processing:
         - [Extended Pairwise Kalman Smoother (EPKS)](#extended-pairwise-kalman-smoother-epks)
         - [Unscented Pairwise Kalman Smoother (UPKS)](#unscented-pairwise-kalman-smoother-upks)
         - [Unscented Kalman Smoother (UKS)](#unscented-kalman-smoother-uks)
+        - [Pairwise Particle Smoother (PPS)](#pairwise-particle-smoother-pps)
     - [Tutorials](#tutorials)
     - [Usage Examples](#usage-examples)
         - [Simulate Linear Data and Filter with PKF](#simulate-linear-data-and-filter-with-pkf)
@@ -221,6 +223,32 @@ results = uks.process_N_data_smoother(N=300)
 ```
 
 Implementation: [`prg/classes/nonlinear_uks.py`](prg/classes/nonlinear_uks.py). Tests: [`prg/tests/test_nonlinear_uks.py`](prg/tests/test_nonlinear_uks.py) (29 tests).
+
+### Pairwise Particle Smoother (PPS)
+
+The PPS implements **FFBSm** (Forward Filtering, Backward Smoothing) on top of the PPF. The forward pass runs the standard PPF with particle clouds stored at every step; the backward pass reweights those forward particles via:
+
+```
+ŵ_{i,n} = w_{i,n} · Σ_j ŵ_{j,n+1} · p(ξ_{j,n+1} | ξ_{i,n}, y_n) / Σ_l w_{l,n}·p(ξ_{j,n+1} | ξ_{l,n}, y_n)
+```
+
+The smoothed mean and covariance are weighted statistics of the forward particle cloud with the smoothed weights. Complexity is O(N·n_p²) per smoother run (vs O(N·n_p) for the forward).
+
+```python
+from prg.classes.nonlinear_pps import NonLinear_PPS
+from prg.classes.param_nonlinear import ParamNonLinear
+from prg.models.nonlinear import ModelFactoryNonLinear
+
+model  = ModelFactoryNonLinear.create("model_x2_y1_pairwise")
+params = model.get_params().copy()
+dim_x  = params.pop("dim_x");  dim_y = params.pop("dim_y")
+param  = ParamNonLinear(0, dim_x, dim_y, **params)
+
+pps = NonLinear_PPS(param, n_particles=300, sKey=42)
+results = pps.process_N_data_smoother(N=200)
+```
+
+Implementation: [`prg/classes/nonlinear_pps.py`](prg/classes/nonlinear_pps.py). Tests: [`prg/tests/test_nonlinear_pps.py`](prg/tests/test_nonlinear_pps.py) (19 tests, including a Monte-Carlo convergence test that verifies the PPS converges to the exact Linear_PKS as `n_particles` grows on a linear-Gaussian pairwise model).
 
 ---
 

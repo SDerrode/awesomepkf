@@ -11,6 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.6.0] - 2026-05-15
+
+### Added
+
+- **`NonLinear_PPS` — Pairwise Particle Smoother (FFBSm)** ([`prg/classes/nonlinear_pps.py`](prg/classes/nonlinear_pps.py)). Implements *Forward Filtering, Backward Smoothing* (Doucet et al. 2000) on top of the `NonLinear_PPF`. The forward pass runs the standard PPF with `store_particles=True` (forced internally); the backward pass reweights the forward particle cloud via a pairwise transition-density-based recursion. Complexity: O(N·n_p²) for the backward pass. The smoothed mean and covariance are weighted statistics of the forward cloud with the smoothed weights. Log-sum-exp normalisation guards against underflow when the forward and next-step clouds are far apart in state space; degenerate weight fallback follows the same `WARNING` pattern as the parent's `_safe_normalize_log_weights`.
+- **`store_particles` flag on `_BaseParticleFilter`** (and propagated through `NonLinear_PPF.process_filter`). When `True`, the per-step particle cloud and weights are appended to each forward history record via the public `HistoryTracker.update_record` API. Default `False` (no history bloat for regular PF/PPF users); forced `True` by the PPS. Non-breaking additive change.
+- **PPS report section** (`Report/NonLinearSmoothingReport/Sections/Section6_PPS.tex`) with FFBSm derivation for pairwise models, log-sum-exp stability discussion, complexity analysis, and the Monte-Carlo convergence table (PPS → PKS) on a linear-Gaussian pairwise model.
+- **PPS figure generator** (`Report/.../Figures/generate_pps_figure.py`) parametrised by `--n-particles`.
+
+### Caveats
+- **No Joseph form** for the particle smoother — that is a Kalman-family numerical safeguard. The corresponding particle-smoother safeguard is the log-sum-exp normalisation, applied in the backward kernel.
+- **No `Gk_smooth`** field in the history — particle smoothers don't have a gain matrix. Instead, a `w_smooth` field carries the smoothed weights (shape `(n_particles,)`).
+- **Different terminal-step estimator from the PPF.** The PPS smoothed mean at step N uses the raw particle cloud weighted by `weights`, while the PPF `Xkp1_update` uses the Rao-Blackwellised estimator `Σ w_i μ'_x,i`. Both target the same posterior but differ by Monte-Carlo variance.
+
+### Validation
+- **Monte-Carlo convergence to PKS** measured on `model_x1_y1_AQ_pairwise` (linear-Gaussian pairwise model) at fixed seed: RMS deviation from the exact `Linear_PKS` shrinks from ~1.4e-2 (n_p=100) to ~6.7e-3 (n_p=2000), compatible with the standard `O(1/√n_p)` MC rate. Two pytest tests enforce the strict ordering and the absolute bound.
+
+### Tests
+- **+19 tests in `prg/tests/test_nonlinear_pps.py`**: shapes, weight normalisation, terminal `w_smooth = weights` boundary condition, Monte-Carlo convergence to `Linear_PKS` (two tests), edge cases (`N=1`, generator semantics, double-call, external `data_generator`, missing ground truth), exception policy, `caplog`-based logging, regression test on linear pairwise model.
+- Total: 244 tests pass (up from 225).
+
+---
+
 ## [2.5.1] - 2026-05-15
 
 PATCH release: cross-cutting parity pass over the four smoother classes
