@@ -11,6 +11,131 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.8.0] - 2026-05-15
+
+MINOR release: end-to-end GUI integration of the five smoothers shipped
+in v2.2.0–v2.6.0. The PyQt6 GUI (kept under ``prg/gui/`` which is
+gitignored — out-of-tree GUI surface for the project) now exposes every
+smoother through a dedicated tab plus inline checkboxes in the existing
+tabs. This release intentionally has **no committed source diff** in
+``prg/`` proper: the smoother classes themselves were finalised in
+2.2.0–2.6.3, the GUI wiring lives in the gitignored area, and the
+tutorial / report were closed out in 2.6.3 / 2.7.0. The tag marks the
+GUI completeness milestone.
+
+### Added (gitignored ``prg/gui/`` tree — design summary only)
+
+- **``prg/gui/smoother_mapping.py``** — pure-Python filter → smoother
+  registry, with ``SMOOTHER_MAP``, ``SmootherSpec``, ``make_smoother``
+  helper (dispatches per filter to the right constructor signature),
+  ``supports_joseph``, and ``FILTER_SUPPORTS_SMOOTHER``. Imports the
+  five smoother classes directly (``Linear_PKS``, ``NonLinear_EPKS``,
+  ``NonLinear_UPKS``, ``NonLinear_UKS``, ``NonLinear_PPS``); ``pf`` is
+  explicitly mapped to ``None`` and reports ``False`` in
+  ``FILTER_SUPPORTS_SMOOTHER``.
+
+- **``prg/gui/tabs/smoother.py``** — new dedicated **Smoother** tab.
+  Filter dropdown is restricted to the five with smoothers
+  (PKF → PKS, EPKF → EPKS, UPKF → UPKS, UKF → UKS, PPF → PPS). Joseph
+  checkbox auto-disables for PPF. Always runs both passes and shows:
+  - state-estimate plot overlaying filter and smoother traces with
+    ±2σ envelopes,
+  - posterior-covariance trace plot (``trace(P)``) side-by-side for
+    both passes — the envelope shrinkage is visible at a glance,
+  - metrics table comparing MSE / MAE / NEES / NIS for both passes,
+  - **Save Session…** export — config, metrics CSV + LaTeX, history
+    pickle, state and covariance plots.
+
+- **``prg/gui/workers/filter_worker.py``** — extended ``FilterJob`` with
+  ``smoother: bool`` + ``joseph: bool``. Worker now:
+  - runs the forward filter via ``FilterRunner`` (unchanged),
+  - if requested, instantiates the matching smoother through
+    ``make_smoother(...)``, replays the *exact* forward trajectory
+    via ``process_smoother(N=None, data_generator=replay())``,
+  - merges ``Xkp1_smooth`` / ``PXXkp1_smooth`` / ``Gk_smooth`` /
+    ``w_smooth`` into the forward history dicts so a single record
+    stream feeds the plots,
+  - emits a payload that includes ``smoother_used: bool`` plus
+    ``smoother_metrics: {mse_total, mae_total, nees_mean, nis_mean}``.
+
+- **``prg/gui/workers/sweep_worker.py``** — ``SweepJob`` extended with
+  ``smoother`` / ``joseph`` flags. When set, each sweep run also fires
+  the matching backward pass and the result dict gains
+  ``mse_smooth_mean / mse_smooth_std / nees_smooth_mean /
+  nees_smooth_std``. Added support for sweeping ``n_particles``
+  directly (special-cased in ``_one_run``: passed to the runner
+  constructor rather than as a model kwarg).
+
+- **``prg/gui/widgets/filter_picker.py``** — two new checkboxes:
+  *Also run smoother (backward pass)* (greyed out for PF, which has
+  no smoother in this release) and *Joseph form (Kalman family only)*
+  (greyed out for PF / PPF). ``also_smoother()`` and ``joseph_form()``
+  accessors honour the enabled-state so callers never see a stale
+  combination.
+
+- **``prg/gui/session.py``** — ``SessionConfig`` extended with
+  optional ``smoother: bool = False`` and ``joseph: bool = False``
+  fields. Persisted to/from TOML under ``[filter].smoother`` /
+  ``[filter].joseph`` so demo presets and saved sessions can pre-tick
+  the smoother flow.
+
+- **``prg/gui/tabs/single_run.py``** — propagates the new checkbox
+  values into ``FilterJob``. When a smoother pass is included in the
+  payload, the **State estimate** plot adds a green smoother trace +
+  envelope alongside the orange filter trace, and the metrics table
+  shows two columns (e.g. *PKF* + *PKS*).
+
+- **``prg/gui/tabs/comparison.py``** — shared *Also run smoothers* +
+  *Joseph form* toggles. PF jobs ignore the smoother flag gracefully
+  (``FILTER_SUPPORTS_SMOOTHER`` gating). The metrics table reorders
+  columns so each smoother sits next to its filter (PKF | PKS |
+  EPKF | EPKS | …); the comparison plot uses dashed lines in the
+  matching colour for smoother traces.
+
+- **``prg/gui/tabs/sensitivity.py``** — same two checkboxes; sweepable
+  parameters now include ``n_particles`` (integer) in addition to the
+  three universal tuning knobs (alpha, beta, kappa); the MSE / NEES
+  plots overlay dashed smoother curves alongside the solid filter ones.
+
+- **``prg/gui/main_window.py``** — registers the new **Smoother** tab
+  between *Single Run* and *Comparison*; ``Load config…`` now applies
+  to all four downstream tabs; loading a preset with ``smoother=True``
+  jumps to the Smoother tab instead of Single Run.
+
+- **5 new demo presets** in ``prg/gui/presets/`` (auto-loaded by the
+  Demo Gallery):
+  - ``11_pks_linear_pairwise.toml`` — PKF + PKS reference run
+    (linear pairwise model, paper §2.5).
+  - ``12_epks_retroactions.toml`` — EPKF + EPKS on the retroactions
+    pairwise model.
+  - ``13_upks_retroactions.toml`` — UPKF + UPKS (Wan2000 sigma points)
+    on the same model.
+  - ``14_uks_multiplicative_augmented.toml`` — UKF + UKS on the
+    augmented multiplicative model.
+  - ``15_pps_retroactions.toml`` — PPF + PPS (FFBSm) on the
+    retroactions model, 300 particles.
+
+### Verification (headless, ``QT_QPA_PLATFORM=offscreen``)
+
+- All six filter cases (PKF, EPKF, UPKF, UKF, PPF, PF) drive the worker
+  cleanly with ``smoother=True``; PF gracefully reports
+  ``smoother_used=False`` since no PF smoother is registered.
+- PKF + PKS on a 50-step linear pairwise trajectory: filter MSE 0.0073,
+  smoother MSE 0.0063 (≈ 13 % reduction — within the expected RTS
+  envelope shrinkage).
+- All 15 demo presets (10 legacy + 5 new) load through ``load_config``,
+  apply to the SmootherTab, and route correctly through the
+  ``MainWindow._apply_preset`` dispatch.
+- Full ``MainWindow`` constructs with 5 tabs in the expected order.
+
+### Tests
+
+- No new tests (per user spec: "Sans tests" for the GUI surface).
+- 247 ``prg/`` tests still pass; no code changes under ``prg/``
+  proper (only under the gitignored ``prg/gui/`` subtree).
+
+---
+
 ## [2.7.0] - 2026-05-15
 
 MINOR release: adds the smoother tutorial and links it from the four
