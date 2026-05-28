@@ -170,6 +170,14 @@ class TestNonLinearUKSSigmaPointSets:
         res = uks.process_N_data_smoother(N=50)
         assert len(res) == 51
 
+    @pytest.mark.parametrize("sigma_set", ["wan2000", "cpkf", "lerner2002", "ito2000"])
+    def test_covariances_and_gains_are_finite_for_each_sigma_set(self, param_nl_classic_x2y1, sigma_set):
+        uks = NonLinear_UKS(param_nl_classic_x2y1, sigmaSet=sigma_set, sKey=SEED)
+        uks.process_N_data_smoother(N=30)
+        for rec in uks.history:
+            assert np.isfinite(rec["PXXkp1_smooth"]).all()
+            assert np.isfinite(rec["Gk_smooth"]).all()
+
     def test_unknown_sigma_set_raises_paramerror(self, param_nl_classic_x2y1):
         from prg.utils.exceptions import ParamError
         with pytest.raises(ParamError):

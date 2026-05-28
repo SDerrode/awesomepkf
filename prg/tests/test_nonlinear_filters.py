@@ -78,3 +78,18 @@ class TestUPKF:
         upd_u = np.array([r[4] for r in res_u[-50:]])
         mean_diff = float(np.mean(np.abs(upd_e - upd_u)))
         assert mean_diff < 5.0, f"EPKF and UPKF diverged too much: {mean_diff:.3f}"
+
+    @pytest.mark.parametrize("sigma_set", ["wan2000", "cpkf", "lerner2002", "ito2000"])
+    def test_sigma_set_mse_guard_against_wan2000(self, param_nl_x2y1, sigma_set):
+        upkf_ref = NonLinear_UPKF(param_nl_x2y1, sigmaSet="wan2000", sKey=SEED)
+        res_ref = upkf_ref.process_N_data(N=N_SHORT)
+        mse_ref = float(np.mean([np.sum((r[1] - r[4]) ** 2) for r in res_ref if r[1] is not None]))
+
+        upkf_alt = NonLinear_UPKF(param_nl_x2y1, sigmaSet=sigma_set, sKey=SEED)
+        res_alt = upkf_alt.process_N_data(N=N_SHORT)
+        mse_alt = float(np.mean([np.sum((r[1] - r[4]) ** 2) for r in res_alt if r[1] is not None]))
+
+        assert mse_alt <= 4.0 * mse_ref + 1e-12, (
+            f"UPKF({sigma_set}) MSE unexpectedly large vs wan2000 "
+            f"(alt={mse_alt:.4f}, ref={mse_ref:.4f})"
+        )
