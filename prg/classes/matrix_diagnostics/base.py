@@ -59,11 +59,13 @@ class _BaseMatrixDiagnostic:
 
     def is_ok(self) -> bool:
         """True only if all checks are OK (no warnings, no failures)."""
-        return self.check().is_ok
+        report = self.check()
+        return report.is_ok
 
     def is_valid(self) -> bool:
         """True if no check is FAIL (warnings tolerated)."""
-        return self.check().is_valid
+        report = self.check()
+        return report.is_valid
 
     def summary(self) -> None:
         print(self.check())

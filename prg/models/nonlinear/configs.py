@@ -137,6 +137,16 @@ def _sm_x2_y2_pairwise(sx, sy, st, su):
     return sgx, sgy
 
 
+def _sm_x1_y1_sincoupling(sx, sy, st, su):
+    # Strongly-curved pairwise coupling (high-frequency sine): bounded → stable,
+    # but enough curvature over the filter spread that the unscented transform
+    # (UPKF/UPKS) departs markedly from the first-order linearization (EPKF/EPKS).
+    x, y, t, u = sx[0], sy[0], st[0], su[0]
+    sgx = sp.Matrix([0.8 * x + 1.5 * sp.sin(2.5 * y) + t])
+    sgy = sp.Matrix([0.6 * y + 1.2 * sp.sin(2.5 * x) + u])
+    return sgx, sgy
+
+
 # Lotka-Volterra needs both a custom symbolic_model (with class consts)
 # AND a custom init_hook for mQ/mz0 around the equilibrium point.
 _LV = {
@@ -197,6 +207,10 @@ NONLINEAR_CONFIGS: dict[str, NonLinearSpec] = {
     ),
     "model_x2_y2_pairwise": NonLinearSpec(
         dim_x=2, dim_y=2, form="gxgy", symbolic_model=_sm_x2_y2_pairwise, val_max=0.15,
+    ),
+    "model_x1_y1_SinCoupling_pairwise": NonLinearSpec(
+        dim_x=1, dim_y=1, form="gxgy",
+        symbolic_model=_sm_x1_y1_sincoupling, val_max=1.0,
     ),
     "model_x1_y1_LotkaVolterra_pairwise": NonLinearSpec(
         dim_x=1, dim_y=1, form="gxgy",

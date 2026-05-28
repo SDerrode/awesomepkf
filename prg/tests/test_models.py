@@ -66,8 +66,21 @@ class TestNonlinearModels:
         assert m.dim_y == 1
         assert m.dim_xy == 2
 
+    def test_x1y1_sincoupling_dimensions(self):
+        m = ModelFactoryNonLinear.create("model_x1_y1_SinCoupling_pairwise")
+        assert m.dim_x == 1
+        assert m.dim_y == 1
+        assert m.dim_xy == 2
+
     def test_transition_callable(self):
         m = ModelFactoryNonLinear.create("model_x2_y1_pairwise")
+        z = np.zeros((m.dim_xy, 1))
+        noise = np.zeros((m.dim_xy, 1))
+        result = m.g(z, noise, dt=1)
+        assert result.shape == (m.dim_xy, 1)
+
+    def test_transition_callable_sincoupling(self):
+        m = ModelFactoryNonLinear.create("model_x1_y1_SinCoupling_pairwise")
         z = np.zeros((m.dim_xy, 1))
         noise = np.zeros((m.dim_xy, 1))
         result = m.g(z, noise, dt=1)
