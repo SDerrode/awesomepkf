@@ -408,6 +408,7 @@ awesomepkf-ppf  --nonlinear-model-name "model_x2_y1_pairwise" --data-filename "t
 │   │   ├── test_nonlinear_uks.py
 │   │   ├── test_nonlinear_upks.py
 │   │   ├── test_particle_filters.py
+│   │   ├── test_sigma_points_set.py
 │   │   ├── test_simulators.py
 │   │   └── test_utils_io.py
 │   ├── utils/
