@@ -219,9 +219,10 @@ class NonLinear_UPKS(NonLinear_UPKF):
         )
 
         # Terminal step initialisation
-        last = self.history[N_records - 1]
+        last_idx = N_records - 1
+        last = self.history[last_idx]
         self.history.update_record(
-            N_records - 1,
+            last_idx,
             Xkp1_smooth=last["Xkp1_update"].copy(),
             PXXkp1_smooth=last["PXXkp1_update"].copy(),
             Gk_smooth=np.zeros((self.dim_x, self.dim_xy)),

@@ -208,9 +208,10 @@ class NonLinear_UKS(NonLinear_UKF):
 
         # Terminal step: smoother = filter at n = N. Unlike the pairwise
         # variants the smoothing gain at the terminal step is (dim_x, dim_x).
-        last = self.history[N_records - 1]
+        last_idx = N_records - 1
+        last = self.history[last_idx]
         self.history.update_record(
-            N_records - 1,
+            last_idx,
             Xkp1_smooth=last["Xkp1_update"].copy(),
             PXXkp1_smooth=last["PXXkp1_update"].copy(),
             Gk_smooth=np.zeros((self.dim_x, self.dim_x)),

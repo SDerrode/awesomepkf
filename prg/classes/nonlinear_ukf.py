@@ -81,12 +81,13 @@ class NonLinear_UKF(PKF):
 
         super().__init__(param, sKey, verbose)
 
+        available_sigma_sets = tuple(SigmaPointsSet.registry)
         try:
             cls = SigmaPointsSet.registry[sigmaSet]
         except KeyError as e:
             raise ParamError(
                 f"Unknown sigma-point set: {sigmaSet!r}. "
-                f"Available: {list(SigmaPointsSet.registry.keys())}."
+                f"Available: {available_sigma_sets}."
             ) from e
 
         if self.param.pairwiseModel:

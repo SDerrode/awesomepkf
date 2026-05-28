@@ -141,9 +141,10 @@ class SigmaPointsSet(ABC):
             If the sum of ``Wm`` deviates from 1 by more than ``EPS_ABS``
             before normalization.
         """
-        if not np.isclose(Wm.sum(), 1.0, atol=EPS_ABS):
-            raise ParamError(f"Wm weights do not sum to 1 (sum={Wm.sum():.6f}).")
-        return Wm / Wm.sum()
+        weight_sum = float(Wm.sum())
+        if not np.isclose(weight_sum, 1.0, atol=EPS_ABS):
+            raise ParamError(f"Wm weights do not sum to 1 (sum={weight_sum:.6f}).")
+        return Wm / weight_sum
 
     @staticmethod
     def _as_column(x: np.ndarray) -> np.ndarray:
