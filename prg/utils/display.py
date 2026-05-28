@@ -45,17 +45,20 @@ def rich_show_fields(
     max_items : int, optional
         Maximum number of items shown for arrays and lists (default ``10``).
     """
+    data: dict[str, Any]
     if is_dataclass(d):
-        d = asdict(d)
+        data = asdict(d)
+    else:
+        data = d
 
     if fields is None:
-        fields = list(d.keys())
+        fields = list(data.keys())
 
     table = Table(title=title)
     table.add_column("Field", no_wrap=True)
     table.add_column("Value", justify="left")
 
-    def format_value(obj) -> str:
+    def format_value(obj: Any) -> str:
         """Recursive formatter for scientific display."""
         if isinstance(obj, np.generic):
             obj = obj.item()
@@ -78,10 +81,10 @@ def rich_show_fields(
         return str(obj)
 
     for key in fields:
-        if key in d:
+        if key in data:
             table.add_row(
                 Text(key, style="cyan"),
-                Text(format_value(d[key]), style="magenta"),
+                Text(format_value(data[key]), style="magenta"),
             )
 
     console.print(table)

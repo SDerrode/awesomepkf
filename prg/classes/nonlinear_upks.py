@@ -18,6 +18,7 @@ from prg.classes.param_linear import ParamLinear
 from prg.classes.param_nonlinear import ParamNonLinear
 from prg.utils.display import rich_show_fields
 from prg.utils.exceptions import CovarianceError, FilterError
+
 # NOTE: ParamError, InvertibilityError, NumericalError and StepValidationError
 # may propagate from the inherited forward pass.
 

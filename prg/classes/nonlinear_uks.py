@@ -23,6 +23,7 @@ from prg.classes.param_linear import ParamLinear
 from prg.classes.param_nonlinear import ParamNonLinear
 from prg.utils.display import rich_show_fields
 from prg.utils.exceptions import CovarianceError, FilterError
+
 # NOTE: ParamError, InvertibilityError, NumericalError and StepValidationError
 # may propagate from the inherited forward pass (cf. NonLinear_UKF.process_filter);
 # they are listed in the Raises docstrings but not imported here as they are

@@ -15,9 +15,15 @@ class CheckResult:
     threshold: float | None
     message: str
 
+    @staticmethod
+    def _format_float_or_none(value: float | None, label: str) -> str:
+        if value is None:
+            return ""
+        return f"  [{label}: {value:.6g}]"
+
     def __str__(self) -> str:
-        thr = f"  (threshold: {self.threshold})" if self.threshold is not None else ""
-        val = f"  [value: {self.value:.6g}]" if self.value is not None else ""
+        thr = self._format_float_or_none(self.threshold, "threshold")
+        val = self._format_float_or_none(self.value, "value")
         return f"  {self.status!s:<14}  {self.name}{val}{thr}\n    → {self.message}"
 
 
@@ -28,11 +34,23 @@ class DiagnosticReport:
     dtype: str
     checks: list[CheckResult] = field(default_factory=list)
 
+    def _aggregate_status(self) -> tuple[bool, bool]:
+        has_warning = False
+        has_fail = False
+        for check in self.checks:
+            if check.status == Status.FAIL:
+                has_fail = True
+                break
+            if check.status == Status.WARNING:
+                has_warning = True
+        return has_warning, has_fail
+
     @property
     def overall_status(self) -> Status:
-        if any(c.status == Status.FAIL for c in self.checks):
+        has_warning, has_fail = self._aggregate_status()
+        if has_fail:
             return Status.FAIL
-        if any(c.status == Status.WARNING for c in self.checks):
+        if has_warning:
             return Status.WARNING
         return Status.OK
 

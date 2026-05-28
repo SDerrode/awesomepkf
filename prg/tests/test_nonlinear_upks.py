@@ -83,7 +83,7 @@ class TestNonLinearUPKSJosephForm:
         upks_jos = NonLinear_UPKS(param, sigmaSet=SIGMA_SET, sKey=SEED, joseph=True)
         res_std = upks_std.process_N_data_smoother(N=N_SHORT)
         res_jos = upks_jos.process_N_data_smoother(N=N_SHORT)
-        for a, b in zip(res_std, res_jos):
+        for a, b in zip(res_std, res_jos, strict=True):
             assert np.allclose(a[5], b[5], atol=self.JOSEPH_EQ_TOL)
 
     @pytest.mark.parametrize("param_fixture", ["param_nl_x1y1", "param_nl_x2y1"])
@@ -93,7 +93,7 @@ class TestNonLinearUPKSJosephForm:
         upks_jos = NonLinear_UPKS(param, sigmaSet=SIGMA_SET, sKey=SEED, joseph=True)
         upks_std.process_N_data_smoother(N=N_SHORT)
         upks_jos.process_N_data_smoother(N=N_SHORT)
-        for r1, r2 in zip(upks_std.history, upks_jos.history):
+        for r1, r2 in zip(upks_std.history, upks_jos.history, strict=True):
             diff = np.max(np.abs(r1["PXXkp1_smooth"] - r2["PXXkp1_smooth"]))
             assert diff < self.JOSEPH_EQ_TOL
 
@@ -177,12 +177,11 @@ class TestNonLinearUPKSEdgeCases:
         triplets = [(r[0], r[1], r[2]) for r in ref]
 
         def replay():
-            for k, x, y in triplets:
-                yield k, x, y
+            yield from triplets
 
         upks_ext = NonLinear_UPKS(param_nl_x2y1, sigmaSet=SIGMA_SET, sKey=SEED)
         ext = upks_ext.process_N_data_smoother(N=30, data_generator=replay())
-        for a, b in zip(ref, ext):
+        for a, b in zip(ref, ext, strict=True):
             assert np.allclose(a[4], b[4], atol=SHAPE_TOL)
             assert np.allclose(a[5], b[5], atol=SHAPE_TOL)
 

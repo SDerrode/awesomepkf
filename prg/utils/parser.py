@@ -6,7 +6,7 @@ def int_ge_1(value: str) -> int:
     """Parse *value* as ``int`` and verify it is ≥ 1."""
     try:
         ivalue = int(value)
-    except ValueError as e:
+    except (TypeError, ValueError) as e:
         raise argparse.ArgumentTypeError(f"{value!r} is not a valid integer") from e
 
     if ivalue < 1:
@@ -19,7 +19,7 @@ def int_ge_1(value: str) -> int:
 # Optional options configuration
 # ---------------------------------------------------------------------------
 
-_OPTION_CONFIG: dict = {
+_OPTION_CONFIG: dict[str, dict[str, object]] = {
     "N": {
         "type": int_ge_1,
         "default": None,
@@ -65,6 +65,7 @@ _OPTION_CONFIG: dict = {
         "help": "Filter type to use (default: None)",
     },
 }
+_AVAILABLE_OPTIONS = tuple(_OPTION_CONFIG)
 
 
 # ---------------------------------------------------------------------------
@@ -114,7 +115,7 @@ def add_arguments(parser: argparse.ArgumentParser, list_options: list[str]) -> N
             # FIX: unknown option → explicit warning instead of silently ignoring
             warnings.warn(
                 f"add_arguments: unknown option {opt!r} ignored "
-                f"(available options: {list(_OPTION_CONFIG)})",
+                f"(available options: {_AVAILABLE_OPTIONS})",
                 UserWarning,
                 stacklevel=2,
             )

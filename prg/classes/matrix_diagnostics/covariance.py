@@ -172,6 +172,47 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
     # Regularisation
     # -------------------------------------------------------
 
+    def _auto_eps_from_spectrum(self, min_eig: float, max_eig: float) -> float:
+        """
+        Compute the automatic Tikhonov regularization factor from spectrum bounds.
+
+        Parameters
+        ----------
+        min_eig : float
+            Smallest eigenvalue of the symmetrized covariance matrix.
+        max_eig : float
+            Largest eigenvalue of the symmetrized covariance matrix.
+
+        Returns
+        -------
+        float
+            Regularization ``eps`` selected from eigenvalue and conditioning
+            criteria. Returns ``0.0`` when matrix is already numerically healthy.
+        """
+        eigenvalue_ok = min_eig > self.tol.eigenvalue_warn
+        # Avoids cond(NaN) if max_eig ~ 0; also protects division.
+        if max_eig > 0.0 and min_eig > 0.0:
+            cond = max_eig / min_eig  # equivalent to np.linalg.cond for SPD
+        else:
+            cond = np.inf
+        condition_ok = cond < self.tol.condition_fail
+
+        if eigenvalue_ok and condition_ok:
+            # Matrix already healthy — no regularisation needed.
+            return 0.0
+
+        # eps must simultaneously:
+        #   1. make lambda_min strictly positive (if needed)
+        #   2. lower conditioning below condition_fail threshold.
+        eps_for_eigenvalue = (
+            abs(min_eig) + self.tol.eigenvalue_warn * 10 if not eigenvalue_ok else 0.0
+        )
+        eps_for_condition = (
+            max_eig / self.tol.condition_fail - min_eig if not condition_ok else 0.0
+        )
+        # x10 safety factor to keep a comfortable numerical margin.
+        return max(eps_for_eigenvalue, eps_for_condition) * 10
+
     def regularize(self, eps: float | None = None) -> RegularizationResult:
         """
         Tikhonov regularisation: M_reg = (M + M.T)/2 + ε * I.
@@ -230,35 +271,7 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
 
         # --- Automatic computation of ε ---
         if eps is None:
-            # Evaluates both failure criteria
-            eigenvalue_ok = min_eig > self.tol.eigenvalue_warn
-            # Avoids cond(NaN) if max_eig ~ 0; also protects division
-            if max_eig > 0.0 and min_eig > 0.0:
-                cond = max_eig / min_eig  # equivalent to np.linalg.cond for SPD
-            else:
-                cond = np.inf
-            condition_ok = cond < self.tol.condition_fail
-
-            if eigenvalue_ok and condition_ok:
-                # Matrix already healthy — no regularisation needed
-                eps = 0.0
-            else:
-                # ε must simultaneously:
-                #   1. make λ_min strictly positive (if needed)
-                #   2. lower the conditioning below condition_fail
-                #      by raising λ_min up to λ_max / condition_fail
-                eps_for_eigenvalue = (
-                    abs(min_eig) + self.tol.eigenvalue_warn * 10
-                    if not eigenvalue_ok
-                    else 0.0
-                )
-                eps_for_condition = (
-                    max_eig / self.tol.condition_fail - min_eig
-                    if not condition_ok
-                    else 0.0
-                )
-                # Facteur ×10 pour garantir une marge confortable
-                eps = max(eps_for_eigenvalue, eps_for_condition) * 10
+            eps = self._auto_eps_from_spectrum(min_eig=min_eig, max_eig=max_eig)
 
         M_reg = M_sym + eps * np.eye(self._n)
 

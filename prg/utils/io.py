@@ -147,23 +147,26 @@ def read_unknown_file(
     Exception
         Any I/O or parsing error is logged and re-raised.
     """
+    if not isinstance(nrows_detect, int) or nrows_detect < 1:
+        raise ValueError(f"nrows_detect must be an integer >= 1, got {nrows_detect!r}.")
+
+    path = Path(filepath)
     # FIX: Path.suffix used instead of os.path.splitext (pathlib already imported)
-    ext = Path(filepath).suffix.lower()
+    ext = path.suffix.lower()
     # FIX: bare try/except with raise removed (added nothing)
-    with Path(filepath).open("rb") as f:
+    with path.open("rb") as f:
         raw_data = f.read(50_000)
         enc_info = chardet.detect(raw_data)
         encoding = enc_info["encoding"] or "utf-8"
         _confidence = enc_info.get("confidence", 0)
     if ext == ".parquet":
-        return pd.read_parquet(filepath)
+        return pd.read_parquet(path)
     if ext == ".json":
-        return pd.read_json(filepath, encoding=encoding)
+        return pd.read_json(path, encoding=encoding)
     if ext in (".xlsx", ".xls"):
-        return pd.read_excel(filepath)
+        return pd.read_excel(path)
     if ext in (".csv", ".txt", ".dat", ".tsv", ""):
-
-        with Path(filepath).open(encoding=encoding) as f:
+        with path.open(encoding=encoding) as f:
             sample_lines = [next(f, "") for _ in range(min(nrows_detect, 10))]
         sample = "".join(sample_lines)
 
@@ -177,8 +180,8 @@ def read_unknown_file(
 
         header = 0 if has_header else None
         if sep is None:
-            return pd.read_csv(filepath, header=header, encoding=encoding)
-        return pd.read_csv(filepath, sep=sep, header=header, encoding=encoding)
+            return pd.read_csv(path, header=header, encoding=encoding)
+        return pd.read_csv(path, sep=sep, header=header, encoding=encoding)
 
     raise ValueError(f"Unrecognised file format: {ext}")
 

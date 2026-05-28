@@ -95,7 +95,7 @@ class TestLinearPKSJosephForm:
         pks_jos = Linear_PKS(param, sKey=SEED, joseph=True)
         res_std = pks_std.process_N_data_smoother(N=N_SHORT)
         res_jos = pks_jos.process_N_data_smoother(N=N_SHORT)
-        for a, b in zip(res_std, res_jos):
+        for a, b in zip(res_std, res_jos, strict=True):
             assert np.allclose(a[5], b[5], atol=self.JOSEPH_EQ_TOL)
 
     @pytest.mark.parametrize("param_fixture", ["param_x1y1", "param_x2y2"])
@@ -106,7 +106,7 @@ class TestLinearPKSJosephForm:
         pks_jos = Linear_PKS(param, sKey=SEED, joseph=True)
         pks_std.process_N_data_smoother(N=N_SHORT)
         pks_jos.process_N_data_smoother(N=N_SHORT)
-        for r1, r2 in zip(pks_std.history, pks_jos.history):
+        for r1, r2 in zip(pks_std.history, pks_jos.history, strict=True):
             diff = np.max(np.abs(r1["PXXkp1_smooth"] - r2["PXXkp1_smooth"]))
             assert diff < self.JOSEPH_EQ_TOL, (
                 f"Step {r1['k']}: |P_std - P_joseph| = {diff:.2e}"
@@ -195,8 +195,10 @@ def _reference_augmented_rts_smoother(pkf_history, A, BQBT, dim_x, dim_y):
         P_smooth[n] = 0.5 * (P_smooth[n] + P_smooth[n].T)
 
     # Return X-block only (analog of what Linear_PKS yields)
-    return [(z[:dim_x].copy(), P[:dim_x, :dim_x].copy())
-            for z, P in zip(Z_smooth, P_smooth)]
+    return [
+        (z[:dim_x].copy(), P[:dim_x, :dim_x].copy())
+        for z, P in zip(Z_smooth, P_smooth, strict=True)
+    ]
 
 
 class TestLinearPKSAugmentedRTSEquivalence:
@@ -222,13 +224,15 @@ class TestLinearPKSAugmentedRTSEquivalence:
         )
 
         # Compare smoothed means
-        for (k, _xt, _y, _xp, _xu, x_smooth), (Xs_ref, _) in zip(res, ref):
+        for (k, _xt, _y, _xp, _xu, x_smooth), (Xs_ref, _) in zip(
+            res, ref, strict=True
+        ):
             assert np.max(np.abs(x_smooth - Xs_ref)) < self.EQ_TOL, (
                 f"Step {k}: mean mismatch between Linear_PKS and augmented RTS"
             )
 
         # Compare smoothed covariances
-        for rec, (_, Ps_ref) in zip(pks.history, ref):
+        for rec, (_, Ps_ref) in zip(pks.history, ref, strict=True):
             diff = np.max(np.abs(rec["PXXkp1_smooth"] - Ps_ref))
             assert diff < self.EQ_TOL, (
                 f"Step {rec['k']}: |P_pks - P_aug_rts| = {diff:.2e}"
@@ -271,7 +275,7 @@ class TestLinearPKSAugmentedRTSEquivalence:
             Z_smooth[n] = Z_filt[n] + C @ (Z_smooth[n + 1] - Z_pred[n + 1])
 
         # Verify Y-block of Z_smooth equals y_n at every step
-        for n, (z_s, rec) in enumerate(zip(Z_smooth, pks.history)):
+        for n, (z_s, rec) in enumerate(zip(Z_smooth, pks.history, strict=True)):
             y_smooth = z_s[param.dim_x:]
             y_obs = rec["ykp1"]
             assert np.allclose(y_smooth, y_obs, atol=self.EQ_TOL), (
@@ -320,7 +324,7 @@ class TestLinearPKSEdgeCases:
         res1 = pks.process_N_data_smoother(N=N_SHORT)
         res2 = pks.process_N_data_smoother(N=N_SHORT)
         assert len(res1) == len(res2) == N_SHORT + 1
-        for a, b in zip(res1, res2):
+        for a, b in zip(res1, res2, strict=True):
             # Same seed, same simulated trajectory not guaranteed — but
             # both runs return the same number of records and consistent
             # shapes. Stronger: smoothed and filtered should match
@@ -353,13 +357,12 @@ class TestLinearPKSEdgeCases:
         # Now replay through an external generator and check the smoother
         # produces the same outputs.
         def replay():
-            for k, x, y in triplets:
-                yield k, x, y
+            yield from triplets
 
         pks_ext = Linear_PKS(param_x1y1, sKey=SEED)
         ext = pks_ext.process_N_data_smoother(N=50, data_generator=replay())
         assert len(ext) == len(ref)
-        for a, b in zip(ref, ext):
+        for a, b in zip(ref, ext, strict=True):
             assert np.allclose(a[4], b[4], atol=SHAPE_TOL)  # filtered
             assert np.allclose(a[5], b[5], atol=SHAPE_TOL)  # smoothed
 
@@ -461,8 +464,9 @@ class TestLinearPKSExceptionPolicy:
     def test_pkferror_root_catches_smoother_errors(self, param_x1y1):
         """All smoother errors derive from ``PKFError``, so catching the
         root class is sufficient to intercept any domain failure."""
-        from prg.utils.exceptions import PKFError
         import copy
+
+        from prg.utils.exceptions import PKFError
         param_bad = copy.copy(param_x1y1)
         param_bad._mQ = np.zeros_like(param_bad._mQ)
         pks = Linear_PKS(param_bad, sKey=SEED)

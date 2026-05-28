@@ -114,7 +114,7 @@ class TestNonLinearUKSJosephForm:
         uks_jos = NonLinear_UKS(param, sigmaSet=SIGMA_SET, sKey=SEED, joseph=True)
         res_std = uks_std.process_N_data_smoother(N=N_SHORT)
         res_jos = uks_jos.process_N_data_smoother(N=N_SHORT)
-        for a, b in zip(res_std, res_jos):
+        for a, b in zip(res_std, res_jos, strict=True):
             assert np.allclose(a[5], b[5], atol=self.JOSEPH_EQ_TOL)
 
     @pytest.mark.parametrize(
@@ -127,7 +127,7 @@ class TestNonLinearUKSJosephForm:
         uks_jos = NonLinear_UKS(param, sigmaSet=SIGMA_SET, sKey=SEED, joseph=True)
         uks_std.process_N_data_smoother(N=N_SHORT)
         uks_jos.process_N_data_smoother(N=N_SHORT)
-        for r1, r2 in zip(uks_std.history, uks_jos.history):
+        for r1, r2 in zip(uks_std.history, uks_jos.history, strict=True):
             diff = np.max(np.abs(r1["PXXkp1_smooth"] - r2["PXXkp1_smooth"]))
             assert diff < self.JOSEPH_EQ_TOL
 
@@ -205,12 +205,11 @@ class TestNonLinearUKSEdgeCases:
         triplets = [(r[0], r[1], r[2]) for r in ref]
 
         def replay():
-            for k, x, y in triplets:
-                yield k, x, y
+            yield from triplets
 
         uks_ext = NonLinear_UKS(param_nl_classic_x2y1, sigmaSet=SIGMA_SET, sKey=SEED)
         ext = uks_ext.process_N_data_smoother(N=30, data_generator=replay())
-        for a, b in zip(ref, ext):
+        for a, b in zip(ref, ext, strict=True):
             assert np.allclose(a[4], b[4], atol=SHAPE_TOL)
             assert np.allclose(a[5], b[5], atol=SHAPE_TOL)
 

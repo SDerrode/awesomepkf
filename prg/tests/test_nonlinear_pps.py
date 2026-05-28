@@ -9,7 +9,6 @@ import pytest
 from prg.classes.linear_pks import Linear_PKS
 from prg.classes.nonlinear_pps import NonLinear_PPS
 from prg.classes.param_linear import ParamLinear
-from prg.classes.param_nonlinear import ParamNonLinear
 from prg.models.linear import ModelFactoryLinear
 from prg.utils.exceptions import CovarianceError, ParamError, PKFError
 
@@ -224,15 +223,14 @@ class TestNonLinearPPSEdgeCases:
         triplets = [(r[0], r[1], r[2]) for r in ref]
 
         def replay():
-            for k, x, y in triplets:
-                yield k, x, y
+            yield from triplets
 
         pps_ext = NonLinear_PPS(
             param_nl_x2y1, n_particles=N_PARTICLES_SHORT, sKey=SEED,
         )
         ext = pps_ext.process_N_data_smoother(N=20, data_generator=replay())
         assert len(ext) == len(ref)
-        for a, b in zip(ref, ext):
+        for a, b in zip(ref, ext, strict=True):
             assert a[0] == b[0]                # step index
             assert a[4].shape == b[4].shape    # filter shape
             assert a[5].shape == b[5].shape    # smoother shape
@@ -319,8 +317,6 @@ class TestNonLinearPPSExceptionPolicy:
         emit a single ``WARNING`` per offending step. We force the
         condition by monkey-patching the backward kernel inputs."""
         from prg.classes import nonlinear_pps as pps_mod
-        original_einsum = pps_mod.np.einsum
-
         # Run a normal forward + backward to verify the WARNING path is
         # exercised under conditions where the unnormalised weights vanish.
         # Easiest reliable trigger: force the backward `np.exp` of an

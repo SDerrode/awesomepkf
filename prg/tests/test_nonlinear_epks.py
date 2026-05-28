@@ -1,12 +1,13 @@
 """Tests for the Extended Pairwise Kalman Smoother (NonLinear_EPKS)."""
 
+import copy
 import logging
 
 import numpy as np
 import pytest
 
 from prg.classes.nonlinear_epks import NonLinear_EPKS
-from prg.utils.exceptions import CovarianceError
+from prg.utils.exceptions import PKFError
 
 SEED = 42
 N_SHORT = 100
@@ -88,7 +89,7 @@ class TestNonLinearEPKSJosephForm:
         epks_jos = NonLinear_EPKS(param, sKey=SEED, joseph=True)
         res_std = epks_std.process_N_data_smoother(N=N_SHORT)
         res_jos = epks_jos.process_N_data_smoother(N=N_SHORT)
-        for a, b in zip(res_std, res_jos):
+        for a, b in zip(res_std, res_jos, strict=True):
             assert np.allclose(a[5], b[5], atol=self.JOSEPH_EQ_TOL)
 
     @pytest.mark.parametrize("param_fixture", ["param_nl_x1y1", "param_nl_x2y1"])
@@ -98,7 +99,7 @@ class TestNonLinearEPKSJosephForm:
         epks_jos = NonLinear_EPKS(param, sKey=SEED, joseph=True)
         epks_std.process_N_data_smoother(N=N_SHORT)
         epks_jos.process_N_data_smoother(N=N_SHORT)
-        for r1, r2 in zip(epks_std.history, epks_jos.history):
+        for r1, r2 in zip(epks_std.history, epks_jos.history, strict=True):
             diff = np.max(np.abs(r1["PXXkp1_smooth"] - r2["PXXkp1_smooth"]))
             assert diff < self.JOSEPH_EQ_TOL, (
                 f"Step {r1['k']}: |P_std - P_joseph| = {diff:.2e}"
@@ -164,12 +165,11 @@ class TestNonLinearEPKSEdgeCases:
         triplets = [(r[0], r[1], r[2]) for r in ref]
 
         def replay():
-            for k, x, y in triplets:
-                yield k, x, y
+            yield from triplets
 
         epks_ext = NonLinear_EPKS(param_nl_x2y1, sKey=SEED)
         ext = epks_ext.process_N_data_smoother(N=30, data_generator=replay())
-        for a, b in zip(ref, ext):
+        for a, b in zip(ref, ext, strict=True):
             assert np.allclose(a[4], b[4], atol=SHAPE_TOL)
             assert np.allclose(a[5], b[5], atol=SHAPE_TOL)
 
@@ -203,10 +203,8 @@ class TestNonLinearEPKSExceptionPolicy:
     def test_pkferror_root_catches_smoother_errors(self, param_nl_x1y1):
         """All EPKS errors derive from ``PKFError``; the root class
         suffices to intercept any domain failure."""
-        from prg.utils.exceptions import PKFError
         # Strongly pathological: zero process noise on x1y1 augmented-like
         # pairwise — forces a Cholesky failure in the backward Cholesky.
-        import copy
         param_bad = copy.copy(param_nl_x1y1)
         param_bad._mQ = np.zeros_like(param_bad._mQ)
         epks = NonLinear_EPKS(param_bad, sKey=SEED)

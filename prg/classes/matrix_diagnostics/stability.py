@@ -101,6 +101,18 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
     # Helpers internes
     # -------------------------------------------------------
 
+    @staticmethod
+    def _format_complex(v: complex) -> str:
+        """Format one eigenvalue for diagnostic messages."""
+        if v.imag == 0:
+            return f"{v.real:.4g}"
+        return f"{v.real:.4g}{'+' if v.imag >= 0 else ''}{v.imag:.4g}j"
+
+    @staticmethod
+    def _format_conjugate_pair(v: complex) -> str:
+        """Format one representative value for a conjugate pair."""
+        return f"{v.real:.4g}±{abs(v.imag):.4g}j"
+
     def _get_eigenvalues(self) -> np.ndarray:
         """Computes (and caches) the eigenvalues."""
         if self._eigenvalues is None:
@@ -126,14 +138,7 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
 
         if len(unstable_vals) > 0:
             worst = float(np.max(np.abs(unstable_vals)))
-            details = ", ".join(
-                (
-                    f"{v.real:.4g}{'+' if v.imag >= 0 else ''}{v.imag:.4g}j"
-                    if v.imag != 0
-                    else f"{v.real:.4g}"
-                )
-                for v in unstable_vals
-            )
+            details = ", ".join(self._format_complex(v) for v in unstable_vals)
             return self._fail(
                 name,
                 worst,
@@ -223,9 +228,7 @@ class StabilityMatrix(_BaseMatrixDiagnostic):
             complex_vals = eigvals[complex_mask]
             # Garde uniquement ceux avec imag > 0 (une valeur par paire)
             positive_imag = complex_vals[complex_vals.imag > 0]
-            pairs_str = ", ".join(
-                f"{v.real:.4g}±{abs(v.imag):.4g}j" for v in positive_imag
-            )
+            pairs_str = ", ".join(self._format_conjugate_pair(v) for v in positive_imag)
             return self._warn(
                 name,
                 None,

@@ -73,11 +73,12 @@ class InvertibleMatrix(_BaseMatrixDiagnostic):
         Raises RuntimeError if the matrix is FAIL.
         """
         report = self.check()
+        status = report.overall_status
 
-        if report.overall_status == Status.FAIL:
+        if status == Status.FAIL:
             raise RuntimeError(f"Cannot invert matrix — diagnostic FAILED:\n{report}")
 
-        if report.overall_status == Status.WARNING:
+        if status == Status.WARNING:
             warnings.warn(
                 "Inverting a matrix with WARNING status — "
                 "numerical accuracy may be reduced.",
@@ -182,8 +183,9 @@ class InvertibleMatrix(_BaseMatrixDiagnostic):
         tol = self.tol
 
         try:
-            M_inv = np.linalg.inv(self._M)
-            self._inverse_cache = M_inv
+            if self._inverse_cache is None:
+                self._inverse_cache = np.linalg.inv(self._M)
+            M_inv = self._inverse_cache
             residual = float(np.linalg.norm(np.eye(self._n) - self._M @ M_inv, "fro"))
         except np.linalg.LinAlgError:
             self._inverse_cache = None
