@@ -46,6 +46,27 @@ jobs:
           name: coverage-report
           path: coverage.xml
 
+  notebooks:
+    name: Notebooks (nbmake)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install package and notebook deps
+        run: pip install -e ".[notebooks]"
+      - name: Register Jupyter kernel
+        run: python -m ipykernel install --user --name python3
+      - name: Execute tutorial notebooks
+        # tutorial_06 imports prg.gui (gitignored — absent from a fresh checkout);
+        # excluded until it is decoupled from the GUI namespace.
+        run: >
+          pytest --nbmake notebooks/
+          --nbmake-kernel=python3
+          --nbmake-timeout=600
+          --ignore=notebooks/tutorial_06_filter_runner_and_config.ipynb
+
   build:
     name: Build wheel
     runs-on: ubuntu-latest

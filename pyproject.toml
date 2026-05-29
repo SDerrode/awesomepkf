@@ -59,6 +59,11 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
 ]
+notebooks = [
+    # Execute the tutorial notebooks in CI (pytest --nbmake) to catch API drift.
+    "pytest-nbmake>=1.5",
+    "ipykernel>=6.0",
+]
 all = [
     "torch>=2.0",
     "PyQt6>=6.6",
@@ -66,6 +71,8 @@ all = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "pytest-qt>=4.4",
+    "pytest-nbmake>=1.5",
+    "ipykernel>=6.0",
 ]
 
 [project.scripts]
