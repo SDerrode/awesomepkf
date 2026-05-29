@@ -11,6 +11,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.9.0] - 2026-05-29
+
+MINOR release: filter/smoother robustness hardening, a new nonlinear
+model, and repository housekeeping on top of the v2.8.0 GUI milestone.
+The gitignored PyQt6 GUI from v2.8.0 was re-verified against the hardened
+filter layer and continues to work unchanged.
+
+### Added
+- **`model_x1_y1_SinCoupling_pairwise`** — a strongly-curved sinusoidal
+  pairwise coupling model (bounded → stable, but with enough curvature
+  over the filter spread that the unscented transform departs markedly
+  from the first-order linearisation). Useful as an EPKF/UPKF (and
+  EPKS/UPKS) divergence demonstration.
+- **Sigma-set comparative guards** for the nonlinear unscented filters
+  (UKF / UPKF), with dedicated tests.
+- **`SCIENTIFIC_PRE_PUSH_CHECKLIST.md`** — pre-push checklist for
+  numerically sensitive refactors.
+
+### Changed / Hardened
+- Hardened the sigma-point filter layer and harmonised runtime guards
+  across the nonlinear and particle filters; refined the
+  `matrix_diagnostics` package; completed Ruff hygiene.
+- Added API-contract and finiteness / edge-case tests across the filter
+  and smoother families. **Test count: 247 → 290, all passing.**
+- Aligned `prg.__version__` with the packaged version (was stuck at
+  `0.1.0`).
+
+### Removed
+- The auto-generated "Folders structure" tree in `README.md`, its
+  `<!-- PROJECT_STRUCTURE_* -->` markers, the `update_readme_structure.sh`
+  generator script, and the `pre-push` hook that regenerated it.
+
+### Housekeeping
+- Excluded `docs/` (local reference PDFs) from version control.
+- The public filter / smoother API is unchanged; the gitignored GUI and
+  its 5 smoother presets continue to work against the hardened base
+  (verified headless).
+
+---
+
 ## [2.8.0] - 2026-05-15
 
 MINOR release: end-to-end GUI integration of the five smoothers shipped
