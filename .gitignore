@@ -13,6 +13,9 @@ logs/
 # le papier
 papier_NonLinearPKF/
 
+# Documents de référence (PDFs, papiers, archives) — local uniquement
+docs/
+
 # Personal dev test scripts and programs (not versioned)
 /prg/testsDev/
 
