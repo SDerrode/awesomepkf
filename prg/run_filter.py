@@ -96,7 +96,7 @@ def _parse_arguments(filter_name: str) -> tuple[argparse.Namespace, str]:
     # ── Apply --config if present ────────────────────────────────────
     args._config_overrides = {}  # default no-op
     if args.config is not None:
-        from prg.gui.session import load_config
+        from prg.utils.session import load_config
 
         cfg = load_config(args.config)
         if cfg.filter_name != filter_name:
