@@ -79,8 +79,8 @@ awesomepkf-pf          = "prg.run_nonlinear_pf:main"
 awesomepkf-fit-pkf     = "prg.run_learn_pmm:main"
 
 [project.urls]
-Homepage   = "https://github.com/sderrode/awesomepkf"
-Repository = "https://github.com/sderrode/awesomepkf"
+Homepage   = "https://github.com/SDerrode/awesomepkf"
+Repository = "https://github.com/SDerrode/awesomepkf"
 
 [tool.ruff]
 target-version = "py310"
