@@ -34,6 +34,7 @@ and **pairwise Kalman smoothers** for offline post-processing:
         - [Unscented Kalman Smoother (UKS)](#unscented-kalman-smoother-uks)
         - [Pairwise Particle Smoother (PPS)](#pairwise-particle-smoother-pps)
     - [Tutorials](#tutorials)
+    - [Parameter learning from data](#parameter-learning-from-data)
     - [Usage Examples](#usage-examples)
         - [Simulate Linear Data and Filter with PKF](#simulate-linear-data-and-filter-with-pkf)
         - [Simulate Non-Linear Data and Filter with EPKF, UPKF and PPF](#simulate-non-linear-data-and-filter-with-epkf-upkf-and-ppf)
@@ -102,6 +103,38 @@ Interactive Jupyter notebooks are available in the [`notebooks/`](notebooks/) di
 | 05 | [`tutorial_05_new_model_lotkavolterra.ipynb`](notebooks/tutorial_05_new_model_lotkavolterra.ipynb) | How to add a new nonlinear pairwise model: Lotka-Volterra prey-predator (dim_x=1, dim_y=1), augmented version, filtering with EPKF/UPKF/PPF |
 | 06 | [`tutorial_06_filter_runner_and_config.ipynb`](notebooks/tutorial_06_filter_runner_and_config.ipynb) | High-level orchestration with `FilterRunner` and `RunOptions`; parameter sweeps via `model_kwargs`; saving and replaying experiments through TOML session configs |
 | 07 | [`tutorial_07_smoothers.ipynb`](notebooks/tutorial_07_smoothers.ipynb) | The 5 smoothers (`Linear_PKS`, `NonLinear_EPKS`/`UPKS`/`UKS`/`PPS`) — RTS-style backward recursion and FFBSm; ±2σ envelope shrinkage, Joseph form, Monte-Carlo convergence of PPS to PKS, decision rule for choosing among the five |
+| 08 | [`tutorial_08_real_data_pkf_learning.ipynb`](notebooks/tutorial_08_real_data_pkf_learning.ipynb) | Estimating the 1D linear PMM parameters `(a, b, c, d, e)` from a real two-column time series (wind-farm active power vs wind speed); PMM vs HMM/Kalman projection; converting to `LinearAmQ` kwargs |
+
+---
+
+## Parameter learning from data
+
+For the **linear, scalar** case (`dim_x = dim_y = 1`), the
+[`prg.learning`](prg/learning/) module estimates the five PMM parameters
+`(a, b, c, d, e)` from a two-column time series by the method of moments.
+
+```bash
+awesomepkf-fit-pkf \
+    --data-filename data/samples/windfarms/site1_202210_Month_586_norm.csv \
+    --x-col ActivePower_KWh --y-col WindSpeed \
+    --output learned_params.npz --verbose 1
+```
+
+On the embedded WindFarms series the fit lands clearly outside the HMM
+(classical Kalman) submanifold — the off-HMM gap `Δc ≈ 0.53` between the
+estimated `c` and its HMM projection `a·b²` means a pairwise model tracks the
+state more tightly than the classical KF. See
+[`tutorial_08`](notebooks/tutorial_08_real_data_pkf_learning.ipynb) for the
+full load → fit → compare → convert workflow.
+
+A small WindFarms sample is shipped under [`data/samples/`](data/samples/);
+the full dataset (BuildingTemp, SeattleTemp, multiple WindFarms sites and
+granularities) is kept outside the repository — point `--data-filename` at a
+local copy if needed.
+
+Parameter identification for **nonlinear** EPKF/UPKF models is *not* covered
+by this estimator — those require a separate procedure (e.g. a neural
+network).
 
 ---
 

@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.10.0] - 2026-05-29
+
+### Added
+
+- **`prg/learning/` — method-of-moments estimator for the 1D linear PMM.** Recovers the five parameters `(a, b, c, d, e)` from a two-column time series by computing the empirical 4×4 covariance of the lagged vector `(X_n, Y_n, X_{n+1}, Y_{n+1})`. `PMMParams` is a `NamedTuple` (iterable, hashable, immutable) with `as_hmm()` and `is_hmm()` helpers. `validate_pmm` enforces `|b|<1`, `|c|<1` and strict positive-definiteness on both Γ and the noise covariance `BBt`. `pmm_to_linear_params` returns `LinearAmQ`-compatible kwargs (`A`, `B`, `mQ`, `mz0`, `Pz0`) where `B` is the symmetric square root of `BBt` via eigendecomposition. Salvaged from the now-removed companion repository `KalmanApp`. Scope is intentionally limited to the linear scalar case — nonlinear identification for EPKF/UPKF needs a separate procedure (e.g. a neural network).
+- **`awesomepkf-fit-pkf` CLI** (`prg/run_learn_pmm.py`) — fits the linear PMM on any CSV/TSV/Parquet/JSON/Excel file with `--x-col` and `--y-col` (positional index or column name). Optionally saves a `numpy.savez(..., allow_pickle=False)`-compatible `.npz` archive with the parameters, the resolved column names, and the two extracted series as a `float64` matrix.
+- **Tutorial 08** — [`tutorial_08_real_data_pkf_learning.ipynb`](notebooks/tutorial_08_real_data_pkf_learning.ipynb): end-to-end on the WindFarms sample (load → fit → PMM vs HMM gap → convert to `LinearAmQ` kwargs).
+- **WindFarms sample under [`data/samples/windfarms/`](data/samples/windfarms/)** — 586 hourly active-power and wind-speed readings (October 2022, one onshore site), shipped in both raw and standardised form. The complete dataset (BuildingTemp, SeattleTemp, multiple sites/granularities) stays outside the repository; the CLI's `--data-filename` accepts a path to any local copy.
+- **`prg/tests/test_learning.py`** — 21 tests covering `PMMParams` unpacking, HMM projection, validation edge cases (`b = ±1`, `c = 1`), method-of-moments recovery on synthetic trajectories (`tol = 0.03` over 50 000 steps), DataFrame and ndarray inputs, symmetric square-root factorisation, real-CSV smoke test, and three CLI tests (happy path with `.npz` roundtrip, missing-file exit code, console-script registration).
+
+---
+
 ## [2.9.0] - 2026-05-29
 
 MINOR release: filter/smoother robustness hardening, a new nonlinear
@@ -641,7 +653,8 @@ no behaviour changes — pure consistency cleanup.
 - NEES and NIS calibration metrics with history tracking
 - Rich terminal output and matplotlib plots
 
-[Unreleased]: https://github.com/sderrode/awesomepkf/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/sderrode/awesomepkf/compare/v2.10.0...HEAD
+[2.10.0]: https://github.com/sderrode/awesomepkf/compare/v2.9.0...v2.10.0
 [0.4.0]: https://github.com/sderrode/awesomepkf/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sderrode/awesomepkf/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sderrode/awesomepkf/compare/v0.1.0...v0.2.0

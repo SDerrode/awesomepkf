@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "awesomepkf"
-version = "2.9.0"
+version = "2.10.0"
 description = "Pairwise Kalman Filter (PKF) and variants (EPKF, UPKF, PPF) and pairwise smoothers for linear and nonlinear state estimation"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -76,6 +76,7 @@ awesomepkf-upkf        = "prg.run_nonlinear_upkf:main"
 awesomepkf-ukf         = "prg.run_nonlinear_ukf:main"
 awesomepkf-ppf         = "prg.run_nonlinear_ppf:main"
 awesomepkf-pf          = "prg.run_nonlinear_pf:main"
+awesomepkf-fit-pkf     = "prg.run_learn_pmm:main"
 
 [project.urls]
 Homepage   = "https://github.com/sderrode/awesomepkf"
