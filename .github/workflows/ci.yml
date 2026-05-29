@@ -59,13 +59,10 @@ jobs:
       - name: Register Jupyter kernel
         run: python -m ipykernel install --user --name python3
       - name: Execute tutorial notebooks
-        # tutorial_06 imports prg.gui (gitignored — absent from a fresh checkout);
-        # excluded until it is decoupled from the GUI namespace.
         run: >
           pytest --nbmake notebooks/
           --nbmake-kernel=python3
           --nbmake-timeout=600
-          --ignore=notebooks/tutorial_06_filter_runner_and_config.ipynb
 
   build:
     name: Build wheel
