@@ -77,7 +77,19 @@ class _BaseParticleFilter(PKF):
         # (FFBSm). Off by default to avoid history bloat for regular PF/PPF
         # users — particle clouds are ``(n_particles, dim_x, 1)`` arrays.
         self.store_particles: bool = bool(store_particles)
-        self._randParticles = SeedGenerator()
+        # Reproductibilité : le RNG des particules (init, propagation, resampling)
+        # est dérivé de sKey — donc reproductible à graine fixée — mais via une
+        # sous-séquence INDÉPENDANTE de celle de simulation (PKF utilise
+        # SeedGenerator(sKey)), afin d'éviter toute corrélation entre le bruit de
+        # la trajectoire vraie et l'aléa du filtre. sKey=None conserve un tirage
+        # non reproductible (comportement voulu, p.ex. pour des répétitions MC).
+        if sKey is None:
+            self._randParticles = SeedGenerator()
+        else:
+            _particle_seed = int(
+                np.random.SeedSequence(sKey).spawn(1)[0].generate_state(1)[0]
+            )
+            self._randParticles = SeedGenerator(_particle_seed)
         self._cached: dict = {}
         self._consecutive_degeneracies: int = 0
 

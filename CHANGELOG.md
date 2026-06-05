@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Particle-filter reproducibility.** `_BaseParticleFilter` now derives its
+  particle RNG (initialisation / propagation / resampling) from `sKey` via an
+  independent `numpy.SeedSequence` subsequence, so PF / PPF runs are
+  reproducible at a fixed seed (previously a fresh `SeedGenerator()` made them
+  non-reproducible even with `sKey`). The subsequence is decoupled from the
+  trajectory-simulation RNG (no correlation between true-state noise and filter
+  randomness); `sKey=None` keeps the non-reproducible draw for Monte-Carlo runs.
+
 ---
 
 ## [2.11.0] - 2026-05-29
