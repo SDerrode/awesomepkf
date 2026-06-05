@@ -11,6 +11,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.11.0] - 2026-05-29
+
+### Added
+- **Linear DWY smoother.** `prg/classes/linear_pks.py` is refactored into a
+  multi-variant backward-smoother framework: `Linear_PKS` becomes a façade
+  selecting the backward pass via `method=` (default `"RTS"` — fully backward
+  compatible). The new `method="DWY"` runs the **Desai-Weinert-Yusypchuk**
+  backward-filter recursion on the time-reversed complementary couple model
+  (cf. Geng et al., 2023); on the linear-Gaussian model it returns the same
+  smoothed mean and covariance as RTS to machine precision
+  (`test_dwy_equals_rts`). Explicit `Linear_PKS_RTS` / `Linear_PKS_DWY`
+  classes are exported, and the `_SMOOTHING_PASSES` registry is set up for
+  further variants (BF / MBF / MF). `test_linear_pks.py`: 40 → 44 tests.
+
+### Also shipped since 2.10.0 (previously committed but untagged)
+- **`--config` CLI decoupled from the gitignored GUI** — `SessionConfig` +
+  `load_config` / `save_config` moved to the tracked, PyQt-free
+  `prg/utils/session.py` (`prg.gui.session` re-exports them), so
+  `awesomepkf-<filter> --config foo.toml` works on a fresh clone / PyPI
+  install. TOML read via stdlib `tomllib` (`tomli` fallback on 3.10).
+- **nbmake notebook CI** (`pytest --nbmake notebooks/`) + a `notebooks`
+  optional-dependency group.
+- **SinCoupling demo** in tutorial_02; **tutorial_05** modernised to the
+  `configs.py` registry API (it was broken); **tutorial_06** decoupled from
+  `prg.gui`; notebook kernels normalised.
+
+### Tests
+- 321 tests pass (`prg/tests/`); ruff clean.
+
+---
+
 ## [2.10.0] - 2026-05-29
 
 ### Added

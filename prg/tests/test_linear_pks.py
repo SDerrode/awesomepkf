@@ -5,7 +5,7 @@ import logging
 import numpy as np
 import pytest
 
-from prg.classes.linear_pks import Linear_PKS
+from prg.classes.linear_pks import Linear_PKS, Linear_PKS_DWY, Linear_PKS_RTS
 from prg.utils.exceptions import CovarianceError
 
 SEED = 42
@@ -283,6 +283,43 @@ class TestLinearPKSAugmentedRTSEquivalence:
             )
 
 
+class TestLinearPKSDWYEquivalence:
+    """The DWY (backward-RTS) variant returns the same smoothed estimate as the
+    RTS pass, to machine precision, on the linear-Gaussian pairwise model
+    (Geng et al., 2023). Both means and covariances are checked."""
+
+    DWY_EQ_TOL = 1e-9
+
+    @pytest.mark.parametrize("param_fixture", ["param_x1y1", "param_x2y2"])
+    def test_dwy_equals_rts(self, param_fixture, request):
+        param = request.getfixturevalue(param_fixture)
+        rts = Linear_PKS_RTS(param, sKey=SEED)
+        rts.process_N_data_smoother(N=120)
+        dwy = Linear_PKS(param, sKey=SEED, method="DWY")
+        dwy.process_N_data_smoother(N=120)
+        for a, b in zip(rts.history, dwy.history, strict=True):
+            assert np.allclose(
+                a["Xkp1_smooth"], b["Xkp1_smooth"], atol=self.DWY_EQ_TOL
+            )
+            assert np.allclose(
+                a["PXXkp1_smooth"], b["PXXkp1_smooth"], atol=self.DWY_EQ_TOL
+            )
+
+    def test_dwy_explicit_class_matches_facade(self, param_x1y1):
+        explicit = Linear_PKS_DWY(param_x1y1, sKey=SEED)
+        explicit.process_N_data_smoother(N=60)
+        facade = Linear_PKS(param_x1y1, sKey=SEED, method="DWY")
+        facade.process_N_data_smoother(N=60)
+        for a, b in zip(explicit.history, facade.history, strict=True):
+            assert np.allclose(a["Xkp1_smooth"], b["Xkp1_smooth"], atol=SHAPE_TOL)
+
+    def test_unknown_method_raises(self, param_x1y1):
+        from prg.utils.exceptions import FilterError
+
+        with pytest.raises(FilterError):
+            Linear_PKS(param_x1y1, sKey=SEED, method="NOPE")
+
+
 class TestLinearPKSEdgeCases:
     """Edge cases of the smoother lifecycle."""
 
@@ -487,11 +524,11 @@ class TestLinearPKSLogging:
             r.message for r in caplog.records
             if r.name == self.LOGGER_NAME and r.levelno == logging.INFO
         ]
-        # Exactly two INFO lines: backward-pass entry and exit
+        # Exactly two INFO lines: smoothing-pass entry and exit
         assert len(info_msgs) == 2
-        assert "backward pass starting" in info_msgs[0]
+        assert "smoothing pass starting" in info_msgs[0]
         assert "joseph=False" in info_msgs[0]
-        assert "backward pass complete" in info_msgs[1]
+        assert "smoothing pass complete" in info_msgs[1]
 
     def test_info_log_reflects_joseph_mode(self, param_x1y1, caplog):
         with caplog.at_level(logging.INFO, logger=self.LOGGER_NAME):

@@ -1,7 +1,24 @@
 """
 ####################################################################
-Linear Pairwise Kalman Smoother (PKS) — RTS-pairwise backward pass
+Linear Pairwise Kalman Smoother (PKS)
 ####################################################################
+
+Five pairwise linear smoothers share the **same** forward Pairwise Kalman
+Filter (PKF) and differ only by their *smoothing pass*: RTS, BF, MBF, MF and
+DWY (cf. Geng et al., 2023). This module provides the shared infrastructure
+(``_LinearPKSBase``) and the first variant (RTS, ``Linear_PKS_RTS``), plus a
+backward-compatible façade ``Linear_PKS`` selecting a variant via ``method=``.
+
+Adding a new variant is a two-step operation:
+
+1. write a free function ``_<name>_pass(s, N_records)`` operating in place on
+   ``s.history`` (``s`` being a ``_LinearPKSBase`` instance), then
+2. register it in ``_SMOOTHING_PASSES`` and expose a thin ``Linear_PKS_<NAME>``
+   subclass.
+
+Every pass must write ``Xkp1_smooth`` and ``PXXkp1_smooth`` to each history
+record (the public contract consumed by the yield/emit step and downstream
+scripts); it may add variant-specific fields (e.g. ``Gk_smooth`` for RTS).
 """
 
 from __future__ import annotations
@@ -25,78 +42,41 @@ from prg.utils.exceptions import CovarianceError, FilterError
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["Linear_PKS"]
+__all__ = ["Linear_PKS", "Linear_PKS_DWY", "Linear_PKS_RTS"]
 
 
-class Linear_PKS(Linear_PKF):
+# ======================================================================
+# Shared infrastructure
+# ======================================================================
+class _LinearPKSBase(Linear_PKF):
     """
-    Linear Pairwise Kalman Smoother (PKS).
+    Shared base for the linear pairwise smoothers.
 
-    Two-pass smoother for the linear pairwise state-space model
+    Factorises everything common to the five variants:
 
-    .. math::
+    - the forward drain (running :meth:`Linear_PKF.process_filter` into
+      :attr:`history`),
+    - the public smoother API (:meth:`process_smoother`,
+      :meth:`process_N_data_smoother`) and the chronological emit step,
+    - the ``joseph`` flag and the parent forward-pass wiring.
 
-        Z_{n+1} = A\\, Z_n + B\\, W_{n+1}, \\quad
-        Z_n = (X_n^T,\\, Y_n^T)^T.
-
-    The forward pass is the standard linear PKF (inherited from
-    :class:`Linear_PKF`). The backward pass performs a Rauch-Tung-Striebel
-    recursion at the **joint** ``Z = (X, Y)`` level: the pairwise model is
-    Markov in ``Z``, not in ``X`` alone (because ``Y_{n+1}`` can depend
-    directly on ``X_n`` via the bottom-left block of ``A``). The smoothing
-    gain therefore couples ``X_n`` to **both** the smoothed ``X_{n+1}``
-    and the next-step innovation ``y_{n+1} - yhat_{n+1|n}``.
-
-    Two covariance update forms are available, selected at construction
-    time via the ``joseph`` flag:
-
-    - ``joseph=False`` (default) — standard form
-      :math:`P^{xx}_{n|N} = P^{xx}_{n|n} + G_n (P^{ZZ}_{n+1|N} - P_{n+1|n}) G_n^T`,
-    - ``joseph=True`` — Joseph form
-      :math:`P^{xx}_{n|N} = (I_p, -G_n) \\Omega_n (I_p, -G_n)^T
-                          + G_n^x\\, P^{xx}_{n+1|N}\\, (G_n^x)^T`,
-      with :math:`\\Omega_n` the joint covariance of
-      :math:`(X_n, Z_{n+1})` conditional on :math:`y_{1:n}`
-      (shape :math:`(p + p + q) \\times (p + p + q)`).
-
-    The two forms are mathematically equivalent at the optimal gain and
-    agree empirically to ``~1e-10`` in double precision on the test
-    fixtures (test tolerance enforced by
-    :class:`TestLinearPKSJosephForm.JOSEPH_EQ_TOL`). The Joseph variant
-    becomes valuable for the nonlinear extensions (EPKF / UPKF) where
-    matrices become less well-conditioned.
+    The only variant-specific part is the abstract hook
+    :meth:`_smoothing_pass`, which each variant overrides to fill the
+    ``Xkp1_smooth`` / ``PXXkp1_smooth`` fields of every history record.
 
     Parameters
     ----------
     param : ParamLinear | ParamNonLinear
-        Forwarded to :class:`Linear_PKF`. Although the class is named
-        "linear", the parent accepts non-linear param objects too — only
-        the constant ``A`` matrix from the param is used.
+        Forwarded to :class:`Linear_PKF` (only the constant ``A`` matrix is
+        used; non-linear param objects are accepted).
     sKey : int, optional
         Random seed for reproducibility (default ``None``).
     verbose : int, optional
-        Verbosity level (0, 1, 2; default 0). ``verbose > 1`` displays
-        each smoothed history record via :func:`rich_show_fields`.
+        Verbosity level (0, 1, 2; default 0). ``verbose > 1`` displays each
+        smoothed record via :func:`rich_show_fields`.
     joseph : bool, optional
-        If ``True``, use the Joseph form of the covariance update
-        (explicitly symmetric / PSD-preserving for any gain). Default
-        ``False`` (standard RTS form).
-
-    History schema additions
-    ------------------------
-    Each history record (initially populated by the forward filter from a
-    :class:`prg.classes.pkf.PKFStep` dataclass) is augmented with three
-    keys by the backward pass:
-
-    - ``Xkp1_smooth`` : ``(dim_x, 1)`` smoothed mean ``E[X_n | y_{1:N}]``.
-    - ``PXXkp1_smooth`` : ``(dim_x, dim_x)`` smoothed covariance.
-    - ``Gk_smooth`` : ``(dim_x, dim_xy)`` smoothing gain :math:`G_n`. At
-      the terminal step ``n = N`` the gain is undefined (no future to
-      condition on); a zero matrix of the correct shape is stored as
-      placeholder.
-
-    All three fields are written via the public
-    :meth:`HistoryTracker.update_record` API.
+        If ``True``, variants that support it use the Joseph (PSD-preserving)
+        covariance update. Default ``False``.
     """
 
     def __init__(
@@ -110,37 +90,28 @@ class Linear_PKS(Linear_PKF):
         self.joseph: bool = joseph
 
     # ------------------------------------------------------------------
-    # Smoother
+    # Public smoother API
     # ------------------------------------------------------------------
-
     def process_smoother(
         self,
         N: int | None = None,
         data_generator: Iterator[tuple[int, np.ndarray, np.ndarray]] | None = None,
     ) -> Iterator[
-        tuple[
-            int,
-            np.ndarray | None,
-            np.ndarray,
-            np.ndarray,
-            np.ndarray,
-            np.ndarray,
-        ]
+        tuple[int, np.ndarray | None, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
     ]:
         """
         Run the linear PKS as a generator.
 
         First exhausts the forward filter (which populates :attr:`history`),
-        then performs the backward RTS recursion in place on the history
-        records via :meth:`HistoryTracker.update_record`, and finally
-        yields the augmented tuples in chronological order.
+        then runs the variant-specific :meth:`_smoothing_pass` in place on the
+        history records, and finally yields the augmented tuples in
+        chronological order.
 
         Parameters
         ----------
         N : int, optional
             Maximum number of forward steps. ``None`` runs until the data
-            generator is exhausted; the actual number of yielded tuples
-            equals the number of forward records.
+            generator is exhausted.
         data_generator : Iterator, optional
             External data generator yielding ``(k, x_true, y_obs)``. If
             ``None`` (default), the internal simulator generator is used.
@@ -148,8 +119,7 @@ class Linear_PKS(Linear_PKF):
         Yields
         ------
         k, x_true, y_observed, X_predict, X_update, X_smooth
-            ``X_smooth`` is the posterior mean
-            :math:`E[X_n | y_{1:N}]`.
+            ``X_smooth`` is the posterior mean :math:`E[X_n | y_{1:N}]`.
 
         Raises
         ------
@@ -160,23 +130,16 @@ class Linear_PKS(Linear_PKF):
             If the forward-pass innovation covariance ``Skp1`` is not
             invertible (propagated from :meth:`Linear_PKF.process_filter`).
         CovarianceError
-            If (a) any covariance matrix in the forward pass is invalid,
-            (b) the Cholesky factorisation of :math:`P^{ZZ}_{n+1|n}` fails
-            during the backward pass, or (c) the resulting smoothed
-            covariance :math:`P^{xx}_{n|N}` is not PSD. In cases (b) and
-            (c) the exception carries ``step`` and ``matrix_name``
-            attributes set to the offending location.
+            If a covariance matrix is invalid, a Cholesky factorisation fails,
+            or a smoothed covariance is not PSD (carries ``step`` /
+            ``matrix_name`` attributes where applicable).
         StepValidationError
-            If the forward pass cannot construct a valid ``PKFStep``
-            (propagated).
+            If the forward pass cannot construct a valid ``PKFStep``.
         NumericalError
-            Base class of ``CovarianceError`` / ``InvertibilityError`` —
-            catch this to intercept any matrix-level failure regardless
-            of subtype.
+            Base class of ``CovarianceError`` / ``InvertibilityError``.
         FilterError
-            If the forward pass yielded no records (defensive guard) or
-            if the forward pass raises an unexpected ``FilterError``
-            (propagated).
+            If the forward pass yielded no records, or on an unexpected
+            ``FilterError`` (propagated).
         """
         # 1) Forward pass — drains the filter into self.history
         for _ in self.process_filter(N=N, data_generator=data_generator):
@@ -187,135 +150,19 @@ class Linear_PKS(Linear_PKF):
             raise FilterError("Linear_PKS: forward pass yielded no records.")
 
         logger.info(
-            "Linear_PKS backward pass starting (N_records=%d, joseph=%s).",
+            "Linear_PKS smoothing pass starting (N_records=%d, method=%s, joseph=%s).",
             N_records,
+            getattr(self, "method", self.__class__.__name__),
             self.joseph,
         )
 
-        # 2) Backward pass — initialise from the terminal step.
-        # At n = N the gain is undefined; zeros of the right shape are
-        # stored as a placeholder (see docstring).
-        last = self.history[N_records - 1]
-        self.history.update_record(
-            N_records - 1,
-            Xkp1_smooth=last["Xkp1_update"].copy(),
-            PXXkp1_smooth=last["PXXkp1_update"].copy(),
-            Gk_smooth=np.zeros((self.dim_x, self.dim_xy)),
-        )
+        # 2) Variant-specific smoothing pass (writes *_smooth into history)
+        self._smoothing_pass(N_records)
 
-        # Pre-allocated scratch buffers — only the writable blocks are
-        # touched in the hot loop; the surrounding zero blocks are part of
-        # the structural invariants of P_aug and P_zz_smooth and must NOT
-        # be overwritten elsewhere.
-        P_aug: np.ndarray = self.zeros_dim_xy_xy.copy()
-        P_zz_smooth: np.ndarray = self.zeros_dim_xy_xy.copy()
-        delta_Z: np.ndarray = self.zeros_dim_xy_1.copy()
-
-        if self.joseph:
-            # Joint covariance Omega_n = Cov((X_n, Z_{n+1}) | y_{1:n})
-            dim_jnt: int = self.dim_x + self.dim_xy
-            Omega = np.zeros((dim_jnt, dim_jnt))
-            J = np.zeros((self.dim_x, dim_jnt))
-            J[: self.dim_x, : self.dim_x] = self.eye_dim_x  # I_p block (fixed)
-
-        for i in range(N_records - 2, -1, -1):
-            cur = self.history[i]      # time step n
-            nxt = self.history[i + 1]  # time step n+1
-
-            Xf_n: np.ndarray = cur["Xkp1_update"]
-            Pf_n: np.ndarray = cur["PXXkp1_update"]
-
-            Xp_npo: np.ndarray = nxt["Xkp1_predict"]
-            ikp1: np.ndarray = nxt["ikp1"]
-            Xs_npo: np.ndarray = nxt["Xkp1_smooth"]
-            Ps_npo: np.ndarray = nxt["PXXkp1_smooth"]
-
-            # Rebuild the full Z-level predicted covariance at step n+1:
-            #     P_{n+1|n} = A diag(P^{xx}_{n|n}, 0) A^T + B Q B^T.
-            P_aug[: self.dim_x, : self.dim_x] = Pf_n
-            P_zz_npo: np.ndarray = self._A @ P_aug @ self._AT + self._BmQBT
-
-            # Cross-covariance (dim_x rows, dim_xy cols):
-            #     Cov(X_n, Z_{n+1} | y_{1:n}) = [P^{xx}_{n|n}, 0] A^T = Pf_n M^T.
-            cross_X: np.ndarray = (P_aug @ self._AT)[: self.dim_x, :]
-
-            # Gain via Cholesky solve (numerically stabler than explicit inverse).
-            # The cho_factor try/except subsumes any ill-conditioning the
-            # generic invertibility check would catch, so we rely solely on it.
-            try:
-                c, low = cho_factor(P_zz_npo)
-                Gn: np.ndarray = cho_solve((c, low), cross_X.T).T
-            except (LinAlgError, ValueError) as e:
-                raise CovarianceError(
-                    f"Step {cur['k']}: Cholesky factorisation failed for "
-                    f"PZZkp1_predict in backward pass.",
-                    matrix_name="PZZkp1_predict",
-                    step=cur["k"],
-                ) from e
-
-            # ── Smoothed mean (same formula for both covariance variants) ──
-            # delta_Z = ((X_{n+1|N} - X_{n+1|n}); innovation y_{n+1} - yhat_{n+1|n})
-            delta_Z[: self.dim_x] = Xs_npo - Xp_npo
-            delta_Z[self.dim_x :] = ikp1
-            Xs_n: np.ndarray = Xf_n + Gn @ delta_Z
-
-            # ── Smoothed covariance ────────────────────────────────────────
-            if self.joseph:
-                Omega[: self.dim_x, : self.dim_x] = Pf_n
-                Omega[: self.dim_x, self.dim_x :] = cross_X
-                Omega[self.dim_x :, : self.dim_x] = cross_X.T
-                Omega[self.dim_x :, self.dim_x :] = P_zz_npo
-                J[:, self.dim_x :] = -Gn          # J = (I_p, -G_n)
-                Gn_x: np.ndarray = Gn[:, : self.dim_x]
-                Ps_n: np.ndarray = J @ Omega @ J.T + Gn_x @ Ps_npo @ Gn_x.T
-            else:
-                # Standard form: Pf + G (P^ZZ_smooth - P^ZZ_pred) G^T
-                P_zz_smooth[: self.dim_x, : self.dim_x] = Ps_npo
-                Delta_P_ZZ: np.ndarray = P_zz_smooth - P_zz_npo
-                Ps_n = Pf_n + Gn @ Delta_P_ZZ @ Gn.T
-
-            # Floating-point symmetry filter (independent of standard/Joseph)
-            Ps_n = 0.5 * (Ps_n + Ps_n.T)
-
-            self._check_covariance(Ps_n, cur["k"], name="PXXkp1_smooth")
-
-            self.history.update_record(
-                i,
-                Xkp1_smooth=Xs_n,
-                PXXkp1_smooth=Ps_n,
-                Gk_smooth=Gn,
-            )
-
-            # Per-step DEBUG trace — gated to avoid formatting cost when off
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(
-                    "Step %d: |Gn|_F=%.3g, tr(P_smooth)=%.3g, tr(P_filt)=%.3g.",
-                    cur["k"],
-                    float(np.linalg.norm(Gn)),
-                    float(np.trace(Ps_n)),
-                    float(np.trace(Pf_n)),
-                )
-
-            # Rich display of the smoothed step, mirroring the forward pass
-            if self.verbose > 1:
-                rich_show_fields(
-                    self.history[i], title=f"Smoothed step {cur['k']}"
-                )
-
-        logger.info(
-            "Linear_PKS backward pass complete (N_records=%d).", N_records,
-        )
+        logger.info("Linear_PKS smoothing pass complete (N_records=%d).", N_records)
 
         # 3) Yield records in chronological order, including the smoother fields
-        for entry in self.history:
-            yield (
-                entry["k"],
-                entry["xkp1"],
-                entry["ykp1"],
-                entry["Xkp1_predict"],
-                entry["Xkp1_update"],
-                entry["Xkp1_smooth"],
-            )
+        yield from self._emit()
 
     def process_N_data_smoother(
         self,
@@ -326,33 +173,374 @@ class Linear_PKS(Linear_PKF):
     ]:
         """
         Eager version of :meth:`process_smoother` — runs ``N`` steps and
-        returns all outputs as a list.
+        returns all outputs as a list (mirror of :meth:`PKF.process_N_data`).
 
-        Mirror of :meth:`PKF.process_N_data` for the smoothing pass.
-
-        Exception-handling policy
-        -------------------------
-        All domain-specific exceptions raised by :meth:`process_smoother`
-        — ``ParamError``, ``InvertibilityError``, ``CovarianceError``,
-        ``NumericalError``, ``StepValidationError`` and direct
-        ``FilterError`` — propagate up **unwrapped**. The structured
-        ``step`` / ``matrix_name`` attributes are preserved.
-
-        Only an opaque ``RuntimeError`` raised by Python's generator
-        machinery (e.g. a non-domain ``StopIteration`` re-raised by
-        PEP 479) is wrapped as ``FilterError`` and chained via
-        ``from`` for traceability.
+        Domain-specific exceptions propagate **unwrapped** (preserving their
+        ``step`` / ``matrix_name`` attributes). Only an opaque ``RuntimeError``
+        from the generator machinery is wrapped as ``FilterError``.
 
         Raises
         ------
         ParamError, InvertibilityError, CovarianceError, NumericalError, StepValidationError
             Propagated unwrapped from :meth:`process_smoother`.
         FilterError
-            Either propagated from :meth:`process_smoother` (forward pass
-            empty or unexpected error), or wrapping an opaque
-            ``RuntimeError`` from the generator machinery.
+            Propagated, or wrapping an opaque generator ``RuntimeError``.
         """
         try:
             return list(self.process_smoother(N=N, data_generator=data_generator))
         except RuntimeError as e:
             raise FilterError("Unexpected runtime error in process_smoother.") from e
+
+    # ------------------------------------------------------------------
+    # Internals
+    # ------------------------------------------------------------------
+    def _emit(
+        self,
+    ) -> Iterator[
+        tuple[int, np.ndarray | None, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+    ]:
+        """Yield the augmented history records in chronological order."""
+        for entry in self.history:
+            yield (
+                entry["k"],
+                entry["xkp1"],
+                entry["ykp1"],
+                entry["Xkp1_predict"],
+                entry["Xkp1_update"],
+                entry["Xkp1_smooth"],
+            )
+
+    def _smoothing_pass(self, N_records: int) -> None:
+        """Variant hook — fill ``Xkp1_smooth`` / ``PXXkp1_smooth`` in history."""
+        raise NotImplementedError(
+            "A smoother variant must implement _smoothing_pass()."
+        )
+
+
+# ======================================================================
+# Smoothing passes (one free function per variant)
+# ======================================================================
+def _rts_backward_pass(s: _LinearPKSBase, N_records: int) -> None:
+    """
+    Rauch--Tung--Striebel pairwise backward pass, in place on ``s.history``.
+
+    Backward RTS recursion at the **joint** ``Z = (X, Y)`` level: the smoothing
+    gain :math:`G_n` (shape ``dim_x x dim_xy``) couples ``X_n`` to both the
+    smoothed ``X_{n+1}`` and the next-step innovation
+    :math:`y_{n+1} - \\hat y_{n+1|n}`.
+
+    Two covariance update forms (selected by ``s.joseph``):
+
+    - ``joseph=False`` — standard
+      :math:`P^{xx}_{n|N} = P^{xx}_{n|n} + G_n (P^{ZZ}_{n+1|N} - P_{n+1|n}) G_n^T`,
+    - ``joseph=True``  — Joseph
+      :math:`(I_p, -G_n)\\,\\Omega_n\\,(I_p, -G_n)^T + G_n^x P^{xx}_{n+1|N} (G_n^x)^T`.
+
+    Writes ``Xkp1_smooth``, ``PXXkp1_smooth`` and ``Gk_smooth`` to each record.
+
+    Parameters
+    ----------
+    s : _LinearPKSBase
+        Smoother instance providing ``_A``, ``_AT``, ``_BmQBT``, ``dim_x``,
+        ``dim_xy``, ``eye_dim_x``, ``zeros_*`` buffers, ``joseph``, ``history``.
+    N_records : int
+        Number of forward records (history length).
+
+    Raises
+    ------
+    CovarianceError
+        If the Cholesky factorisation of ``P^{ZZ}_{n+1|n}`` fails, or the
+        smoothed covariance is not PSD (carries ``step`` / ``matrix_name``).
+    """
+    # Backward pass — initialise from the terminal step. At n = N the gain is
+    # undefined (no future to condition on); a zero placeholder is stored.
+    last = s.history[N_records - 1]
+    s.history.update_record(
+        N_records - 1,
+        Xkp1_smooth=last["Xkp1_update"].copy(),
+        PXXkp1_smooth=last["PXXkp1_update"].copy(),
+        Gk_smooth=np.zeros((s.dim_x, s.dim_xy)),
+    )
+
+    # Pre-allocated scratch buffers — only writable blocks are touched in the
+    # hot loop; the surrounding zero blocks are structural invariants.
+    P_aug: np.ndarray = s.zeros_dim_xy_xy.copy()
+    P_zz_smooth: np.ndarray = s.zeros_dim_xy_xy.copy()
+    delta_Z: np.ndarray = s.zeros_dim_xy_1.copy()
+
+    if s.joseph:
+        dim_jnt: int = s.dim_x + s.dim_xy
+        Omega = np.zeros((dim_jnt, dim_jnt))
+        J = np.zeros((s.dim_x, dim_jnt))
+        J[: s.dim_x, : s.dim_x] = s.eye_dim_x  # I_p block (fixed)
+
+    for i in range(N_records - 2, -1, -1):
+        cur = s.history[i]      # time step n
+        nxt = s.history[i + 1]  # time step n+1
+
+        Xf_n: np.ndarray = cur["Xkp1_update"]
+        Pf_n: np.ndarray = cur["PXXkp1_update"]
+
+        Xp_npo: np.ndarray = nxt["Xkp1_predict"]
+        ikp1: np.ndarray = nxt["ikp1"]
+        Xs_npo: np.ndarray = nxt["Xkp1_smooth"]
+        Ps_npo: np.ndarray = nxt["PXXkp1_smooth"]
+
+        # P_{n+1|n} = A diag(P^{xx}_{n|n}, 0) A^T + B Q B^T
+        P_aug[: s.dim_x, : s.dim_x] = Pf_n
+        P_zz_npo: np.ndarray = s._A @ P_aug @ s._AT + s._BmQBT
+
+        # Cov(X_n, Z_{n+1} | y_{1:n}) = [P^{xx}_{n|n}, 0] A^T = Pf_n M^T.
+        cross_X: np.ndarray = (P_aug @ s._AT)[: s.dim_x, :]
+
+        # Gain via Cholesky solve (numerically stabler than explicit inverse).
+        try:
+            c, low = cho_factor(P_zz_npo)
+            Gn: np.ndarray = cho_solve((c, low), cross_X.T).T
+        except (LinAlgError, ValueError) as e:
+            raise CovarianceError(
+                f"Step {cur['k']}: Cholesky factorisation failed for "
+                f"PZZkp1_predict in backward pass.",
+                matrix_name="PZZkp1_predict",
+                step=cur["k"],
+            ) from e
+
+        # ── Smoothed mean (same formula for both covariance variants) ──
+        delta_Z[: s.dim_x] = Xs_npo - Xp_npo
+        delta_Z[s.dim_x :] = ikp1
+        Xs_n: np.ndarray = Xf_n + Gn @ delta_Z
+
+        # ── Smoothed covariance ──
+        if s.joseph:
+            Omega[: s.dim_x, : s.dim_x] = Pf_n
+            Omega[: s.dim_x, s.dim_x :] = cross_X
+            Omega[s.dim_x :, : s.dim_x] = cross_X.T
+            Omega[s.dim_x :, s.dim_x :] = P_zz_npo
+            J[:, s.dim_x :] = -Gn          # J = (I_p, -G_n)
+            Gn_x: np.ndarray = Gn[:, : s.dim_x]
+            Ps_n: np.ndarray = J @ Omega @ J.T + Gn_x @ Ps_npo @ Gn_x.T
+        else:
+            P_zz_smooth[: s.dim_x, : s.dim_x] = Ps_npo
+            Delta_P_ZZ: np.ndarray = P_zz_smooth - P_zz_npo
+            Ps_n = Pf_n + Gn @ Delta_P_ZZ @ Gn.T
+
+        # Floating-point symmetry filter (independent of standard/Joseph)
+        Ps_n = 0.5 * (Ps_n + Ps_n.T)
+
+        s._check_covariance(Ps_n, cur["k"], name="PXXkp1_smooth")
+
+        s.history.update_record(
+            i,
+            Xkp1_smooth=Xs_n,
+            PXXkp1_smooth=Ps_n,
+            Gk_smooth=Gn,
+        )
+
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "Step %d: |Gn|_F=%.3g, tr(P_smooth)=%.3g, tr(P_filt)=%.3g.",
+                cur["k"],
+                float(np.linalg.norm(Gn)),
+                float(np.trace(Ps_n)),
+                float(np.trace(Pf_n)),
+            )
+
+        if s.verbose > 1:
+            rich_show_fields(s.history[i], title=f"Smoothed step {cur['k']}")
+
+
+def _cond_xy(
+    mean_z: np.ndarray, Pzz: np.ndarray, y: np.ndarray, dx: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """Gaussian conditioning of ``X`` on ``Y = y`` from the joint ``(mean_z, Pzz)``.
+
+    Returns ``(E[X | Y=y], Var[X | Y=y])``. Used by the DWY backward filter's
+    measurement update and its terminal initialisation.
+    """
+    mx, my = mean_z[:dx], mean_z[dx:]
+    Pxx = Pzz[:dx, :dx]
+    Pyy, Pyx = Pzz[dx:, dx:], Pzz[dx:, :dx]
+    K = np.linalg.solve(Pyy, Pyx).T          # K = Pxy Pyy^{-1}, shape (dx, dy)
+    return mx + K @ (y - my), Pxx - K @ Pyx
+
+
+def _dwy_pass(s: _LinearPKSBase, N_records: int) -> None:
+    """
+    Desai--Weinert--Yusypchuk (backward-RTS) pairwise smoothing pass.
+
+    Dual of the RTS pass: a **backward** pairwise filter on the time-reversed
+    (complementary) couple model, followed by a **forward** recursion. On the
+    linear-Gaussian model it returns the same smoothed estimate as RTS (Geng
+    et al., 2023) — see the equivalence test ``test_dwy_equals_rts``.
+
+    Mechanics (cf. report Section 2.5):
+
+    - Lyapunov prior covariance ``Sigma_n`` and prior mean ``m_n``;
+    - backward model ``Z_n = A^b_n Z_{n+1} + u^b_n`` with
+      ``A^b_n = Sigma_n A^T Sigma_{n+1}^{-1}``,
+      ``Q^b_n = Sigma_n - A^b_n Sigma_{n+1} (A^b_n)^T``, and a **non-zero-mean**
+      forcing ``b^b_n = m_n - A^b_n m_{n+1}`` (the reversed process is not
+      centred — this offset affects means, not covariances);
+    - backward filter (``N -> 0``): ``P^b_n``, ``x^b_n = E[X_n | y_{n:N}]``;
+    - forward recursion (``0 -> N``): gain
+      ``D_n = P^b_n (M^b_{n-1})^T (P^b_{n-1|n})^{-1}``.
+
+    Writes ``Xkp1_smooth``, ``PXXkp1_smooth`` and the DWY gain ``Dk_smooth``.
+
+    Raises
+    ------
+    CovarianceError
+        If a backward-predicted covariance is not Cholesky-factorisable, or a
+        smoothed covariance is not PSD (carries ``step`` / ``matrix_name``).
+    """
+    dx, dy, dz = s.dim_x, s.dim_y, s.dim_xy
+    A, AT, Qp = s._A, s._AT, s._BmQBT
+    NN = N_records - 1
+
+    Sig0 = np.asarray(s.param.Pz0, dtype=float).reshape(dz, dz)
+    mz0 = np.asarray(s.param.mz0, dtype=float).reshape(dz, 1)
+
+    # --- Lyapunov prior (covariance + mean) ---
+    Sig: list = [Sig0]
+    mz: list = [mz0]
+    for _ in range(NN):
+        Sig.append(A @ Sig[-1] @ AT + Qp)
+        mz.append(A @ mz[-1])
+
+    # --- backward (complementary) model: A^b, Q^b, M^b, forcing b^b ---
+    Ab: list = [None] * NN
+    Qb: list = [None] * NN
+    Mb: list = [None] * NN
+    bb: list = [None] * NN
+    for n in range(NN):
+        Abn = Sig[n] @ AT @ np.linalg.inv(Sig[n + 1])
+        Ab[n] = Abn
+        Qb[n] = Sig[n] - Abn @ Sig[n + 1] @ Abn.T
+        Mb[n] = Abn[:, :dx]                       # X-columns block
+        bb[n] = mz[n] - Abn @ mz[n + 1]           # non-zero-mean forcing
+
+    ys = [
+        np.asarray(s.history[n]["ykp1"], dtype=float).reshape(dy, 1)
+        for n in range(N_records)
+    ]
+
+    # --- backward filter (N -> 0) ---
+    Pb: list = [None] * (NN + 1)
+    xb: list = [None] * (NN + 1)
+    Ppred: list = [None] * (NN + 1)   # P^b_{n-1|n}  (stored at index n-1)
+    zpred: list = [None] * (NN + 1)   # z^b_{n-1|n}
+    xb[NN], Pb[NN] = _cond_xy(mz[NN], Sig[NN], ys[NN], dx)
+    for n in range(NN, 0, -1):
+        Pzz = Mb[n - 1] @ Pb[n] @ Mb[n - 1].T + Qb[n - 1]
+        zp = Ab[n - 1] @ np.vstack([xb[n], ys[n]]) + bb[n - 1]
+        Ppred[n - 1] = Pzz
+        zpred[n - 1] = zp
+        xb[n - 1], Pb[n - 1] = _cond_xy(zp, Pzz, ys[n - 1], dx)
+
+    # --- forward recursion (0 -> N) ---
+    Xs: list = [None] * (NN + 1)
+    Ps: list = [None] * (NN + 1)
+    Dn_list: list = [None] * (NN + 1)
+    Dn_list[0] = np.zeros((dx, dz))               # n = 0: gain undefined
+    Xs[0], Ps[0] = xb[0], Pb[0]
+    blk = s.zeros_dim_xy_xy.copy()
+    for n in range(1, NN + 1):
+        try:
+            c, low = cho_factor(Ppred[n - 1])
+            Dn = cho_solve((c, low), (Pb[n] @ Mb[n - 1].T).T).T
+        except (LinAlgError, ValueError) as e:
+            raise CovarianceError(
+                f"Step {s.history[n]['k']}: Cholesky factorisation failed for "
+                f"the backward-predicted covariance in the DWY pass.",
+                matrix_name="PZZpred_backward",
+                step=s.history[n]["k"],
+            ) from e
+        blk[:dx, :dx] = Ps[n - 1]
+        Ps[n] = Pb[n] + Dn @ (blk - Ppred[n - 1]) @ Dn.T
+        resid = np.vstack(
+            [Xs[n - 1] - zpred[n - 1][:dx], ys[n - 1] - zpred[n - 1][dx:]]
+        )
+        Xs[n] = xb[n] + Dn @ resid
+        Dn_list[n] = Dn
+
+    # --- write smoothed quantities to history ---
+    for n in range(N_records):
+        Ps_n = 0.5 * (Ps[n] + Ps[n].T)
+        s._check_covariance(Ps_n, s.history[n]["k"], name="PXXkp1_smooth")
+        s.history.update_record(
+            n, Xkp1_smooth=Xs[n], PXXkp1_smooth=Ps_n, Dk_smooth=Dn_list[n]
+        )
+
+
+# Registry of smoothing passes. Extend as variants land:
+#   "BF": _bf_backward_pass, "MBF": _mbf_backward_pass, "MF": _mf_twofilter_pass.
+_SMOOTHING_PASSES = {
+    "RTS": _rts_backward_pass,
+    "DWY": _dwy_pass,
+}
+
+
+# ======================================================================
+# Variant classes + façade
+# ======================================================================
+class Linear_PKS_RTS(_LinearPKSBase):
+    """Linear pairwise Rauch--Tung--Striebel smoother (explicit variant)."""
+
+    def _smoothing_pass(self, N_records: int) -> None:
+        _rts_backward_pass(self, N_records)
+
+
+class Linear_PKS_DWY(_LinearPKSBase):
+    """Linear pairwise Desai--Weinert--Yusypchuk (backward-RTS) smoother.
+
+    Equivalent to RTS on the linear-Gaussian model (same smoothed mean and
+    covariance to machine precision), obtained via the time-reversed
+    complementary couple model. See :func:`_dwy_pass`.
+    """
+
+    def _smoothing_pass(self, N_records: int) -> None:
+        _dwy_pass(self, N_records)
+
+
+class Linear_PKS(_LinearPKSBase):
+    """
+    Linear Pairwise Kalman Smoother — façade selecting a smoothing variant.
+
+    Backward-compatible: ``Linear_PKS(param, sKey=..., joseph=...)`` keeps the
+    historical RTS behaviour (``method="RTS"`` is the default). Other variants
+    (``"BF"``, ``"MBF"``, ``"MF"``, ``"DWY"``) are registered as they are
+    implemented; on the linear-Gaussian model they all produce the same
+    smoothed estimate (Geng et al., 2023) and differ only by mechanics.
+
+    Parameters
+    ----------
+    param, sKey, verbose, joseph
+        See :class:`_LinearPKSBase`.
+    method : str, optional
+        Smoother variant key, one of :data:`_SMOOTHING_PASSES` (default
+        ``"RTS"``).
+
+    Raises
+    ------
+    FilterError
+        If ``method`` is not a registered variant.
+    """
+
+    def __init__(
+        self,
+        param: ParamLinear | ParamNonLinear,
+        sKey: int | None = None,
+        verbose: int = 0,
+        joseph: bool = False,
+        method: str = "RTS",
+    ) -> None:
+        super().__init__(param, sKey, verbose, joseph)
+        if method not in _SMOOTHING_PASSES:
+            raise FilterError(
+                f"Unknown smoother method {method!r}; "
+                f"available: {sorted(_SMOOTHING_PASSES)}."
+            )
+        self.method: str = method
+
+    def _smoothing_pass(self, N_records: int) -> None:
+        _SMOOTHING_PASSES[self.method](self, N_records)

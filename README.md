@@ -8,7 +8,7 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
 
 and **pairwise Kalman smoothers** for offline post-processing:
 
-- **Linear Pairwise Kalman Smoother (PKS)** — RTS-style backward pass on the joint `(X, Y)` Markov chain.
+- **Linear Pairwise Kalman Smoother (PKS)** — RTS-style backward pass on the joint `(X, Y)` Markov chain, with an equivalent **DWY** (Desai-Weinert-Yusypchuk) backward-filter variant selectable via `method="DWY"`.
 - **Extended Pairwise Kalman Smoother (EPKS)** — same recursion with the per-step Jacobian replacing the constant transition matrix.
 - **Unscented Pairwise Kalman Smoother (UPKS)** — sigma-point cross-covariance in the backward pass; supports the same sigma-point sets as the UPKF (`wan2000`, `cpkf`, `lerner2002`, `ito2000`).
 - **Unscented Kalman Smoother (UKS)** — classical (non-pairwise) sigma-point smoother for FxHx models with Markov-in-X assumption; gain `(dim_x, dim_x)`.
@@ -177,6 +177,8 @@ Smoothers are **two-pass, offline** estimators that condition on the *entire* ob
 
 The linear PKS runs the [PKF forward](#pairwise-kalman-filter-pkf), then a backward Rauch-Tung-Striebel recursion at the **joint** `(X, Y)` level. The pairwise model is Markov in `Z = (X, Y)` (not in `X` alone), so the smoothing gain `G_n` has shape `(dim_x, dim_x + dim_y)`. Equivalently, the linear PKS is the classical RTS smoother applied to the augmented state `Z' = (X, Y)` with degenerate observation `Y_n = (0, I) Z'_n` (`R^aug = 0`).
 
+`Linear_PKS` is a façade that selects the backward pass via `method=` (default `"RTS"`). `method="DWY"` runs the **Desai-Weinert-Yusypchuk** backward-filter recursion on the time-reversed complementary couple model (cf. Geng et al., 2023); on the linear-Gaussian model it returns the same smoothed mean and covariance as RTS to machine precision (verified by `test_dwy_equals_rts`). The explicit variant classes `Linear_PKS_RTS` and `Linear_PKS_DWY` are also exported (`Linear_PKS_<NAME>`).
+
 ```python
 from prg.classes.linear_pks import Linear_PKS
 from prg.classes.param_linear import ParamLinear
@@ -195,7 +197,7 @@ results = pks.process_N_data_smoother(N=500)
 # each tuple: (k, x_true, y_obs, X_predict, X_update, X_smooth)
 ```
 
-Implementation: [`prg/classes/linear_pks.py`](prg/classes/linear_pks.py). Tests: [`prg/tests/test_linear_pks.py`](prg/tests/test_linear_pks.py) (40 tests, including PSD shrinkage, Joseph equivalence, augmented-state RTS equivalence, and full exception/logging coverage).
+Implementation: [`prg/classes/linear_pks.py`](prg/classes/linear_pks.py). Tests: [`prg/tests/test_linear_pks.py`](prg/tests/test_linear_pks.py) (44 tests, including PSD shrinkage, Joseph equivalence, augmented-state RTS equivalence, DWY≡RTS equivalence, and full exception/logging coverage).
 
 ### Extended Pairwise Kalman Smoother (EPKS)
 
