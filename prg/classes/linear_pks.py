@@ -376,11 +376,11 @@ def _dwy_pass(s: _LinearPKSBase, N_records: int) -> None:
     Mechanics (cf. report Section 2.5):
 
     - Lyapunov prior covariance ``Sigma_n`` and prior mean ``m_n``;
-    - backward model ``Z_n = A^b_n Z_{n+1} + u^b_n`` with
+    - backward model ``Z_n = A^b_n Z_{n+1} + c^b_n + u^b_n`` with
       ``A^b_n = Sigma_n A^T Sigma_{n+1}^{-1}``,
       ``Q^b_n = Sigma_n - A^b_n Sigma_{n+1} (A^b_n)^T``, and a **non-zero-mean**
-      forcing ``b^b_n = m_n - A^b_n m_{n+1}`` (the reversed process is not
-      centred — this offset affects means, not covariances);
+      forcing/offset ``c^b_n = m_n - A^b_n m_{n+1}`` (the reversed process is not
+      centred — this offset affects means, not covariances; cf. report §2.5);
     - backward filter (``N -> 0``): ``P^b_n``, ``x^b_n = E[X_n | y_{n:N}]``;
     - forward recursion (``0 -> N``): gain
       ``D_n = P^b_n (M^b_{n-1})^T (P^b_{n-1|n})^{-1}``.
@@ -407,17 +407,17 @@ def _dwy_pass(s: _LinearPKSBase, N_records: int) -> None:
         Sig.append(A @ Sig[-1] @ AT + Qp)
         mz.append(A @ mz[-1])
 
-    # --- backward (complementary) model: A^b, Q^b, M^b, forcing b^b ---
+    # --- backward (complementary) model: A^b, Q^b, M^b, offset c^b ---
     Ab: list = [None] * NN
     Qb: list = [None] * NN
     Mb: list = [None] * NN
-    bb: list = [None] * NN
+    cb: list = [None] * NN
     for n in range(NN):
         Abn = Sig[n] @ AT @ np.linalg.inv(Sig[n + 1])
         Ab[n] = Abn
         Qb[n] = Sig[n] - Abn @ Sig[n + 1] @ Abn.T
         Mb[n] = Abn[:, :dx]                       # X-columns block
-        bb[n] = mz[n] - Abn @ mz[n + 1]           # non-zero-mean forcing
+        cb[n] = mz[n] - Abn @ mz[n + 1]           # non-zero-mean offset c^b_n
 
     ys = [
         np.asarray(s.history[n]["ykp1"], dtype=float).reshape(dy, 1)
@@ -432,7 +432,7 @@ def _dwy_pass(s: _LinearPKSBase, N_records: int) -> None:
     xb[NN], Pb[NN] = _cond_xy(mz[NN], Sig[NN], ys[NN], dx)
     for n in range(NN, 0, -1):
         Pzz = Mb[n - 1] @ Pb[n] @ Mb[n - 1].T + Qb[n - 1]
-        zp = Ab[n - 1] @ np.vstack([xb[n], ys[n]]) + bb[n - 1]
+        zp = Ab[n - 1] @ np.vstack([xb[n], ys[n]]) + cb[n - 1]
         Ppred[n - 1] = Pzz
         zpred[n - 1] = zp
         xb[n - 1], Pb[n - 1] = _cond_xy(zp, Pzz, ys[n - 1], dx)
