@@ -281,22 +281,25 @@ class TestNonLinearPPSExceptionPolicy:
         with pytest.raises(PKFError):
             pps.process_N_data_smoother(N=0)
 
-    def test_singular_mQ_xx_raises_covariance_error(self, param_nl_x2y1):
-        """If ``mQ[:p,:p]`` is degenerate when the smoother starts the
+    def test_singular_joint_mQ_raises_covariance_error(self, param_nl_x2y1):
+        """If the joint transition-noise covariance ``mQ`` (full
+        ``(p+q)x(p+q)``) is degenerate when the smoother starts the
         backward pass, the Cholesky cannot be initialised; a
         ``CovarianceError`` with structured ``step=-1`` and
-        ``matrix_name='mQ[:p,:p]'`` must surface. Parallels Linear_PKS's
+        ``matrix_name='mQ'`` must surface. Parallels Linear_PKS's
         ``test_singular_predicted_covariance_raises``.
 
-        We zero **only the X-marginal block** of ``mQ`` (not the full
-        ``mQ``, which would also kill ``R`` and trigger an earlier
-        ``InvertibilityError`` in the PPF forward ``_precompute``).
+        We zero **only the X-marginal block** of ``mQ`` — this already makes
+        the full ``mQ`` singular (so the joint-kernel Cholesky fails), while
+        leaving the Y-block intact so ``R`` stays invertible and the PPF
+        forward ``_precompute`` does not raise an earlier
+        ``InvertibilityError``.
         """
         param_bad = copy.copy(param_nl_x2y1)
         bad_mQ = param_bad._mQ.copy()
         p = param_nl_x2y1.dim_x
         bad_mQ[:p, :p] = 0.0
-        bad_mQ[:p, p:] = 0.0  # also zero the M cross-block to keep mQ PSD
+        bad_mQ[:p, p:] = 0.0  # also zero the cross-blocks (keep mQ symmetric PSD)
         bad_mQ[p:, :p] = 0.0
         param_bad._mQ = bad_mQ
         pps = NonLinear_PPS(
@@ -305,7 +308,7 @@ class TestNonLinearPPSExceptionPolicy:
         with pytest.raises(CovarianceError) as exc_info:
             pps.process_N_data_smoother(N=10)
         err = exc_info.value
-        assert err.matrix_name == "mQ[:p,:p]"
+        assert err.matrix_name == "mQ"
         assert err.step == -1                # sentinel: construction-time
         assert err.__cause__ is not None
 

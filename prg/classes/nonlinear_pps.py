@@ -59,8 +59,13 @@ class NonLinear_PPS(NonLinear_PPF):
     .. math::
 
         \\tilde w_{i,n} \\;=\\; w_{i,n} \\sum_j \\tilde w_{j,n+1}\\,
-            \\frac{p(\\xi_{j,n+1} \\mid \\xi_{i,n},\\, y_n)}
-                  {\\sum_l w_{l,n}\\, p(\\xi_{j,n+1} \\mid \\xi_{l,n},\\, y_n)}
+            \\frac{p(\\xi_{j,n+1}, y_{n+1} \\mid \\xi_{i,n},\\, y_n)}
+                  {\\sum_l w_{l,n}\\, p(\\xi_{j,n+1}, y_{n+1} \\mid \\xi_{l,n},\\, y_n)}
+
+    where the backward kernel is the **joint** couple transition density
+    :math:`\\mathcal N\\bigl((\\xi_{j,n+1}, y_{n+1}); g((\\xi_{i,n}, y_n), 0),\\,
+    B Q B^\\top\\bigr)` — retaining the ``y_{n+1}`` factor is required for the
+    pairwise model (it depends on ``x_n`` via ``A^{yx}``).
 
     Smoothed moments per step are recovered as standard weighted
     statistics on the forward particle cloud:
@@ -266,10 +271,10 @@ class NonLinear_PPS(NonLinear_PPF):
             If a covariance matrix in the forward PPF (e.g. ``R``)
             cannot be inverted (propagated).
         CovarianceError
-            (a) at construction-time if the X-marginal transition-noise
-            covariance ``mQ[:p,:p]`` is not positive definite — its
-            Cholesky is required to evaluate the backward kernel
-            (carries ``step=-1`` and ``matrix_name="mQ[:p,:p]"``);
+            (a) at construction-time if the joint transition-noise
+            covariance ``mQ`` (full ``(p+q)x(p+q)``) is not positive
+            definite — its Cholesky is required to evaluate the backward
+            kernel (carries ``step=-1`` and ``matrix_name="mQ"``);
             (b) at every backward step if the resulting smoothed
             covariance :math:`P^{xx}_{n|N}` is not PSD (carries the
             offending ``step`` and ``matrix_name="PXXkp1_smooth"``).
@@ -297,20 +302,26 @@ class NonLinear_PPS(NonLinear_PPF):
             self.n_particles,
         )
 
-        # 2) Pre-compute the inverse of the X-marginal transition-noise
-        # covariance. Same convention as the PPF: assumes B = I, so the
-        # marginal X-noise covariance is just the top-left p×p block of mQ.
-        Sigma_xx: np.ndarray = self.param.mQ[: self.dim_x, : self.dim_x]
+        # 2) Pre-compute the inverse of the JOINT (p+q)-dim transition-noise
+        # covariance Sigma_zz = B Q B^T. Same convention as the PPF: assumes
+        # B = I, so Sigma_zz is the full mQ. The FFBSm backward kernel is the
+        # JOINT transition density of z_{n+1} = (x_{n+1}, y_{n+1}): for a
+        # pairwise model y_{n+1} depends on x_n (via A^{yx}), so the y_{n+1}
+        # factor does NOT cancel in the FFBSm ratio and must be retained
+        # (cf. report Section 6.3 — using only the X-marginal mQ[:p,:p] leaves
+        # an O(1) smoothing bias that does not vanish as n_p -> inf).
+        Sigma_zz: np.ndarray = self.param.mQ
         try:
-            c_sig, low_sig = cho_factor(Sigma_xx)
-            Sigma_xx_inv: np.ndarray = cho_solve(
-                (c_sig, low_sig), self.eye_dim_x
+            c_sig, low_sig = cho_factor(Sigma_zz)
+            Sigma_zz_inv: np.ndarray = cho_solve(
+                (c_sig, low_sig), np.eye(self.dim_xy)
             )
         except (LinAlgError, ValueError) as e:
             raise CovarianceError(
-                "NonLinear_PPS: Cholesky factorisation of mQ[:p,:p] failed — "
-                "cannot evaluate the backward transition kernel.",
-                matrix_name="mQ[:p,:p]",
+                "NonLinear_PPS: Cholesky factorisation of mQ (joint p+q "
+                "transition-noise covariance) failed — cannot evaluate the "
+                "backward kernel.",
+                matrix_name="mQ",
                 step=-1,
             ) from e
 
@@ -340,23 +351,31 @@ class NonLinear_PPS(NonLinear_PPF):
             particles_npo: np.ndarray = nxt["particles"]       # (n_p, dim_x, 1)
             w_smooth_npo: np.ndarray = nxt["w_smooth"]         # (n_p,)
 
-            # Propagate each particle through g with y_n inserted, take X-part:
-            # mu_x[i] = [ g((particles_n[i], y_n), 0) ]_X
+            # Propagate each particle through g with y_n inserted (full couple):
+            # mu_z[i] = g((particles_n[i], y_n), 0) = (mu_x[i], mu_y[i]).
             z_out = self._propagate_particles_at(
                 particles_n, Yn, z_buffer, zeros_batched,
             )
-            mu_x: np.ndarray = z_out[:, : self.dim_x, :]       # (n_p, dim_x, 1)
+            mu_x: np.ndarray = z_out[:, : self.dim_x, 0]       # (n_p, dim_x)
+            mu_y: np.ndarray = z_out[:, self.dim_x :, 0]       # (n_p, dim_y)
 
-            # Pairwise log-density matrix
-            #   log_D[i, j] = -0.5 (xi_{j,n+1} - mu_x[i])^T Sigma_xx^{-1} (xi_{j,n+1} - mu_x[i])
-            # diff[i, j, :, 0] = xi_{j,n+1} - mu_x[i]
-            diff = particles_npo[None, :, :, :] - mu_x[:, None, :, :]
-            # Fused contraction with path optimisation — ~20-30% faster than
-            # two sequential einsums on the test grid.
+            # JOINT backward log-density matrix. The next augmented state is
+            # z_{n+1} = (xi_{j,n+1}, y_{n+1}); the residual carries the X-part
+            # (varies over i AND j) and the Y-part (varies over i only, since
+            # y_{n+1} is the fixed observation). The Y-part does NOT cancel in
+            # the FFBSm column-normaliser when A^{yx} != 0 (cf. Section 6.3).
+            #   log_D[i, j] = -0.5 d_{ij}^T Sigma_zz^{-1} d_{ij},
+            #   d_{ij} = ( xi_{j,n+1} - mu_x[i] ; y_{n+1} - mu_y[i] ).
+            y_npo: np.ndarray = nxt["ykp1"][:, 0]              # (dim_y,)  y_{n+1}
+            diff_x = particles_npo[None, :, :, 0] - mu_x[:, None, :]   # (i, j, dim_x)
+            diff_y = (y_npo[None, :] - mu_y)[:, None, :]               # (i, 1, dim_y)
+            diff_z = np.concatenate(
+                [diff_x, np.broadcast_to(diff_y, (*diff_x.shape[:2], self.dim_y))],
+                axis=2,
+            )                                                  # (i, j, dim_xy)
+            # Fused contraction with path optimisation.
             quad = np.einsum(
-                "ijk,kl,ijl->ij",
-                diff[..., 0], Sigma_xx_inv, diff[..., 0],
-                optimize=True,
+                "ijk,kl,ijl->ij", diff_z, Sigma_zz_inv, diff_z, optimize=True,
             )
             log_D = -0.5 * quad                                # (n_p, n_p)
 
