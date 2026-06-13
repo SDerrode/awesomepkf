@@ -5,7 +5,14 @@ import logging
 import numpy as np
 import pytest
 
-from prg.classes.linear_pks import Linear_PKS, Linear_PKS_DWY, Linear_PKS_RTS
+from prg.classes.linear_pks import (
+    Linear_PKS,
+    Linear_PKS_BF,
+    Linear_PKS_DWY,
+    Linear_PKS_MBF,
+    Linear_PKS_MF,
+    Linear_PKS_RTS,
+)
 from prg.utils.exceptions import CovarianceError
 
 SEED = 42
@@ -318,6 +325,57 @@ class TestLinearPKSDWYEquivalence:
 
         with pytest.raises(FilterError):
             Linear_PKS(param_x1y1, sKey=SEED, method="NOPE")
+
+
+class TestLinearPKSVariantEquivalence:
+    """BF, MBF and MF each return the same smoothed estimate as RTS, to machine
+    precision, on the linear-Gaussian pairwise model (Geng et al., 2023). This
+    is the consolidated non-regression test of report Section 2.6 — the five
+    linear variants compute the same law and differ only by mechanics."""
+
+    VARIANT_EQ_TOL = 1e-9
+
+    @pytest.mark.parametrize("method", ["BF", "MBF", "MF"])
+    @pytest.mark.parametrize("param_fixture", ["param_x1y1", "param_x2y2"])
+    def test_variant_equals_rts(self, method, param_fixture, request):
+        param = request.getfixturevalue(param_fixture)
+        rts = Linear_PKS_RTS(param, sKey=SEED)
+        rts.process_N_data_smoother(N=120)
+        var = Linear_PKS(param, sKey=SEED, method=method)
+        var.process_N_data_smoother(N=120)
+        for a, b in zip(rts.history, var.history, strict=True):
+            assert np.allclose(
+                a["Xkp1_smooth"], b["Xkp1_smooth"], atol=self.VARIANT_EQ_TOL
+            ), f"{method}: smoothed mean mismatch at step {a['k']}"
+            assert np.allclose(
+                a["PXXkp1_smooth"], b["PXXkp1_smooth"], atol=self.VARIANT_EQ_TOL
+            ), f"{method}: smoothed covariance mismatch at step {a['k']}"
+
+    @pytest.mark.parametrize(
+        "method, cls",
+        [("BF", Linear_PKS_BF), ("MBF", Linear_PKS_MBF), ("MF", Linear_PKS_MF)],
+    )
+    def test_variant_explicit_class_matches_facade(self, method, cls, param_x1y1):
+        explicit = cls(param_x1y1, sKey=SEED)
+        explicit.process_N_data_smoother(N=60)
+        facade = Linear_PKS(param_x1y1, sKey=SEED, method=method)
+        facade.process_N_data_smoother(N=60)
+        for a, b in zip(explicit.history, facade.history, strict=True):
+            assert np.allclose(a["Xkp1_smooth"], b["Xkp1_smooth"], atol=SHAPE_TOL)
+            assert np.allclose(
+                a["PXXkp1_smooth"], b["PXXkp1_smooth"], atol=SHAPE_TOL
+            )
+
+    @pytest.mark.parametrize("method", ["BF", "MBF", "MF"])
+    def test_variant_terminal_equals_filtered(self, method, param_x1y1):
+        """Terminal step: smoothed == filtered for every variant."""
+        pks = Linear_PKS(param_x1y1, sKey=SEED, method=method)
+        pks.process_N_data_smoother(N=N_SHORT)
+        last = pks.history[-1]
+        assert np.allclose(last["Xkp1_smooth"], last["Xkp1_update"], atol=SHAPE_TOL)
+        assert np.allclose(
+            last["PXXkp1_smooth"], last["PXXkp1_update"], atol=SHAPE_TOL
+        )
 
 
 class TestLinearPKSEdgeCases:

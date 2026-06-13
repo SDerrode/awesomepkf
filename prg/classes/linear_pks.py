@@ -42,7 +42,14 @@ from prg.utils.exceptions import CovarianceError, FilterError
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["Linear_PKS", "Linear_PKS_DWY", "Linear_PKS_RTS"]
+__all__ = [
+    "Linear_PKS",
+    "Linear_PKS_BF",
+    "Linear_PKS_DWY",
+    "Linear_PKS_MBF",
+    "Linear_PKS_MF",
+    "Linear_PKS_RTS",
+]
 
 
 # ======================================================================
@@ -349,6 +356,187 @@ def _rts_backward_pass(s: _LinearPKSBase, N_records: int) -> None:
             rich_show_fields(s.history[i], title=f"Smoothed step {cur['k']}")
 
 
+def _mbf_backward_pass(s: _LinearPKSBase, N_records: int) -> None:
+    r"""
+    Modified Bryson--Frazier (Bierman) pairwise smoothing pass, in place.
+
+    Adjoint smoother at the **filtered** ``X`` level (dimension ``dim_x``). It
+    propagates the adjoint pair :math:`(\lambda_n, \Lambda_n)` from which the
+    smoothed law is recovered by
+
+    .. math::
+        \bar x_{n|N} = \bar x_{n|n} + P^{xx}_{n|n}\,\lambda_n,\quad
+        P^{xx}_{n|N} = P^{xx}_{n|n} - P^{xx}_{n|n}\,\Lambda_n\,P^{xx}_{n|n}.
+
+    Backward recursion (``n = N \to 1``), with the constant columns-X block
+    :math:`M = (A^{xx}; A^{yx})`, the forward innovation ``ikp1``, its
+    covariance ``Skp1`` and the filter gain ``Kkp1``:
+
+    - measurement update (to the couple adjoint)
+      :math:`\mu_n = (\lambda_n;\, S_n^{-1}\iota_n - K_n^\top\lambda_n)`,
+      :math:`N_n = \mathrm{diag}(0, S_n^{-1}) + (I; -K_n^\top)\,\Lambda_n\,(I, -K_n)`;
+    - time update :math:`\lambda_{n-1} = M^\top\mu_n`,
+      :math:`\Lambda_{n-1} = M^\top N_n M`.
+
+    The factored form of ``N_n`` keeps :math:`\Lambda_n \succeq 0` by
+    construction (the rearward analogue of the Joseph form), so this variant is
+    numerically robust and never forms the degenerate joint covariance. On the
+    linear-Gaussian model it returns the RTS estimate (see ``test_mbf_equals_rts``).
+
+    Writes ``Xkp1_smooth`` / ``PXXkp1_smooth`` to each record.
+
+    Raises
+    ------
+    CovarianceError
+        If the innovation covariance ``Skp1`` is not Cholesky-factorisable, or a
+        smoothed covariance is not PSD (carries ``step`` / ``matrix_name``).
+    """
+    dx = s.dim_x
+    M: np.ndarray = s._A[:, :dx]   # columns-X of A, shape (dim_xy, dim_x)
+    MT: np.ndarray = M.T
+    NN: int = N_records - 1
+
+    # Terminal step: lambda_N = Lambda_N = 0 → smoothed = filtered.
+    last = s.history[NN]
+    s.history.update_record(
+        NN,
+        Xkp1_smooth=last["Xkp1_update"].copy(),
+        PXXkp1_smooth=last["PXXkp1_update"].copy(),
+    )
+    lam: np.ndarray = np.zeros((dx, 1))
+    Lam: np.ndarray = np.zeros((dx, dx))
+
+    for n in range(NN, 0, -1):
+        rec = s.history[n]
+        Sn, Kn, inn = rec["Skp1"], rec["Kkp1"], rec["ikp1"]
+
+        try:
+            c, low = cho_factor(Sn)
+            Sinv_inn: np.ndarray = cho_solve((c, low), inn)            # S^{-1} iota_n
+            Sinv: np.ndarray = cho_solve((c, low), s.eye_dim_y)        # S^{-1}
+        except (LinAlgError, ValueError) as e:
+            raise CovarianceError(
+                f"Step {rec['k']}: Cholesky factorisation failed for the "
+                f"innovation covariance Skp1 in the MBF pass.",
+                matrix_name="Skp1",
+                step=rec["k"],
+            ) from e
+
+        # Measurement update → couple adjoint (mu_n, N_n), factored PSD form.
+        F: np.ndarray = np.vstack((s.eye_dim_x, -Kn.T))    # [I_p; -K_n^T], (dz, dx)
+        mu: np.ndarray = np.vstack((lam, Sinv_inn - Kn.T @ lam))
+        Nmat: np.ndarray = F @ Lam @ F.T
+        Nmat[dx:, dx:] += Sinv                              # + diag(0, S^{-1})
+
+        # Time update n → n-1.
+        lam = MT @ mu
+        Lam = MT @ Nmat @ M
+
+        # Recover the smoothed law at n-1 (filtered-level).
+        prev = s.history[n - 1]
+        Xf: np.ndarray = prev["Xkp1_update"]
+        Pf: np.ndarray = prev["PXXkp1_update"]
+        Xs: np.ndarray = Xf + Pf @ lam
+        Ps: np.ndarray = Pf - Pf @ Lam @ Pf
+        Ps = 0.5 * (Ps + Ps.T)
+        s._check_covariance(Ps, prev["k"], name="PXXkp1_smooth")
+        s.history.update_record(n - 1, Xkp1_smooth=Xs, PXXkp1_smooth=Ps)
+
+
+def _bf_backward_pass(s: _LinearPKSBase, N_records: int) -> None:
+    r"""
+    Bryson--Frazier (pure) pairwise smoothing pass, in place.
+
+    Adjoint smoother at the **couple** level: it propagates the predicted-couple
+    adjoint :math:`(\mu_n, N_n) \in \mathbb{R}^{p+q}` and recovers the smoothed
+    law from the *predicted* joint moments
+
+    .. math::
+        \bar z_{n|N} = \bar z_{n|n-1} + P_{n|n-1}\,\mu_n,\quad
+        P^{ZZ}_{n|N} = P_{n|n-1} - P_{n|n-1}\,N_n\,P_{n|n-1},
+
+    the smoothed ``X`` law being the ``x`` / ``xx`` block. Backward recursion
+    (``n = N \to 1``) with :math:`\Psi_n = (I; -K_n^\top) M^\top`:
+
+    .. math::
+        \mu_n = (0; S_n^{-1}\iota_n) + \Psi_n \mu_{n+1},\quad
+        N_n = \mathrm{diag}(0, S_n^{-1}) + \Psi_n N_{n+1} \Psi_n^\top.
+
+    The terminal step ``n = 0`` (no prediction) is recovered at the filtered
+    level via :math:`\lambda_0 = M^\top\mu_1`. Unlike MBF, the covariance update
+    is a *subtraction* on the joint :math:`P_{n|n-1}`; it is the (less robust)
+    standard counterpart, kept for completeness. On the linear-Gaussian model it
+    returns the RTS estimate (see ``test_bf_equals_rts``).
+
+    Writes ``Xkp1_smooth`` / ``PXXkp1_smooth`` to each record.
+
+    Raises
+    ------
+    CovarianceError
+        If the innovation covariance ``Skp1`` is not Cholesky-factorisable, or a
+        smoothed covariance is not PSD (carries ``step`` / ``matrix_name``).
+    """
+    dx, dz = s.dim_x, s.dim_xy
+    M: np.ndarray = s._A[:, :dx]
+    MT: np.ndarray = M.T
+    NN: int = N_records - 1
+
+    # Couple adjoint, initialised flat (mu_{N+1} = 0, N_{N+1} = 0).
+    mu: np.ndarray = np.zeros((dz, 1))
+    Nmat: np.ndarray = np.zeros((dz, dz))
+
+    P_pred: np.ndarray = s.zeros_dim_xy_xy.copy()
+
+    for n in range(NN, 0, -1):
+        rec = s.history[n]
+        Sn, Kn, inn = rec["Skp1"], rec["Kkp1"], rec["ikp1"]
+
+        try:
+            c, low = cho_factor(Sn)
+            Sinv_inn: np.ndarray = cho_solve((c, low), inn)
+            Sinv: np.ndarray = cho_solve((c, low), s.eye_dim_y)
+        except (LinAlgError, ValueError) as e:
+            raise CovarianceError(
+                f"Step {rec['k']}: Cholesky factorisation failed for the "
+                f"innovation covariance Skp1 in the BF pass.",
+                matrix_name="Skp1",
+                step=rec["k"],
+            ) from e
+
+        # Couple-adjoint recursion: Psi_n = [I; -K_n^T] M^T.
+        Psi: np.ndarray = np.vstack((s.eye_dim_x, -Kn.T)) @ MT
+        mu = Psi @ mu
+        mu[dx:] += Sinv_inn                       # + (0; S^{-1} iota_n)
+        Nmat = Psi @ Nmat @ Psi.T
+        Nmat[dx:, dx:] += Sinv                    # + diag(0, S^{-1})
+
+        # Predicted-level recovery at n. Rebuild the predicted joint moments:
+        #   z_pred = (X_pred; y - iota),  P_pred = [[PXX, K S], [(K S)^T, S]].
+        Xp: np.ndarray = rec["Xkp1_predict"]
+        z_pred: np.ndarray = np.vstack((Xp, rec["ykp1"] - inn))
+        Pxy: np.ndarray = Kn @ Sn
+        P_pred[:dx, :dx] = rec["PXXkp1_predict"]
+        P_pred[:dx, dx:] = Pxy
+        P_pred[dx:, :dx] = Pxy.T
+        P_pred[dx:, dx:] = Sn
+
+        z_s: np.ndarray = z_pred + P_pred @ mu
+        Pzz_s: np.ndarray = P_pred - P_pred @ Nmat @ P_pred
+        Ps: np.ndarray = 0.5 * (Pzz_s[:dx, :dx] + Pzz_s[:dx, :dx].T)
+        s._check_covariance(Ps, rec["k"], name="PXXkp1_smooth")
+        s.history.update_record(n, Xkp1_smooth=z_s[:dx], PXXkp1_smooth=Ps)
+
+    # n = 0: no prediction → recover at the filtered level via lambda_0 = M^T mu_1.
+    lam0: np.ndarray = MT @ mu
+    Lam0: np.ndarray = MT @ Nmat @ M
+    rec0 = s.history[0]
+    Xf0, Pf0 = rec0["Xkp1_update"], rec0["PXXkp1_update"]
+    Ps0: np.ndarray = Pf0 - Pf0 @ Lam0 @ Pf0
+    Ps0 = 0.5 * (Ps0 + Ps0.T)
+    s._check_covariance(Ps0, rec0["k"], name="PXXkp1_smooth")
+    s.history.update_record(0, Xkp1_smooth=Xf0 + Pf0 @ lam0, PXXkp1_smooth=Ps0)
+
+
 def _cond_xy(
     mean_z: np.ndarray, Pzz: np.ndarray, y: np.ndarray, dx: int
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -364,14 +552,15 @@ def _cond_xy(
     return mx + K @ (y - my), Pxx - K @ Pyx
 
 
-def _dwy_pass(s: _LinearPKSBase, N_records: int) -> None:
+def _dwy_backward_filter(s: _LinearPKSBase, N_records: int) -> dict:
     """
-    Desai--Weinert--Yusypchuk (backward-RTS) pairwise smoothing pass.
+    Backward pairwise filter on the time-reversed (complementary) couple model.
 
-    Dual of the RTS pass: a **backward** pairwise filter on the time-reversed
-    (complementary) couple model, followed by a **forward** recursion. On the
-    linear-Gaussian model it returns the same smoothed estimate as RTS (Geng
-    et al., 2023) — see the equivalence test ``test_dwy_equals_rts``.
+    Shared infrastructure for the **DWY** smoother (which chains a forward
+    recursion, :func:`_dwy_pass`) and the **MF** two-filter smoother (which
+    fuses pointwise, :func:`_mf_twofilter_pass`). Both reuse the same reversed
+    model and backward filter; they differ only by how the backward law is
+    combined with the forward filter (cf. report Section 2.4 / 2.5).
 
     Mechanics (cf. report Section 2.5):
 
@@ -380,18 +569,14 @@ def _dwy_pass(s: _LinearPKSBase, N_records: int) -> None:
       ``A^b_n = Sigma_n A^T Sigma_{n+1}^{-1}``,
       ``Q^b_n = Sigma_n - A^b_n Sigma_{n+1} (A^b_n)^T``, and a **non-zero-mean**
       forcing/offset ``c^b_n = m_n - A^b_n m_{n+1}`` (the reversed process is not
-      centred — this offset affects means, not covariances; cf. report §2.5);
-    - backward filter (``N -> 0``): ``P^b_n``, ``x^b_n = E[X_n | y_{n:N}]``;
-    - forward recursion (``0 -> N``): gain
-      ``D_n = P^b_n (M^b_{n-1})^T (P^b_{n-1|n})^{-1}``.
+      centred — this offset affects means, not covariances);
+    - backward filter (``N -> 0``): ``P^b_n``, ``x^b_n = E[X_n | y_{n:N}]``,
+      plus the backward-predicted joint moments ``z^b_{n-1|n}``, ``P^b_{n-1|n}``.
 
-    Writes ``Xkp1_smooth``, ``PXXkp1_smooth`` and the DWY gain ``Dk_smooth``.
-
-    Raises
-    ------
-    CovarianceError
-        If a backward-predicted covariance is not Cholesky-factorisable, or a
-        smoothed covariance is not PSD (carries ``step`` / ``matrix_name``).
+    Returns
+    -------
+    dict
+        Keys ``dx, dy, dz, NN, Sig, mz, Mb, ys, xb, Pb, Ppred, zpred``.
     """
     dx, dy, dz = s.dim_x, s.dim_y, s.dim_xy
     A, AT, Qp = s._A, s._AT, s._BmQBT
@@ -437,6 +622,36 @@ def _dwy_pass(s: _LinearPKSBase, N_records: int) -> None:
         zpred[n - 1] = zp
         xb[n - 1], Pb[n - 1] = _cond_xy(zp, Pzz, ys[n - 1], dx)
 
+    return {
+        "dx": dx, "dy": dy, "dz": dz, "NN": NN,
+        "Sig": Sig, "mz": mz, "Mb": Mb, "ys": ys,
+        "xb": xb, "Pb": Pb, "Ppred": Ppred, "zpred": zpred,
+    }
+
+
+def _dwy_pass(s: _LinearPKSBase, N_records: int) -> None:
+    """
+    Desai--Weinert--Yusypchuk (backward-RTS) pairwise smoothing pass.
+
+    Dual of the RTS pass: a **backward** pairwise filter on the time-reversed
+    (complementary) couple model (:func:`_dwy_backward_filter`), followed by a
+    **forward** recursion of gain ``D_n = P^b_n (M^b_{n-1})^T (P^b_{n-1|n})^{-1}``.
+    On the linear-Gaussian model it returns the same smoothed estimate as RTS
+    (Geng et al., 2023) — see the equivalence test ``test_dwy_equals_rts``.
+
+    Writes ``Xkp1_smooth``, ``PXXkp1_smooth`` and the DWY gain ``Dk_smooth``.
+
+    Raises
+    ------
+    CovarianceError
+        If a backward-predicted covariance is not Cholesky-factorisable, or a
+        smoothed covariance is not PSD (carries ``step`` / ``matrix_name``).
+    """
+    bf = _dwy_backward_filter(s, N_records)
+    dx, dz, NN = bf["dx"], bf["dz"], bf["NN"]
+    Mb, ys = bf["Mb"], bf["ys"]
+    xb, Pb, Ppred, zpred = bf["xb"], bf["Pb"], bf["Ppred"], bf["zpred"]
+
     # --- forward recursion (0 -> N) ---
     Xs: list = [None] * (NN + 1)
     Ps: list = [None] * (NN + 1)
@@ -472,10 +687,76 @@ def _dwy_pass(s: _LinearPKSBase, N_records: int) -> None:
         )
 
 
-# Registry of smoothing passes. Extend as variants land:
-#   "BF": _bf_backward_pass, "MBF": _mbf_backward_pass, "MF": _mf_twofilter_pass.
+def _mf_twofilter_pass(s: _LinearPKSBase, N_records: int) -> None:
+    r"""
+    Mayne--Fraser (two-filter) pairwise smoothing pass, in place.
+
+    Fuses, in **information** form, the forward filter posterior
+    :math:`p(X_n | y_{1:n})` with the backward filter posterior
+    :math:`p(X_n | y_{n:N})` (shared backward filter,
+    :func:`_dwy_backward_filter`), removing the doubly-counted prior-conditioned
+    term :math:`p(X_n | y_n)`:
+
+    .. math::
+        (P^{xx}_{n|N})^{-1} = (P^{xx}_{n|n})^{-1} + (P^b_n)^{-1} - (P^y_n)^{-1},
+
+    and likewise for the information vector. The two passes are **independent**
+    (parallelisable) — this is the structural difference with DWY, which chains
+    them. On the linear-Gaussian model it returns the RTS estimate (Geng et al.,
+    2023) — see ``test_mf_equals_rts``.
+
+    Writes ``Xkp1_smooth`` / ``PXXkp1_smooth`` to each record.
+
+    Raises
+    ------
+    CovarianceError
+        If any of the three :math:`p\times p` covariances (or the fused
+        information matrix) is not Cholesky-factorisable, or a smoothed
+        covariance is not PSD (carries ``step`` / ``matrix_name``).
+    """
+    bf = _dwy_backward_filter(s, N_records)
+    dx = bf["dx"]
+    Sig, mz, ys, xb, Pb = bf["Sig"], bf["mz"], bf["ys"], bf["xb"], bf["Pb"]
+    eye_dx = s.eye_dim_x
+
+    def _inv_pd(P: np.ndarray, k: int, name: str) -> np.ndarray:
+        try:
+            c, low = cho_factor(P)
+            return cho_solve((c, low), eye_dx)
+        except (LinAlgError, ValueError) as e:
+            raise CovarianceError(
+                f"Step {k}: Cholesky factorisation failed for {name} "
+                f"in the MF two-filter fusion.",
+                matrix_name=name,
+                step=k,
+            ) from e
+
+    for n in range(N_records):
+        rec = s.history[n]
+        Xf, Pf = rec["Xkp1_update"], rec["PXXkp1_update"]
+        Xb, Pbn = xb[n], Pb[n]
+        # p(X_n | y_n): prior marginal N(m_n, Sig_n) conditioned on Y_n = y_n.
+        Xy, Py = _cond_xy(mz[n], Sig[n], ys[n], dx)
+
+        If = _inv_pd(Pf, rec["k"], "PXXkp1_update")
+        Ib = _inv_pd(Pbn, rec["k"], "Pb_backward")
+        Iy = _inv_pd(Py, rec["k"], "Py_prior")
+
+        info: np.ndarray = If + Ib - Iy                  # fused information
+        Ps: np.ndarray = _inv_pd(info, rec["k"], "info_smooth")
+        Xs: np.ndarray = Ps @ (If @ Xf + Ib @ Xb - Iy @ Xy)
+        Ps = 0.5 * (Ps + Ps.T)
+        s._check_covariance(Ps, rec["k"], name="PXXkp1_smooth")
+        s.history.update_record(n, Xkp1_smooth=Xs, PXXkp1_smooth=Ps)
+
+
+# Registry of smoothing passes. All five linear variants produce the same
+# smoothed estimate on the linear-Gaussian model (Geng et al., 2023).
 _SMOOTHING_PASSES = {
     "RTS": _rts_backward_pass,
+    "BF": _bf_backward_pass,
+    "MBF": _mbf_backward_pass,
+    "MF": _mf_twofilter_pass,
     "DWY": _dwy_pass,
 }
 
@@ -488,6 +769,33 @@ class Linear_PKS_RTS(_LinearPKSBase):
 
     def _smoothing_pass(self, N_records: int) -> None:
         _rts_backward_pass(self, N_records)
+
+
+class Linear_PKS_BF(_LinearPKSBase):
+    """Linear pairwise Bryson--Frazier smoother (couple adjoint, predicted-level
+    recovery). Equivalent to RTS on the linear-Gaussian model. See
+    :func:`_bf_backward_pass`."""
+
+    def _smoothing_pass(self, N_records: int) -> None:
+        _bf_backward_pass(self, N_records)
+
+
+class Linear_PKS_MBF(_LinearPKSBase):
+    """Linear pairwise Modified Bryson--Frazier smoother (filtered ``X`` adjoint,
+    PSD-preserving factored form). Equivalent to RTS on the linear-Gaussian
+    model. See :func:`_mbf_backward_pass`."""
+
+    def _smoothing_pass(self, N_records: int) -> None:
+        _mbf_backward_pass(self, N_records)
+
+
+class Linear_PKS_MF(_LinearPKSBase):
+    """Linear pairwise Mayne--Fraser (two-filter) smoother (independent forward
+    and backward filters fused in information form). Equivalent to RTS on the
+    linear-Gaussian model. See :func:`_mf_twofilter_pass`."""
+
+    def _smoothing_pass(self, N_records: int) -> None:
+        _mf_twofilter_pass(self, N_records)
 
 
 class Linear_PKS_DWY(_LinearPKSBase):
