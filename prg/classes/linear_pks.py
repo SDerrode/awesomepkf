@@ -859,6 +859,8 @@ def _lifted_pass(s: _LinearPKSBase, N_records: int) -> None:
     # --- backward sweep: mean x_n and diagonal inverse blocks P_{n|N} ---
     Xs: list = [None] * (NN + 1)
     Ps: list = [None] * (NN + 1)
+    # Mk_smooth[n] = Cov(X_{n+1}, X_n | y_{0:N}); zero placeholder at the terminal n.
+    Ms: list = [np.zeros((dx, dx)) for _ in range(NN + 1)]
     Xs[NN] = cho_solve(chol[NN], ctil[NN])
     Ps[NN] = cho_solve(chol[NN], eye_dx)
     for n in range(NN - 1, -1, -1):
@@ -866,11 +868,14 @@ def _lifted_pass(s: _LinearPKSBase, N_records: int) -> None:
         Xs[n] = cho_solve(chol[n], ctil[n] - Loff.T @ Xs[n + 1])
         W = Dinv @ Loff.T                              # Delta_n^{-1} J[n,n+1]
         Ps[n] = Dinv + W @ Ps[n + 1] @ W.T
+        Ms[n] = -Ps[n + 1] @ W.T                       # (J^{-1})_{n+1,n}
 
     for n in range(N_records):
         Psn = 0.5 * (Ps[n] + Ps[n].T)
         s._check_covariance(Psn, s.history[n]["k"], name="PXXkp1_smooth")
-        s.history.update_record(n, Xkp1_smooth=Xs[n], PXXkp1_smooth=Psn)
+        s.history.update_record(
+            n, Xkp1_smooth=Xs[n], PXXkp1_smooth=Psn, Mk_smooth=Ms[n]
+        )
 
 
 # Registry of smoothing passes. All variants produce the same smoothed estimate

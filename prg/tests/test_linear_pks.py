@@ -383,6 +383,26 @@ class TestLinearPKSVariantEquivalence:
             last["PXXkp1_smooth"], last["PXXkp1_update"], atol=SHAPE_TOL
         )
 
+    @pytest.mark.parametrize("param_fixture", ["param_x1y1", "param_x2y2"])
+    def test_var_cross_covariance_matches_rts(self, param_fixture, request):
+        """VAR stores the lag-one cross-covariances Mk_smooth =
+        Cov(X_{n+1}, X_n | y_{1:N}); they match the RTS identity
+        P^{xx}_{n+1|N} (G_n^x)^T to machine precision (needed for EM)."""
+        param = request.getfixturevalue(param_fixture)
+        dx = param.dim_x
+        rts = Linear_PKS_RTS(param, sKey=SEED)
+        rts.process_N_data_smoother(N=80)
+        var = Linear_PKS_VAR(param, sKey=SEED)
+        var.process_N_data_smoother(N=80)
+        H = rts.history
+        for n in range(len(H) - 1):
+            Gx = H[n]["Gk_smooth"][:, :dx]                  # X-cols of RTS gain
+            M_rts = H[n + 1]["PXXkp1_smooth"] @ Gx.T
+            assert np.allclose(
+                var.history[n]["Mk_smooth"], M_rts, atol=self.VARIANT_EQ_TOL
+            ), f"cross-covariance mismatch at step {n}"
+        assert np.allclose(var.history[-1]["Mk_smooth"], 0.0)  # terminal placeholder
+
 
 class TestLinearPKSEdgeCases:
     """Edge cases of the smoother lifecycle."""
