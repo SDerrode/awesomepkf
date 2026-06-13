@@ -49,6 +49,7 @@ __all__ = [
     "Linear_PKS_MBF",
     "Linear_PKS_MF",
     "Linear_PKS_RTS",
+    "Linear_PKS_VAR",
 ]
 
 
@@ -750,14 +751,138 @@ def _mf_twofilter_pass(s: _LinearPKSBase, N_records: int) -> None:
         s.history.update_record(n, Xkp1_smooth=Xs, PXXkp1_smooth=Ps)
 
 
-# Registry of smoothing passes. All five linear variants produce the same
-# smoothed estimate on the linear-Gaussian model (Geng et al., 2023).
+def _lifted_pass(s: _LinearPKSBase, N_records: int) -> None:
+    r"""
+    Variational (lifted) pairwise smoothing pass: one block-tridiagonal solve.
+
+    Since $\mY_n=\vy_n$ is observed exactly, fixed-interval smoothing is a single
+    quadratic program in the latent trajectory $\mathbf{x}=(\mX_0,\dots,\mX_N)$.
+    With $\mathbf{E}=[\mI_p;\zero]$, the columns-$\mX$ block $\mM=\mA[:,:p]$ and the
+    transition-residual covariance $\mathbf{R}=\mB\calQ\mB^\top$, the information
+    matrix is block tridiagonal ($p\times p$ blocks),
+
+        J_{nn}   = E^T R^{-1} E + M^T R^{-1} M     (interior; boundary terms drop),
+        J_{n,n-1} = -E^T R^{-1} M  (constant),
+
+    plus the prior $P_0^{-1}$ from the first estimate $p(\mX_0\mid\vy_0)$. The
+    smoothed means solve $J\,\hat{\mathbf{x}}=\boldsymbol\eta$ by a block Thomas
+    (forward--backward) sweep; the diagonal inverse blocks $\Pxx{\nnN}$ follow from
+    the Takahashi backward recursion. On the linear-Gaussian model this returns the
+    RTS estimate (``test_lifted_equals_rts``); $J\succ0$ iff $\mS_n\succ0\ \forall n$.
+
+    Requires $\mathbf{R}=\mB\calQ\mB^\top\succ0$ (full-rank process noise).
+
+    Writes ``Xkp1_smooth`` / ``PXXkp1_smooth`` to each record.
+
+    Raises
+    ------
+    CovarianceError
+        If $\mathbf{R}$, the prior $P_0$ or a pivot $\Delta_n$ is not
+        Cholesky-factorisable (carries ``step`` / ``matrix_name``).
+    """
+    dx, dy, dz = s.dim_x, s.dim_y, s.dim_xy
+    A = s._A
+    M = A[:, :dx]                       # (dz, dx) columns-X block
+    Axy = A[:dx, dx:]                   # (dx, dy)
+    Ayy = A[dx:, dx:]                   # (dy, dy)
+    R = s._BmQBT
+    NN = N_records - 1
+    E = np.zeros((dz, dx))
+    E[:dx, :] = s.eye_dim_x
+
+    eye_dx = s.eye_dim_x
+    k0 = s.history[0]["k"]
+    try:
+        cR, lowR = cho_factor(R)
+        Rinv = cho_solve((cR, lowR), np.eye(dz))
+    except (LinAlgError, ValueError) as e:
+        raise CovarianceError(
+            "Variational pass: R = B Q B^T is not positive definite "
+            "(required by the lifted form).",
+            matrix_name="BmQBT",
+            step=k0,
+        ) from e
+
+    EtRinvE = E.T @ Rinv @ E            # (dx, dx)
+    MtRinvM = M.T @ Rinv @ M            # (dx, dx)
+    Loff = -(E.T @ Rinv @ M)           # constant lower block J[n, n-1]
+
+    mu0 = s.history[0]["Xkp1_update"]
+    P0 = s.history[0]["PXXkp1_update"]
+    try:
+        cP0, lowP0 = cho_factor(P0)
+        P0inv = cho_solve((cP0, lowP0), eye_dx)
+    except (LinAlgError, ValueError) as e:
+        raise CovarianceError(
+            "Variational pass: initial P_0 is not positive definite.",
+            matrix_name="PXXkp1_update",
+            step=k0,
+        ) from e
+
+    ys = [np.asarray(s.history[n]["ykp1"], dtype=float).reshape(dy, 1)
+          for n in range(N_records)]
+
+    # --- assemble block-tridiagonal J (diagonal D, constant lower Loff) and eta ---
+    D = [np.zeros((dx, dx)) for _ in range(NN + 1)]
+    eta = [np.zeros((dx, 1)) for _ in range(NN + 1)]
+    D[0] += P0inv
+    eta[0] += P0inv @ mu0
+    for n in range(1, NN + 1):
+        cn = np.vstack([-Axy @ ys[n - 1], ys[n] - Ayy @ ys[n - 1]])   # (dz, 1)
+        Rinv_cn = Rinv @ cn
+        D[n] += EtRinvE
+        D[n - 1] += MtRinvM
+        eta[n] += -(E.T @ Rinv_cn)
+        eta[n - 1] += M.T @ Rinv_cn
+
+    # --- forward sweep: pivots Delta_n (chol) and modified RHS ctil_n ---
+    chol: list = [None] * (NN + 1)
+    ctil: list = [None] * (NN + 1)
+    try:
+        Delta = 0.5 * (D[0] + D[0].T)
+        chol[0] = cho_factor(Delta)
+        ctil[0] = eta[0]
+        for n in range(1, NN + 1):
+            T = Loff @ cho_solve(chol[n - 1], eye_dx)     # L_n Delta_{n-1}^{-1}
+            Delta = D[n] - T @ Loff.T
+            Delta = 0.5 * (Delta + Delta.T)
+            chol[n] = cho_factor(Delta)
+            ctil[n] = eta[n] - T @ ctil[n - 1]
+    except (LinAlgError, ValueError) as e:
+        raise CovarianceError(
+            "Variational pass: a block-tridiagonal pivot is not positive "
+            "definite (S_n may be singular).",
+            matrix_name="Delta",
+            step=k0,
+        ) from e
+
+    # --- backward sweep: mean x_n and diagonal inverse blocks P_{n|N} ---
+    Xs: list = [None] * (NN + 1)
+    Ps: list = [None] * (NN + 1)
+    Xs[NN] = cho_solve(chol[NN], ctil[NN])
+    Ps[NN] = cho_solve(chol[NN], eye_dx)
+    for n in range(NN - 1, -1, -1):
+        Dinv = cho_solve(chol[n], eye_dx)
+        Xs[n] = cho_solve(chol[n], ctil[n] - Loff.T @ Xs[n + 1])
+        W = Dinv @ Loff.T                              # Delta_n^{-1} J[n,n+1]
+        Ps[n] = Dinv + W @ Ps[n + 1] @ W.T
+
+    for n in range(N_records):
+        Psn = 0.5 * (Ps[n] + Ps[n].T)
+        s._check_covariance(Psn, s.history[n]["k"], name="PXXkp1_smooth")
+        s.history.update_record(n, Xkp1_smooth=Xs[n], PXXkp1_smooth=Psn)
+
+
+# Registry of smoothing passes. All variants produce the same smoothed estimate
+# on the linear-Gaussian model (Geng et al., 2023); VAR is the single
+# block-tridiagonal (variational) solve that unifies the five recursions.
 _SMOOTHING_PASSES = {
     "RTS": _rts_backward_pass,
     "BF": _bf_backward_pass,
     "MBF": _mbf_backward_pass,
     "MF": _mf_twofilter_pass,
     "DWY": _dwy_pass,
+    "VAR": _lifted_pass,
 }
 
 
@@ -808,6 +933,16 @@ class Linear_PKS_DWY(_LinearPKSBase):
 
     def _smoothing_pass(self, N_records: int) -> None:
         _dwy_pass(self, N_records)
+
+
+class Linear_PKS_VAR(_LinearPKSBase):
+    """Linear pairwise variational smoother: the smoothed trajectory as the
+    solution of a single block-tridiagonal linear system (the lifted/QP form that
+    unifies the five recursions). Equivalent to RTS on the linear-Gaussian model.
+    See :func:`_lifted_pass`."""
+
+    def _smoothing_pass(self, N_records: int) -> None:
+        _lifted_pass(self, N_records)
 
 
 class Linear_PKS(_LinearPKSBase):

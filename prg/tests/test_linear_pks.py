@@ -12,6 +12,7 @@ from prg.classes.linear_pks import (
     Linear_PKS_MBF,
     Linear_PKS_MF,
     Linear_PKS_RTS,
+    Linear_PKS_VAR,
 )
 from prg.utils.exceptions import CovarianceError
 
@@ -335,7 +336,7 @@ class TestLinearPKSVariantEquivalence:
 
     VARIANT_EQ_TOL = 1e-9
 
-    @pytest.mark.parametrize("method", ["BF", "MBF", "MF"])
+    @pytest.mark.parametrize("method", ["BF", "MBF", "MF", "VAR"])
     @pytest.mark.parametrize("param_fixture", ["param_x1y1", "param_x2y2"])
     def test_variant_equals_rts(self, method, param_fixture, request):
         param = request.getfixturevalue(param_fixture)
@@ -353,7 +354,12 @@ class TestLinearPKSVariantEquivalence:
 
     @pytest.mark.parametrize(
         "method, cls",
-        [("BF", Linear_PKS_BF), ("MBF", Linear_PKS_MBF), ("MF", Linear_PKS_MF)],
+        [
+            ("BF", Linear_PKS_BF),
+            ("MBF", Linear_PKS_MBF),
+            ("MF", Linear_PKS_MF),
+            ("VAR", Linear_PKS_VAR),
+        ],
     )
     def test_variant_explicit_class_matches_facade(self, method, cls, param_x1y1):
         explicit = cls(param_x1y1, sKey=SEED)
@@ -366,7 +372,7 @@ class TestLinearPKSVariantEquivalence:
                 a["PXXkp1_smooth"], b["PXXkp1_smooth"], atol=SHAPE_TOL
             )
 
-    @pytest.mark.parametrize("method", ["BF", "MBF", "MF"])
+    @pytest.mark.parametrize("method", ["BF", "MBF", "MF", "VAR"])
     def test_variant_terminal_equals_filtered(self, method, param_x1y1):
         """Terminal step: smoothed == filtered for every variant."""
         pks = Linear_PKS(param_x1y1, sKey=SEED, method=method)
