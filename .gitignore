@@ -16,6 +16,9 @@ papier_NonLinearPKF/
 # Documents de référence (PDFs, papiers, archives) — local uniquement
 docs/
 
+# Claude Code tooling — local sessions, worktrees, settings (not versioned)
+.claude/
+
 # Personal dev test scripts and programs (not versioned)
 /prg/testsDev/
 
