@@ -1,9 +1,9 @@
 """Linear smoothers ≡ RTS numerical equivalence check (linear-Gaussian pairwise).
 
-On the linear-Gaussian pairwise model, the five linear smoothing variants (RTS,
-BF, MBF, MF, DWY) are algebraically the *same* estimator (Geng et al., 2023):
+On the linear-Gaussian pairwise model, the six linear smoothing variants (RTS,
+BF, MBF, MF, DWY, VAR) are algebraically the *same* estimator (Geng et al., 2023):
 each must agree with the RTS reference to machine precision. This script
-quantifies, for every variant ``m`` in {BF, MBF, MF, DWY}, the residual gap
+quantifies, for every variant ``m`` in {BF, MBF, MF, DWY, VAR}, the residual gap
     eX = max_n || x_{n|N}^{m} - x_{n|N}^{RTS} ||_inf
     eP = max_n || P_{n|N}^{m} - P_{n|N}^{RTS} ||_inf
 over a full smoothed trajectory, reporting the WORST case over several seeds for
@@ -27,6 +27,7 @@ from prg.classes.linear_pks import (
     Linear_PKS_MBF,
     Linear_PKS_MF,
     Linear_PKS_RTS,
+    Linear_PKS_VAR,
 )
 from prg.classes.param_linear import ParamLinear
 from prg.models.linear import ModelFactoryLinear
@@ -43,6 +44,7 @@ VARIANTS = {
     "MBF": Linear_PKS_MBF,
     "MF": Linear_PKS_MF,
     "DWY": Linear_PKS_DWY,
+    "VAR": Linear_PKS_VAR,
 }
 
 
@@ -119,7 +121,7 @@ def main() -> None:
             mant = v / 10.0**exp
             return f"{mant:.1f}".replace(".", "{,}") + r"\times 10^{" + f"{exp}" + "}"
 
-        # Emits the data rows of §2.6 tab:smoothers-equiv (columns BF/MBF/MF/DWY,
+        # Emits the data rows of §2.6 tab:smoothers-equiv (columns BF/MBF/MF/DWY/VAR,
         # two rows e_x / e_P per model). Paste between \midrule and \bottomrule.
         lines: list[str] = []
         for i, tag in enumerate(MODELS):
