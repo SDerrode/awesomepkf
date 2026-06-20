@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [2.12.0] - 2026-06-20
+
+### Added
+- **Partial EM noise estimator (`prg/learning/em_partial_noise.py`).**
+  `estimate_noise_em` performs *partial* maximum-likelihood estimation by EM for
+  the linear-Gaussian pairwise couple: the transition `A` is held **known**, and
+  only the joint process-noise covariance `Q` is estimated. The E-step runs the
+  variational smoother (`method="VAR"`, the only variant exposing the lag-one
+  cross-covariance `Mk_smooth`); the M-step is the closed form
+  `Q̂ = (1/T) Σ E[(Z_{n+1} − A Z_n)(Z_{n+1} − A Z_n)ᵀ | y_{1:N}]`, exploiting that
+  the observed Y-block collapses the joint posterior onto the hidden X-block. A
+  `block_diagonal=True` flag estimates the well-conditioned `Q_xy = 0` sub-model.
+  Returns an `EMNoiseResult` (`Q`, per-iteration log-likelihood, `n_iter`,
+  `converged`). `prg/tests/test_em_partial_noise.py`: 4 tests (block-diagonal
+  recovery, full-joint likelihood maximisation, two validation cases).
+- **Identifiability (documented + numerically verified).** Fixing `A` removes the
+  EM *gauge* non-uniqueness but does **not** make the full joint `Q` identifiable:
+  the cross-noise `Q_xy` is effectively non-identified from the hidden state (a
+  near-flat likelihood ridge — the joint-`Q` Fisher information is numerically
+  singular along it, and the EM endpoint tracks the initialisation rather than
+  converging to the truth as `N` grows). Conditional on the diagonal blocks (or
+  with X observed) `Q_xy` is sharply identified, and the `block_diagonal`
+  sub-model recovers cleanly — hence the flag. The M-step algebra, the
+  `Mk_smooth` transpose convention, the Y-collapse and the block-diagonal
+  constraint were verified to machine precision by an independent adversarial
+  review.
+
 ### Fixed
 - **Particle-filter reproducibility.** `_BaseParticleFilter` now derives its
   particle RNG (initialisation / propagation / resampling) from `sKey` via an
@@ -17,6 +46,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   non-reproducible even with `sKey`). The subsequence is decoupled from the
   trajectory-simulation RNG (no correlation between true-state noise and filter
   randomness); `sKey=None` keeps the non-reproducible draw for Monte-Carlo runs.
+
+### Also shipped since 2.11.0 (previously committed, untagged)
+- **Linear pairwise smoothers BF, MBF, MF** — complete the linear PKS family;
+  each agrees with RTS to machine precision.
+- **Variational (block-tridiagonal) pairwise smoother** (`method="VAR"`).
+- **VAR lag-one cross-covariances `M_{n|N}`** (`Mk_smooth`) — the E-step input
+  consumed by the partial EM above.
+- **FFBSm backward-kernel fix** (pyproject `2.11.2`) — joint couple transition
+  density, so PPS converges to PKS.
 
 ---
 
