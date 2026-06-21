@@ -6,9 +6,9 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
 - **Unscented Pairwise Kalman Filter (UPKF)**, with multiple variants depending on the choice of sigma points
 - **Pairwise Particle Filter (PPF)**
 
-and **pairwise Kalman smoothers** for offline post-processing:
+together with the classic (non-pairwise) **Unscented Kalman Filter (UKF)** and **Particle Filter (PF)** as baselines, and **pairwise Kalman smoothers** for offline post-processing:
 
-- **Linear Pairwise Kalman Smoother (PKS)** — RTS-style backward pass on the joint `(X, Y)` Markov chain, with an equivalent **DWY** (Desai-Weinert-Yusypchuk) backward-filter variant selectable via `method="DWY"`.
+- **Linear Pairwise Kalman Smoother (PKS)** — backward pass on the joint `(X, Y)` Markov chain, available in **six equivalent variants** selectable via `method=`: `RTS` (default), `BF` (Bryson-Frazier), `MBF` (Modified Bryson-Frazier), `MF` (Mayne-Fraser two-filter), `DWY` (Desai-Weinert-Yusypchuk backward filter) and `VAR` (variational / lifted block-tridiagonal). All return the same estimate on the linear-Gaussian model (Geng et al., 2023); `VAR` additionally exposes the lag-one cross-covariance `Mk_smooth`.
 - **Extended Pairwise Kalman Smoother (EPKS)** — same recursion with the per-step Jacobian replacing the constant transition matrix.
 - **Unscented Pairwise Kalman Smoother (UPKS)** — sigma-point cross-covariance in the backward pass; supports the same sigma-point sets as the UPKF (`wan2000`, `cpkf`, `lerner2002`, `ito2000`).
 - **Unscented Kalman Smoother (UKS)** — classical (non-pairwise) sigma-point smoother for FxHx models with Markov-in-X assumption; gain `(dim_x, dim_x)`.
@@ -27,6 +27,8 @@ and **pairwise Kalman smoothers** for offline post-processing:
         - [Extended Pairwise Kalman Filter (EPKF)](#extended-pairwise-kalman-filter-epkf)
         - [Unscented Pairwise Kalman Filter (UPKF)](#unscented-pairwise-kalman-filter-upkf)
         - [Pairwise Particle Filter (PPF)](#pairwise-particle-filter-ppf)
+        - [Unscented Kalman Filter (UKF)](#unscented-kalman-filter-ukf)
+        - [Particle Filter (PF)](#particle-filter-pf)
     - [Smoothers](#smoothers)
         - [Linear Pairwise Kalman Smoother (PKS)](#linear-pairwise-kalman-smoother-pks)
         - [Extended Pairwise Kalman Smoother (EPKS)](#extended-pairwise-kalman-smoother-epks)
@@ -52,7 +54,7 @@ pip install awesomepkf
 ### From source
 
 ```bash
-git clone https://github.com/sderrode/awesomepkf.git
+git clone https://github.com/SDerrode/awesomepkf.git
 cd awesomepkf
 pip install .
 ```
@@ -66,7 +68,7 @@ pip install -e ".[dev]"
 ### Requirements
 
 - Python >= 3.10
-- numpy, scipy, matplotlib, pandas, rich, sympy
+- numpy, scipy, matplotlib, pandas, rich, chardet, sympy (plus tomli on Python < 3.11)
 
 ---
 
@@ -104,14 +106,20 @@ Interactive Jupyter notebooks are available in the [`notebooks/`](notebooks/) di
 | 06 | [`tutorial_06_filter_runner_and_config.ipynb`](notebooks/tutorial_06_filter_runner_and_config.ipynb) | High-level orchestration with `FilterRunner` and `RunOptions`; parameter sweeps via `model_kwargs`; saving and replaying experiments through a reproducible JSON spec |
 | 07 | [`tutorial_07_smoothers.ipynb`](notebooks/tutorial_07_smoothers.ipynb) | The 5 smoothers (`Linear_PKS`, `NonLinear_EPKS`/`UPKS`/`UKS`/`PPS`) — RTS-style backward recursion and FFBSm; ±2σ envelope shrinkage, Joseph form, Monte-Carlo convergence of PPS to PKS, decision rule for choosing among the five |
 | 08 | [`tutorial_08_real_data_pkf_learning.ipynb`](notebooks/tutorial_08_real_data_pkf_learning.ipynb) | Estimating the 1D linear PMM parameters `(a, b, c, d, e)` from a real two-column time series (wind-farm active power vs wind speed); PMM vs HMM/Kalman projection; converting to `LinearAmQ` kwargs |
+| 09 | [`tutorial_09_linear_smoothers.ipynb`](notebooks/tutorial_09_linear_smoothers.ipynb) | The six linear pairwise smoothers behind one façade `Linear_PKS(param, method=...)` — RTS, BF, MBF, MF, DWY and the variational/lifted `VAR` form; shows all six return the same smoothed mean/covariance to round-off (~1e-15), companion to the `python -m prg.run_dwy_equivalence` non-regression check |
 
 ---
 
 ## Parameter learning from data
 
-For the **linear, scalar** case (`dim_x = dim_y = 1`), the
-[`prg.learning`](prg/learning/) module estimates the five PMM parameters
-`(a, b, c, d, e)` from a two-column time series by the method of moments.
+The [`prg.learning`](prg/learning/) module offers two estimators for the
+linear-Gaussian case: a **method-of-moments** fit of the scalar PMM, and a
+**partial EM** for the joint noise covariance.
+
+### Method of moments (scalar PMM)
+
+For the **linear, scalar** case (`dim_x = dim_y = 1`), it estimates the five PMM
+parameters `(a, b, c, d, e)` from a two-column time series by the method of moments.
 
 ```bash
 awesomepkf-fit-pkf \
@@ -132,6 +140,34 @@ the full dataset (BuildingTemp, SeattleTemp, multiple WindFarms sites and
 granularities) is kept outside the repository — point `--data-filename` at a
 local copy if needed.
 
+### Partial EM for the noise covariance (linear-Gaussian)
+
+For a linear-Gaussian pairwise couple `Z = (X, Y)` with the transition `A`
+**known**, [`prg.learning.estimate_noise_em`](prg/learning/em_partial_noise.py)
+runs a partial EM that estimates **only** the joint process-noise covariance `Q`
+(with `B = I`, so `Q` is the effective process covariance). The E-step uses the
+variational linear smoother (`method="VAR"`, the only backward pass exposing the
+lag-one cross-covariance `Mk_smooth`); the M-step is a unique closed form given
+`A`, and the observed-data log-likelihood it returns is monotone non-decreasing.
+
+```python
+from prg.learning import estimate_noise_em
+
+result = estimate_noise_em(param, data, block_diagonal=True)
+result.Q          # estimated (dim_xy, dim_xy) joint noise covariance, PSD
+result.loglik     # per-iteration observed-data log-likelihood
+result.converged  # bool
+```
+
+**Identifiability.** Fixing `A` removes the `(A, Q)` gauge freedom, but the
+*full* joint `Q` is still not identifiable from the hidden state: the cross-noise
+block `Q_xy` lies on a near-flat likelihood ridge and the EM estimate of `Q_xy`
+tracks the initialisation rather than converging to the truth as `N` grows. The
+X- and Y-noise *blocks* remain well identified, so pass `block_diagonal=True` to
+fit the well-conditioned block-diagonal sub-model (`Q_xy = 0`), which recovers
+cleanly at modest `N`. This is a **library function** (returning an
+`EMNoiseResult`) — unlike the PMM estimator it has **no CLI**.
+
 Parameter identification for **nonlinear** EPKF/UPKF models is *not* covered
 by this estimator — those require a separate procedure (e.g. a neural
 network).
@@ -146,10 +182,7 @@ The repository provides a program called **run_simulator.py** to simulate data a
 
 ## Filters
 
-Each filter has two types of programs:
-
-1. Simulate data **and filter it directly**  
-2. Filter data **from a previously saved file**  
+Each filter is exposed through a single `run_<filter>.py` script (a thin wrapper over `prg.run_filter`). The same script does both jobs: it **simulates and filters** when given `--N`, or **filters a previously saved file** when given `--data-filename` (the two are mutually exclusive).
 
 ### Pairwise Kalman Filter (PKF)
 
@@ -167,6 +200,14 @@ Each filter has two types of programs:
 
 - **run_nonlinear_ppf.py** – filter non-linear data either from simulated data or from a previously saved file (e.g., generated with `run_simulator.py`)  
 
+### Unscented Kalman Filter (UKF)
+
+- **run_nonlinear_ukf.py** – the classic (non-pairwise) sigma-point filter for models Markov in `X` alone; takes `--sigma-set`.
+
+### Particle Filter (PF)
+
+- **run_nonlinear_pf.py** – the classic (non-pairwise) bootstrap particle filter; takes `--n-particles`.
+
 ---
 
 ## Smoothers
@@ -177,7 +218,7 @@ Smoothers are **two-pass, offline** estimators that condition on the *entire* ob
 
 The linear PKS runs the [PKF forward](#pairwise-kalman-filter-pkf), then a backward Rauch-Tung-Striebel recursion at the **joint** `(X, Y)` level. The pairwise model is Markov in `Z = (X, Y)` (not in `X` alone), so the smoothing gain `G_n` has shape `(dim_x, dim_x + dim_y)`. Equivalently, the linear PKS is the classical RTS smoother applied to the augmented state `Z' = (X, Y)` with degenerate observation `Y_n = (0, I) Z'_n` (`R^aug = 0`).
 
-`Linear_PKS` is a façade that selects the backward pass via `method=` (default `"RTS"`). `method="DWY"` runs the **Desai-Weinert-Yusypchuk** backward-filter recursion on the time-reversed complementary couple model (cf. Geng et al., 2023); on the linear-Gaussian model it returns the same smoothed mean and covariance as RTS to machine precision (verified by `test_dwy_equals_rts`). The explicit variant classes `Linear_PKS_RTS` and `Linear_PKS_DWY` are also exported (`Linear_PKS_<NAME>`).
+`Linear_PKS` is a façade that selects the backward pass via `method=` — one of six: `"RTS"` (default), `"BF"` (Bryson-Frazier), `"MBF"` (Modified Bryson-Frazier), `"MF"` (Mayne-Fraser two-filter), `"DWY"` (Desai-Weinert-Yusypchuk backward filter) and `"VAR"` (variational / lifted). All return the same smoothed mean and covariance as RTS to machine precision on the linear-Gaussian model (cf. Geng et al., 2023; verified by `test_variant_equals_rts` / `test_dwy_equals_rts`), and the matching explicit classes `Linear_PKS_RTS`, `Linear_PKS_BF`, `Linear_PKS_MBF`, `Linear_PKS_MF`, `Linear_PKS_DWY`, `Linear_PKS_VAR` are all exported. `VAR` solves for the whole smoothed trajectory as a single **block-tridiagonal** linear system (lifted / quadratic-program form, requiring full-rank process noise `R = B Q Bᵀ ≻ 0`) and is the only variant that also writes the lag-one cross-covariance `Mk_smooth[n] = Cov(X_{n+1}, X_n | y_{0:N})` — the cross-moment the EM noise estimator consumes.
 
 ```python
 from prg.classes.linear_pks import Linear_PKS
@@ -197,7 +238,7 @@ results = pks.process_N_data_smoother(N=500)
 # each tuple: (k, x_true, y_obs, X_predict, X_update, X_smooth)
 ```
 
-Implementation: [`prg/classes/linear_pks.py`](prg/classes/linear_pks.py). Tests: [`prg/tests/test_linear_pks.py`](prg/tests/test_linear_pks.py) (44 tests, including PSD shrinkage, Joseph equivalence, augmented-state RTS equivalence, DWY≡RTS equivalence, and full exception/logging coverage).
+Implementation: [`prg/classes/linear_pks.py`](prg/classes/linear_pks.py). Tests: [`prg/tests/test_linear_pks.py`](prg/tests/test_linear_pks.py) (62 tests, including PSD shrinkage, Joseph equivalence, augmented-state RTS equivalence, the BF/MBF/MF/DWY/VAR ≡ RTS equivalence, the VAR lag-one cross-covariance, and full exception/logging coverage).
 
 ### Extended Pairwise Kalman Smoother (EPKS)
 
@@ -217,7 +258,7 @@ epks = NonLinear_EPKS(param, sKey=42, joseph=False)
 results = epks.process_N_data_smoother(N=300)
 ```
 
-Implementation: [`prg/classes/nonlinear_epks.py`](prg/classes/nonlinear_epks.py). Tests: [`prg/tests/test_nonlinear_epks.py`](prg/tests/test_nonlinear_epks.py) (25 tests). Note: not suitable for augmented models (rank-deficient predicted covariance fails the backward Cholesky).
+Implementation: [`prg/classes/nonlinear_epks.py`](prg/classes/nonlinear_epks.py). Tests: [`prg/tests/test_nonlinear_epks.py`](prg/tests/test_nonlinear_epks.py) (27 tests). Note: not suitable for augmented models (rank-deficient predicted covariance fails the backward Cholesky).
 
 ### Unscented Pairwise Kalman Smoother (UPKS)
 
@@ -237,7 +278,7 @@ upks = NonLinear_UPKS(param, sigmaSet="wan2000", sKey=42, joseph=False)
 results = upks.process_N_data_smoother(N=300)
 ```
 
-Implementation: [`prg/classes/nonlinear_upks.py`](prg/classes/nonlinear_upks.py). Tests: [`prg/tests/test_nonlinear_upks.py`](prg/tests/test_nonlinear_upks.py) (29 tests, parametrised over all sigma-point sets). Same caveats as the EPKS regarding augmented models.
+Implementation: [`prg/classes/nonlinear_upks.py`](prg/classes/nonlinear_upks.py). Tests: [`prg/tests/test_nonlinear_upks.py`](prg/tests/test_nonlinear_upks.py) (36 tests, parametrised over all sigma-point sets). Same caveats as the EPKS regarding augmented models.
 
 ### Unscented Kalman Smoother (UKS)
 
@@ -257,14 +298,14 @@ uks = NonLinear_UKS(param, sigmaSet="wan2000", sKey=42, joseph=False)
 results = uks.process_N_data_smoother(N=300)
 ```
 
-Implementation: [`prg/classes/nonlinear_uks.py`](prg/classes/nonlinear_uks.py). Tests: [`prg/tests/test_nonlinear_uks.py`](prg/tests/test_nonlinear_uks.py) (29 tests).
+Implementation: [`prg/classes/nonlinear_uks.py`](prg/classes/nonlinear_uks.py). Tests: [`prg/tests/test_nonlinear_uks.py`](prg/tests/test_nonlinear_uks.py) (37 tests).
 
 ### Pairwise Particle Smoother (PPS)
 
-The PPS implements **FFBSm** (Forward Filtering, Backward Smoothing) on top of the PPF. The forward pass runs the standard PPF with particle clouds stored at every step; the backward pass reweights those forward particles via:
+The PPS implements **FFBSm** (Forward Filtering, Backward Smoothing) on top of the PPF. The forward pass runs the standard PPF with particle clouds stored at every step; the backward pass reweights those forward particles via the **joint** couple transition density (the `y_{n+1}` factor must be kept — using only the X-marginal leaves an O(1) smoothing bias that does not vanish as `n_p → ∞`):
 
 ```
-ŵ_{i,n} = w_{i,n} · Σ_j ŵ_{j,n+1} · p(ξ_{j,n+1} | ξ_{i,n}, y_n) / Σ_l w_{l,n}·p(ξ_{j,n+1} | ξ_{l,n}, y_n)
+ŵ_{i,n} = w_{i,n} · Σ_j ŵ_{j,n+1} · p(ξ_{j,n+1}, y_{n+1} | ξ_{i,n}, y_n) / Σ_l w_{l,n}·p(ξ_{j,n+1}, y_{n+1} | ξ_{l,n}, y_n)
 ```
 
 The smoothed mean and covariance are weighted statistics of the forward particle cloud with the smoothed weights. Complexity is O(N·n_p²) per smoother run (vs O(N·n_p) for the forward).
@@ -283,7 +324,7 @@ pps = NonLinear_PPS(param, n_particles=300, sKey=42)
 results = pps.process_N_data_smoother(N=200)
 ```
 
-Implementation: [`prg/classes/nonlinear_pps.py`](prg/classes/nonlinear_pps.py). Tests: [`prg/tests/test_nonlinear_pps.py`](prg/tests/test_nonlinear_pps.py) (19 tests, including a Monte-Carlo convergence test that verifies the PPS converges to the exact Linear_PKS as `n_particles` grows on a linear-Gaussian pairwise model).
+Implementation: [`prg/classes/nonlinear_pps.py`](prg/classes/nonlinear_pps.py). Tests: [`prg/tests/test_nonlinear_pps.py`](prg/tests/test_nonlinear_pps.py) (22 tests, including a Monte-Carlo convergence test that verifies the PPS converges to the exact Linear_PKS as `n_particles` grows on a linear-Gaussian pairwise model).
 
 ---
 
