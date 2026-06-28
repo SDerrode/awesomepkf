@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.13.0] - 2026-06-28
+
+### Added
+- **Deterministic control input (*consigne*) for the linear pairwise smoothers.**
+  `ParamLinear` gains an optional control matrix `G` (shape `(dim_xy, dim_u)`);
+  the couple then obeys `Z_{n+1} = A Z_n + G u_n + B W_n`. The control sequence
+  `u` is passed to `Linear_PKF.simulate_N_data(N, u=...)` and
+  `Linear_PKS.process_N_data_smoother(N, ..., u=...)`. A deterministic control
+  shifts only the means (never the covariances), so it is applied by **exact
+  mean-trajectory superposition** — uniform across all six backward passes
+  (RTS/BF/MBF/MF/DWY/VAR), which stay equivalent to machine precision
+  (~6e-15 with control). `u=None` / `G=None` is fully backward compatible
+  (the autonomous model is unchanged). `prg/tests/test_linear_pks_control.py`
+  (4 tests: cross-variant equivalence, control-is-used MSE check, covariance
+  invariance, backward-compatibility).
+
+---
+
 ## [2.12.0] - 2026-06-20
 
 ### Added

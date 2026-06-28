@@ -243,6 +243,28 @@ results = pks.process_N_data_smoother(N=500)
 
 Implementation: [`prg/classes/linear_pks.py`](prg/classes/linear_pks.py). Tests: [`prg/tests/test_linear_pks.py`](prg/tests/test_linear_pks.py) (62 tests, including PSD shrinkage, Joseph equivalence, augmented-state RTS equivalence, the BF/MBF/MF/DWY/VAR ≡ RTS equivalence, the VAR lag-one cross-covariance, and full exception/logging coverage).
 
+#### Deterministic control (consigne)
+
+All six variants accept an optional known control input `u_n`: the couple obeys
+`Z_{n+1} = A Z_n + G u_n + B W_n` with a control matrix `G` (shape `(dim_xy, dim_u)`).
+Pass `G` to `ParamLinear(..., G=G)` and the control sequence `u` to
+`simulate_N_data(N, u=...)` and `process_N_data_smoother(N, ..., u=...)`. A
+deterministic control shifts only the means (never the covariances), so it is
+applied by **exact mean-trajectory superposition** and behaves identically across
+all six backward passes (which stay equivalent to ~1e-15). `u=None` / `G=None`
+keeps the autonomous model — fully backward compatible.
+
+```python
+import numpy as np
+G   = np.array([[0.6], [0.3]])                    # control on the (X, Y) couple
+param = ParamLinear(0, dim_x, dim_y, **params, G=G)
+sim = Linear_PKF(param, sKey=42).simulate_N_data(N, u=u)
+res = Linear_PKS(param, method="VAR").process_N_data_smoother(
+    N=None, data_generator=iter(sim), u=u)
+```
+
+Tests: [`prg/tests/test_linear_pks_control.py`](prg/tests/test_linear_pks_control.py) (4 tests).
+
 ---
 
 ## Paper Reproducibility Scripts

@@ -178,7 +178,9 @@ class PKF:
     # Data simulation & processing
     # ------------------------------------------------------------------
 
-    def simulate_N_data(self, N: int) -> list[tuple[int, np.ndarray, np.ndarray]]:
+    def simulate_N_data(
+        self, N: int, u: np.ndarray | None = None
+    ) -> list[tuple[int, np.ndarray, np.ndarray]]:
         """
         Simulate ``N`` steps of data and return them as a list.
 
@@ -186,6 +188,11 @@ class PKF:
         ----------
         N : int
             Number of steps to simulate.
+        u : np.ndarray, optional
+            Deterministic control sequence driving the transitions, shape
+            ``(N, dim_u)`` or ``(N, dim_u, 1)``. ``u[n]`` drives the transition
+            from step ``n`` to step ``n+1`` via the additive term ``G @ u[n]``
+            (requires ``param.G`` to be set). ``None`` (default) ⇒ no control.
 
         Returns
         -------
@@ -198,7 +205,31 @@ class PKF:
             If ``N`` is not a strictly positive integer.
         """
         self._validate_N(N)
-        return list(self._data_generation(N))
+        return list(self._data_generation(N, u=u))
+
+    def _normalise_control(self, u: np.ndarray | None) -> np.ndarray | None:
+        """Normalise a control sequence to shape ``(R, dim_u, 1)`` or ``None``.
+
+        Accepts ``(R, dim_u)`` or ``(R, dim_u, 1)``. Returns ``None`` when ``u``
+        is ``None`` or when the model carries no control matrix (``param.G is
+        None``), so the no-control fast path is a plain identity.
+        """
+        if u is None or getattr(self.param, "G", None) is None:
+            return None
+        u_arr = np.asarray(u, dtype=float)
+        if u_arr.ndim == 2:
+            u_arr = u_arr[:, :, None]
+        if u_arr.ndim != 3 or u_arr.shape[2] != 1:
+            raise ParamError(
+                "u must have shape (R, dim_u) or (R, dim_u, 1); "
+                f"got {np.asarray(u).shape}."
+            )
+        dim_u = self.param.G.shape[1]
+        if u_arr.shape[1] != dim_u:
+            raise ParamError(
+                f"u has dim_u={u_arr.shape[1]} but G expects dim_u={dim_u}."
+            )
+        return u_arr
 
     def process_N_data(
         self,
@@ -258,7 +289,7 @@ class PKF:
     # ------------------------------------------------------------------
 
     def _data_generation(
-        self, N: int | None = None
+        self, N: int | None = None, u: np.ndarray | None = None
     ) -> Generator[tuple[int, np.ndarray, np.ndarray], None, None]:
         """
         Simulate state-space data and yield one step at a time.
@@ -270,6 +301,11 @@ class PKF:
         ----------
         N : int or None
             Number of steps to generate. If ``None``, generates indefinitely.
+        u : np.ndarray, optional
+            Deterministic control sequence, shape ``(R, dim_u)`` or
+            ``(R, dim_u, 1)``. ``u[n]`` adds ``G @ u[n]`` to the transition from
+            step ``n`` to step ``n+1`` (non-augmented / pairwise branch only,
+            and only when ``param.G`` is set). ``None`` ⇒ no control.
 
         Yields
         ------
@@ -282,6 +318,11 @@ class PKF:
         """
 
         Zkp1_simul = np.zeros((self.dim_xy, 1))
+
+        # Normalise the optional control to (R, dim_u, 1) (or None). The control
+        # is only applied on the non-augmented / pairwise branch below.
+        u_norm = self._normalise_control(u)
+        G = getattr(self.param, "G", None) if u_norm is not None else None
 
         # First step — sample initial state from prior distribution
         if self.param.augmented:
@@ -330,6 +371,10 @@ class PKF:
 
             # ── Propagation ──────────────────────────────────────────────────
             Zkp1_simul = self.param.g(Zkp1_simul, noise_z, self.dt)
+
+            # ── Deterministic control: add G·u_k to the n→n+1 transition ──────
+            if G is not None and k < u_norm.shape[0]:
+                Zkp1_simul = Zkp1_simul + G @ u_norm[k]
 
             # ── Emission ─────────────────────────────────────────────────────
             Xkp1_simul, Ykp1_simul = np.split(Zkp1_simul, [self.dim_x])

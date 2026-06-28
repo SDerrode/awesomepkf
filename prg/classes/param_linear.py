@@ -65,6 +65,12 @@ class ParamLinear:
         self.dim_xy = dim_x + dim_y
         self.verbose = verbose
 
+        # Optional deterministic control matrix G (shape (dim_xy, dim_u)).
+        # Popped *before* the key-count dispatch below so it does not perturb
+        # the 15-/17-key parametrisation check; ``None`` ⇒ no control (default,
+        # fully backward compatible).
+        G = kwargs.pop("G", None)
+
         # Two ways to construct the object
         if len(kwargs.keys()) == 15:  # parametrization (A, mQ, mz0, Pz0)
             self.constructorFrom_AB_mQ(
@@ -87,6 +93,16 @@ class ParamLinear:
                 f"The model is not properly parametrised: {list(kwargs.keys())}. "
                 f"Expected 12 or 14 keys, got {len(kwargs.keys())}."
             )
+
+        # Optional control matrix G — validate shape (dim_xy, dim_u) if present.
+        if G is not None:
+            G = np.array(G, dtype=float)
+            if __debug__ and (G.ndim != 2 or G.shape[0] != self.dim_xy):
+                raise ParamError(
+                    f"G must have shape (dim_xy, dim_u) = ({self.dim_xy}, dim_u); "
+                    f"got {G.shape}."
+                )
+        self._G = G
 
         # Common parameters
         self.augmented = kwargs["augmented"]
@@ -284,6 +300,15 @@ class ParamLinear:
     @property
     def Pz0(self) -> np.ndarray:
         return self._Pz0
+
+    @property
+    def G(self) -> np.ndarray | None:
+        """Optional deterministic-control matrix, shape ``(dim_xy, dim_u)``.
+
+        ``None`` (the default) means *no control* — the model reduces to the
+        plain pairwise transition ``Z_{n+1} = A Z_n + B W_n``.
+        """
+        return self._G
 
     # ------------------------------------------------------------------
     # Summary

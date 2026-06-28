@@ -104,6 +104,7 @@ class _LinearPKSBase(Linear_PKF):
         self,
         N: int | None = None,
         data_generator: Iterator[tuple[int, np.ndarray, np.ndarray]] | None = None,
+        u: np.ndarray | None = None,
     ) -> Iterator[
         tuple[int, np.ndarray | None, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
     ]:
@@ -115,6 +116,17 @@ class _LinearPKSBase(Linear_PKF):
         history records, and finally yields the augmented tuples in
         chronological order.
 
+        Optional deterministic control
+        ------------------------------
+        When ``u`` is given (and ``param.G`` is set), the couple obeys
+        ``Z_{n+1} = A Z_n + G u_n + B W_n``. A deterministic control shifts only
+        **means**, never covariances, so it is handled by *superposition*
+        (exact for the linear-Gaussian model) without touching any of the six
+        backward passes: build the nominal trajectory ``μ`` (``μ[0]=0``,
+        ``μ[n+1] = A μ[n] + G u[n]``), run the control-free smoother on the
+        **shifted** observations ``Ỹ_n = Y_n − μ[n][dim_x:]``, then add ``μ``
+        back to the means (covariances unchanged).
+
         Parameters
         ----------
         N : int, optional
@@ -123,6 +135,10 @@ class _LinearPKSBase(Linear_PKF):
         data_generator : Iterator, optional
             External data generator yielding ``(k, x_true, y_obs)``. If
             ``None`` (default), the internal simulator generator is used.
+        u : np.ndarray, optional
+            Deterministic control sequence, shape ``(R, dim_u)`` or
+            ``(R, dim_u, 1)``. ``None`` (default) or ``param.G is None`` ⇒
+            behaviour is **exactly** unchanged.
 
         Yields
         ------
@@ -149,8 +165,18 @@ class _LinearPKSBase(Linear_PKF):
             If the forward pass yielded no records, or on an unexpected
             ``FilterError`` (propagated).
         """
+        # ── Control-driven path: mean-trajectory compensation ────────────────
+        u_norm = self._normalise_control(u)
+        if u_norm is not None:
+            mu = self._build_control_trajectory(N, data_generator, u_norm)
+            self._ctrl_mu = mu
+            shifted_gen: Iterator | None = iter(self._shift_records())
+        else:
+            mu = None
+            shifted_gen = data_generator
+
         # 1) Forward pass — drains the filter into self.history
-        for _ in self.process_filter(N=N, data_generator=data_generator):
+        for _ in self.process_filter(N=N, data_generator=shifted_gen):
             pass
 
         N_records: int = len(self.history)
@@ -169,6 +195,10 @@ class _LinearPKSBase(Linear_PKF):
 
         logger.info("Linear_PKS smoothing pass complete (N_records=%d).", N_records)
 
+        # 2b) Un-shift the history: add μ back to the means (covariances stay).
+        if mu is not None:
+            self._unshift_history(mu)
+
         # 3) Yield records in chronological order, including the smoother fields
         yield from self._emit()
 
@@ -176,6 +206,7 @@ class _LinearPKSBase(Linear_PKF):
         self,
         N: int | None,
         data_generator: Iterator | None = None,
+        u: np.ndarray | None = None,
     ) -> list[
         tuple[int, np.ndarray | None, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
     ]:
@@ -187,6 +218,11 @@ class _LinearPKSBase(Linear_PKF):
         ``step`` / ``matrix_name`` attributes). Only an opaque ``RuntimeError``
         from the generator machinery is wrapped as ``FilterError``.
 
+        Parameters
+        ----------
+        N, data_generator, u
+            See :meth:`process_smoother`.
+
         Raises
         ------
         ParamError, InvertibilityError, CovarianceError, NumericalError, StepValidationError
@@ -195,9 +231,80 @@ class _LinearPKSBase(Linear_PKF):
             Propagated, or wrapping an opaque generator ``RuntimeError``.
         """
         try:
-            return list(self.process_smoother(N=N, data_generator=data_generator))
+            return list(
+                self.process_smoother(N=N, data_generator=data_generator, u=u)
+            )
         except RuntimeError as e:
             raise FilterError("Unexpected runtime error in process_smoother.") from e
+
+    # ------------------------------------------------------------------
+    # Control superposition helpers (linear-Gaussian, exact)
+    # ------------------------------------------------------------------
+    def _build_control_trajectory(
+        self,
+        N: int | None,
+        data_generator: Iterator | None,
+        u_norm: np.ndarray,
+    ) -> np.ndarray:
+        """Materialise the data and build the nominal control trajectory ``μ``.
+
+        Stores the raw records on ``self._ctrl_records`` (a list of
+        ``(k, x_true, y_obs)`` triples) for :meth:`_shift_records`, and returns
+        ``μ`` of shape ``(R, dim_xy, 1)`` with ``μ[0]=0`` and
+        ``μ[n+1] = A μ[n] + G u[n]`` (so the prior ``mz0`` is left unchanged).
+        """
+        if data_generator is not None:
+            records = list(data_generator)
+            if N is not None:
+                records = records[: N + 1]
+        else:
+            # No external data: simulate the control-driven data natively first.
+            records = self.simulate_N_data(N, u=u_norm)
+
+        R = len(records)
+        G = self.param.G
+        dim_u = G.shape[1]
+        mu = np.zeros((R, self.dim_xy, 1))
+        for n in range(R - 1):
+            un = u_norm[n] if n < u_norm.shape[0] else np.zeros((dim_u, 1))
+            mu[n + 1] = self._A @ mu[n] + G @ un
+
+        self._ctrl_records = records
+        return mu
+
+    def _shift_records(self) -> list[tuple[int, np.ndarray | None, np.ndarray]]:
+        """Build the shifted data ``Ỹ_n = Y_n − μ[n][dim_x:]`` for the filter.
+
+        The X-truth column is passed through unchanged (it is ground truth, not
+        an estimate); only the observation ``Y`` is shifted by the Y-block of
+        ``μ`` so the control-free smoother sees a centred sequence.
+        """
+        mu = self._ctrl_mu
+        dx = self.dim_x
+        shifted: list[tuple[int, np.ndarray | None, np.ndarray]] = []
+        for n, (k, x_true, y_obs) in enumerate(self._ctrl_records):
+            y_arr = np.asarray(y_obs, dtype=float).reshape(self.dim_y, 1)
+            shifted.append((k, x_true, y_arr - mu[n][dx:]))
+        return shifted
+
+    def _unshift_history(self, mu: np.ndarray) -> None:
+        """Add ``μ`` back to the X means and restore the original observations.
+
+        Covariances and innovations are untouched (a deterministic control
+        shifts means only).
+        """
+        dx = self.dim_x
+        for n in range(len(self.history)):
+            rec = self.history[n]
+            mu_x = mu[n][:dx]
+            mu_y = mu[n][dx:]
+            self.history.update_record(
+                n,
+                Xkp1_predict=rec["Xkp1_predict"] + mu_x,
+                Xkp1_update=rec["Xkp1_update"] + mu_x,
+                Xkp1_smooth=rec["Xkp1_smooth"] + mu_x,
+                ykp1=rec["ykp1"] + mu_y,
+            )
 
     # ------------------------------------------------------------------
     # Internals
@@ -768,7 +875,7 @@ def _lifted_pass(s: _LinearPKSBase, N_records: int) -> None:
     smoothed means solve $J\,\hat{\mathbf{x}}=\boldsymbol\eta$ by a block Thomas
     (forward--backward) sweep; the diagonal inverse blocks $\Pxx{\nnN}$ follow from
     the Takahashi backward recursion. On the linear-Gaussian model this returns the
-    RTS estimate (``test_lifted_equals_rts``); $J\succ0$ iff $\mS_n\succ0\ \forall n$.
+    RTS estimate (``test_variant_equals_rts`` with ``method="VAR"``); $J\succ0$ iff $\mS_n\succ0\ \forall n$.
 
     Requires $\mathbf{R}=\mB\calQ\mB^\top\succ0$ (full-rank process noise).
 
