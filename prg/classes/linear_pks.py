@@ -993,6 +993,7 @@ _SMOOTHING_PASSES = {
     "BF": _bf_backward_pass,
     "MBF": _mbf_backward_pass,
     "MF": _mf_twofilter_pass,
+    "2F": _mf_twofilter_pass,   # alias: "two-filter" (paper name); "MF" kept for back-compat
     "DWY": _dwy_pass,
     "VAR": _lifted_pass,
 }
@@ -1027,8 +1028,13 @@ class Linear_PKS_MBF(_LinearPKSBase):
 
 
 class Linear_PKS_MF(_LinearPKSBase):
-    """Linear pairwise Mayne--Fraser (two-filter) smoother (independent forward
-    and backward filters fused in information form). Equivalent to RTS on the
+    """Linear pairwise two-filter smoother (independent forward and backward
+    filters fused in information form). Also selectable via ``method='2F'`` on the
+    :class:`Linear_PKS` facade -- ``'2F'`` ("two-filter") is the name used in the
+    companion paper, ``'MF'`` (Mayne--Fraser) is kept for backward compatibility.
+    The backward pass is the *posterior* (Bayesian) time-reversal of the couple
+    chain, so it generalises the classical Mayne--Fraser likelihood two-filter
+    while returning the same smoothed estimate. Equivalent to RTS on the
     linear-Gaussian model. See :func:`_mf_twofilter_pass`."""
 
     def _smoothing_pass(self, N_records: int) -> None:
@@ -1063,9 +1069,11 @@ class Linear_PKS(_LinearPKSBase):
 
     Backward-compatible: ``Linear_PKS(param, sKey=..., joseph=...)`` keeps the
     historical RTS behaviour (``method="RTS"`` is the default). Other variants
-    (``"BF"``, ``"MBF"``, ``"MF"``, ``"DWY"``) are registered as they are
-    implemented; on the linear-Gaussian model they all produce the same
-    smoothed estimate (Geng et al., 2023) and differ only by mechanics.
+    (``"BF"``, ``"MBF"``, ``"MF"``/``"2F"``, ``"DWY"``, ``"VAR"``) are registered
+    as they are implemented; on the linear-Gaussian model they all produce the same
+    smoothed estimate (Geng et al., 2023) and differ only by mechanics. ``"MF"`` and
+    ``"2F"`` select the same two-filter smoother (``"2F"`` is the name used in the
+    companion paper; ``"MF"`` is kept for backward compatibility).
 
     Parameters
     ----------

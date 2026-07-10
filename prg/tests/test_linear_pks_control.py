@@ -32,7 +32,7 @@ from prg.models.linear import ModelFactoryLinear
 
 SEED = 123
 N = 1500
-METHODS = ["RTS", "BF", "MBF", "MF", "DWY", "VAR"]
+METHODS = ["RTS", "BF", "MBF", "MF", "2F", "DWY", "VAR"]  # "2F" is the alias of "MF"
 
 # Control matrix on the whole couple (dim_xy=2, dim_u=1).
 G = np.array([[0.6], [0.3]])
