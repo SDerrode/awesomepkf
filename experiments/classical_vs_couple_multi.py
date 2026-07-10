@@ -106,29 +106,32 @@ def _run(cfg: dict, qscale: float, seeds: int, N: int) -> dict:
     A0, Q0, _, _ = _make(cfg, 0.0, qscale)               # ablated
     p_cpl, p_abl = _param(A1, Q1, dx, dy), _param(A0, Q0, dx, dy)
     p_ref = _best_classical(A1, Q1, dx, dy)              # population-best classical
-    mc, ma, mr, nc, nr = ([] for _ in range(5))
+    mc, ma, mr, nc, nr, na = ([] for _ in range(6))
     for s in range(seeds):
         data = Linear_PKF(p_cpl, sKey=s).simulate_N_data(N)
         a, b = _metrics(p_cpl, data, dx); mc.append(a); nc.append(b)
-        a, _ = _metrics(p_abl, data, dx); ma.append(a)
+        a, b = _metrics(p_abl, data, dx); ma.append(a); na.append(b)
         a, b = _metrics(p_ref, data, dx); mr.append(a); nr.append(b)
     mc, ma, mr = np.mean(mc), np.mean(ma), np.mean(mr)
     return dict(dx=dx, dy=dy, gap_refit=100 * (mr / mc - 1),
                 gap_abl=100 * (ma / mc - 1),
-                nees_cpl=float(np.mean(nc)), nees_refit=float(np.mean(nr)))
+                nees_cpl=float(np.mean(nc)), nees_refit=float(np.mean(nr)),
+                nees_abl=float(np.mean(na)))
 
 
 def main(seeds: int = 150, N: int = 400) -> None:
     print(f"rho=1, {seeds} seeds, N={N}. Gap = MSE penalty vs couple; "
           f"NEES/dimX (calibrated=1).\n")
     print(f"{'model':>6} {'(p,q)':>7} {'obs-noise':>10} "
-          f"{'dMSE refit':>11} {'dMSE abl':>9} {'NEES cpl':>9} {'NEES refit':>11}")
+          f"{'dMSE refit':>11} {'dMSE abl':>9} {'NEES cpl':>9} {'NEES refit':>11} "
+          f"{'NEES abl':>9}")
     for tag, cfg in MODELS.items():
         for qscale, label in ((1.0, "nominal"), (4.0, "x4")):
             r = _run(cfg, qscale, seeds, N)
             print(f"{tag:>6} {'(%d,%d)' % (r['dx'], r['dy']):>7} {label:>10} "
                   f"{r['gap_refit']:>10.0f}% {r['gap_abl']:>8.0f}% "
-                  f"{r['nees_cpl']:>9.2f} {r['nees_refit']:>11.2f}")
+                  f"{r['nees_cpl']:>9.2f} {r['nees_refit']:>11.2f} "
+                  f"{r['nees_abl']:>9.2f}")
 
 
 if __name__ == "__main__":
