@@ -11,6 +11,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.14.0] - 2026-07-11
+
+### Added
+- **Partial EM for the couple dynamics + back-action test
+  (`prg/learning/em_partial_dynamics.py`).** `estimate_dynamics_em` learns the two
+  couple-defining transition blocks — the back-action `A_xy` (Y→X) and the
+  observation memory `A_yy` (Y→Y) — by partial EM from the classical initialisation
+  `A_xy = A_yy = 0`, with `A_xx`, `A_yx` and `Q` held **fixed** (the dynamics
+  counterpart of the 2.12.0 noise estimator). `back_action_lrt` forms the
+  likelihood-ratio statistic `Λ = 2[ℓ(A_xy free) − ℓ(A_xy = 0)]`, asymptotically
+  `χ²` with `dim_x·dim_y` degrees of freedom, for testing `H0: A_xy = 0` (no
+  back-action). Reproduces Figs. 2–3 of the companion paper; walked through in
+  `notebooks/tutorial_10_learning_and_testing.ipynb`.
+- **`'2F'` alias for the Mayne–Fraser two-filter smoother.** `Linear_PKS(param,
+  method='2F')` is accepted as a synonym of `method='MF'`; both dispatch to the same
+  two-filter backward pass.
+- **Paper-reproduction scripts (`experiments/`).** Self-contained, deterministic
+  drivers for the linear-smoothers paper — `classical_vs_couple.py` (Fig. 1),
+  `em_identification.py` (Fig. 2), `em_lrt.py` (Fig. 3) and `lrt_vector.py`
+  (vector-data `χ²_pq` check) — with `experiments/README.md` documenting the
+  expected numbers, runtimes and outputs.
+
+### Fixed
+- Ruff lint on `prg/` (`F841` unused variable, `RUF022` unsorted `__all__`) and
+  pinned `ruff==0.15.21` in CI so the lint job is reproducible across ruff releases.
+
+---
+
 ## [2.13.0] - 2026-06-28
 
 ### Added
