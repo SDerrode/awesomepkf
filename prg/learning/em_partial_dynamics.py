@@ -78,10 +78,10 @@ from prg.models.linear._amq import LinearAmQ
 from prg.utils.exceptions import NumericalError, ParamError
 
 __all__ = [
-    "EMDynamicsResult",
     "BackActionLRT",
-    "estimate_dynamics_em",
+    "EMDynamicsResult",
     "back_action_lrt",
+    "estimate_dynamics_em",
 ]
 
 
@@ -241,7 +241,6 @@ def estimate_dynamics_em(
         smoother = Linear_PKS(em_param, sKey=sKey, method="VAR")
         smoother.process_N_data_smoother(N=None, data_generator=iter(records))
         hist = smoother.history._history
-        R = len(hist)
 
         loglik.append(_gaussian_loglik(smoother.history))
 
