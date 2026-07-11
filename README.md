@@ -8,7 +8,7 @@ This repository contains a set of programs illustrating the **Pairwise Kalman Fi
 
 together with the classic (non-pairwise) **Unscented Kalman Filter (UKF)** and **Particle Filter (PF)** as baselines.
 
-For offline post-processing it provides the **Linear Pairwise Kalman Smoother (PKS)** — a backward pass on the joint `(X, Y)` Markov chain, available in **six equivalent variants** selectable via `method=`: `RTS` (default), `BF` (Bryson-Frazier), `MBF` (Modified Bryson-Frazier), `MF` (Mayne-Fraser two-filter), `DWY` (Desai-Weinert-Yusypchuk backward filter) and `VAR` (variational / lifted block-tridiagonal). All return the same estimate on the linear-Gaussian model (Geng et al., 2023); `VAR` additionally exposes the lag-one cross-covariance `Mk_smooth`.
+For offline post-processing it provides the **Linear Pairwise Kalman Smoother (PKS)** — a backward pass on the joint `(X, Y)` Markov chain, available in **six equivalent variants** selectable via `method=`: `RTS` (default), `BF` (Bryson-Frazier), `MBF` (Modified Bryson-Frazier), `MF` (Mayne-Fraser two-filter, alias `2F`), `DWY` (Desai-Weinert-Yusypchuk backward filter) and `VAR` (variational / lifted block-tridiagonal). All return the same estimate on the linear-Gaussian model (Geng et al., 2023); `VAR` additionally exposes the lag-one cross-covariance `Mk_smooth`.
 
 ---
 
@@ -255,7 +255,7 @@ Smoothers are **two-pass, offline** estimators that condition on the *entire* ob
 
 The linear PKS runs the [PKF forward](#pairwise-kalman-filter-pkf), then a backward Rauch-Tung-Striebel recursion at the **joint** `(X, Y)` level. The pairwise model is Markov in `Z = (X, Y)` (not in `X` alone), so the smoothing gain `G_n` has shape `(dim_x, dim_x + dim_y)`. Equivalently, the linear PKS is the classical RTS smoother applied to the augmented state `Z' = (X, Y)` with degenerate observation `Y_n = (0, I) Z'_n` (`R^aug = 0`).
 
-`Linear_PKS` is a façade that selects the backward pass via `method=` — one of six: `"RTS"` (default), `"BF"` (Bryson-Frazier), `"MBF"` (Modified Bryson-Frazier), `"MF"` (Mayne-Fraser two-filter), `"DWY"` (Desai-Weinert-Yusypchuk backward filter) and `"VAR"` (variational / lifted). All return the same smoothed mean and covariance as RTS to machine precision on the linear-Gaussian model (cf. Geng et al., 2023; verified by `test_variant_equals_rts` / `test_dwy_equals_rts`), and the matching explicit classes `Linear_PKS_RTS`, `Linear_PKS_BF`, `Linear_PKS_MBF`, `Linear_PKS_MF`, `Linear_PKS_DWY`, `Linear_PKS_VAR` are all exported. `VAR` solves for the whole smoothed trajectory as a single **block-tridiagonal** linear system (lifted / quadratic-program form, requiring full-rank process noise `R = B Q Bᵀ ≻ 0`) and is the only variant that also writes the lag-one cross-covariance `Mk_smooth[n] = Cov(X_{n+1}, X_n | y_{0:N})` — the cross-moment the EM noise estimator consumes.
+`Linear_PKS` is a façade that selects the backward pass via `method=` — one of six: `"RTS"` (default), `"BF"` (Bryson-Frazier), `"MBF"` (Modified Bryson-Frazier), `"MF"` (Mayne-Fraser two-filter, alias `"2F"`), `"DWY"` (Desai-Weinert-Yusypchuk backward filter) and `"VAR"` (variational / lifted). All return the same smoothed mean and covariance as RTS to machine precision on the linear-Gaussian model (cf. Geng et al., 2023; verified by `test_variant_equals_rts` / `test_dwy_equals_rts`), and the matching explicit classes `Linear_PKS_RTS`, `Linear_PKS_BF`, `Linear_PKS_MBF`, `Linear_PKS_MF`, `Linear_PKS_DWY`, `Linear_PKS_VAR` are all exported. `VAR` solves for the whole smoothed trajectory as a single **block-tridiagonal** linear system (lifted / quadratic-program form, requiring full-rank process noise `R = B Q Bᵀ ≻ 0`) and is the only variant that also writes the lag-one cross-covariance `Mk_smooth[n] = Cov(X_{n+1}, X_n | y_{0:N})` — the cross-moment the EM noise estimator consumes.
 
 The six backward passes (all write `Xkp1_smooth` / `PXXkp1_smooth`; only `VAR` also writes `Mk_smooth`):
 
@@ -264,7 +264,7 @@ The six backward passes (all write `Xkp1_smooth` / `PXXkp1_smooth`; only `VAR` a
 | `"RTS"` *(default)* | Rauch–Tung–Striebel | classical forward–backward smoothing gain `G_n` (shape `dim_x × dim_xy`) coupling `X_n` to the whole couple `Z_{n+1}` |
 | `"BF"` | Bryson–Frazier | adjoint smoother at the **couple** level: propagates the predicted-couple adjoint `(μ_n, N_n)` |
 | `"MBF"` | Modified Bryson–Frazier (Bierman) | adjoint smoother at the **filtered `X`** level (`dim_x`), via the adjoint pair `(λ_n, Λ_n)` |
-| `"MF"` | Mayne–Fraser (two-filter) | fuses, in **information** form, the forward posterior with a backward information filter |
+| `"MF"` *(alias `"2F"`)* | Mayne–Fraser (two-filter) | fuses, in **information** form, the forward posterior with a backward information filter |
 | `"DWY"` | Desai–Weinert–Yusypchuk | dual of RTS: a **backward** pairwise filter on the time-reversed (complementary) couple model |
 | `"VAR"` | Variational / lifted | one **block-tridiagonal** solve (quadratic program in the latent trajectory); the only variant exposing `Mk_smooth` |
 

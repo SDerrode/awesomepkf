@@ -141,6 +141,24 @@ def main(N: int = 400, seeds: int = 200, n_rho: int = 9) -> dict:
     print(f"\nAt rho=1: vs couple, ablated MSE +{100*(ma/mc-1):.0f}% (NEES "
           f"{res['nees_ablated'][-1]:.2f}); refit MSE +{100*(mr/mc-1):.0f}% (NEES "
           f"{res['nees_refit'][-1]:.2f}); couple NEES {res['nees_couple'][-1]:.2f}.")
+    np.savez(_CACHE, **{k: np.asarray(v, float) for k, v in res.items()})
+    print(f"data cached to {_CACHE}")
+    _plot(res)
+    return res
+
+
+_CACHE = Path(__file__).resolve().parents[1] / "figures" / "classical_vs_couple_data.npz"
+
+
+def _replot_from_cache() -> dict:
+    """Re-render the figure from the cached MC arrays (instant; no re-simulation).
+
+    The heavy part is the seeded MC sweep; the numbers are deterministic, so once
+    cached, any style/colour tweak only needs ``--replot`` instead of ~10 min of
+    library smoothing.
+    """
+    d = np.load(_CACHE)
+    res = {k: d[k] for k in d.files}
     _plot(res)
     return res
 
@@ -148,21 +166,34 @@ def main(N: int = 400, seeds: int = 200, n_rho: int = 9) -> dict:
 def _plot(res: dict) -> None:
     import matplotlib
     matplotlib.use("Agg")
+    # Shared paper figure style. Set AFTER any awesomepkf/prg plot_settings import
+    # (those ran at module import time above) so these rcParams win; explicit
+    # colors are given on every plot call so nothing is left to a prop_cycle.
+    import matplotlib as mpl
+    mpl.rcParams.update({
+        "figure.dpi": 150, "savefig.dpi": 300, "savefig.facecolor": "white",
+        "savefig.bbox": "tight", "font.size": 8, "axes.titlesize": 8.5,
+        "axes.labelsize": 8, "xtick.labelsize": 7, "ytick.labelsize": 7,
+        "legend.fontsize": 7, "legend.framealpha": 0.9, "lines.linewidth": 1.3,
+        "lines.markersize": 4, "axes.axisbelow": True,
+    })
     import matplotlib.pyplot as plt
 
     rho = np.asarray(res["rho"])
-    style = {"couple": ("o-", "C0", "couple"),
-             "refit": ("^-.", "C2", "classical (refit)"),
-             "ablated": ("s--", "C3", "classical (ablated)")}
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 2.7))
+    # Harmonized palette: couple=C0 (blue), refit=C1 (orange),
+    # ablated="0.5" (gray) dashed -- matches Figs 4-5.
+    style = {"couple": ("o-", "tab:blue", "couple"),
+             "refit": ("^-.", "tab:orange", "classical (refit)"),
+             "ablated": ("s--", "0.5", "classical (ablated)")}
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 2.6))
     for name in ("couple", "refit", "ablated"):
         mk, col, lab = style[name]
         m = np.asarray(res[f"mse_{name}"]); se = np.asarray(res[f"mse_{name}_se"])
         ax1.plot(rho, m, mk, ms=4, color=col, label=lab)
-        ax1.fill_between(rho, m - se, m + se, color=col, alpha=0.18, lw=0)
+        ax1.fill_between(rho, m - se, m + se, color=col, alpha=0.20, lw=0)
     ax1.set_xlabel(r"coupling strength $\rho$")
     ax1.set_ylabel("smoothed-state MSE")
-    ax1.legend(fontsize=7.5)
+    ax1.legend()
     ax1.grid(True, alpha=0.3)
 
     ax2.axhline(DX, ls=":", color="k", lw=1, label="calibrated")
@@ -170,18 +201,24 @@ def _plot(res: dict) -> None:
         mk, col, lab = style[name]
         m = np.asarray(res[f"nees_{name}"]); se = np.asarray(res[f"nees_{name}_se"])
         ax2.plot(rho, m, mk, ms=4, color=col, label=lab)
-        ax2.fill_between(rho, m - se, m + se, color=col, alpha=0.18, lw=0)
+        ax2.fill_between(rho, m - se, m + se, color=col, alpha=0.20, lw=0)
     ax2.set_xlabel(r"coupling strength $\rho$")
     ax2.set_ylabel("NEES")
-    ax2.legend(fontsize=7.5)
+    ax2.legend()
     ax2.grid(True, alpha=0.3)
 
     fig.tight_layout()
     out = Path(__file__).resolve().parents[1] / "figures" / "classical_vs_couple.pdf"
     out.parent.mkdir(exist_ok=True)
-    fig.savefig(out, bbox_inches="tight", facecolor="white")
+    fig.savefig(out)                       # vector PDF
+    fig.savefig(out.with_suffix(".png"))   # raster preview beside it
     print(f"figure written to {out}")
+    print(f"preview written to {out.with_suffix('.png')}")
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if "--replot" in sys.argv:          # instant re-render from cached MC arrays
+        _replot_from_cache()
+    else:
+        main()

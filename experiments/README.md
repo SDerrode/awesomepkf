@@ -13,8 +13,9 @@ pip install -e .                                     # installs awesomepkf + dep
 ```
 
 Run everything **from the repository root** (so `prg` is importable). The
-`classical_vs_couple*` scripts import `prg` directly; the `em_*` scripts locate the
-repository root themselves (override with the `AWESOMEPKF_ROOT` environment variable).
+`classical_vs_couple*`, `em_identification` and `lrt_vector` scripts import `prg`
+(the last two locate the repository root themselves — override with the
+`AWESOMEPKF_ROOT` environment variable); `em_lrt.py` is fully self-contained.
 
 ## Scripts, figures, and how to reproduce them
 
@@ -26,8 +27,9 @@ for precision.
 |---|---|---|---|
 | `classical_vs_couple.py` | Fig. 1, Table III | `python experiments/classical_vs_couple.py` | ~1 min |
 | `classical_vs_couple_multi.py` | Table III | `python experiments/classical_vs_couple_multi.py` | ~2 min |
-| `em_identification.py` | Fig. 2 | `python experiments/em_identification.py` | ~3 min (50 seeds, N=2000) |
-| `em_lrt.py` | Fig. 3 | `python experiments/em_lrt.py` | ~30 min (350 seeds); `--seeds 40` for a quick look |
+| `em_identification.py` | Fig. 2 | `python experiments/em_identification.py` | ~3 min (50 seeds × 100 iters, N=2000) |
+| `em_lrt.py` | Fig. 3 | `python experiments/em_lrt.py` | ~1 min (direct-MLE null + power) |
+| `lrt_vector.py` | Remark 3 (vector `chi2_pq`) | `python experiments/lrt_vector.py` | ~8 min (library LRT, two cases) |
 
 The "one estimate" check (Table II — all six smoothers agree to round-off) is in
 `notebooks/tutorial_09_linear_smoothers.ipynb`; the learning/testing story of Figs. 2-3
@@ -39,15 +41,17 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 |---|---|
 | `classical_vs_couple.py` | at ρ=1: best-fit classical MSE **+77 %**, naive ablation **+138 %**; couple NEES ≈ 0.99, refit ≈ 0.87 |
 | `classical_vs_couple_multi.py` | at ρ=1, ΔMSE(refit) in **37–123 %** across (p,q) and noise; couple stays calibrated |
-| `em_identification.py` | `A^xy = 0.383 ± 0.034`, `A^yy = 0.408 ± 0.020` (true 0.4/0.4); monotone log-likelihood |
-| `em_lrt.py` | empirical size **0.049** at α=0.05, mean Λ ≈ 0.92 (χ²₁ mean 1); power rising to **1.0** by A^xy=0.45 |
+| `em_identification.py` | `A^xy = 0.395 ± 0.041`, `A^yy = 0.403 ± 0.022` (true 0.4/0.4); monotone log-likelihood |
+| `em_lrt.py` | empirical size **0.037** at α=0.05, mean Λ ≈ 0.985 (χ²₁ mean 1); power rising to **1.0** by A^xy=0.45 |
+| `lrt_vector.py` | x2y2 (q=p=2): mean Λ ≈ 3.8 (dof pq=4), size ≈ 0.04 — tracks χ²₄; x2y1 (q=1<p): mean Λ ≈ 1 < pq, size ≈ 0.01 — conservative |
 
 ## Outputs
 
-- `em_identification.py` → `experiments/em_coupling.png`
-- `em_lrt.py` → `experiments/em_lrt.png`
-- `classical_vs_couple.py` → `figures/classical_vs_couple.pdf`
+- `em_identification.py` → `experiments/em_coupling.pdf` (+ `.png` preview)
+- `em_lrt.py` → `experiments/em_lrt.pdf` (+ `.png` preview)
+- `classical_vs_couple.py` → `figures/classical_vs_couple.pdf` (+ `.png`; `--replot` re-renders from the cached `figures/classical_vs_couple_data.npz`)
 - `classical_vs_couple_multi.py` → prints a table to stdout
+- `lrt_vector.py` → `experiments/lrt_vector_both.json` (+ prints the size table)
 
 These generated files are git-ignored; only the scripts are versioned.
 
