@@ -30,6 +30,8 @@ for precision.
 | `em_identification.py` | Fig. 2 | `python experiments/em_identification.py` | ~3 min (50 seeds × 100 iters, N=2000) |
 | `em_lrt.py` | Fig. 3 | `python experiments/em_lrt.py` | ~1 min (direct-MLE null + power) |
 | `lrt_vector.py` | Remark 3 (vector `chi2_pq`) | `python experiments/lrt_vector.py` | ~8 min (library LRT, two cases) |
+| `backaction_oscillator.py` | Fig. 4 | `python experiments/backaction_oscillator.py` | ~15 min (40 realisations × 4 MLE fits × 2 systems); `... 8` for a quick look |
+| `backaction_tradeoff.py` | Fig. 5 | `python experiments/backaction_tradeoff.py` | ~10 s (self-contained) |
 
 The "one estimate" check (Table II — all six smoothers agree to round-off) is in
 `notebooks/tutorial_09_linear_smoothers.ipynb`; the learning/testing story of Figs. 2-3
@@ -44,6 +46,8 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 | `em_identification.py` | `A^xy = 0.395 ± 0.041`, `A^yy = 0.403 ± 0.022` (true 0.4/0.4); monotone log-likelihood |
 | `em_lrt.py` | empirical size **0.037** at α=0.05, mean Λ ≈ 0.985 (χ²₁ mean 1); power rising to **1.0** by A^xy=0.45 |
 | `lrt_vector.py` | x2y2 (q=p=2): mean Λ ≈ 3.8 (dof pq=4), size ≈ 0.04 — tracks χ²₄; x2y1 (q=1<p): mean Λ ≈ 1 < pq, size ≈ 0.01 — conservative |
+| `backaction_oscillator.py` | out-of-class oscillator: couple lowers held-out error **~35 %** (Diebold–Mariano p<1e-20), complex poles in **40/40** runs vs classical real **0/40**; in-class control (A^xy=0 truth): **≈0 %** (n.s.) |
+| `backaction_tradeoff.py` | LRT power saturates by A^xy≈0.4; the classical state-MSE penalty keeps rising to ~20 % (testability ≠ estimability) |
 
 ## Outputs
 
@@ -52,6 +56,8 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 - `classical_vs_couple.py` → `figures/classical_vs_couple.pdf` (+ `.png`; `--replot` re-renders from the cached `figures/classical_vs_couple_data.npz`)
 - `classical_vs_couple_multi.py` → prints a table to stdout
 - `lrt_vector.py` → `experiments/lrt_vector_both.json` (+ prints the size table)
+- `backaction_oscillator.py` → `figures/backaction_poles.pdf` (+ `.png`; caches `figures/backaction_oscillator_data.npz`, `--replot` re-renders from it)
+- `backaction_tradeoff.py` → `figures/backaction_two_quantities.pdf` (+ `.png` preview)
 
 These generated files are git-ignored; only the scripts are versioned.
 
