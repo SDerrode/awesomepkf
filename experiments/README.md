@@ -25,15 +25,16 @@ for precision.
 
 | Script | Reproduces | Command (published settings) | Runtime |
 |---|---|---|---|
-| `classical_vs_couple.py` | Fig. 1, Table III | `python experiments/classical_vs_couple.py` | ~1 min |
-| `classical_vs_couple_multi.py` | Table III | `python experiments/classical_vs_couple_multi.py` | ~2 min |
-| `em_identification.py` | Fig. 2 | `python experiments/em_identification.py` | ~3 min (50 seeds × 100 iters, N=2000) |
-| `em_lrt.py` | Fig. 3 | `python experiments/em_lrt.py` | ~1 min (direct-MLE null + power) |
+| `pmm_schematic.py` | Fig. 1 (model schematic) | `python experiments/pmm_schematic.py` | ~2 s (matplotlib diagram) |
+| `classical_vs_couple.py` | Fig. 2, Table IV | `python experiments/classical_vs_couple.py` | ~1 min |
+| `classical_vs_couple_multi.py` | Table IV | `python experiments/classical_vs_couple_multi.py` | ~2 min |
+| `em_identification.py` | Fig. 3 | `python experiments/em_identification.py` | ~3 min (50 seeds × 100 iters, N=2000) |
+| `em_lrt.py` | Fig. 4 | `python experiments/em_lrt.py` | ~1 min (direct-MLE null + power) |
 | `lrt_vector.py` | Remark 3 (vector `chi2_pq`) | `python experiments/lrt_vector.py` | ~8 min (library LRT, two cases) |
-| `backaction_oscillator.py` | Fig. 4 | `python experiments/backaction_oscillator.py` | ~15 min (40 realisations × 4 MLE fits × 2 systems); `... 8` for a quick look |
-| `backaction_tradeoff.py` | Fig. 5 | `python experiments/backaction_tradeoff.py` | ~10 s (self-contained) |
+| `backaction_oscillator.py` | Fig. 5 | `python experiments/backaction_oscillator.py` | ~15 min (40 realisations × 4 MLE fits × 2 systems); `... 8` for a quick look |
+| `backaction_tradeoff.py` | Fig. 6 | `python experiments/backaction_tradeoff.py` | ~10 s (self-contained) |
 
-The "one estimate" check (Table II — all six smoothers agree to round-off) is in
+The "one estimate" check (Table III — all six smoothers agree to round-off) is in
 `notebooks/tutorial_09_linear_smoothers.ipynb`; the learning/testing story of Figs. 2-3
 is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 
@@ -58,6 +59,7 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 - `lrt_vector.py` → `experiments/lrt_vector_both.json` (+ prints the size table)
 - `backaction_oscillator.py` → `figures/backaction_poles.pdf` (+ `.png`; caches `figures/backaction_oscillator_data.npz`, `--replot` re-renders from it)
 - `backaction_tradeoff.py` → `figures/backaction_two_quantities.pdf` (+ `.png` preview)
+- `pmm_schematic.py` → `figures/pmm_schematic.pdf` (+ `.png` preview; a matplotlib graphical-model diagram, no numbers)
 
 These generated files are git-ignored; only the scripts are versioned.
 
