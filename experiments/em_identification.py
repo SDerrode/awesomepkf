@@ -141,10 +141,10 @@ def main(N=2000, iters=100, seeds=50):
     it = np.arange(iters)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 2.6))
     for k in range(seeds):
-        ax1.plot(it, A_axy[k], "-", color="r", alpha=0.12, lw=0.7)
-        ax1.plot(it, A_ayy[k], "-", color="g", alpha=0.12, lw=0.7)
-    ax1.plot(it, A_axy.mean(0), "-", color="r", lw=2.4, label=r"$A^{xy}$ (back-action)")
-    ax1.plot(it, A_ayy.mean(0), "-", color="g", lw=2.4, label=r"$A^{yy}$ (obs. memory)")
+        ax1.plot(it, A_axy[k], "-", color="tab:blue", alpha=0.12, lw=0.7)
+        ax1.plot(it, A_ayy[k], "--", color="tab:orange", alpha=0.12, lw=0.7)
+    ax1.plot(it, A_axy.mean(0), "-", color="tab:blue", lw=2.4, label=r"$A^{xy}$ (back-action)")
+    ax1.plot(it, A_ayy.mean(0), "--", color="tab:orange", lw=2.4, label=r"$A^{yy}$ (obs. memory)")
     ax1.axhline(AXY_T, ls=":", color="k", lw=1)
     ax1.scatter([0], [0], color="k", zorder=5, s=16)
     ax1.annotate("classical init", (0, 0), textcoords="offset points",
@@ -155,8 +155,8 @@ def main(N=2000, iters=100, seeds=50):
     ax1.grid(True, alpha=0.3)
 
     for k in range(seeds):
-        ax2.plot(it, A_ll[k], "-", color="r", alpha=0.12, lw=0.7)
-    ax2.plot(it, A_ll.mean(0), "-", color="r", lw=2.4)
+        ax2.plot(it, A_ll[k], "-", color="0.35", alpha=0.12, lw=0.7)
+    ax2.plot(it, A_ll.mean(0), "-", color="0.35", lw=2.4)
     ax2.set_xlabel("EM iteration")
     ax2.set_ylabel(r"marginal $\log p(\mathbf{y}_{1:N})/N$")
     ax2.grid(True, alpha=0.3)
