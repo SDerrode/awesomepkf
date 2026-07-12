@@ -1,6 +1,11 @@
-"""Fig 5 (paper style, harmonized palette, improved annotations): testability != estimability.
-Self-contained (recomputes the spectral KL_constrained power curve; estimation-gap points from
-the validated D1 table). Output: figures/backaction_two_quantities.pdf"""
+"""Fig 8 (paper style, harmonized palette): testability != estimability.
+Panel (a) is FULLY RECOMPUTED from the spectral (Whittle/Itakura-Saito) KL: both the power
+curve and its markers are P(chi2_1(2N*KL) > c) with KL the constrained-null rate.
+Panel (b) plots the smoothed-state estimation gap gapF; per the paper's supplementary note
+its magnitude is GAUGE-DEPENDENT, so it is carried here as the Design-1 state-estimation
+values (the D1 routine is not bundled in this self-contained script -- an independent
+frozen-gauge smoother gives a larger, gauge-dependent magnitude).
+Output: figures/backaction_two_quantities.pdf"""
 from pathlib import Path
 import numpy as np
 from scipy.optimize import minimize_scalar
@@ -33,7 +38,9 @@ g=np.linspace(0,0.5,90)
 klc=np.array([kl_con(x) if x>0 else 0.0 for x in g])
 powc=np.where(g>0,ncx2.sf(qc,1,2*N*klc),0.05)
 axy=np.array([0,0.1,0.2,0.3,0.4,0.45,0.5])
-powE=np.array([0.05,0.1729,0.5489,0.8990,0.9945,0.9994,1.0])
+powE=np.array([ncx2.sf(qc,1,2*N*kl_con(x)) if x>0 else 0.05 for x in axy])  # recomputed (was hard-coded)
+# Design-1 smoothed-state gap (gauge-dependent magnitude; see paper supplementary note).
+# Kept as documented constants -- the D1 state-estimation routine is not bundled here.
 gapF=np.array([0.0,1.28,4.46,9.29,14.07,17.63,20.51])
 COUPLE,CLASSIC="C0","C1"
 

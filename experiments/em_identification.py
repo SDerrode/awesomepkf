@@ -5,16 +5,15 @@ papier, Sec. IV-B) : la rétroaction A^{xy} (Y -> X) et la mémoire d'observatio
 A^{yy} (Y -> Y), tous deux nuls dans le modèle classique.
 
 EM partiel : on fixe A^{xx}, A^{yx} et la covariance de bruit Q ; on estime
-(A^{xy}, A^{yy}) en partant de l'initialisation classique (0, 0). Le E-step est un
-filtre de Kalman + lisseur RTS vectorisé (2x2 numpy, ~20x plus rapide que le lisseur
-générique de la librairie, moyennes lissées identiques à ~5e-9) ; le M-step est une
-régression fermée sur les observations y_n. La figure montre la trajectoire EM des
-deux coefficients et la croissance monotone de la log-vraisemblance ; le script
-imprime en outre la dispersion multi-graines (biais / écart-type).
+(A^{xy}, A^{yy}) en partant de l'initialisation classique (0, 0). Le E-step est le
+lisseur variationnel VAR (moyennes lissées) ; le M-step est une régression fermée
+sur les observations y_n. La figure montre la trajectoire EM des deux coefficients
+et la croissance monotone de la log-vraisemblance ; le script imprime en outre la
+dispersion multi-graines (biais / écart-type).
 
-Sortie : ``em_coupling.pdf`` (+ ``em_coupling.png`` d'apercu, dans le dossier de ce script).
+Sortie : ``em_coupling.png`` (dans le dossier de ce script).
 
-Usage :  python experiments/em_identification.py [--N 2000] [--iters 100] [--seeds 50]
+Usage :  python em_identification.py [--N 2000] [--iters 25] [--seeds 50]
 """
 from __future__ import annotations
 
@@ -23,6 +22,7 @@ import os
 import sys
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -46,17 +46,21 @@ REPO_ROOT = _locate_repo_root()
 sys.path.insert(0, str(REPO_ROOT))
 os.chdir(REPO_ROOT)
 
-from prg.classes.linear_pkf import Linear_PKF          # noqa: E402  (simulation)
+from prg.classes.linear_pkf import Linear_PKF          # noqa: E402
+from prg.classes.linear_pks import Linear_PKS_VAR      # noqa: E402
 from prg.classes.param_linear import ParamLinear       # noqa: E402
 from prg.models.linear._amq import LinearAmQ           # noqa: E402
 
-import matplotlib as mpl                                # noqa: E402
-mpl.rcParams.update({                                   # style figure de l'article
+# Shared paper figure style (Figs 4-5). Set AFTER all imports so that any global
+# awesomepkf plot_settings / prop_cycle cannot override these; explicit colors are
+# used on every plot call below so nothing is left to the prop_cycle.
+mpl.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 300, "savefig.facecolor": "white",
     "savefig.bbox": "tight", "font.size": 8, "axes.titlesize": 8.5,
     "axes.labelsize": 8, "xtick.labelsize": 7, "ytick.labelsize": 7,
     "legend.fontsize": 7, "legend.framealpha": 0.9, "lines.linewidth": 1.3,
-    "lines.markersize": 4})
+    "lines.markersize": 4, "axes.axisbelow": True,
+})
 
 DX, DY, DZ = 1, 1, 2
 AXX, AYX = 0.6, 0.3
@@ -78,32 +82,20 @@ def _param(A, Q):
     return ParamLinear(0, DX, DY, **p)
 
 
-def _smooth_fast(axy, ayy, ys):
-    """E-step vectorisé : filtre de Kalman (couple $\\mZ=(X,Y)$, $Y$ observé
-    exactement) puis lisseur RTS rétrograde, en $2\\times2$ numpy. Équivalent au
-    lisseur VAR de la librairie (moyennes lissées identiques à $\\sim\\!5\\times10^{-9}$)
-    mais $\\sim\\!20\\times$ plus rapide. Retourne $(\\hat x_{n\\mid N},\\ \\ell/N)$."""
-    A = np.array([[AXX, axy], [AYX, ayy]])
-    N = len(ys)
-    zf = np.zeros((N, 2)); Pf = np.zeros((N, 2, 2))
-    zp = np.zeros((N, 2)); Pp = np.zeros((N, 2, 2))
-    S = np.zeros(N); innv = np.zeros(N)
-    for n in range(N):                                  # filtre avant
-        if n == 0:
-            zpn, Ppn = np.zeros(2), np.eye(2)           # a priori N(mz0=0, Pz0=I)
-        else:
-            zpn = A @ zf[n - 1]; Ppn = A @ Pf[n - 1] @ A.T + QT
-        Sn = Ppn[1, 1]; i = ys[n] - zpn[1]              # Y observé exactement (R=0)
-        K = Ppn[:, 1] / Sn
-        zf[n] = zpn + K * i
-        Pf[n] = Ppn - np.outer(K, Ppn[1, :])
-        zp[n], Pp[n], S[n], innv[n] = zpn, Ppn, Sn, i
-    zs = zf.copy()
-    for n in range(N - 2, -1, -1):                      # RTS rétrograde
-        Gn = Pf[n] @ A.T @ inv(Pp[n + 1])
-        zs[n] = zf[n] + Gn @ (zs[n + 1] - zp[n + 1])
-    ll = np.sum(-0.5 * (np.log(2 * np.pi) + np.log(S[1:]) + innv[1:] ** 2 / S[1:])) / N
-    return zs[:, 0], ll
+def _smooth(A, Q, data):
+    sm = Linear_PKS_VAR(_param(A, Q))
+    sm.process_N_data_smoother(N=len(data) - 1, data_generator=iter(data))
+    return sm
+
+
+def _loglik(sm, N):
+    ll = 0.0
+    for n in range(1, len(sm.history)):
+        S = np.atleast_2d(sm.history[n]["Skp1"])
+        i = sm.history[n]["ikp1"].reshape(-1, 1)
+        _, ld = np.linalg.slogdet(S)
+        ll += -0.5 * (DY * np.log(2 * np.pi) + ld + (i.T @ np.linalg.solve(S, i)).item())
+    return ll / N
 
 
 def _em(data, iters, record=True):
@@ -112,18 +104,22 @@ def _em(data, iters, record=True):
     y = np.array([np.asarray(yy, float).item() for _, _, yy in data])
     y0, y1 = y[:-1], y[1:]
     Syy = float(np.dot(y0, y0))
+    N = len(data)
     axy = ayy = 0.0
     tr_axy, tr_ayy, tr_ll = [], [], []
     for _ in range(iters):
-        xh, ll = _smooth_fast(axy, ayy, y)              # E-step (Kalman/RTS 2x2)
-        tr_axy.append(axy); tr_ayy.append(ayy); tr_ll.append(ll)
+        sm = _smooth(_A(axy, ayy), QT, data)
+        tr_axy.append(axy)
+        tr_ayy.append(ayy)
+        tr_ll.append(_loglik(sm, N))
+        xh = np.array([np.asarray(h["Xkp1_smooth"], float).item() for h in sm.history])
         xh0, xh1 = xh[:-1], xh[1:]
-        axy = float(np.dot(xh1 - AXX * xh0, y0) / Syy)   # M-step (régressions fermées)
+        axy = float(np.dot(xh1 - AXX * xh0, y0) / Syy)
         ayy = float(np.dot(y1 - AYX * xh0, y0) / Syy)
     return np.array(tr_axy), np.array(tr_ayy), np.array(tr_ll)
 
 
-def main(N=2000, iters=100, seeds=50):
+def main(N=2000, iters=25, seeds=50):
     A_axy, A_ayy, A_ll = [], [], []
     for s in range(seeds):
         data = Linear_PKF(_param(_A(AXY_T, AYY_T), QT), sKey=s).simulate_N_data(N)
@@ -162,16 +158,20 @@ def main(N=2000, iters=100, seeds=50):
     ax2.grid(True, alpha=0.3)
 
     fig.tight_layout()
-    out = Path(__file__).resolve().parent / "em_coupling.pdf"
-    fig.savefig(out)                                    # PDF vectoriel (style article)
-    fig.savefig(out.with_suffix(".png"), dpi=150)       # aperçu raster
-    print(f"figure written to {out}", flush=True)
+    figdir = Path(__file__).resolve().parent.parent / "figures"
+    figdir.mkdir(exist_ok=True)
+    out_pdf = figdir / "em_coupling.pdf"
+    out_png = figdir / "em_coupling.png"
+    fig.savefig(out_pdf)          # vector PDF (paper figure)
+    fig.savefig(out_png)          # raster preview
+    print(f"figure written to {out_pdf}", flush=True)
+    print(f"preview written to {out_png}", flush=True)
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--N", type=int, default=2000)
-    ap.add_argument("--iters", type=int, default=100)
+    ap.add_argument("--iters", type=int, default=25)
     ap.add_argument("--seeds", type=int, default=50)
     args = ap.parse_args()
     main(N=args.N, iters=args.iters, seeds=args.seeds)

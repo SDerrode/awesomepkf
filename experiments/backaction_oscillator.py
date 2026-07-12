@@ -1,4 +1,4 @@
-"""Out-of-class oscillator experiment (paper Fig. 4): back-action buys complex-pole
+"""Out-of-class oscillator experiment (paper Fig. 7): back-action buys complex-pole
 approximation power. TRUE system is 3rd-order (out of BOTH 2-D VAR(1) classes): a damped
 oscillator (position y observed, velocity x latent) with AR(1) correlated forcing. We fit,
 by exact y-marginal MLE, four nested 2-D pairwise VAR(1) models and compare recovered poles
@@ -185,34 +185,22 @@ def make_figure(data):
         "axes.labelsize": 8, "xtick.labelsize": 7, "ytick.labelsize": 7,
         "legend.fontsize": 6.5, "lines.linewidth": 1.3, "lines.markersize": 4})
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(1, 2, figsize=(7.0, 2.7))
-    # (a) fitted poles vs true
+    fig, ax = plt.subplots(1, 1, figsize=(3.5, 3.0))
+    # fitted poles vs true (the held-out gains ug/og are reported in the paper text)
     th = np.linspace(0, 2 * np.pi, 200)
-    ax[0].plot(np.cos(th), np.sin(th), color="0.8", lw=0.8, zorder=1)
+    ax.plot(np.cos(th), np.sin(th), color="0.8", lw=0.8, zorder=1)
     uc = data["uc"].ravel(); ucl = data["ucl"].ravel(); tp = np.atleast_1d(data["true"])
-    ax[0].scatter(ucl.real, ucl.imag, s=16, marker="s", color="tab:orange", alpha=0.55,
-                  label="classical (real)", zorder=2)
-    ax[0].scatter(uc.real, uc.imag, s=14, color="tab:blue", alpha=0.45,
-                  label="couple (complex)", zorder=3)
-    ax[0].scatter(tp.real, tp.imag, s=70, marker="x", color="k", lw=1.8,
-                  label="true oscillator", zorder=4)
-    ax[0].axhline(0, color="0.7", lw=0.5)
-    ax[0].set_xlabel("Re"); ax[0].set_ylabel("Im"); ax[0].set_aspect("equal", "box")
-    ax[0].set_xlim(0.2, 1.05); ax[0].set_ylim(-0.55, 0.55)
-    ax[0].set_title("(a) fitted transition poles")
-    ax[0].legend(loc="lower left"); ax[0].grid(alpha=0.3)
-    # (b) held-out gain vs damping (couple)
-    ug, og = data["ug"], data["og"]
-    ax[1].bar([0, 1], [ug[0], og[0]], yerr=[1.96 * ug[1], 1.96 * og[1]],
-              color=["tab:blue", "0.6"], capsize=4, width=0.55, zorder=2)
-    ax[1].axhline(0, color="k", lw=0.6)
-    ax[1].set_xticks([0, 1])
-    ax[1].set_xticklabels(["out-of-class\n(oscillator)", "in-class\n(no back-action)"])
-    ax[1].set_ylabel(r"held-out $y$-prediction gain (\%)".replace("\\%", "%"))
-    ax[1].set_title("(b) couple gain over classical")
-    ax[1].grid(alpha=0.3, axis="y")
-    for i, (m, s) in enumerate([ug, og]):
-        ax[1].text(i, m + 1.96 * s + 0.6, f"{m:.1f}%", ha="center", fontsize=7)
+    ax.scatter(ucl.real, ucl.imag, s=16, marker="s", color="tab:orange", alpha=0.55,
+               label="classical (real)", zorder=2)
+    ax.scatter(uc.real, uc.imag, s=14, color="tab:blue", alpha=0.45,
+               label="pairwise (complex)", zorder=3)
+    ax.scatter(tp.real, tp.imag, s=70, marker="x", color="k", lw=1.8,
+               label="true oscillator", zorder=4)
+    ax.axhline(0, color="0.7", lw=0.5)
+    ax.set_xlabel("Re"); ax.set_ylabel("Im"); ax.set_aspect("equal", "box")
+    ax.set_xlim(0.2, 1.05); ax.set_ylim(-0.55, 0.55)
+    ax.set_title("fitted transition poles")
+    ax.legend(loc="lower left"); ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(OUT + "/backaction_poles.pdf")
     fig.savefig(OUT + "/backaction_poles_preview.png", dpi=150)

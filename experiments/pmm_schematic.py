@@ -44,14 +44,12 @@ def edge(ax, a, b, color="0.25", lw=1.2, label=None, lab_off=(0, 0), style="-|>"
 
 
 def frame(ax, title):
-    ax.set_xlim(-0.7, 2.7); ax.set_ylim(-0.9, 1.8)
+    ax.set_xlim(-0.7, 2.7); ax.set_ylim(-0.5, 1.5)
     ax.set_aspect("equal"); ax.axis("off")
-    ax.set_title(title, fontsize=9)
-    ax.text(1.0, -0.85, "latent (grey) / observed (white)", ha="center",
-            fontsize=6.3, color="0.4")
+    ax.set_title(title, fontsize=9, pad=3)
 
 
-fig, (axL, axR) = plt.subplots(1, 2, figsize=(7.0, 2.5))
+fig, (axL, axR) = plt.subplots(1, 2, figsize=(7.0, 2.05))
 
 # ---- (a) classical state-space ----
 for k, lat in [("Xn", True), ("Xn1", True), ("Yn", False), ("Yn1", False)]:
@@ -72,7 +70,7 @@ edge(axR, "Yn", "Xn1", color="#d62728", lw=2.0, label=r"$\mathbf{A}^{xy}$ (back-
 # correlated process noise between the two n+1 states
 edge(axR, "Xn1", "Yn1", color="0.45", lw=1.0, style="<|-|>", ls=(0, (4, 2)),
      label=r"$\mathbf{R}^{xy}$", lab_off=(0.34, 0.0), rad=0.0)
-frame(axR, "(b) pairwise Markov couple $\\mathbf{Z}=(\\mathbf{X},\\mathbf{Y})$")
+frame(axR, "(b) pairwise Markov model $\\mathbf{Z}=(\\mathbf{X},\\mathbf{Y})$")
 
 fig.tight_layout()
 fig.savefig(OUT + "/pmm_schematic.pdf")
