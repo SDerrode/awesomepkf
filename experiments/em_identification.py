@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Apprentissage par EM des deux coefficients propres au modèle couple (Fig. 2 du
+Apprentissage par EM des deux coefficients propres au modèle couple (Fig. 5 du
 papier, Sec. IV-B) : la rétroaction A^{xy} (Y -> X) et la mémoire d'observation
 A^{yy} (Y -> Y), tous deux nuls dans le modèle classique.
 

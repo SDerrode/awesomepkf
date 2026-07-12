@@ -1,4 +1,4 @@
-"""Out-of-class oscillator experiment (paper Fig. 7): back-action buys complex-pole
+"""Out-of-class oscillator experiment (paper Fig. 8): back-action buys complex-pole
 approximation power. TRUE system is 3rd-order (out of BOTH 2-D VAR(1) classes): a damped
 oscillator (position y observed, velocity x latent) with AR(1) correlated forcing. We fit,
 by exact y-marginal MLE, four nested 2-D pairwise VAR(1) models and compare recovered poles

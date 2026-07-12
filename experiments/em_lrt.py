@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Back-action detection by likelihood-ratio test (LRT) --- Fig. 5 of the paper,
+Back-action detection by likelihood-ratio test (LRT) --- Fig. 6 of the paper,
 Sec. IV-C. We test H0: A^{xy}=0 (no back-action) against A^{xy}!=0, via
 Lambda = 2[ell(A^{xy} free) - ell(A^{xy}=0)]. Each likelihood is the marginal
 likelihood of the Y-channel; A^{yy} is a free nuisance on both sides (A^{xx},

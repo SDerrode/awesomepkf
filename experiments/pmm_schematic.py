@@ -1,4 +1,4 @@
-"""Graphical-model schematic of the Gaussian pairwise Markov model (paper Fig. 0 / Sec. II).
+"""Graphical-model schematic of the Gaussian pairwise Markov model (paper Fig. 1 / Sec. II).
 Left: classical state-space (latent Markov X, memoryless observation Y). Right: the PMM
 couple Z=(X,Y) jointly Markov, adding the back-action A^xy (Y->X, highlighted) and
 correlated process noise R^xy. Self-contained (matplotlib only). Output: figures/pmm_schematic.pdf"""

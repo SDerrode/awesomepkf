@@ -1,4 +1,4 @@
-"""Fig 8 (paper style, harmonized palette): testability != estimability.
+"""Fig 9 (paper style, harmonized palette): testability != estimability.
 Panel (a) is FULLY RECOMPUTED from the spectral (Whittle/Itakura-Saito) KL: both the power
 curve and its markers are P(chi2_1(2N*KL) > c) with KL the constrained-null rate.
 Panel (b) plots the smoothed-state estimation gap gapF; per the paper's supplementary note
