@@ -164,7 +164,7 @@ def main(seeds=350, N=400, npow=120):
     ax1.grid(alpha=0.3)
     ax2.axhline(0.05, ls=":", color="0.4", lw=1, label=r"size $\alpha=0.05$")
     ax2.plot(axyf, pow_pred, "--", color="C0", lw=1.6, zorder=1,
-             label=r"predicted $\chi^2_1(\lambda)$, $\lambda{=}2N\,\mathrm{KL}$")
+             label=r"predicted $\chi^2_1(\lambda)$, $\lambda{=}2N\,\mathrm{KL}_{\mathrm{rate}}$")
     ax2.errorbar(axyg, powm, yerr=powse, fmt="o", color="C3", capsize=2, zorder=3,
                  label="empirical $\\pm$ 95% CI")
     ax2.set_xlabel(r"true back-action $A^{xy}$")

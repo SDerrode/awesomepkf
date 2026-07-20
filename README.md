@@ -16,7 +16,7 @@ For offline post-processing it provides the **Linear Pairwise Kalman Smoother (P
 
 This library is the reference implementation for two companion papers on Gaussian pairwise Markov models:
 
-1. **Smoothing, Learning, and Testing the Gaussian Pairwise Markov Model** — the six equivalent linear smoothers, learning the couple coefficients (back-action `A_xy`, observation memory `A_yy`) by partial EM, and a likelihood-ratio test for measurement back-action. *Reproduce it with* [`experiments/`](experiments/) (Figs. 1–3, Tables II–III) and tutorials [`07`](notebooks/tutorial_07_smoothers.ipynb), [`09`](notebooks/tutorial_09_linear_smoothers.ipynb), [`10`](notebooks/tutorial_10_learning_and_testing.ipynb).
+1. **Smoothing, Learning, and Testing the Gaussian Pairwise Markov Model** — the six equivalent linear smoothers, learning the couple coefficients (back-action `A_xy`, observation memory `A_yy`) by partial EM, and a likelihood-ratio test for measurement back-action. *Reproduce it with* [`experiments/`](experiments/) (Figs. 1–11, Tables I–V) and tutorials [`07`](notebooks/tutorial_07_smoothers.ipynb), [`09`](notebooks/tutorial_09_linear_smoothers.ipynb), [`10`](notebooks/tutorial_10_learning_and_testing.ipynb).
 2. **Nonlinear Extensions of the Gaussian Pairwise Kalman Filter** (EPKF / UPKF; [hal-05645741](https://hal.science/hal-05645741)). *Reproduce it with* the `run_nonlinear_{epkf,upkf,ppf}.py` scripts and tutorials [`02`](notebooks/tutorial_02_nonlinear_models.ipynb), [`05`](notebooks/tutorial_05_new_model_lotkavolterra.ipynb).
 
 See [`experiments/README.md`](experiments/README.md) for exact commands, expected numbers, and runtimes.

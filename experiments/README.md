@@ -37,6 +37,8 @@ for precision.
 | `lrt_vector.py` | Remark 3 (vector `chi2_pq`) | `python experiments/lrt_vector.py` | ~8 min (library LRT, two cases) |
 | `backaction_oscillator.py` | Fig. 8 (fitted poles) | `python experiments/backaction_oscillator.py` | ~15 min (40 realizations × 4 MLE fits × 2 systems); `... 8` for a quick look |
 | `backaction_tradeoff.py` | Fig. 9 | `python experiments/backaction_tradeoff.py` | ~10 s (self-contained) |
+| `petetin_kl_comparison.py` | Fig. 10 (estimability vs. testability, cf. Petetin–Desbouvries 2014) | `python experiments/petetin_kl_comparison.py` | ~5 s (self-contained) |
+| `rmse_vs_lrt.py` | Fig. 11 (RMSE comparison vs. the test) | `python experiments/rmse_vs_lrt.py` | ~8 min (MC, 4 decision rules) |
 
 The "one estimate" check (Table II — all six smoothers agree to round-off) is in
 `notebooks/tutorial_09_linear_smoothers.ipynb`; the learning/testing story of Figs. 5-6
@@ -55,6 +57,8 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 | `lrt_vector.py` | x2y2 (q=p=2): mean Λ ≈ 3.8 (dof pq=4), size ≈ 0.04 — tracks χ²₄; x2y1 (q=1<p): mean Λ ≈ 1 < pq, size ≈ 0.01 — conservative |
 | `backaction_oscillator.py` | out-of-class oscillator: pairwise lowers held-out error **~35 %** (Diebold–Mariano p<1e-20), complex poles in **40/40** runs vs classical real **0/40**; in-class control (A^xy=0 truth): **≈0 %** (n.s.) |
 | `backaction_tradeoff.py` | LRT power saturates by A^xy≈0.4; the classical state-MSE penalty keeps rising to ~20 % (testability ≠ estimability) |
+| `petetin_kl_comparison.py` | Petetin Eq.(71) rises to **0.47** at R/Q=20 while the paper's KL_rate ≡ **0** on their A^yx=0 couple; KL_rate climbs **0→0.46** as A^yx opens a y-footprint |
+| `rmse_vs_lrt.py` | H0 size: naive in-sample **1.00**, held-out **0.32**, DM **0.02**, LRT **0.04** (only DM/LRT calibrated); identity Λ≈N·log(MSE0/MSE1) corr **0.997** |
 | `discriminating_models.py` | under noise starvation cond(P)→**5.9e9** (RTS), cond(Σ)→**3.3e7** (2F/DWY), cond(S)≡**1** (BF/MBF), cond(R)≈1.5 (VAR); 2F/DWY smoothed-state error →**2.5e-7** while BF/MBF/VAR stay ~1e-13 |
 
 ## Outputs
@@ -66,6 +70,8 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 - `lrt_vector.py` → `experiments/lrt_vector_both.json` (+ prints the size table)
 - `backaction_oscillator.py` → `figures/backaction_poles.pdf` (+ `.png`; caches `figures/backaction_oscillator_data.npz`, `--replot` re-renders from it)
 - `backaction_tradeoff.py` → `figures/backaction_two_quantities.pdf` (+ `.png` preview)
+- `petetin_kl_comparison.py` → `figures/petetin_kl_comparison.pdf` (+ `.png` preview; self-contained, numpy/scipy/matplotlib)
+- `rmse_vs_lrt.py` → `figures/rmse_vs_lrt.pdf` (+ `.png` preview; self-contained, numpy/scipy/matplotlib)
 - `pmm_schematic.py` → `figures/pmm_schematic.pdf` (+ `.png` preview; a matplotlib graphical-model diagram, no numbers)
 - `bench_smoothers.py` → `figures/bench_smoothers.pdf` (+ `.png` preview)
 - `em_realdata.py` → `figures/em_realdata.pdf` (+ `.png` preview)

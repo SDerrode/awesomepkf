@@ -67,9 +67,13 @@ edge(axR, "Yn", "Yn1", label=r"$\mathbf{A}^{yy}$", lab_off=(0, -0.16))
 edge(axR, "Xn", "Yn1", label=r"$\mathbf{A}^{yx}$", lab_off=(0.0, -0.22), rad=0.0)
 edge(axR, "Yn", "Xn1", color="#d62728", lw=2.0, label=r"$\mathbf{A}^{xy}$ (back-action)",
      lab_off=(0.0, 0.22), rad=0.0)
-# correlated process noise between the two n+1 states
+# correlated process noise couples the two channels WITHIN each slice (both n and n+1) --
+# this is the couple's within-slice X-Y link; it is not exclusive to the PMM (a classical
+# model with correlated noise has it too), so it is drawn neutral (grey), not highlighted.
+edge(axR, "Xn", "Yn", color="0.45", lw=1.0, style="<|-|>", ls=(0, (4, 2)),
+     label=r"$\mathbf{R}^{xy}$", lab_off=(-0.30, 0.0), rad=0.0)
 edge(axR, "Xn1", "Yn1", color="0.45", lw=1.0, style="<|-|>", ls=(0, (4, 2)),
-     label=r"$\mathbf{R}^{xy}$", lab_off=(0.34, 0.0), rad=0.0)
+     label=r"$\mathbf{R}^{xy}$", lab_off=(0.30, 0.0), rad=0.0)
 frame(axR, "(b) pairwise Markov model $\\mathbf{Z}=(\\mathbf{X},\\mathbf{Y})$")
 
 fig.tight_layout()

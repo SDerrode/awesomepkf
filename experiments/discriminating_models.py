@@ -4,7 +4,7 @@ differ only NUMERICALLY under stress. We engineer pairwise models (p=2, q=1) tha
 one inverted matrix ill-conditioned, drive the ACTUAL library smoothers, and report two
 oracle-free quantities:
   M1  condition number of the matrix each variant inverts (root cause, no oracle):
-      RTS -> P_{n|n-1} (dim p+q), MBF/BF -> S_n=P^yy_{n|n-1} (dim q), MF/DWY -> Sigma_n
+      RTS -> P_{n|n-1} (dim p+q), MBF/BF -> S_n=P^yy_{n|n-1} (dim q), 2F/DWY -> Sigma_n
       (Lyapunov prior), VAR -> R_n (process noise).
   M3  worst per-step gap of each variant vs the RTS reference (corroboration).
 Regimes: R1 process-noise starvation (mQ -> 0, i.e. R_n -> singular boundary of the
@@ -31,7 +31,7 @@ from prg.utils.exceptions import PKFError
 
 OUT = str(Path(__file__).resolve().parents[1] / "figures"); Path(OUT).mkdir(parents=True, exist_ok=True)
 VARIANTS = {"RTS": Linear_PKS_RTS, "BF": Linear_PKS_BF, "MBF": Linear_PKS_MBF,
-            "MF": Linear_PKS_MF, "DWY": Linear_PKS_DWY, "VAR": Linear_PKS_VAR}
+            "2F": Linear_PKS_MF, "DWY": Linear_PKS_DWY, "VAR": Linear_PKS_VAR}
 NONREF = {k: v for k, v in VARIANTS.items() if k != "RTS"}
 
 # engineered models (p=2, q=1)
@@ -117,14 +117,14 @@ def main():
     fig, ax = plt.subplots(1, 2, figsize=(7.0, 2.6))
     COL = {"P": "#D55E00", "Sig": "#CC79A7", "R": "#999999", "S": "#0072B2"}
     ax[0].loglog(eps, cP, "-o", color=COL["P"], label=r"$\mathbf{P}_{n|n-1}$ (RTS)")
-    ax[0].loglog(eps, cSig, "-D", color=COL["Sig"], label=r"$\boldsymbol{\Sigma}_n$ (MF/DWY)")
+    ax[0].loglog(eps, cSig, "-D", color=COL["Sig"], label=r"$\boldsymbol{\Sigma}_n$ (2F/DWY)")
     ax[0].loglog(eps, cR, "-s", color=COL["R"], label=r"$\mathbf{R}_n$ (VAR)")
     ax[0].loglog(eps, cS, "-^", color=COL["S"], lw=2.2, label=r"$\mathbf{S}_n$ (BF/MBF)")
     ax[0].set_xlabel(r"process-noise scale $\varepsilon$"); ax[0].invert_xaxis()
     ax[0].set_ylabel("cond. of inverted matrix")
     ax[0].set_title("(a) conditioning under noise starvation")
     ax[0].legend(loc="upper left"); ax[0].grid(alpha=0.3, which="both")
-    STY = {"BF": ("-^", "#0072B2"), "MBF": ("-v", "#009E73"), "MF": ("-D", "#CC79A7"),
+    STY = {"BF": ("-^", "#0072B2"), "MBF": ("-v", "#009E73"), "2F": ("-D", "#CC79A7"),
            "DWY": ("-P", "#E69F00"), "VAR": ("-s", "#999999")}
     for k in NONREF:
         m, c = STY[k]

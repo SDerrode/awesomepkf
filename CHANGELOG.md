@@ -11,6 +11,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.15.0] - 2026-07-20
+
+### Added
+- **Two paper-reproduction experiments (`experiments/`).**
+  `petetin_kl_comparison.py` (Fig. 10) contrasts the estimability-side
+  Kullback–Leibler divergence of Petetin–Desbouvries (IEEE TSP 62(14), 2014,
+  Eq. 71) with the paper's spectral `KL_rate` testability gauge, and shows the
+  back-action becomes testable only once a forward path `A_yx` opens a
+  `Y`-footprint. `rmse_vs_lrt.py` (Fig. 11) shows that an *uncalibrated* RMSE
+  comparison is not a valid back-action test — the nested couple wins the
+  in-sample RMSE with probability 1 (held-out false-positive rate ≈ 0.32,
+  ~6× nominal) — whereas a Diebold–Mariano / likelihood-ratio test is
+  calibrated, with the identity `Λ ≈ N·log(MSE0/MSE1)` (corr. 0.997). Both are
+  self-contained (numpy/scipy/matplotlib); `rmse_vs_lrt.py` caches its
+  Monte-Carlo summary for a fast `--replot`.
+
+### Changed
+- **Experiment-figure polish.** `em_lrt.py` legend now reads `λ = 2N·KL_rate`
+  (was `2N·KL`); `discriminating_models.py` labels the two-filter smoother `2F`
+  (was `MF`), including its `Σ_n (2F/DWY)` legend; `pmm_schematic.py` draws the
+  within-slice correlated-noise link `R_xy` at both time slices (the couple no
+  longer appears to drop the vertical `X`–`Y` link). `experiments/README.md`
+  renumbered and extended for Figs. 1–11.
+- `.gitignore` now excludes the whole generated `figures/` directory (and
+  `experiments/*.pdf`, `*.png`) rather than an enumerated list, so new
+  experiment outputs are ignored automatically.
+
+---
+
 ## [2.14.0] - 2026-07-11
 
 ### Added

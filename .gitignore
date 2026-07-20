@@ -129,18 +129,7 @@ dmypy.json
 cython_debug/
 
 # Paper-experiment generated outputs (only the scripts are versioned)
-experiments/em_coupling.pdf
-experiments/em_coupling.png
-experiments/em_lrt.pdf
-experiments/em_lrt.png
+figures/
+experiments/*.pdf
+experiments/*.png
 experiments/lrt_vector_*.json
-figures/classical_vs_couple.pdf
-figures/classical_vs_couple.png
-figures/classical_vs_couple_data.npz
-figures/backaction_poles.pdf
-figures/backaction_poles_preview.png
-figures/backaction_two_quantities.pdf
-figures/backaction_two_quantities_preview.png
-figures/backaction_oscillator_data.npz
-figures/pmm_schematic.pdf
-figures/pmm_schematic_preview.png
