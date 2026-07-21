@@ -13,7 +13,7 @@ dispersion multi-graines (biais / écart-type).
 
 Sortie : ``em_coupling.png`` (dans le dossier de ce script).
 
-Usage :  python em_identification.py [--N 2000] [--iters 25] [--seeds 50]
+Usage :  python em_identification.py [--N 2000] [--iters 100] [--seeds 50]
 """
 from __future__ import annotations
 
@@ -119,7 +119,7 @@ def _em(data, iters, record=True):
     return np.array(tr_axy), np.array(tr_ayy), np.array(tr_ll)
 
 
-def main(N=2000, iters=25, seeds=50):
+def main(N=2000, iters=100, seeds=50):
     A_axy, A_ayy, A_ll = [], [], []
     for s in range(seeds):
         data = Linear_PKF(_param(_A(AXY_T, AYY_T), QT), sKey=s).simulate_N_data(N)
@@ -171,7 +171,7 @@ def main(N=2000, iters=25, seeds=50):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--N", type=int, default=2000)
-    ap.add_argument("--iters", type=int, default=25)
+    ap.add_argument("--iters", type=int, default=100)
     ap.add_argument("--seeds", type=int, default=50)
     args = ap.parse_args()
     main(N=args.N, iters=args.iters, seeds=args.seeds)

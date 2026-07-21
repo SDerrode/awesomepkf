@@ -105,6 +105,34 @@ def main():
         print(f"{rho:>6.3f} {cP:>9.1e} {cS:>8.1e} {cSig:>9.1e} {cR:>8.1e} |       "
               + "".join(f"{g[k]:>9.1e}" for k in NONREF))
 
+    # ---- R3: same starvation at q=2, where cond(S_n) is not a 1x1 tautology ----
+    # At q=1 the predicted-observation covariance is a scalar, so cond(S_n)=1 identically
+    # and the column carries no information. With a genuine 2-D observation channel the
+    # number becomes meaningful -- and reveals that MBF's advantage, while large, is bounded.
+    print("\n=== R3: noise starvation at p=q=2 (cond(S) is informative here) ===")
+    A3 = np.array([[0.60, 0.10, 0.05, 0.02], [0.00, 0.50, 0.03, 0.01],
+                   [0.40, 0.30, 0.30, 0.05], [0.15, 0.55, 0.04, 0.25]])
+    B3 = np.array([[1.0, 0.2, 0.0, 0.0], [0.2, 1.0, 0.0, 0.0],
+                   [0.0, 0.0, 1.0, 0.3], [0.0, 0.0, 0.3, 1.0]])
+    print(f"{'eps':>8} {'cond(P)':>10} {'cond(S)':>9} {'cond(R)':>9}   ratio P/S")
+    for e in (1e-1, 1e-3, 1e-5, 1e-7, 1e-8):
+        try:
+            m = LinearAmQ(2, 2, A=A3, mQ=e * B3, mz0=np.zeros((4, 1)),
+                          Pz0=np.eye(4) * 0.1, pairwiseModel=True)
+            pr = m.get_params().copy(); pr.pop("dim_x"); pr.pop("dim_y")
+            f = Linear_PKS_RTS(ParamLinear(0, 2, 2, **pr), sKey=1)
+            f.process_N_data_smoother(N=400)
+            cP = cS = 0.0
+            for rec in f.history:
+                S = np.atleast_2d(rec["Skp1"]); Pxy = np.atleast_2d(rec["Kkp1"]) @ S
+                Pm = np.block([[np.atleast_2d(rec["PXXkp1_predict"]), Pxy], [Pxy.T, S]])
+                cP = max(cP, float(np.linalg.cond(Pm))); cS = max(cS, float(np.linalg.cond(S)))
+            print(f"{e:>8.0e} {cP:>10.2e} {cS:>9.2f} {float(np.linalg.cond(e * B3)):>9.2e}"
+                  f"  {cP / cS:>10.1e}")
+        except PKFError:
+            print(f"{e:>8.0e}  filter aborts: S_n numerically singular "
+                  f"(so 'never ill-conditioned' is false)")
+
     # ---- figure: R1 fine sweep (cond + accuracy vs eps) ----
     eps = np.logspace(-1, -11, 11)
     cP, cS, cSig, cR = [], [], [], []

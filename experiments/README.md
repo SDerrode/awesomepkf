@@ -27,21 +27,22 @@ for precision.
 | Script | Reproduces | Command (published settings) | Runtime |
 |---|---|---|---|
 | `pmm_schematic.py` | Fig. 1 (model schematic) | `python experiments/pmm_schematic.py` | ~2 s (matplotlib diagram) |
-| `discriminating_models.py` | Fig. 2 + conditioning table (MBF safety) | `python experiments/discriminating_models.py` | ~1 min (drives the six library smoothers) |
+| `discriminating_models.py` | Fig. 2 + conditioning table (MBF safety) | `python experiments/discriminating_models.py` | ~2 min (drives the six library smoothers; also prints the q=2 check) |
 | `bench_smoothers.py` | Fig. 3 (timing/memory) | `python experiments/bench_smoothers.py` | ~3 min (six smoothers, N up to 1.6e4) |
 | `classical_vs_couple.py` | Fig. 4 | `python experiments/classical_vs_couple.py` | ~1 min |
-| `classical_vs_couple_multi.py` | Table III | `python experiments/classical_vs_couple_multi.py` | ~2 min |
-| `em_identification.py` | Fig. 5 | `python experiments/em_identification.py` | ~3 min (50 seeds × 100 iters, N=2000) |
+| `classical_vs_couple_multi.py` | Table IV | `python experiments/classical_vs_couple_multi.py` | ~2 min |
+| `em_identification.py` | Fig. 5 | `python experiments/em_identification.py` | **~40 min** (50 seeds × 100 iters, N=2000; the E-step is the library smoother, not a hand-rolled one) |
 | `em_lrt.py` | Fig. 6 | `python experiments/em_lrt.py` | ~1 min (direct-MLE null + power) |
-| `em_realdata.py` | Fig. 7, Table IV | `python experiments/em_realdata.py` | ~2 min (needs the chemostat/S&P data under `data/`) |
+| `em_realdata.py` | Fig. 7, Table V | `python experiments/em_realdata.py` | ~2 min (needs the chemostat/S&P data under `data/`) |
 | `lrt_vector.py` | Remark 3 (vector `chi2_pq`) | `python experiments/lrt_vector.py` | ~8 min (library LRT, two cases) |
 | `backaction_oscillator.py` | Fig. 8 (fitted poles) | `python experiments/backaction_oscillator.py` | ~15 min (40 realizations × 4 MLE fits × 2 systems); `... 8` for a quick look |
 | `backaction_tradeoff.py` | Fig. 9 | `python experiments/backaction_tradeoff.py` | ~10 s (self-contained) |
 | `petetin_kl_comparison.py` | Fig. 10 (estimability vs. testability, cf. Petetin–Desbouvries 2014) | `python experiments/petetin_kl_comparison.py` | ~5 s (self-contained) |
 | `rmse_vs_lrt.py` | Fig. 11 (RMSE comparison vs. the test) | `python experiments/rmse_vs_lrt.py` | ~8 min (MC, 4 decision rules) |
 
-The "one estimate" check (Table II — all six smoothers agree to round-off) is in
-`notebooks/tutorial_09_linear_smoothers.ipynb`; the learning/testing story of Figs. 5-6
+The "one estimate" check (Table III — all six smoothers agree to round-off) is reproduced
+by `python -m prg.run_dwy_equivalence` (defaults `--N 500 --seeds 20`), with a shorter-horizon
+walkthrough in `notebooks/tutorial_09_linear_smoothers.ipynb`; the learning/testing story of Figs. 5-6
 is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 
 ## Expected results (to verify a run)
@@ -53,13 +54,13 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 | `classical_vs_couple_multi.py` | at ρ=1, ΔMSE(refit) in **37–123 %** across (p,q) and noise; couple stays calibrated |
 | `em_identification.py` | `A^xy = 0.395 ± 0.041`, `A^yy = 0.403 ± 0.022` (true 0.4/0.4); monotone log-likelihood |
 | `em_lrt.py` | empirical size **0.037** at α=0.05, mean Λ ≈ 0.985 (χ²₁ mean 1); power rising to **1.0** by A^xy=0.45; predicted χ²₁(λ) curve overlays the empirical power |
-| `em_realdata.py` | chemostat Λ **70.6/102.1**, S&P **95.2/280.5**, wind **3.3 (keep) / 13.6**; learned A^xy CI ≈ **[−0.50, −0.29]**, held-out **+10.3 %** vs classical |
+| `em_realdata.py` | chemostat Λ **70.6/102.1**, S&P **95.2/280.5**, wind **3.3 (keep) / 13.6**, negative control (circularly shifted driver) **0.74 (keep)**; learned A^xy CI ≈ **[−0.50, −0.29]**, held-out **+10.3 %** vs classical (Clark–West t=2.90, p=0.002; plain DM is *not* significant) |
 | `lrt_vector.py` | x2y2 (q=p=2): mean Λ ≈ 3.8 (dof pq=4), size ≈ 0.04 — tracks χ²₄; x2y1 (q=1<p): mean Λ ≈ 1 < pq, size ≈ 0.01 — conservative |
 | `backaction_oscillator.py` | out-of-class oscillator: pairwise lowers held-out error **~35 %** (Diebold–Mariano p<1e-20), complex poles in **40/40** runs vs classical real **0/40**; in-class control (A^xy=0 truth): **≈0 %** (n.s.) |
 | `backaction_tradeoff.py` | LRT power saturates by A^xy≈0.4; the classical state-MSE penalty keeps rising to ~20 % (testability ≠ estimability) |
 | `petetin_kl_comparison.py` | Petetin Eq.(71) rises to **0.47** at R/Q=20 while the paper's KL_rate ≡ **0** on their A^yx=0 couple; KL_rate climbs **0→0.46** as A^yx opens a y-footprint |
 | `rmse_vs_lrt.py` | H0 size: naive in-sample **1.00**, held-out **0.32**, DM **0.02**, LRT **0.04** (only DM/LRT calibrated); identity Λ≈N·log(MSE0/MSE1) corr **0.997** |
-| `discriminating_models.py` | under noise starvation cond(P)→**5.9e9** (RTS), cond(Σ)→**3.3e7** (2F/DWY), cond(S)≡**1** (BF/MBF), cond(R)≈1.5 (VAR); 2F/DWY smoothed-state error →**2.5e-7** while BF/MBF/VAR stay ~1e-13 |
+| `discriminating_models.py` | under noise starvation cond(P)→**5.9e9** (RTS), cond(Σ)→**3.3e7** (2F/DWY), cond(S)≡**1** (BF/MBF — but at q=1 that is a 1×1 tautology, not evidence), cond(R)≈1.5 (VAR); 2F/DWY smoothed-state error →**2.5e-7** while BF/MBF/VAR stay ~1e-13. Block **R3** (p=q=2, where cond(S) is informative): cond(S) saturates near **8.7** while cond(P) reaches **1.2e6** (10⁵-fold separation), and below eps=1e-8 the filter aborts on a singular S_n — so "never ill-conditioned" is too strong |
 
 ## Outputs
 

@@ -1,6 +1,6 @@
 """Fig 9 (paper style, harmonized palette): testability != estimability.
 Panel (a) is FULLY RECOMPUTED from the spectral (Whittle/Itakura-Saito) KL: both the power
-curve and its markers are P(chi2_1(2N*KL) > c) with KL the constrained-null rate.
+curve and its markers are P(chi2_1(2N*KL_rate) > c), KL_rate being the constrained-null rate.
 Panel (b) plots the smoothed-state estimation gap gapF; per the paper's supplementary note
 its magnitude is GAUGE-DEPENDENT, so it is carried here as the Design-1 state-estimation
 values (the D1 routine is not bundled in this self-contained script -- an independent
@@ -46,14 +46,14 @@ COUPLE,CLASSIC="C0","C1"
 
 fig,ax=plt.subplots(1,2,figsize=(7.0,2.6))
 # (a) testability
-ax[0].plot(g,powc,"-",color=COUPLE,label=r"$P(\chi^2_1(2N\,\mathrm{KL})>c)$")
+ax[0].plot(g,powc,"-",color=COUPLE,label=r"$P(\chi^2_1(2N\,\mathrm{KL_{rate}})>c)$")
 ax[0].plot(axy,powE,"o",color=COUPLE,ms=4)
 ax[0].axhline(0.05,ls=":",color="0.5",lw=0.8)
 ax[0].text(0.5,0.075,r"$\alpha=0.05$",color="0.4",fontsize=6.5,ha="right",va="bottom")
 ax[0].axvline(0.4,ls="--",color="0.7",lw=0.8)
 ax[0].annotate("saturates by\n$A^{xy}\\!\\approx\\!0.4$",xy=(0.34,0.985),xytext=(0.10,0.60),fontsize=7,
                ha="center",arrowprops=dict(arrowstyle="->",color="0.45",lw=1.0))
-ax[0].annotate("free-$\\mathcal{Q}$ gauge:\n$\\mathrm{KL}\\!\\approx\\!0\\Rightarrow$ no test power",
+ax[0].annotate("free-$\\mathcal{Q}$ gauge:\n$\\mathrm{KL_{rate}}\\!\\approx\\!0\\Rightarrow$ no test power",
                xy=(0.03,0.052),xytext=(0.325,0.27),color="C3",fontsize=6.4,ha="center",va="center",
                arrowprops=dict(arrowstyle="->",color="C3",lw=1.0))
 ax[0].set_xlabel(r"back-action $A^{xy}$"); ax[0].set_ylabel(r"LRT power at $\alpha=0.05$")

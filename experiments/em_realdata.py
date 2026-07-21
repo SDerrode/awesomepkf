@@ -221,10 +221,14 @@ def main(B=500, seed=1):
     tests = [
         ("chemostat: rotif.$\\to$algae", np.column_stack([algae, rot])),
         ("chemostat: algae$\\to$rotif.", np.column_stack([rot, algae])),
-        ("S&P: $Y\\to X$",             np.column_stack([x0, y0])),
-        ("S&P: $X\\to Y$",             np.column_stack([y0, x0])),
+        ("S&P: return$\\to$volat.",    np.column_stack([x0, y0])),
+        ("S&P: volat.$\\to$return",    np.column_stack([y0, x0])),
         ("wind: speed$\\to$power",       np.column_stack([power, speed])),
         ("wind: power$\\to$speed",       np.column_stack([speed, power])),
+        # negative control: circularly shifting the driver keeps each marginal (and its
+        # autocorrelation) but destroys the cross-coupling -> the test must keep H0.
+        ("control: shifted rotif.$\\to$algae",
+         np.column_stack([algae, np.roll(rot, len(rot) // 2)])),
     ]
     rows, chemo_stat, chemo_nulls = [], None, None
     print(f"{'test':32s} {'N':>5s} {'Lambda':>9s} {'p_chi2':>10s} {'p_surr':>8s}  verdict")
@@ -244,9 +248,11 @@ def main(B=500, seed=1):
           f"  ({100*(lrn['mse_classical']/lrn['mse_couple']-1):+.1f}% vs couple)")
 
     # ---------------- figure ----------------
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 2.7))
+    # Single panel: the per-system Lambda bar chart that used to sit alongside merely
+    # restated the paper's Table V, so only the surrogate-null panel is kept.
+    fig, ax1 = plt.subplots(1, 1, figsize=(3.5, 2.7))
 
-    # Panel A: chemostat surrogate null (coupling destroyed) vs χ²₁ + observed Λ
+    # chemostat surrogate null (coupling destroyed) vs χ²₁ + observed Λ
     xx = np.linspace(0, 14, 400)
     ax1.hist(chemo_nulls, bins=30, range=(0, 14), density=True, color=KEEP, alpha=0.45,
              label="surrogate null $\\Lambda$")
@@ -258,21 +264,6 @@ def main(B=500, seed=1):
     ax1.set(xlim=(0, 14), ylim=(0, 0.6), xlabel="$\\Lambda$", ylabel="density",
             title="Chemostat: surrogate null vs observed")
     ax1.legend(fontsize=7, loc="upper right")
-
-    # Panel B: Lambda per test (log), colored by verdict, chi2_1 5% threshold
-    labs = [r[0] for r in rows]
-    stats = np.array([max(r[2], 1e-2) for r in rows])
-    cols = [REJECT if r[4] < 0.05 else KEEP for r in rows]
-    yv = np.arange(len(rows))[::-1]
-    ax2.barh(yv, stats, color=cols, alpha=0.85, height=0.6)
-    ax2.set_xscale("log")
-    ax2.axvline(chi2.ppf(0.95, 1), ls="--", color="0.3", lw=1.2,
-                label=r"$\chi^2_1$ $5\%$ threshold")
-    ax2.set_ylim(-0.6, len(rows) - 0.4)
-    ax2.legend(loc="lower right", fontsize=6.6)
-    ax2.set_yticks(yv)
-    ax2.set_yticklabels(labs, fontsize=7)
-    ax2.set(xlabel="$\\Lambda$ (log)", title="Back-action statistic per system")
 
     fig.tight_layout()
     figdir = Path(__file__).resolve().parents[1] / "figures"

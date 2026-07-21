@@ -11,7 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.15.0] - 2026-07-20
+## [2.14.1] - 2026-07-20
+
+Documentation and paper-reproduction scripts only: **no change to `prg/`**, so the
+installable package is byte-identical to 2.14.0 (hence a patch bump, not a minor one).
+The whole set stems from an audit of the companion paper; every number below was
+re-derived rather than taken on trust.
 
 ### Added
 - **Two paper-reproduction experiments (`experiments/`).**
@@ -37,6 +42,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.gitignore` now excludes the whole generated `figures/` directory (and
   `experiments/*.pdf`, `*.png`) rather than an enumerated list, so new
   experiment outputs are ignored automatically.
+
+### Fixed
+- **`em_identification.py` did not reproduce its own published figure.** The
+  `--iters` default was 25, while the paper's coefficients
+  (`A_xy = 0.395 ± 0.041`, `A_yy = 0.403 ± 0.022`) need 100 EM iterations; the
+  bare command now reproduces them. Its runtime is documented honestly as
+  **~40 min** (measured), not the "~3 min" previously claimed — the E-step is the
+  library smoother, deliberately not replaced by a hand-rolled one.
+- **`discriminating_models.py`: `cond(S_n) = 1` was a tautology.** With `q = 1`,
+  `S_n` is a scalar, so that column carried no information. A new block **R3**
+  reruns the starvation at `p = q = 2`, where `cond(S_n)` saturates near **8.7**
+  while `cond(P)` reaches **1.2e6** — and where, below `eps = 1e-8`, the filter
+  aborts on a singular `S_n`, showing MBF's advantage to be large but *bounded*.
+- **`em_realdata.py`: the negative control promised in the docstring was never
+  run.** It now is — circularly shifting the driver preserves each marginal and its
+  autocorrelation while destroying the cross-coupling, giving `Λ = 0.74`
+  (`p_surr = 0.53`, keep `H0`). The S&P rows are relabelled `return→volat.` /
+  `volat.→return` to match the paper's table, and the per-system bar panel, which
+  merely restated that table, was dropped.
+- `petetin_kl_comparison.py` cited a hardcoded bibliography number in the figure
+  legend, which went stale as soon as references were renumbered; it now cites by
+  author. `backaction_tradeoff.py` writes `KL_rate`, not a bare `KL`.
+- `experiments/README.md`: corrected three table numbers, both stale runtimes, and
+  the pointer for the "one estimate" check (`prg.run_dwy_equivalence`).
 
 ---
 

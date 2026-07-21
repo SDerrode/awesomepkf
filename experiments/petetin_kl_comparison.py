@@ -78,10 +78,10 @@ def main():
     kl_vs_ayx = [paper_kl(np.array([[a, axy], [ayx, a]]), Qc1) for ayx in ayx_grid]
 
     fig, ax = plt.subplots(1, 2, figsize=(7.0, 2.7))
-    # "[30]" = petetin2014jumps' number in the paper bibliography (hardcoded here since the
-    # figure is generated outside LaTeX); realign it if the references are renumbered.
+    # Cite by author, never by bibliography number: the figure is generated outside LaTeX,
+    # so a hardcoded "[n]" silently goes stale as soon as the references are renumbered.
     ax[0].semilogx(ratio, p71, "-o", color=ORANGE,
-                   label=r"Petetin et al. [30]: approximation (estimability)")
+                   label=r"Petetin & Desbouvries: approximation (estimability)")
     ax[0].semilogx(ratio, kl_pap, "-s", color=BLUE,
                    label=r"paper $\mathrm{KL_{rate}}=\lambda/2N$: testability")
     ax[0].axhline(0, color=GREY, lw=0.8, ls=":")
