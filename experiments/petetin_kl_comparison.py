@@ -1,5 +1,5 @@
 """Estimability vs testability, related to Petetin-Desbouvries (IEEE TSP 62(14), 2014, Eq. 71)
--- paper Fig. 10, Sec. IV (When and why back-action helps). Scalar AR(1)+observation model.
+-- paper Fig. 10, Sec. V (When back-action is worth modelling). Scalar AR(1)+observation model.
 (a) Petetin's per-step KL (their Eq. 71, approximation/estimability) rises with the noise
     ratio R/Q, while the paper's spectral KL_rate (LRT noncentrality lambda/2N, testability)
     is identically zero on THEIR couple (its back-action sits in the A^yx=0 gauge -> y stays
@@ -83,22 +83,22 @@ def main():
     ax[0].semilogx(ratio, p71, "-o", color=ORANGE,
                    label=r"Petetin & Desbouvries: approximation (estimability)")
     ax[0].semilogx(ratio, kl_pap, "-s", color=BLUE,
-                   label=r"paper $\mathrm{KL_{rate}}=\lambda/2N$: testability")
+                   label=r"spectral $\mathrm{KL_{rate}}=\lambda/2N$: testability")
     ax[0].axhline(0, color=GREY, lw=0.8, ls=":")
     ax[0].set_xlabel(r"noise ratio $R/Q$")
     ax[0].set_ylabel("KL divergence (per step / rate)")
     ax[0].set_title(r"(a) two KL functionals on Petetin's couple ($A^{yx}{=}0$)")
     ax[0].legend(loc="upper left"); ax[0].grid(alpha=0.3, which="both")
-    ax[0].annotate("test powerless:\nback-action hidden in gauge", xy=(6, 0.004),
+    ax[0].annotate("test powerless:\nno $y$-footprint", xy=(6, 0.004),
                    xytext=(1.1, 0.16), fontsize=6.5, color=BLUE,
                    arrowprops=dict(arrowstyle="->", color=BLUE, lw=0.8))
 
     ax[1].plot(ayx_grid, kl_vs_ayx, "-D", color=GREEN)
     ax[1].axvline(0, color=ORANGE, lw=1.0, ls="--")
     ax[1].set_xlabel(r"forward path $A^{yx}$ (at $R/Q{=}1$, back-action $A^{xy}$ fixed)")
-    ax[1].set_ylabel(r"paper $\mathrm{KL_{rate}}$ (testability)")
+    ax[1].set_ylabel(r"spectral $\mathrm{KL_{rate}}$ (testability)")
     ax[1].set_title(r"(b) back-action becomes testable only via a $\mathbf{y}$-footprint")
-    ax[1].annotate("Petetin gauge\n$A^{yx}{=}0$", xy=(0.006, 0.006),
+    ax[1].annotate("Petetin couple\n$A^{yx}{=}0$", xy=(0.006, 0.006),
                    xytext=(0.06, 0.33), fontsize=6.5, color=ORANGE,
                    arrowprops=dict(arrowstyle="->", color=ORANGE, lw=0.8))
     ax[1].grid(alpha=0.3)

@@ -1,4 +1,4 @@
-"""Robustness of the classical-vs-couple gap across dimension and SNR (SPL App.).
+"""Robustness of the classical-vs-couple gap across dimension and SNR (paper Table IV, Sec. III).
 
 Repeats the strong-coupling (rho=1) comparison of ``classical_vs_couple.py`` on
 several pairwise models -- varying the latent/observed dimensions (p,q) and the

@@ -152,15 +152,25 @@ def main():
     ax[0].set_ylabel("cond. of inverted matrix")
     ax[0].set_title("(a) conditioning under noise starvation")
     ax[0].legend(loc="upper left"); ax[0].grid(alpha=0.3, which="both")
-    STY = {"BF": ("-^", "#0072B2"), "MBF": ("-v", "#009E73"), "2F": ("-D", "#CC79A7"),
-           "DWY": ("-P", "#E69F00"), "VAR": ("-s", "#999999")}
-    for k in NONREF:
-        m, c = STY[k]
-        ax[1].loglog(eps, np.array(gaps[k]) + 1e-17, m, color=c, label=k)
+    STY = {"BF": ("-^", "#0072B2", {}), "MBF": ("-v", "#009E73", {}),
+           "VAR": ("-s", "#999999", {}),
+           # 2F and DWY both invert Sigma_n, so their curves nearly coincide. Neither
+           # may hide the other: 2F is a solid line with large hollow markers, DWY a
+           # dashed line with small filled ones drawn on top -- the dashes let 2F show
+           # through and DWY's marker sits inside 2F's ring.
+           "2F":  ("-D",  "#CC79A7", {"mfc": "none", "ms": 9, "lw": 1.4}),
+           "DWY": ("--P", "#E69F00", {"ms": 5, "lw": 1.4, "zorder": 5})}
+    ORDER = ["BF", "MBF", "VAR", "2F", "DWY"]
+    for k in ORDER:
+        m, c, kw = STY[k]
+        ax[1].loglog(eps, np.array(gaps[k]) + 1e-17, m, color=c, label=k, **kw)
     ax[1].set_xlabel(r"process-noise scale $\varepsilon$"); ax[1].invert_xaxis()
     ax[1].set_ylabel(r"worst $\|\cdot\|_\infty$ gap vs RTS")
     ax[1].set_title("(b) resulting smoothed-state error")
-    ax[1].legend(loc="upper left", ncol=2); ax[1].grid(alpha=0.3, which="both")
+    hdl, lab = ax[1].get_legend_handles_labels()      # restore the NONREF reading order
+    o = [lab.index(k) for k in NONREF]
+    ax[1].legend([hdl[i] for i in o], [lab[i] for i in o], loc="upper left", ncol=2)
+    ax[1].grid(alpha=0.3, which="both")
     fig.tight_layout()
     fig.savefig(OUT + "/discriminating.pdf")
     fig.savefig(OUT + "/discriminating_preview.png", dpi=150)

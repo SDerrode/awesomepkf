@@ -191,16 +191,20 @@ def make_figure(data):
     ax.plot(np.cos(th), np.sin(th), color="0.8", lw=0.8, zorder=1)
     uc = data["uc"].ravel(); ucl = data["ucl"].ravel(); tp = np.atleast_1d(data["true"])
     ax.scatter(ucl.real, ucl.imag, s=16, marker="s", color="tab:orange", alpha=0.55,
-               label="classical (real)", zorder=2)
+               label="classical", zorder=2)
     ax.scatter(uc.real, uc.imag, s=14, color="tab:blue", alpha=0.45,
-               label="pairwise (complex)", zorder=3)
+               label="pairwise", zorder=3)
     ax.scatter(tp.real, tp.imag, s=70, marker="x", color="k", lw=1.8,
-               label="true oscillator", zorder=4)
+               label="true poles", zorder=4)
     ax.axhline(0, color="0.7", lw=0.5)
     ax.set_xlabel("Re"); ax.set_ylabel("Im"); ax.set_aspect("equal", "box")
     ax.set_xlim(0.2, 1.05); ax.set_ylim(-0.55, 0.55)
     ax.set_title("fitted transition poles")
-    ax.legend(loc="lower left"); ax.grid(alpha=0.3)
+    # Upper-left quadrant is empty ("lower left" used to sit on the lower true-pole cross);
+    # labels name the series only -- real vs complex is the finding, stated in the caption.
+    ax.legend(loc="upper left", fontsize=6, framealpha=0.85, borderpad=0.3,
+              labelspacing=0.25, handletextpad=0.35, borderaxespad=0.25, markerscale=0.8)
+    ax.grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(OUT + "/backaction_poles.pdf")
     fig.savefig(OUT + "/backaction_poles_preview.png", dpi=150)

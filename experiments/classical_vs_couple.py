@@ -19,7 +19,7 @@ record:
 
 We sweep the coupling strength ``rho`` (scales both ``A^{xy}`` and ``R^{xy}``) and
 report, against ground truth, the smoothed-state MSE and the normalised estimation
-error squared (NEES, calibrated value = dim X), with +/- 1 s.e. bands over seeds.
+error squared (NEES/dim X, calibrated value = 1), with +/- 1 s.e. bands over seeds.
 
 Run (with ``prg`` importable, e.g. from the awesomepkf repo root):
     python experiments/classical_vs_couple.py
@@ -98,7 +98,7 @@ def _metrics(history, data) -> tuple[float, float]:
         se += (e.T @ e).item()
         nees += (e.T @ np.linalg.solve(P, e)).item()
         n += 1
-    return se / n, nees / n
+    return se / n, nees / (n * DX)      # NEES/dim X: calibrated = 1 (DX=1 here)
 
 
 NAMES = ("couple", "ablated", "refit")

@@ -154,8 +154,9 @@ def main(seeds0=400, seeds1=200, replot=False):
 
     fig, ax = plt.subplots(1, 2, figsize=(7.0, 2.7))
     ax[0].bar(range(4), size, color=cols, alpha=0.85, width=0.62)
-    ax[0].axhline(0.05, ls="--", color="0.35", lw=1.1)
-    ax[0].text(2.6, 0.13, r"$\alpha=0.05$", fontsize=7, color="0.35", ha="center")
+    # same alpha line in both panels (style shared with Fig. em_lrt); labelled once,
+    # in the caption, rather than annotated in (a) only.
+    ax[0].axhline(0.05, ls=":", color="0.4", lw=1)
     for i, s in enumerate(size):
         ax[0].text(i, s + 0.02, f"{s:.3f}", ha="center", va="bottom", fontsize=7)
     ax[0].set_xticks(range(4)); ax[0].set_xticklabels(rules)
@@ -170,11 +171,11 @@ def main(seeds0=400, seeds1=200, replot=False):
                    arrowprops=dict(arrowstyle="->", color=RED, lw=0.8))
     ax[1].plot(axys, pow_lrt, "-o", color=BLUE, label=f"R4 LRT, size {size[3]:.3f}")
     ax[1].plot(axys, pow_dm, "-s", color=GREEN, label=f"R3 held-out RMSE+DM, size {size[2]:.3f}")
-    ax[1].axhline(0.05, ls=":", color="0.5", lw=1)
+    ax[1].axhline(0.05, ls=":", color="0.4", lw=1)
     ax[1].set_xlabel(r"true back-action $A^{xy}$")
     ax[1].set_ylabel("power (rejection rate)")
     ax[1].set_ylim(-0.03, 1.0)
-    ax[1].set_title("(b) both calibrated tests have power (DM undersized)", fontsize=8)
+    ax[1].set_title("(b) both calibrated tests have power (DM conservative)", fontsize=8)
     ax[1].legend(loc="upper left"); ax[1].grid(alpha=0.3)
     fig.tight_layout()
     fig.savefig(OUT / "rmse_vs_lrt.pdf")

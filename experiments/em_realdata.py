@@ -43,7 +43,7 @@ mpl.rcParams.update({
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy.stats import chi2
+from scipy.stats import chi2, norm
 
 REJECT, KEEP = "#D55E00", "#009E73"   # Okabe-Ito vermillion / bluish-green (colourblind-safe)
 
@@ -178,6 +178,38 @@ def phase_randomize(y, rng):
 
 
 # --------------------------------------------------------------------------- #
+#  held-out predictive comparison: Diebold-Mariano and its Clark-West form     #
+# --------------------------------------------------------------------------- #
+def _hac_se(d, lags=0):
+    """Newey-West standard error of mean(d); lags=0 is the plain i.i.d. estimator."""
+    n = len(d)
+    e = d - d.mean()
+    g0 = float(e @ e) / n
+    var = g0
+    for k in range(1, lags + 1):
+        gk = float(e[k:] @ e[:-k]) / n
+        var += 2.0 * (1.0 - k / (lags + 1.0)) * gk
+    return float(np.sqrt(max(var, 1e-300) / n))
+
+
+def dm_cw(e0, e1, f0, f1, lags=0):
+    """One-sided t-statistics for "the couple predicts better than the classical".
+
+    e0, e1: held-out errors of the classical (A^xy = 0) and couple models.
+    f0, f1: their point forecasts (needed for the Clark-West adjustment).
+
+    Diebold-Mariano compares squared errors directly; for NESTED models that statistic
+    is non-standard and undersized (the couple nests the classical), so Clark-West adds
+    back the estimation-noise term (f0 - f1)^2 that the nesting mechanically incurs.
+    """
+    d_dm = e0 ** 2 - e1 ** 2
+    d_cw = e0 ** 2 - (e1 ** 2 - (f0 - f1) ** 2)
+    return {"t_dm": float(d_dm.mean() / _hac_se(d_dm, lags)),
+            "t_cw": float(d_cw.mean() / _hac_se(d_cw, lags)),
+            "t_cw_hac1": float(d_cw.mean() / _hac_se(d_cw, 1))}
+
+
+# --------------------------------------------------------------------------- #
 #  learning: couple coefficients + held-out one-step MSE (chemostat)          #
 # --------------------------------------------------------------------------- #
 def learning_chemostat(B, seed):
@@ -206,10 +238,14 @@ def learning_chemostat(B, seed):
     Af, _, _ = fit_full(Ztr)
     Ar, _, _ = fit_restricted(Ztr)
     xte1 = Zte[1:, 0]
-    mse_c = float(np.mean((xte1 - (Zte[:-1] @ Af.T)[:, 0]) ** 2))
-    mse_k = float(np.mean((xte1 - (Zte[:-1] @ Ar.T)[:, 0]) ** 2))
+    fc = (Zte[:-1] @ Af.T)[:, 0]                       # couple forecasts
+    fk = (Zte[:-1] @ Ar.T)[:, 0]                       # classical (A^xy = 0) forecasts
+    ec, ek = xte1 - fc, xte1 - fk
+    mse_c = float(np.mean(ec ** 2))
+    mse_k = float(np.mean(ek ** 2))
+    tests = dm_cw(ek, ec, fk, fc)                      # H1: the couple predicts better
     return dict(axy=float(axy), ayy=float(ayy), axy_ci=ci(axys), ayy_ci=ci(ayys),
-                mse_couple=mse_c, mse_classical=mse_k)
+                mse_couple=mse_c, mse_classical=mse_k, n_test=int(len(ec)), **tests)
 
 
 # --------------------------------------------------------------------------- #
@@ -246,6 +282,11 @@ def main(B=500, seed=1):
     print(f"  A_yy (obs. memory)   = {lrn['ayy']:+.3f}  95% CI {tuple(round(v,3) for v in lrn['ayy_ci'])}")
     print(f"  held-out 1-step MSE(X): couple={lrn['mse_couple']:.4f}  classical(Axy=0)={lrn['mse_classical']:.4f}"
           f"  ({100*(lrn['mse_classical']/lrn['mse_couple']-1):+.1f}% vs couple)")
+    print(f"  held-out predictive test (n={lrn['n_test']}, one-sided): "
+          f"DM t={lrn['t_dm']:.2f} (p={1 - norm.cdf(lrn['t_dm']):.3f}) | "
+          f"Clark-West t={lrn['t_cw']:.2f} (p={1 - norm.cdf(lrn['t_cw']):.3f})"
+          f" | CW with 1 HAC lag t={lrn['t_cw_hac1']:.2f} "
+          f"(p={1 - norm.cdf(lrn['t_cw_hac1']):.3f})")
 
     # ---------------- figure ----------------
     # Single panel: the per-system Lambda bar chart that used to sit alongside merely

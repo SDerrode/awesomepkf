@@ -155,12 +155,15 @@ def main(seeds=350, N=400, npow=120):
              label=r"$\Lambda$ under $H_0$")
     xx = np.linspace(0.02, 12, 300)
     ax1.plot(xx, chi2.pdf(xx, 1), color="C0", lw=1.8, label=r"$\chi^2_1$")
-    ax1.axvline(crit, ls=":", color="0.4", lw=1)
+    ax1.axvline(crit, ls=":", color="0.4", lw=1,
+                label=rf"reject if $\Lambda>{crit:.2f}$ ($\alpha{{=}}0.05$)")
     ax1.set_xlabel(r"$\Lambda$")
     ax1.set_ylabel("density")
     ax1.set_ylim(0, 1.0)
-    ax1.set_title(f"(a) null: size $={size:.3f}$")
-    ax1.legend(loc="upper right")
+    # "size" is the empirical type-I error: fraction of H0 draws right of the line.
+    ax1.set_title(f"(a) null distribution "
+                  f"(rejected {size:.3f} of $H_0$ draws, nominal 0.05)")
+    ax1.legend(loc="upper right", fontsize=6.5)
     ax1.grid(alpha=0.3)
     ax2.axhline(0.05, ls=":", color="0.4", lw=1, label=r"size $\alpha=0.05$")
     ax2.plot(axyf, pow_pred, "--", color="C0", lw=1.6, zorder=1,

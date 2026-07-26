@@ -7,12 +7,18 @@ Monte-Carlo SIZE check of Lambda = 2[ell(A^xy free) - ell(A^xy=0)] for VECTOR da
 (prg.learning.em_partial_dynamics.back_action_lrt). Null models set A^xy = 0, freeze
 A^xx, A^yx, Q at truth, and keep A^yy as a free nuisance.
 
+The dof count is full when (A^xx, A^yx) is OBSERVABLE -- rank O = p, where
+O = [A^yx; A^yx A^xx; ...] -- NOT when q >= p; dimension counting is the wrong criterion
+(see Prop. 1 / Remark 3 of the paper). Both couples below are observable; they differ in
+how WELL conditioned that observability is.
+
 Cases:
-  * x2y2 (p=2, q=2, pq=4): observed channel as rich as the latent state -> the pq
-    entries of A^xy are identifiable, so Lambda tracks chi2_4 (mean ~ 4, size ~ alpha).
-  * x2y1 (p=2, q=1, pq=2): the 1-D observation cannot resolve all pq directions;
-    the Fisher information is rank-deficient, the effective dof drops below pq, and
-    referring Lambda to chi2_pq is conservative (mean ~ 1 < pq, size < alpha).
+  * x2y2 (p=2, q=2, pq=4): O well conditioned (singular values 0.407/0.148, ratio 2.7),
+    so Lambda tracks chi2_4 (mean ~ 3.8, var ~ 7.3, size ~ 0.04, KS p ~ 0.35).
+  * x2y1 (p=2, q=1, pq=2): O is full rank but nearly singular (0.406/0.0074, ratio 55).
+    At finite N the weak direction contributes almost nothing, so the statistic behaves
+    as though the count were deficient: mean ~ 1 rather than pq = 2, size ~ 0.01 --
+    conservative (correct level, reduced power).
 
 Run from the awesomepkf repo root with its .venv, or set AWESOMEPKF_ROOT.
     python experiments/lrt_vector.py [both|x2y1|x2y2]

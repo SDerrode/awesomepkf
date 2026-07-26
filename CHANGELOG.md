@@ -9,6 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Documentation, paper-reproduction scripts and tutorials only: **no change to `prg/`**,
+so the installable package is unchanged. Follows a cross-document consistency audit of the
+companion paper; every published number is now produced by a released script.
+
+### Added
+- `experiments/identifiability_frozen.py` — checks that freezing `A^xx,A^yx,Q` restores
+  identifiability of `(A^xy,A^yy)` iff `(A^xx,A^yx)` is observable (rank O = p), across
+  (p,q) = (1,1),(2,2),(2,1); shows `A^yx != 0` alone is not enough when p > q.
+- `experiments/em_observability.py` — partial-EM recovery on two p=2,q=1 couples sharing
+  the same nonzero `A^yx`, differing only in observability rank.
+- `experiments/em_realdata.py` — Diebold–Mariano and Clark–West held-out predictive tests
+  (`dm_cw`, Newey–West SE), so the chemostat t-statistics (0.80 / 2.90 / 2.56) are computed,
+  not quoted.
+- `experiments/em_lrt.py` — caches the H0 null draws to `em_lrt_null.npz`.
+- `notebooks/tutorial_10_learning_and_testing.ipynb` — enriched with the χ²_pq(λ)=2N·KL_rate
+  law (cached MC null + analytic power curve) and a surrogate-calibrated real-data test;
+  runs in ~25 s under nbmake. Bundled inputs in `notebooks/data/`.
+
+### Fixed
+- `experiments/backaction_tradeoff.py` — the estimability panel (Fig. 9b) is now recomputed
+  from the spectra (state-optimal classical smoother) instead of hard-coded constants.
+- `experiments/lrt_vector.py` — docstring corrected: the χ²_pq count is full under
+  observability (rank O = p), not under q ≥ p.
+- Figure legends/labels: 2F vs DWY made distinguishable (`discriminating_models.py`); NEES
+  normalised to 1 (`classical_vs_couple.py`); shared α line and "DM conservative"
+  (`rmse_vs_lrt.py`); "spectral KL_rate" axis label and no "gauge" for a frozen-block
+  regime (`petetin_kl_comparison.py`); poles-figure legend moved off the true-pole marker
+  (`backaction_oscillator.py`).
+
 ---
 
 ## [2.14.1] - 2026-07-20
