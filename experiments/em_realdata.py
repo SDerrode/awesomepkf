@@ -33,9 +33,9 @@ import argparse
 import os
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib as mpl
+
+mpl.use("Agg")
 mpl.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 300, "savefig.facecolor": "white", "savefig.bbox": "tight",
     "font.size": 8, "axes.titlesize": 8.5, "axes.labelsize": 8, "xtick.labelsize": 7,
@@ -220,7 +220,7 @@ def learning_chemostat(B, seed):
     # IC bootstrap par blocs mobiles sur Axy, Ayy
     rng = np.random.default_rng(seed)
     T = len(Z) - 1
-    L = max(10, int(round(len(Z) ** (1 / 3) * 2)))
+    L = max(10, round(len(Z) ** (1 / 3) * 2))
     axys, ayys = [], []
     for _ in range(B):
         idx = []
@@ -231,7 +231,8 @@ def learning_chemostat(B, seed):
         Zb = np.vstack([Z[idx], Z[idx[-1] + 1]])
         Ab, _, _ = fit_full(Zb)
         axys.append(Ab[0, 1]); ayys.append(Ab[1, 1])
-    ci = lambda v: (float(np.percentile(v, 2.5)), float(np.percentile(v, 97.5)))
+    def ci(v):
+        return (float(np.percentile(v, 2.5)), float(np.percentile(v, 97.5)))
     # held-out one-step-ahead MSE of X: couple (full) vs classical ablation (Axy=0)
     cut = int(0.8 * len(Z))
     Ztr, Zte = Z[:cut], Z[cut - 1:]
@@ -245,7 +246,7 @@ def learning_chemostat(B, seed):
     mse_k = float(np.mean(ek ** 2))
     tests = dm_cw(ek, ec, fk, fc)                      # H1: the couple predicts better
     return dict(axy=float(axy), ayy=float(ayy), axy_ci=ci(axys), ayy_ci=ci(ayys),
-                mse_couple=mse_c, mse_classical=mse_k, n_test=int(len(ec)), **tests)
+                mse_couple=mse_c, mse_classical=mse_k, n_test=len(ec), **tests)
 
 
 # --------------------------------------------------------------------------- #
@@ -306,8 +307,8 @@ def main(B=500, seed=1):
     ax1.annotate(f"observed $\\Lambda={chemo_stat:.0f}$\noff scale, $\\gg\\chi^2_1$ (reject)",
                  xy=(13.95, 0.018), xytext=(5.6, 0.34), fontsize=8, color=REJECT,
                  ha="center", va="center",
-                 arrowprops=dict(arrowstyle="->", color=REJECT, lw=1.2,
-                                 connectionstyle="arc3,rad=-0.15"))
+                 arrowprops={"arrowstyle": "->", "color": REJECT, "lw": 1.2,
+                                 "connectionstyle": "arc3,rad=-0.15"})
     ax1.set(xlim=(0, 14), ylim=(0, 0.6), xlabel="$\\Lambda$", ylabel="density",
             title="Chemostat: surrogate null vs observed")
     ax1.legend(fontsize=7, loc="upper right")

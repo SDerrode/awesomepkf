@@ -164,12 +164,11 @@ def _replot_from_cache() -> dict:
 
 
 def _plot(res: dict) -> None:
-    import matplotlib
-    matplotlib.use("Agg")
+    import matplotlib as mpl
+    mpl.use("Agg")
     # Shared paper figure style. Set AFTER any awesomepkf/prg plot_settings import
     # (those ran at module import time above) so these rcParams win; explicit
     # colors are given on every plot call so nothing is left to a prop_cycle.
-    import matplotlib as mpl
     mpl.rcParams.update({
         "figure.dpi": 150, "savefig.dpi": 300, "savefig.facecolor": "white",
         "savefig.bbox": "tight", "font.size": 8, "axes.titlesize": 8.5,

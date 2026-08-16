@@ -53,10 +53,10 @@ REPO_ROOT = _locate_repo_root()
 sys.path.insert(0, str(REPO_ROOT))
 os.chdir(REPO_ROOT)
 
-from prg.classes.linear_pkf import Linear_PKF                       # noqa: E402
-from prg.classes.param_linear import ParamLinear                    # noqa: E402
-from prg.models.linear._amq import LinearAmQ                        # noqa: E402
-from prg.learning.em_partial_dynamics import back_action_lrt        # noqa: E402
+from prg.classes.linear_pkf import Linear_PKF
+from prg.classes.param_linear import ParamLinear
+from prg.learning.em_partial_dynamics import back_action_lrt
+from prg.models.linear._amq import LinearAmQ
 
 OUT = Path(__file__).resolve().parent
 
@@ -99,10 +99,10 @@ def run_case(A, Q, dim_x, dim_y, label, N=400, nseed=300):
     print(f"  var  Lambda = {lams.var():.3f}  (theory chi2 var  = {2 * dof})")
     print(f"  empirical size @ alpha=0.05 = {size:.3f}  (crit chi2_{dof},0.95 = {qc:.3f})")
     print(f"  KS vs chi2_{dof}: D={ks.statistic:.3f}, p={ks.pvalue:.3f}  (p>0.05 = tracks)")
-    return dict(label=label, dim_x=dim_x, dim_y=dim_y, dof=dof, sr=float(sr),
-                N=N, nseed=len(lams), fails=fails,
-                mean=float(lams.mean()), var=float(lams.var()), size=size,
-                crit=float(qc), ks_D=float(ks.statistic), ks_p=float(ks.pvalue))
+    return {"label": label, "dim_x": dim_x, "dim_y": dim_y, "dof": dof, "sr": float(sr),
+                "N": N, "nseed": len(lams), "fails": fails,
+                "mean": float(lams.mean()), "var": float(lams.var()), "size": size,
+                "crit": float(qc), "ks_D": float(ks.statistic), "ks_p": float(ks.pvalue)}
 
 
 A_X2Y1 = [[0.50, 0.10, 0.00],
@@ -128,5 +128,6 @@ if __name__ == "__main__":
         results.append(run_case(A_X2Y1, Q_X2Y1, 2, 1, "x2y1", N=400, nseed=150))
     if which in ("x2y2", "both"):
         results.append(run_case(A_X2Y2, Q_X2Y2, 2, 2, "x2y2", N=250, nseed=100))
-    json.dump(results, open(OUT / f"lrt_vector_{which}.json", "w"), indent=1)
+    with (OUT / f"lrt_vector_{which}.json").open("w") as fh:
+        json.dump(results, fh, indent=1)
     print(f"\nSAVED {OUT / f'lrt_vector_{which}.json'}", flush=True)

@@ -13,10 +13,13 @@ Run (from the awesomepkf repo root):  python experiments/discriminating_models.p
 Adapted from the linear-smoothers TAC note (adds VAR + the figure). Output: figures/discriminating.pdf
 """
 from __future__ import annotations
+
 from pathlib import Path
-import numpy as np
-import matplotlib; matplotlib.use("Agg")
+
 import matplotlib as mpl
+import numpy as np
+
+mpl.use("Agg")
 mpl.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 300, "savefig.facecolor": "white", "savefig.bbox": "tight",
     "font.size": 8, "axes.titlesize": 8.5, "axes.labelsize": 8, "xtick.labelsize": 7,
@@ -24,7 +27,13 @@ mpl.rcParams.update({
 import matplotlib.pyplot as plt
 
 from prg.classes.linear_pks import (
-    Linear_PKS_RTS, Linear_PKS_BF, Linear_PKS_MBF, Linear_PKS_MF, Linear_PKS_DWY, Linear_PKS_VAR)
+    Linear_PKS_BF,
+    Linear_PKS_DWY,
+    Linear_PKS_MBF,
+    Linear_PKS_MF,
+    Linear_PKS_RTS,
+    Linear_PKS_VAR,
+)
 from prg.classes.param_linear import ParamLinear
 from prg.models.linear._amq import LinearAmQ
 from prg.utils.exceptions import PKFError
@@ -72,7 +81,7 @@ def _gaps_vs_rts(param, N, seed):
         try:
             v = cls(param, sKey=seed); v.process_N_data_smoother(N=N)
             out[name] = max(float(np.max(np.abs(a["Xkp1_smooth"] - b["Xkp1_smooth"])))
-                            for a, b in zip(rts.history, v.history))
+                            for a, b in zip(rts.history, v.history, strict=True))
         except PKFError:
             out[name] = np.nan
     return out

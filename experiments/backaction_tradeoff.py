@@ -9,11 +9,13 @@ qualitative point -- the gap keeps rising where the test has already saturated -
 to that choice.
 Output: figures/backaction_two_quantities.pdf"""
 from pathlib import Path
+
+import matplotlib as mpl
 import numpy as np
 from scipy.optimize import minimize_scalar
-from scipy.stats import ncx2, chi2
-import matplotlib; matplotlib.use("Agg")
-import matplotlib as mpl
+from scipy.stats import chi2, ncx2
+
+mpl.use("Agg")
 mpl.rcParams.update({
     "figure.dpi":150,"savefig.dpi":300,"savefig.facecolor":"white","savefig.bbox":"tight",
     "font.size":8,"axes.titlesize":8.5,"axes.labelsize":8,"xtick.labelsize":7,"ytick.labelsize":7,
@@ -75,10 +77,10 @@ ax[0].axhline(0.05,ls=":",color="0.5",lw=0.8)
 ax[0].text(0.5,0.075,r"$\alpha=0.05$",color="0.4",fontsize=6.5,ha="right",va="bottom")
 ax[0].axvline(0.4,ls="--",color="0.7",lw=0.8)
 ax[0].annotate("saturates by\n$A^{xy}\\!\\approx\\!0.4$",xy=(0.34,0.985),xytext=(0.10,0.60),fontsize=7,
-               ha="center",arrowprops=dict(arrowstyle="->",color="0.45",lw=1.0))
+               ha="center",arrowprops={"arrowstyle": "->","color": "0.45","lw": 1.0})
 ax[0].annotate("$\\mathcal{Q}$ free:\n$\\mathrm{KL_{rate}}\\!\\approx\\!0\\Rightarrow$ no test power",
                xy=(0.03,0.052),xytext=(0.325,0.27),color="C3",fontsize=6.4,ha="center",va="center",
-               arrowprops=dict(arrowstyle="->",color="C3",lw=1.0))
+               arrowprops={"arrowstyle": "->","color": "C3","lw": 1.0})
 ax[0].set_xlabel(r"back-action $A^{xy}$"); ax[0].set_ylabel(r"LRT power at $\alpha=0.05$")
 ax[0].set_xlim(-0.02,0.52); ax[0].set_ylim(-0.03,1.06)
 ax[0].set_title("(a) testability (in the $Y$-marginal)")
@@ -88,7 +90,7 @@ ax[1].plot(axy,gapF,"s-",color=CLASSIC,ms=4,label="classical smoother penalty")
 ax[1].axvline(0.4,ls="--",color="0.7",lw=0.8)
 ax[1].annotate("still climbing\nwhere the test\nhas saturated",xy=(0.4,gapF[4]),
                xytext=(0.045,0.80*gapF[-1]),fontsize=7,
-               arrowprops=dict(arrowstyle="->",color="0.45",lw=1.0))
+               arrowprops={"arrowstyle": "->","color": "0.45","lw": 1.0})
 ax[1].set_xlabel(r"back-action $A^{xy}$"); ax[1].set_ylabel(r"state-MSE penalty (\%)".replace("\\%","%"))
 ax[1].set_xlim(-0.02,0.52); ax[1].set_ylim(-0.03*gapF[-1],1.10*gapF[-1])
 ax[1].set_title("(b) estimability (in the joint $(X,Y)$)")
@@ -97,4 +99,4 @@ ax[1].legend(loc="lower right",fontsize=6.5); ax[1].grid(alpha=0.3)  # upper lef
 fig.tight_layout()
 fig.savefig(OUT+"/backaction_two_quantities.pdf")
 fig.savefig(OUT+"/backaction_two_quantities_preview.png",dpi=150)
-print("saved backaction_two_quantities.pdf ; KL(0.4)=%.5f"%kl_con(0.4))
+print(f"saved backaction_two_quantities.pdf ; KL(0.4)={kl_con(0.4):.5f}")

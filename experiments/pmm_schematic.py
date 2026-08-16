@@ -4,9 +4,9 @@ couple Z=(X,Y) jointly Markov, adding the back-action A^xy (Y->X, highlighted) a
 correlated process noise R^xy. Self-contained (matplotlib only). Output: figures/pmm_schematic.pdf"""
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib as mpl
+
+mpl.use("Agg")
 mpl.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 300, "savefig.facecolor": "white",
     "savefig.bbox": "tight", "font.size": 8, "axes.titlesize": 9})
@@ -40,7 +40,7 @@ def edge(ax, a, b, color="0.25", lw=1.2, label=None, lab_off=(0, 0), style="-|>"
         mx, my = (x0 + x1) / 2 + lab_off[0], (y0 + y1) / 2 + lab_off[1]
         ax.text(mx, my, label, ha="center", va="center", fontsize=7.5,
                 color=color, zorder=5,
-                bbox=dict(boxstyle="round,pad=0.05", fc="white", ec="none", alpha=0.85))
+                bbox={"boxstyle": "round,pad=0.05", "fc": "white", "ec": "none", "alpha": 0.85})
 
 
 def frame(ax, title):

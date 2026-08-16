@@ -10,6 +10,7 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.stats import t as student_t
 
+
 # ---- true 3rd-order damped oscillator: state (p=position, v=velocity, u=AR1 forcing) ----
 def true_system(poles, ar_phi=0.90, ar_sig=0.20):
     """Build the true 3rd-order system so the (p,v) block has the given eigenvalues
@@ -110,7 +111,7 @@ def fit(Ytr, free_axy, free_qxy):
     return _unpack(best.x, free_axy, free_qxy)
 
 def heldout_mse(Yte, A, Q):
-    ll, yp = yfilter(Yte, A, Q)
+    _ll, yp = yfilter(Yte, A, Q)
     if yp is None:
         return np.nan, None
     err = Yte - yp
@@ -165,10 +166,10 @@ def run(sim_fn, true_poles, label, M=60, N=600, split=0.7, seed0=0):
         g, se = gain(k)
         print(f"  held-out y-pred gain, {k:>9}: {g:5.1f}% +/- {se:.1f}")
     print(f"  Diebold-Mariano couple vs classical: t={dm_t:.2f}, p={dm_p:.1e}")
-    return dict(label=label, true_poles=true_poles, poles_c=poles_c,
-                poles_cl=poles_cl, mse=mse, ncomplex_c=ncomplex_c, ncomplex_cl=ncomplex_cl,
-                gains={k: gain(k) for k in ("Rxy_only", "Axy_only", "couple")},
-                dm_t=dm_t, dm_p=dm_p, M=M)
+    return {"label": label, "true_poles": true_poles, "poles_c": poles_c,
+                "poles_cl": poles_cl, "mse": mse, "ncomplex_c": ncomplex_c, "ncomplex_cl": ncomplex_cl,
+                "gains": {k: gain(k) for k in ("Rxy_only", "Axy_only", "couple")},
+                "dm_t": dm_t, "dm_p": dm_p, "M": M}
 
 
 OUT = str(Path(__file__).resolve().parents[1] / "figures")
@@ -176,9 +177,8 @@ Path(OUT).mkdir(parents=True, exist_ok=True)
 
 
 def make_figure(data):
-    import matplotlib
-    matplotlib.use("Agg")
     import matplotlib as mpl
+    mpl.use("Agg")
     mpl.rcParams.update({
         "figure.dpi": 150, "savefig.dpi": 300, "savefig.facecolor": "white",
         "savefig.bbox": "tight", "font.size": 8, "axes.titlesize": 8.5,

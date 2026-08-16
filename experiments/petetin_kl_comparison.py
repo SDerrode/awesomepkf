@@ -10,11 +10,13 @@ Uses the paper's OWN _kl_rate / y_spectrum functional (identical to em_lrt.py). 
 (numpy/scipy/matplotlib). Output: figures/petetin_kl_comparison.pdf
 """
 from pathlib import Path
+
+import matplotlib as mpl
 import numpy as np
 from scipy.optimize import minimize_scalar
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib as mpl
+
+mpl.use("Agg")
+
 mpl.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 300, "savefig.facecolor": "white", "savefig.bbox": "tight",
     "font.size": 8, "axes.titlesize": 8.5, "axes.labelsize": 8, "xtick.labelsize": 7,
@@ -91,7 +93,7 @@ def main():
     ax[0].legend(loc="upper left"); ax[0].grid(alpha=0.3, which="both")
     ax[0].annotate("test powerless:\nno $y$-footprint", xy=(6, 0.004),
                    xytext=(1.1, 0.16), fontsize=6.5, color=BLUE,
-                   arrowprops=dict(arrowstyle="->", color=BLUE, lw=0.8))
+                   arrowprops={"arrowstyle": "->", "color": BLUE, "lw": 0.8})
 
     ax[1].plot(ayx_grid, kl_vs_ayx, "-D", color=GREEN)
     ax[1].axvline(0, color=ORANGE, lw=1.0, ls="--")
@@ -100,7 +102,7 @@ def main():
     ax[1].set_title(r"(b) back-action becomes testable only via a $\mathbf{y}$-footprint")
     ax[1].annotate("Petetin couple\n$A^{yx}{=}0$", xy=(0.006, 0.006),
                    xytext=(0.06, 0.33), fontsize=6.5, color=ORANGE,
-                   arrowprops=dict(arrowstyle="->", color=ORANGE, lw=0.8))
+                   arrowprops={"arrowstyle": "->", "color": ORANGE, "lw": 0.8})
     ax[1].grid(alpha=0.3)
 
     fig.tight_layout()

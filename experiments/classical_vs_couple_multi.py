@@ -25,18 +25,18 @@ inv = np.linalg.inv
 # Base pairwise model families (block matrices; back-action A^{xy} and noise
 # cross-block S are scaled by rho, the observation noise Q^{yy} by qscale).
 MODELS = {
-    "x1y1": dict(dx=1, dy=1,
-                 Axx=[[0.6]], Ayx=[[0.3]], Ayy=[[0.4]], Axy=[[0.4]],
-                 Qxx=[[0.10]], Qyy=[[0.10]], S=[[0.05]]),
-    "x2y2": dict(dx=2, dy=2,
-                 Axx=[[0.5, 0.1], [0.0, 0.45]], Ayx=[[0.3, 0.0], [0.1, 0.2]],
-                 Ayy=[[0.35, 0.05], [0.0, 0.3]], Axy=[[0.35, 0.1], [0.05, 0.3]],
-                 Qxx=[[0.10, 0.0], [0.0, 0.10]], Qyy=[[0.10, 0.0], [0.0, 0.10]],
-                 S=[[0.04, 0.0], [0.0, 0.04]]),
-    "x2y1": dict(dx=2, dy=1,
-                 Axx=[[0.5, 0.1], [0.0, 0.45]], Ayx=[[0.3, 0.1]], Ayy=[[0.4]],
-                 Axy=[[0.4], [0.2]], Qxx=[[0.10, 0.0], [0.0, 0.10]],
-                 Qyy=[[0.10]], S=[[0.05], [0.03]]),
+    "x1y1": {"dx": 1, "dy": 1,
+                 "Axx": [[0.6]], "Ayx": [[0.3]], "Ayy": [[0.4]], "Axy": [[0.4]],
+                 "Qxx": [[0.10]], "Qyy": [[0.10]], "S": [[0.05]]},
+    "x2y2": {"dx": 2, "dy": 2,
+                 "Axx": [[0.5, 0.1], [0.0, 0.45]], "Ayx": [[0.3, 0.0], [0.1, 0.2]],
+                 "Ayy": [[0.35, 0.05], [0.0, 0.3]], "Axy": [[0.35, 0.1], [0.05, 0.3]],
+                 "Qxx": [[0.10, 0.0], [0.0, 0.10]], "Qyy": [[0.10, 0.0], [0.0, 0.10]],
+                 "S": [[0.04, 0.0], [0.0, 0.04]]},
+    "x2y1": {"dx": 2, "dy": 1,
+                 "Axx": [[0.5, 0.1], [0.0, 0.45]], "Ayx": [[0.3, 0.1]], "Ayy": [[0.4]],
+                 "Axy": [[0.4], [0.2]], "Qxx": [[0.10, 0.0], [0.0, 0.10]],
+                 "Qyy": [[0.10]], "S": [[0.05], [0.03]]},
 }
 
 
@@ -113,10 +113,10 @@ def _run(cfg: dict, qscale: float, seeds: int, N: int) -> dict:
         a, b = _metrics(p_abl, data, dx); ma.append(a); na.append(b)
         a, b = _metrics(p_ref, data, dx); mr.append(a); nr.append(b)
     mc, ma, mr = np.mean(mc), np.mean(ma), np.mean(mr)
-    return dict(dx=dx, dy=dy, gap_refit=100 * (mr / mc - 1),
-                gap_abl=100 * (ma / mc - 1),
-                nees_cpl=float(np.mean(nc)), nees_refit=float(np.mean(nr)),
-                nees_abl=float(np.mean(na)))
+    return {"dx": dx, "dy": dy, "gap_refit": 100 * (mr / mc - 1),
+                "gap_abl": 100 * (ma / mc - 1),
+                "nees_cpl": float(np.mean(nc)), "nees_refit": float(np.mean(nr)),
+                "nees_abl": float(np.mean(na))}
 
 
 def main(seeds: int = 150, N: int = 400) -> None:
@@ -128,7 +128,8 @@ def main(seeds: int = 150, N: int = 400) -> None:
     for tag, cfg in MODELS.items():
         for qscale, label in ((1.0, "nominal"), (4.0, "x4")):
             r = _run(cfg, qscale, seeds, N)
-            print(f"{tag:>6} {'(%d,%d)' % (r['dx'], r['dy']):>7} {label:>10} "
+            dims = f"({r['dx']},{r['dy']})"
+            print(f"{tag:>6} {dims:>7} {label:>10} "
                   f"{r['gap_refit']:>10.0f}% {r['gap_abl']:>8.0f}% "
                   f"{r['nees_cpl']:>9.2f} {r['nees_refit']:>11.2f} "
                   f"{r['nees_abl']:>9.2f}")

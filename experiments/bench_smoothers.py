@@ -5,9 +5,11 @@ AWESOMEPKF_ROOT (or run from a tree where prg is importable). Output: figures/be
 import time
 import tracemalloc
 from pathlib import Path
-import numpy as np
-import matplotlib; matplotlib.use("Agg")
+
 import matplotlib as mpl
+import numpy as np
+
+mpl.use("Agg")
 mpl.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 300, "savefig.facecolor": "white", "savefig.bbox": "tight",
     "font.size": 8, "axes.titlesize": 8.5, "axes.labelsize": 8, "xtick.labelsize": 7,
@@ -61,7 +63,7 @@ def main():
     # peak memory at the largest N
     simL = list(Linear_PKF(param, sKey=1).simulate_N_data(Ns[-1]))
     mem = {m: peak_mem(param, simL, m) for m in METHODS}
-    print("peak memory (MB) at N=%d: " % Ns[-1] + "  ".join(f"{m}={mem[m]:.1f}" for m in METHODS))
+    print(f"peak memory (MB) at N={Ns[-1]}: " + "  ".join(f"{m}={mem[m]:.1f}" for m in METHODS))
     # empirical scaling exponent (log-log slope) per method
     lnN = np.log(Ns)
     for m in METHODS:

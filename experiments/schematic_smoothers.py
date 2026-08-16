@@ -5,9 +5,10 @@ Table I: it shows the shared linear system on the left and the six solvers group
 inverts and its dimension, and a glyph for its sweep pattern.
 Output: figures/schematic_smoothers.pdf"""
 from pathlib import Path
-import matplotlib; matplotlib.use("Agg")
+
 import matplotlib as mpl
 
+mpl.use("Agg")
 mpl.rcParams.update({"savefig.dpi": 300, "savefig.facecolor": "white", "savefig.bbox": "tight",
                      "font.size": 8})
 import matplotlib.pyplot as plt
@@ -45,7 +46,7 @@ ax.text(15, cy - 3.2, "tridiagonal coupling", ha="center", fontsize=6.4, color="
 
 # ---- fan-out arrow ----
 ax.annotate("", xy=(34, 21), xytext=(30, 21),
-            arrowprops=dict(arrowstyle="-|>", lw=1.4, color=EDGE))
+            arrowprops={"arrowstyle": "-|>", "lw": 1.4, "color": EDGE})
 ax.text(32, 24.8, "six elimination", ha="center", fontsize=6.6, color="#444")
 ax.text(32, 22.4, "orders", ha="center", fontsize=6.6, color="#444")
 

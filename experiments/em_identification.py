@@ -46,10 +46,10 @@ REPO_ROOT = _locate_repo_root()
 sys.path.insert(0, str(REPO_ROOT))
 os.chdir(REPO_ROOT)
 
-from prg.classes.linear_pkf import Linear_PKF          # noqa: E402
-from prg.classes.linear_pks import Linear_PKS_VAR      # noqa: E402
-from prg.classes.param_linear import ParamLinear       # noqa: E402
-from prg.models.linear._amq import LinearAmQ           # noqa: E402
+from prg.classes.linear_pkf import Linear_PKF
+from prg.classes.linear_pks import Linear_PKS_VAR
+from prg.classes.param_linear import ParamLinear
+from prg.models.linear._amq import LinearAmQ
 
 # Shared paper figure style (Figs 4-5). Set AFTER all imports so that any global
 # awesomepkf plot_settings / prop_cycle cannot override these; explicit colors are

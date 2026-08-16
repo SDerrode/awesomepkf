@@ -14,14 +14,17 @@ Also checks the identity  Lambda ~= N log(MSE0/MSE1)  (steady-state approx). Sel
 Usage: python experiments/rmse_vs_lrt.py [--seeds0 400] [--seeds1 200]
 """
 from __future__ import annotations
+
 import argparse
 from pathlib import Path
+
+import matplotlib as mpl
 import numpy as np
 from scipy.optimize import minimize, minimize_scalar
 from scipy.stats import chi2, norm
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib as mpl
+
+mpl.use("Agg")
+
 mpl.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 300, "savefig.facecolor": "white", "savefig.bbox": "tight",
     "font.size": 8, "axes.titlesize": 8, "axes.labelsize": 8, "xtick.labelsize": 7,
@@ -165,10 +168,10 @@ def main(seeds0=400, seeds1=200, replot=False):
     ax[0].set_title("(a) uncalibrated RMSE-picking is not a test", fontsize=8)
     ax[0].annotate("in-sample: nested\ntautology", xy=(0, 1.0), xytext=(0.45, 0.83),
                    fontsize=6.3, color=RED, ha="left",
-                   arrowprops=dict(arrowstyle="->", color=RED, lw=0.8))
+                   arrowprops={"arrowstyle": "->", "color": RED, "lw": 0.8})
     ax[0].annotate(r"held-out: still $\sim$6$\times$" "\nnominal", xy=(1, size[1]), xytext=(1.2, 0.52),
                    fontsize=6.3, color=RED, ha="left",
-                   arrowprops=dict(arrowstyle="->", color=RED, lw=0.8))
+                   arrowprops={"arrowstyle": "->", "color": RED, "lw": 0.8})
     ax[1].plot(axys, pow_lrt, "-o", color=BLUE, label=f"R4 LRT, size {size[3]:.3f}")
     ax[1].plot(axys, pow_dm, "-s", color=GREEN, label=f"R3 held-out RMSE+DM, size {size[2]:.3f}")
     ax[1].axhline(0.05, ls=":", color="0.4", lw=1)

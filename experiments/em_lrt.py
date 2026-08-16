@@ -24,13 +24,13 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import matplotlib as mpl
 import numpy as np
 from scipy.optimize import minimize, minimize_scalar
 from scipy.stats import chi2, ncx2
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib as mpl
+mpl.use("Agg")
+
 mpl.rcParams.update({
     "figure.dpi": 150, "savefig.dpi": 300, "savefig.facecolor": "white",
     "savefig.bbox": "tight", "font.size": 8, "axes.titlesize": 8.5,
@@ -139,7 +139,7 @@ def main(seeds=350, N=400, npow=120):
     for a in axyg:
         L = np.array([lrt(sim(a, 0.4, N, np.random.default_rng(5000 + int(a * 1000) * 97 + s)))
                       for s in range(npow)])
-        p = float(np.mean(L > crit))
+        p = float(np.mean(crit < L))
         powm.append(p)
         powse.append(1.96 * np.sqrt(p * (1 - p) / npow))
     powm, powse = np.array(powm), np.array(powse)
