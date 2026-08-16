@@ -173,7 +173,7 @@ class TestMissingObsCorrectness:
         """With and without gaps, the filter must match the exact joint
         recursion seeded from its own first estimate."""
         param = request.getfixturevalue(fixture)
-        pkf, results, X, Y = _run(param, gaps)
+        pkf, results, _X, Y = _run(param, gaps)
 
         ref = _reference(param, pkf.history[0], Y, gaps)
         assert len(results) == N_STEPS + 1
@@ -239,7 +239,7 @@ class TestMissingObsValidation:
 
         pkf = Linear_PKF(param_x2y2, sKey=SEED)
         gen = ((k, X[k], Y[k]) for k in range(len(X)))
-        with pytest.raises(ParamError, match="[Pp]artially missing"):
+        with pytest.raises(ParamError, match=r"[Pp]artially missing"):
             list(pkf.process_filter(data_generator=gen))
 
     def test_first_obs_nan_raises(self, param_x1y1):
@@ -259,7 +259,7 @@ class TestMissingObsValidation:
 
         pkf = Linear_PKF(param_x2y2, sKey=SEED)
         gen = ((k, X[k], Y[k]) for k in range(len(X)))
-        with pytest.raises(ParamError, match="[Pp]artially missing"):
+        with pytest.raises(ParamError, match=r"[Pp]artially missing"):
             list(pkf.process_filter(data_generator=gen))
 
     def test_none_observation_raises(self, param_x1y1):

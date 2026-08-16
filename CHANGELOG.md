@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.15.0] - 2026-08-16
 
 Apart from the missing-observation support (first entry below), this batch is
 documentation, paper-reproduction scripts and tutorials only. It follows a
@@ -897,7 +897,7 @@ no behaviour changes — pure consistency cleanup.
 - NEES and NIS calibration metrics with history tracking
 - Rich terminal output and matplotlib plots
 
-[Unreleased]: https://github.com/sderrode/awesomepkf/compare/v2.10.0...HEAD
+[2.15.0]: https://github.com/sderrode/awesomepkf/compare/v2.14.0...v2.15.0
 [2.10.0]: https://github.com/sderrode/awesomepkf/compare/v2.9.0...v2.10.0
 [0.4.0]: https://github.com/sderrode/awesomepkf/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sderrode/awesomepkf/compare/v0.2.0...v0.3.0

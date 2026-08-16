@@ -168,14 +168,14 @@ def main(B: int = 200, N: int = 400, seed: int = 1) -> dict:
                 100.0 * (_rmse(naive, X, gaps) / _rmse(exact, X, gaps) - 1.0)
             )
 
-        stats = dict(
-            median=float(np.median(exc_all)),
-            q90=float(np.percentile(exc_all, 90)),
-            max=float(np.max(exc_all)),
-            gap_median=float(np.median(exc_gap)),
-            gap_q90=float(np.percentile(exc_gap, 90)),
-            diverged=diverged, skipped=skipped, n=len(exc_all),
-        )
+        stats = {
+            "median": float(np.median(exc_all)),
+            "q90": float(np.percentile(exc_all, 90)),
+            "max": float(np.max(exc_all)),
+            "gap_median": float(np.median(exc_gap)),
+            "gap_q90": float(np.percentile(exc_gap, 90)),
+            "diverged": diverged, "skipped": skipped, "n": len(exc_all),
+        }
         results[rate] = stats
         note = f" ({skipped} skipped)" if skipped else ""
         print(f"{rate:>5.0%} | {stats['median']:>9.1f} {stats['q90']:>7.1f} "
