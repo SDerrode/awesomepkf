@@ -20,9 +20,11 @@ is now produced by a released script.
   carried to the next prediction (exact marginalisation over the missing `y`).
   In a pairwise model `y` is a component of the Markov chain, so the classical
   "skip the update" recipe — rebuilding `blkdiag(P_xx, 0)` across the gap — is
-  incorrect: measured on random couples (p=4, q=2), it costs 5–7 % median state
-  RMSE at moderate gap rates, with a heavy tail (up to 45 % at the ninth decile)
-  and occasional divergence. Gap steps are recorded in the history with
+  incorrect: measured on 200 random stable couples (p=4, q=2) by
+  `experiments/missing_obs_ablation.py`, it costs a median 0.5–1.1 % excess
+  state RMSE at 10–30 % gap rates, with a heavy tail across couples (ninth
+  decile 2.5–5.5 %, worst case ~80 %); the damage lands on the steps *after*
+  each gap (at the gap step itself both recipes return the prior). Gap steps are recorded in the history with
   `ikp1 = Skp1 = Kkp1 = None`. Partially-missing observations raise `ParamError`
   (marginalising a sub-vector is not yet supported), as does a missing first
   observation (the filter is initialised by conditioning on `y_0`). The no-gap

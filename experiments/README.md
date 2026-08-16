@@ -39,6 +39,7 @@ for precision.
 | `backaction_tradeoff.py` | Fig. 9 | `python experiments/backaction_tradeoff.py` | ~10 s (self-contained) |
 | `petetin_kl_comparison.py` | Fig. 10 (estimability vs. testability, cf. Petetin–Desbouvries 2014) | `python experiments/petetin_kl_comparison.py` | ~5 s (self-contained) |
 | `rmse_vs_lrt.py` | Fig. 11 (RMSE comparison vs. the test) | `python experiments/rmse_vs_lrt.py` | ~8 min (MC, 4 decision rules) |
+| `missing_obs_ablation.py` | CHANGELOG numbers (missing-observation ablation: exact marginalisation vs the classical blkdiag recipe) | `python experiments/missing_obs_ablation.py` | ~3 min (600 runs: 200 couples × 3 gap rates, N=400) |
 
 The "one estimate" check (Table III — all six smoothers agree to round-off) is reproduced
 by `python -m prg.run_dwy_equivalence` (defaults `--N 500 --seeds 20`), with a shorter-horizon
@@ -61,6 +62,7 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 | `petetin_kl_comparison.py` | Petetin Eq.(71) rises to **0.47** at R/Q=20 while the paper's KL_rate ≡ **0** on their A^yx=0 couple; KL_rate climbs **0→0.46** as A^yx opens a y-footprint |
 | `rmse_vs_lrt.py` | H0 size: naive in-sample **1.00**, held-out **0.32**, DM **0.02**, LRT **0.04** (only DM/LRT calibrated); identity Λ≈N·log(MSE0/MSE1) corr **0.997** |
 | `discriminating_models.py` | under noise starvation cond(P)→**5.9e9** (RTS), cond(Σ)→**3.3e7** (2F/DWY), cond(S)≡**1** (BF/MBF — but at q=1 that is a 1×1 tautology, not evidence), cond(R)≈1.5 (VAR); 2F/DWY smoothed-state error →**2.5e-7** while BF/MBF/VAR stay ~1e-13. Block **R3** (p=q=2, where cond(S) is informative): cond(S) saturates near **8.7** while cond(P) reaches **1.2e6** (10⁵-fold separation), and below eps=1e-8 the filter aborts on a singular S_n — so "never ill-conditioned" is too strong |
+| `missing_obs_ablation.py` | naive blkdiag recipe vs exact marginalisation: median excess state RMSE **0.5–1.1 %** at 10–30 % gap rates, ninth decile **2.5–5.5 %**, worst couple **~80 %**; gap-step-only excess ≈ 0 (negative control — the damage lands on the steps *after* each gap); **0/200** diverged at every rate |
 
 ## Outputs
 
