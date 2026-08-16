@@ -99,6 +99,64 @@ GAP_PATTERNS = {
 }
 
 
+def _batch_smoother_reference(param, hist0, Y, gaps):
+    """Exact batch smoother: stack ``Z_{1:N}`` into one joint Gaussian seeded
+    from the filter's k=0 posterior, condition on every OBSERVED ``Y_k`` at
+    once, and return the smoothed (X mean, X cov) for k = 1..N. Independent
+    of any forward/backward recursion."""
+    p = param.dim_x
+    A = np.asarray(param.A, dtype=float)
+    Q = param.B @ param.mQ @ param.B.T
+    d = A.shape[0]
+    N = len(Y) - 1
+
+    z0 = np.vstack((hist0["Xkp1_update"], hist0["ykp1"]))
+    P0 = np.zeros((d, d))
+    P0[:p, :p] = hist0["PXXkp1_update"]
+
+    # Prior means and per-step covariances of Z_k given the k=0 posterior
+    means, covs = [], []
+    m, P = z0, P0
+    for _ in range(N):
+        m = A @ m
+        P = A @ P @ A.T + Q
+        means.append(m)
+        covs.append(P)
+
+    # Stacked prior covariance: Cov(Z_j, Z_k) = P_j (A^T)^(k-j) for k >= j
+    big = np.zeros((N * d, N * d))
+    for j in range(N):
+        Cjk = covs[j]
+        big[j * d : (j + 1) * d, j * d : (j + 1) * d] = Cjk
+        for k in range(j + 1, N):
+            Cjk = Cjk @ A.T
+            big[j * d : (j + 1) * d, k * d : (k + 1) * d] = Cjk
+            big[k * d : (k + 1) * d, j * d : (j + 1) * d] = Cjk.T
+    big_mean = np.vstack(means)  # (N*d, 1)
+
+    obs_idx = np.array(
+        [
+            (k - 1) * d + p + i
+            for k in range(1, N + 1)
+            if k not in gaps
+            for i in range(d - p)
+        ]
+    )
+    y_obs = np.vstack([Y[k] for k in range(1, N + 1) if k not in gaps])
+
+    Soo = big[np.ix_(obs_idx, obs_idx)]
+    Cxo = big[:, obs_idx]
+    K = np.linalg.solve(Soo, Cxo.T).T
+    mean_post = big_mean + K @ (y_obs - big_mean[obs_idx])
+    cov_post = big - K @ Cxo.T
+
+    out = []
+    for k in range(1, N + 1):
+        sl = slice((k - 1) * d, (k - 1) * d + p)
+        out.append((mean_post[sl], cov_post[sl, sl]))
+    return out
+
+
 # ---------------------------------------------------------------------------
 # correctness against the exact reference
 # ---------------------------------------------------------------------------
@@ -228,15 +286,85 @@ class TestMissingObsValidation:
 
 
 # ---------------------------------------------------------------------------
-# downstream guards: smoothers and EM reject gapped data explicitly
+# smoothing with gaps: the joint-level RTS pass is exact
+# ---------------------------------------------------------------------------
+
+class TestSmootherWithGaps:
+    """RTS smoothing over gapped data must match the exact batch smoother
+    (one joint Gaussian over Z_{1:N} conditioned on the observed Y's)."""
+
+    N_SM = 25  # the batch reference builds an (N*dim_xy)^2 Gaussian
+
+    @pytest.mark.parametrize(
+        "gaps_fn",
+        [
+            lambda n: set(),
+            lambda n: {5},
+            lambda n: {5, 6, 7},
+            lambda n: {1},
+            lambda n: {n},
+            lambda n: set(range(2, n, 3)),
+        ],
+        ids=[
+            "no-gaps", "single", "burst",
+            "first-possible", "trailing", "every-3rd",
+        ],
+    )
+    @pytest.mark.parametrize("fixture", ["param_x1y1", "param_x2y2"])
+    @pytest.mark.parametrize("joseph", [False, True], ids=["standard", "joseph"])
+    def test_rts_matches_batch_reference(
+        self, fixture, gaps_fn, joseph, request
+    ):
+        param = request.getfixturevalue(fixture)
+        n = self.N_SM
+        gaps = gaps_fn(n)
+        X, Y = _simulate(param, n)
+
+        pks = Linear_PKS(param, sKey=SEED, joseph=joseph)  # default: RTS
+        pks.process_N_data_smoother(
+            N=None, data_generator=_generator(X, Y, gaps)
+        )
+
+        ref = _batch_smoother_reference(param, pks.history[0], Y, gaps)
+        for k in range(1, n + 1):
+            x_ref, pxx_ref = ref[k - 1]
+            rec = pks.history[k]
+            np.testing.assert_allclose(
+                rec["Xkp1_smooth"], x_ref, atol=1e-8,
+                err_msg=f"smoothed state mismatch at k={k} (gap={k in gaps})",
+            )
+            np.testing.assert_allclose(
+                rec["PXXkp1_smooth"], pxx_ref, atol=1e-8,
+                err_msg=f"smoothed cov mismatch at k={k} (gap={k in gaps})",
+            )
+
+    def test_gap_step_gets_future_information(self, param_x1y1):
+        """On a gap step the smoothed covariance must be strictly tighter
+        than the filtered one: the whole point of smoothing over a gap."""
+        n = self.N_SM
+        X, Y = _simulate(param_x1y1, n)
+
+        pks = Linear_PKS(param_x1y1, sKey=SEED)
+        pks.process_N_data_smoother(
+            N=None, data_generator=_generator(X, Y, gaps={10})
+        )
+        rec = pks.history[10]
+        tr_filt = float(np.trace(rec["PXXkp1_update"]))
+        tr_smooth = float(np.trace(rec["PXXkp1_smooth"]))
+        assert tr_smooth < tr_filt
+
+
+# ---------------------------------------------------------------------------
+# downstream guards: non-RTS smoothers and EM reject gapped data explicitly
 # ---------------------------------------------------------------------------
 
 class TestMissingObsDownstreamGuards:
 
-    def test_smoother_rejects_gaps(self, param_x1y1):
+    @pytest.mark.parametrize("method", ["BF", "MBF", "MF", "DWY", "VAR"])
+    def test_non_rts_smoothers_reject_gaps(self, param_x1y1, method):
         X, Y = _simulate(param_x1y1, 20)
 
-        pks = Linear_PKS(param_x1y1, sKey=SEED)
+        pks = Linear_PKS(param_x1y1, sKey=SEED, method=method)
         with pytest.raises(FilterError, match="missing observations"):
             pks.process_N_data_smoother(
                 N=None, data_generator=_generator(X, Y, gaps={6})

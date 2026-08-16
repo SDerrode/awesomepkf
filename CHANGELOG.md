@@ -27,12 +27,19 @@ is now produced by a released script.
   (marginalising a sub-vector is not yet supported), as does a missing first
   observation (the filter is initialised by conditioning on `y_0`). The no-gap
   path is numerically identical to the previous implementation.
-  Downstream consumers are guarded: the linear smoothers (`Linear_PKS*`) and
-  both EM routines reject gapped data with an explicit error (their backward
-  passes require observed steps), and runner NIS diagnostics are skipped when
-  a run contains gaps. Observations are validated at the source: `None`,
-  wrong-size or partially-NaN vectors raise `ParamError`; an empty data
-  generator raises `FilterError`.
+  **Smoothing over gaps** is supported by the RTS pass, now carried at the
+  joint `Z = (X, Y)` level: on observed steps the recursion reduces exactly
+  to the historical X-marginal form (Y rows of the joint gain vanish), and on
+  gap steps the full joint recorded by the forward pass (new
+  `Zkp1_joint`/`PZZkp1_joint` step fields) propagates future information into
+  the missing `y` as well. Validated against an independent batch smoother
+  (one joint Gaussian over `Z_{1:N}` conditioned on the observed `Y`'s,
+  atol 1e-8), in standard and Joseph forms. The five other variants
+  (BF/MBF/2F/DWY/VAR) and both EM routines reject gapped data with an
+  explicit error pointing to `method='RTS'`; runner NIS diagnostics are
+  skipped when a run contains gaps. Observations are validated at the
+  source: `None`, wrong-size or partially-NaN vectors raise `ParamError`;
+  an empty data generator raises `FilterError`.
   New tests: `prg/tests/test_missing_obs.py` (validated against an independent
   exact joint-Gaussian recursion, atol 1e-10). Nonlinear filters
   (EPKF/UPKF/UKF/PPF/PF) do not yet handle gaps and now reject NaN

@@ -183,18 +183,17 @@ class _LinearPKSBase(Linear_PKF):
         if N_records == 0:
             raise FilterError("Linear_PKS: forward pass yielded no records.")
 
-        # Missing observations (all-NaN y) are supported by the forward filter
-        # only: every backward pass consumes the innovation fields (None on a
-        # gap step) and rebuilds the block-diagonal joint prior, which is
-        # invalid across a gap.
+        # Missing observations (all-NaN y): only the joint-level RTS pass
+        # handles them; the other variants consume the innovation fields
+        # (None on a gap step) or treat every recorded y as observed data.
         gap_steps = [rec["k"] for rec in self.history if rec["ikp1"] is None]
-        if gap_steps:
+        if gap_steps and not self._supports_gaps():
             shown = ", ".join(str(k) for k in gap_steps[:8])
             more = ", ..." if len(gap_steps) > 8 else ""
             raise FilterError(
-                f"Linear_PKS: smoothing with missing observations (all-NaN y) "
-                f"is not supported — {len(gap_steps)} gap step(s) at "
-                f"k = {shown}{more}."
+                f"Linear_PKS: this smoother variant does not support missing "
+                f"observations (all-NaN y) — {len(gap_steps)} gap step(s) at "
+                f"k = {shown}{more}. Use the RTS pass (method='RTS')."
             )
 
         logger.info(
@@ -345,33 +344,91 @@ class _LinearPKSBase(Linear_PKF):
             "A smoother variant must implement _smoothing_pass()."
         )
 
+    def _supports_gaps(self) -> bool:
+        """Whether this smoother variant handles missing observations.
+
+        Only the joint-level RTS pass does; the other variants consume the
+        innovation fields (``None`` on gap steps) or treat every recorded
+        ``y`` as observed data.
+        """
+        return False
+
 
 # ======================================================================
 # Smoothing passes (one free function per variant)
 # ======================================================================
+def _joint_posterior(
+    s: _LinearPKSBase, rec: dict
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Joint posterior ``(z, P)`` of the couple at a recorded forward step.
+
+    Observed step: ``[Xkp1_update; y]`` with covariance
+    ``blkdiag(PXXkp1_update, 0)`` — conditioning on the exactly observed ``Y``
+    zeroes its covariance. Missing-observation step: the full joint recorded
+    by the forward pass (``Zkp1_joint`` / ``PZZkp1_joint``), which is NOT
+    block-diagonal.
+    """
+    if rec.get("PZZkp1_joint") is not None:
+        return rec["Zkp1_joint"].copy(), rec["PZZkp1_joint"].copy()
+    if rec["ikp1"] is None and rec["k"] > 0:
+        raise FilterError(
+            f"Step {rec['k']}: gap record without a stored joint posterior "
+            f"(history predates missing-observation support?)."
+        )
+    z = np.vstack((rec["Xkp1_update"], rec["ykp1"]))
+    P = np.zeros((s.dim_xy, s.dim_xy))
+    P[: s.dim_x, : s.dim_x] = rec["PXXkp1_update"]
+    return z, P
+
+
+def _joint_predicted_mean(s: _LinearPKSBase, rec: dict) -> np.ndarray:
+    """
+    Predicted joint mean ``[X_pred; Y_pred]`` at a recorded step.
+
+    Observed step: ``Y_pred = y - innovation``. Missing-observation step: the
+    recorded joint posterior IS the predicted joint (no update happened).
+    """
+    if rec.get("PZZkp1_joint") is not None:
+        return rec["Zkp1_joint"].copy()
+    return np.vstack((rec["Xkp1_predict"], rec["ykp1"] - rec["ikp1"]))
+
+
 def _rts_backward_pass(s: _LinearPKSBase, N_records: int) -> None:
     """
     Rauch--Tung--Striebel pairwise backward pass, in place on ``s.history``.
 
-    Backward RTS recursion at the **joint** ``Z = (X, Y)`` level: the smoothing
-    gain :math:`G_n` (shape ``dim_x x dim_xy``) couples ``X_n`` to both the
-    smoothed ``X_{n+1}`` and the next-step innovation
-    :math:`y_{n+1} - \\hat y_{n+1|n}`.
+    Backward RTS recursion carried at the **joint** ``Z = (X, Y)`` level,
+    which handles missing observations exactly. With the joint posterior
+    ``(z_n, P_n)`` of each forward step (see :func:`_joint_posterior`), the
+    recursion is the textbook RTS on ``Z``:
 
-    Two covariance update forms (selected by ``s.joseph``):
+    .. math::
+        P_{n+1|n} &= A P_n A^T + B Q B^T \\\\
+        G_n       &= P_n A^T P_{n+1|n}^{-1} \\\\
+        z_{n|N}   &= z_n + G_n (z_{n+1|N} - z_{n+1|n}) \\\\
+        P_{n|N}   &= P_n + G_n (P_{n+1|N} - P_{n+1|n}) G_n^T
 
-    - ``joseph=False`` — standard
-      :math:`P^{xx}_{n|N} = P^{xx}_{n|n} + G_n (P^{ZZ}_{n+1|N} - P_{n+1|n}) G_n^T`,
-    - ``joseph=True``  — Joseph
-      :math:`(I_p, -G_n)\\,\\Omega_n\\,(I_p, -G_n)^T + G_n^x P^{xx}_{n+1|N} (G_n^x)^T`.
+    On an observed step ``P_n = blkdiag(P^{xx}_{n|n}, 0)``, so the ``Y`` rows
+    of ``G_n`` vanish and the recursion reduces exactly to the historical
+    X-marginal form (the smoothed ``Y_n`` stays the observed ``y_n``). On a
+    gap step ``P_n`` is the full predicted joint, and the nonzero Y/cross
+    blocks propagate the future information into the missing ``Y_n`` as well.
 
-    Writes ``Xkp1_smooth``, ``PXXkp1_smooth`` and ``Gk_smooth`` to each record.
+    Two covariance update forms (selected by ``s.joseph``): standard (above)
+    or Joseph ``(I, -G_n) \\Omega_n (I, -G_n)^T + G_n P^{ZZ}_{n+1|N} G_n^T``
+    with ``\\Omega_n = [[P_n, P_n A^T], [A P_n, P_{n+1|n}]]`` — algebraically
+    identical, PSD-preserving.
+
+    Writes ``Xkp1_smooth``, ``PXXkp1_smooth`` and ``Gk_smooth`` (the ``X``
+    rows of the joint gain, shape ``dim_x x dim_xy``, unchanged from the
+    historical convention) to each record.
 
     Parameters
     ----------
     s : _LinearPKSBase
         Smoother instance providing ``_A``, ``_AT``, ``_BmQBT``, ``dim_x``,
-        ``dim_xy``, ``eye_dim_x``, ``zeros_*`` buffers, ``joseph``, ``history``.
+        ``dim_xy``, ``joseph``, ``history``.
     N_records : int
         Number of forward records (history length).
 
@@ -384,6 +441,7 @@ def _rts_backward_pass(s: _LinearPKSBase, N_records: int) -> None:
     # Backward pass — initialise from the terminal step. At n = N the gain is
     # undefined (no future to condition on); a zero placeholder is stored.
     last = s.history[N_records - 1]
+    zs_npo, Ps_npo = _joint_posterior(s, last)  # smoothed == filtered at n=N
     s.history.update_record(
         N_records - 1,
         Xkp1_smooth=last["Xkp1_update"].copy(),
@@ -391,41 +449,28 @@ def _rts_backward_pass(s: _LinearPKSBase, N_records: int) -> None:
         Gk_smooth=np.zeros((s.dim_x, s.dim_xy)),
     )
 
-    # Pre-allocated scratch buffers — only writable blocks are touched in the
-    # hot loop; the surrounding zero blocks are structural invariants.
-    P_aug: np.ndarray = s.zeros_dim_xy_xy.copy()
-    P_zz_smooth: np.ndarray = s.zeros_dim_xy_xy.copy()
-    delta_Z: np.ndarray = s.zeros_dim_xy_1.copy()
+    d: int = s.dim_xy
 
     if s.joseph:
-        dim_jnt: int = s.dim_x + s.dim_xy
-        Omega = np.zeros((dim_jnt, dim_jnt))
-        J = np.zeros((s.dim_x, dim_jnt))
-        J[: s.dim_x, : s.dim_x] = s.eye_dim_x  # I_p block (fixed)
+        Omega = np.zeros((2 * d, 2 * d))
+        J = np.zeros((d, 2 * d))
+        J[:, :d] = np.eye(d)  # (I, -G_n) — identity block fixed
 
     for i in range(N_records - 2, -1, -1):
         cur = s.history[i]      # time step n
         nxt = s.history[i + 1]  # time step n+1
 
-        Xf_n: np.ndarray = cur["Xkp1_update"]
-        Pf_n: np.ndarray = cur["PXXkp1_update"]
+        z_n, P_n = _joint_posterior(s, cur)
+        zp_npo: np.ndarray = _joint_predicted_mean(s, nxt)
 
-        Xp_npo: np.ndarray = nxt["Xkp1_predict"]
-        ikp1: np.ndarray = nxt["ikp1"]
-        Xs_npo: np.ndarray = nxt["Xkp1_smooth"]
-        Ps_npo: np.ndarray = nxt["PXXkp1_smooth"]
-
-        # P_{n+1|n} = A diag(P^{xx}_{n|n}, 0) A^T + B Q B^T
-        P_aug[: s.dim_x, : s.dim_x] = Pf_n
-        P_zz_npo: np.ndarray = s._A @ P_aug @ s._AT + s._BmQBT
-
-        # Cov(X_n, Z_{n+1} | y_{1:n}) = [P^{xx}_{n|n}, 0] A^T = Pf_n M^T.
-        cross_X: np.ndarray = (P_aug @ s._AT)[: s.dim_x, :]
+        # Cov(Z_n, Z_{n+1} | data so far) = P_n A^T, and the joint prior
+        Cn: np.ndarray = P_n @ s._AT
+        P_zz_npo: np.ndarray = s._A @ Cn + s._BmQBT
 
         # Gain via Cholesky solve (numerically stabler than explicit inverse).
         try:
             c, low = cho_factor(P_zz_npo)
-            Gn: np.ndarray = cho_solve((c, low), cross_X.T).T
+            Gn: np.ndarray = cho_solve((c, low), Cn.T).T  # (dim_xy, dim_xy)
         except (LinAlgError, ValueError) as e:
             raise CovarianceError(
                 f"Step {cur['k']}: Cholesky factorisation failed for "
@@ -434,35 +479,31 @@ def _rts_backward_pass(s: _LinearPKSBase, N_records: int) -> None:
                 step=cur["k"],
             ) from e
 
-        # ── Smoothed mean (same formula for both covariance variants) ──
-        delta_Z[: s.dim_x] = Xs_npo - Xp_npo
-        delta_Z[s.dim_x :] = ikp1
-        Xs_n: np.ndarray = Xf_n + Gn @ delta_Z
+        # ── Smoothed joint mean (same formula for both covariance variants) ──
+        zs_n: np.ndarray = z_n + Gn @ (zs_npo - zp_npo)
 
-        # ── Smoothed covariance ──
+        # ── Smoothed joint covariance ──
         if s.joseph:
-            Omega[: s.dim_x, : s.dim_x] = Pf_n
-            Omega[: s.dim_x, s.dim_x :] = cross_X
-            Omega[s.dim_x :, : s.dim_x] = cross_X.T
-            Omega[s.dim_x :, s.dim_x :] = P_zz_npo
-            J[:, s.dim_x :] = -Gn          # J = (I_p, -G_n)
-            Gn_x: np.ndarray = Gn[:, : s.dim_x]
-            Ps_n: np.ndarray = J @ Omega @ J.T + Gn_x @ Ps_npo @ Gn_x.T
+            Omega[:d, :d] = P_n
+            Omega[:d, d:] = Cn
+            Omega[d:, :d] = Cn.T
+            Omega[d:, d:] = P_zz_npo
+            J[:, d:] = -Gn
+            Ps_n: np.ndarray = J @ Omega @ J.T + Gn @ Ps_npo @ Gn.T
         else:
-            P_zz_smooth[: s.dim_x, : s.dim_x] = Ps_npo
-            Delta_P_ZZ: np.ndarray = P_zz_smooth - P_zz_npo
-            Ps_n = Pf_n + Gn @ Delta_P_ZZ @ Gn.T
+            Ps_n = P_n + Gn @ (Ps_npo - P_zz_npo) @ Gn.T
 
         # Floating-point symmetry filter (independent of standard/Joseph)
         Ps_n = 0.5 * (Ps_n + Ps_n.T)
 
-        s._check_covariance(Ps_n, cur["k"], name="PXXkp1_smooth")
+        Ps_x: np.ndarray = Ps_n[: s.dim_x, : s.dim_x].copy()
+        s._check_covariance(Ps_x, cur["k"], name="PXXkp1_smooth")
 
         s.history.update_record(
             i,
-            Xkp1_smooth=Xs_n,
-            PXXkp1_smooth=Ps_n,
-            Gk_smooth=Gn,
+            Xkp1_smooth=zs_n[: s.dim_x].copy(),
+            PXXkp1_smooth=Ps_x,
+            Gk_smooth=Gn[: s.dim_x, :].copy(),
         )
 
         if logger.isEnabledFor(logging.DEBUG):
@@ -470,12 +511,14 @@ def _rts_backward_pass(s: _LinearPKSBase, N_records: int) -> None:
                 "Step %d: |Gn|_F=%.3g, tr(P_smooth)=%.3g, tr(P_filt)=%.3g.",
                 cur["k"],
                 float(np.linalg.norm(Gn)),
-                float(np.trace(Ps_n)),
-                float(np.trace(Pf_n)),
+                float(np.trace(Ps_x)),
+                float(np.trace(P_n[: s.dim_x, : s.dim_x])),
             )
 
         if s.verbose > 1:
             rich_show_fields(s.history[i], title=f"Smoothed step {cur['k']}")
+
+        zs_npo, Ps_npo = zs_n, Ps_n
 
 
 def _mbf_backward_pass(s: _LinearPKSBase, N_records: int) -> None:
@@ -1017,10 +1060,16 @@ _SMOOTHING_PASSES = {
 # Variant classes + façade
 # ======================================================================
 class Linear_PKS_RTS(_LinearPKSBase):
-    """Linear pairwise Rauch--Tung--Striebel smoother (explicit variant)."""
+    """Linear pairwise Rauch--Tung--Striebel smoother (explicit variant).
+
+    The backward pass runs at the joint ``Z = (X, Y)`` level, so it handles
+    missing observations (all-NaN ``y``) exactly."""
 
     def _smoothing_pass(self, N_records: int) -> None:
         _rts_backward_pass(self, N_records)
+
+    def _supports_gaps(self) -> bool:
+        return True
 
 
 class Linear_PKS_BF(_LinearPKSBase):
@@ -1121,3 +1170,6 @@ class Linear_PKS(_LinearPKSBase):
 
     def _smoothing_pass(self, N_records: int) -> None:
         _SMOOTHING_PASSES[self.method](self, N_records)
+
+    def _supports_gaps(self) -> bool:
+        return self.method == "RTS"

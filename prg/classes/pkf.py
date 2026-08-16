@@ -64,6 +64,17 @@ class PKFStep:
         Updated (posterior) state estimate, shape ``(dim_x, 1)``.
     PXXkp1_update : np.ndarray or None
         Updated state covariance matrix (maybe Joseph form), shape ``(dim_x, dim_x)``.
+    Zkp1_joint : np.ndarray or None
+        Joint posterior mean ``[X; Y]`` of the couple, shape ``(dim_xy, 1)``.
+        Stored **only on missing-observation steps**, where it equals the
+        predicted joint; on observed steps it is ``None`` and reconstructible
+        as ``[Xkp1_update; ykp1]``.
+    PZZkp1_joint : np.ndarray or None
+        Joint posterior covariance of the couple, shape ``(dim_xy, dim_xy)``.
+        Stored **only on missing-observation steps**, where it is NOT
+        block-diagonal (marginalising the missing ``y`` leaves nonzero Y and
+        cross blocks); on observed steps it is ``None`` and reconstructible
+        as ``blkdiag(PXXkp1_update, 0)``. Its presence marks a gap step.
     """
 
     k: int
@@ -72,12 +83,17 @@ class PKFStep:
     Xkp1_predict: np.ndarray
     PXXkp1_predict: np.ndarray
 
-    # Optional fields — None at the prediction-only step
+    # Optional fields — None at the prediction-only step, and None
+    # (ikp1/Skp1/Kkp1) on missing-observation steps
     ikp1: np.ndarray | None = None
     Skp1: np.ndarray | None = None
     Kkp1: np.ndarray | None = None
     Xkp1_update: np.ndarray | None = None
     PXXkp1_update: np.ndarray | None = None
+
+    # Joint posterior of the couple — set only by missing-observation steps
+    Zkp1_joint: np.ndarray | None = None
+    PZZkp1_joint: np.ndarray | None = None
 
 
 class PKF:
@@ -741,9 +757,12 @@ class PKF:
 
         The posterior equals the prior (no update): the predicted and updated
         fields coincide and the innovation fields (``ikp1``/``Skp1``/``Kkp1``)
-        stay ``None``. The caller remains responsible for carrying the FULL
-        joint covariance to the next prediction (exact marginalisation over
-        the missing ``y`` — see ``Linear_PKF.process_filter``).
+        stay ``None``. The FULL joint posterior (= the predicted joint, with
+        nonzero Y and cross blocks) is stored on the step as
+        ``Zkp1_joint``/``PZZkp1_joint`` so that smoothers can read it; the
+        caller remains responsible for carrying it to the next prediction
+        (exact marginalisation over the missing ``y`` — see
+        ``Linear_PKF.process_filter``).
 
         Parameters
         ----------
@@ -783,6 +802,8 @@ class PKF:
                 PXXkp1_predict=PXXkp1_predict.copy(),
                 Xkp1_update=Xkp1_predict.copy(),
                 PXXkp1_update=PXXkp1_predict.copy(),
+                Zkp1_joint=Zkp1_predict.copy(),
+                PZZkp1_joint=Pkp1_predict.copy(),
             )
         except (ValueError, LinAlgError) as e:
             raise StepValidationError(
