@@ -39,6 +39,11 @@ def model_x2y2():
 
 
 @pytest.fixture(scope="session")
+def model_x2y2_augmented():
+    return ModelFactoryLinear.create("model_x2_y2_AQ_augmented")
+
+
+@pytest.fixture(scope="session")
 def model_nl_x2y1():
     return ModelFactoryNonLinear.create("model_x2_y1_pairwise")
 
@@ -70,6 +75,11 @@ def param_x1y1(model_x1y1):
 @pytest.fixture(scope="session")
 def param_x2y2(model_x2y2):
     return make_param_linear(model_x2y2)
+
+
+@pytest.fixture(scope="session")
+def param_x2y2_augmented(model_x2y2_augmented):
+    return make_param_linear(model_x2y2_augmented)
 
 
 @pytest.fixture(scope="session")

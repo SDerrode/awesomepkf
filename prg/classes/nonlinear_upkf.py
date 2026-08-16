@@ -189,7 +189,7 @@ class NonLinear_UPKF(PKF):
                 step = self._nextUpdating(
                     new_k, new_xkp1, new_ykp1, Zkp1_predict, Pkp1_predict
                 )
-            except (InvertibilityError, NumericalError):
+            except (InvertibilityError, NumericalError, ParamError):
                 raise
             except Exception as e:
                 raise FilterError(

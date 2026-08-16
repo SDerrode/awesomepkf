@@ -219,6 +219,11 @@ def estimate_noise_em(
     if len(records) < 2:
         raise ParamError("EM needs at least 2 time steps (got "
                          f"{len(records)}).")
+    if any(np.isnan(np.asarray(rec[2], dtype=float)).any() for rec in records):
+        raise ParamError(
+            "estimate_noise_em: missing observations (NaN in y) are not "
+            "supported."
+        )
 
     dim_x, dim_y = int(param.dim_x), int(param.dim_y)
     dim_xy = dim_x + dim_y

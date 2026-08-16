@@ -183,6 +183,20 @@ class _LinearPKSBase(Linear_PKF):
         if N_records == 0:
             raise FilterError("Linear_PKS: forward pass yielded no records.")
 
+        # Missing observations (all-NaN y) are supported by the forward filter
+        # only: every backward pass consumes the innovation fields (None on a
+        # gap step) and rebuilds the block-diagonal joint prior, which is
+        # invalid across a gap.
+        gap_steps = [rec["k"] for rec in self.history if rec["ikp1"] is None]
+        if gap_steps:
+            shown = ", ".join(str(k) for k in gap_steps[:8])
+            more = ", ..." if len(gap_steps) > 8 else ""
+            raise FilterError(
+                f"Linear_PKS: smoothing with missing observations (all-NaN y) "
+                f"is not supported — {len(gap_steps)} gap step(s) at "
+                f"k = {shown}{more}."
+            )
+
         logger.info(
             "Linear_PKS smoothing pass starting (N_records=%d, method=%s, joseph=%s).",
             N_records,

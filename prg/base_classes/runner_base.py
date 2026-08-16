@@ -168,15 +168,20 @@ class BaseRunner(ABC):
         """
 
         try:
-            ikp1_last = self.runner_instance.history.last()["ikp1"]
-            Skp1_last = self.runner_instance.history.last()["Skp1"]
+            # Innovation diagnostics (NIS) need ikp1/Skp1 on EVERY record:
+            # a single None (e.g. a missing-observation step) would break the
+            # column stacking, so the whole column is skipped in that case.
+            has_innovations = all(
+                rec["ikp1"] is not None and rec["Skp1"] is not None
+                for rec in self.runner_instance.history
+            )
             self.runner_instance.history.compute_errors(
                 self.runner_instance,
                 ["xkp1"],
                 ["Xkp1_update"],
                 ["PXXkp1_update"],
-                ["ikp1"] if ikp1_last is not None else None,
-                ["Skp1"] if Skp1_last is not None else None,
+                ["ikp1"] if has_innovations else None,
+                ["Skp1"] if has_innovations else None,
             )
         except PKFError:
             raise

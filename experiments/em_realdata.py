@@ -299,9 +299,15 @@ def main(B=500, seed=1):
              label="surrogate null $\\Lambda$")
     ax1.plot(xx, chi2.pdf(xx, 1), "k-", lw=1.4, label="$\\chi^2_1$")
     ax1.axvline(chi2.ppf(0.95, 1), ls=":", color="k", lw=1)
-    ax1.annotate(f"observed\n$\\Lambda={chemo_stat:.0f}$ (reject)",
-                 xy=(13.4, 0.03), xytext=(6.0, 0.30), fontsize=8, color=REJECT,
-                 arrowprops=dict(arrowstyle="->", color=REJECT, lw=1.2))
+    # The observed Lambda (~71) is far beyond the axis (kept tight to show the null),
+    # so the arrow points AT the right edge and the text says "off scale" -- it must not
+    # read as if Lambda=71 sat near x=13. The tip sits just inside xlim: exactly ON the
+    # boundary, matplotlib's annotation_clip may drop the whole annotation.
+    ax1.annotate(f"observed $\\Lambda={chemo_stat:.0f}$\noff scale, $\\gg\\chi^2_1$ (reject)",
+                 xy=(13.95, 0.018), xytext=(5.6, 0.34), fontsize=8, color=REJECT,
+                 ha="center", va="center",
+                 arrowprops=dict(arrowstyle="->", color=REJECT, lw=1.2,
+                                 connectionstyle="arc3,rad=-0.15"))
     ax1.set(xlim=(0, 14), ylim=(0, 0.6), xlabel="$\\Lambda$", ylabel="density",
             title="Chemostat: surrogate null vs observed")
     ax1.legend(fontsize=7, loc="upper right")

@@ -223,6 +223,11 @@ def estimate_dynamics_em(
     records = list(data)
     if len(records) < 2:
         raise ParamError(f"EM needs at least 2 time steps (got {len(records)}).")
+    if any(np.isnan(np.asarray(rec[2], dtype=float)).any() for rec in records):
+        raise ParamError(
+            "estimate_dynamics_em: missing observations (NaN in y) are not "
+            "supported."
+        )
 
     dim_x, dim_y = int(param.dim_x), int(param.dim_y)
     A = np.asarray(param.A, dtype=float).copy()

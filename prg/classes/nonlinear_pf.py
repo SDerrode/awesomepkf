@@ -247,6 +247,8 @@ class NonLinear_PF(_BaseParticleFilter):
                 new_k, new_xkp1, new_ykp1 = next(generator)
             except StopIteration:
                 return
+            # NaN observations would silently poison every particle weight
+            self._validate_observed_y(new_k, new_ykp1)
 
             # =========================
             # PROPAGATION — sample x_i ~ p(x_{k+1} | x_i^k)

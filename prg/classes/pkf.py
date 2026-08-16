@@ -515,6 +515,9 @@ class PKF:
 
         Raises
         ------
+        ParamError
+            If ``y_0`` contains NaN (missing observations are not supported
+            at the first step).
         InvertibilityError
             If ``Sigma22`` (prior observation covariance) is not invertible.
         CovarianceError
@@ -524,6 +527,7 @@ class PKF:
         """
 
         k, xkp1, ykp1 = next(generator)
+        self._validate_observed_y(k, ykp1)
 
         # Gaussian conditioning on the first observation
         mu_x0, mu_y0 = np.split(self.mz0, [self.dim_x])
@@ -624,6 +628,9 @@ class PKF:
 
         Raises
         ------
+        ParamError
+            If ``ykp1`` contains NaN (a missing observation must be handled
+            by the caller before reaching the update).
         InvertibilityError
             If the innovation covariance ``Skp1`` is not invertible.
         CovarianceError
@@ -632,6 +639,8 @@ class PKF:
         StepValidationError
             If ``PKFStep`` construction fails due to invalid data.
         """
+        self._validate_observed_y(k, ykp1)
+
         Xkp1_predict, Ykp1_predict = np.split(Zkp1_predict, [self.dim_x])
         PXXkp1_predict = Pkp1_predict[: self.dim_x, : self.dim_x]
         PXYkp1_predict = Pkp1_predict[: self.dim_x, self.dim_x :]
@@ -691,5 +700,100 @@ class PKF:
 
         if self.verbose > 1:
             rich_show_fields(step, title=f"Step {k} Update")
+
+        return step
+
+    def _validate_observed_y(self, k: int, ykp1: np.ndarray) -> None:
+        """
+        Reject a NaN observation at an update site.
+
+        Only ``Linear_PKF.process_filter`` supports missing observations
+        (all-NaN ``y``), and it intercepts them before reaching the update
+        methods. Everywhere else a NaN observation would silently propagate
+        NaN means past the covariance checks, which never involve ``y``.
+
+        Raises
+        ------
+        ParamError
+            If ``ykp1`` contains at least one NaN.
+        """
+        if np.isnan(np.asarray(ykp1, dtype=float)).any():
+            raise ParamError(
+                f"Step {k}: observation contains NaN. Missing observations "
+                f"(all-NaN y) are only supported by Linear_PKF.process_filter."
+            )
+
+    # ------------------------------------------------------------------
+    # Missing-observation step (no update)
+    # ------------------------------------------------------------------
+
+    def _noUpdate(
+        self,
+        k: int,
+        xkp1: np.ndarray | None,
+        ykp1: np.ndarray,
+        Zkp1_predict: np.ndarray,
+        Pkp1_predict: np.ndarray,
+        store: bool = True,
+    ) -> PKFStep:
+        """
+        Record a prediction-only step for a missing observation.
+
+        The posterior equals the prior (no update): the predicted and updated
+        fields coincide and the innovation fields (``ikp1``/``Skp1``/``Kkp1``)
+        stay ``None``. The caller remains responsible for carrying the FULL
+        joint covariance to the next prediction (exact marginalisation over
+        the missing ``y`` — see ``Linear_PKF.process_filter``).
+
+        Parameters
+        ----------
+        k : int
+            Current time step index.
+        xkp1 : np.ndarray or None
+            Ground truth state at step ``k``; ``None`` if unavailable.
+        ykp1 : np.ndarray
+            The all-NaN gap marker, shape ``(dim_y, 1)``, recorded as-is.
+        Zkp1_predict : np.ndarray
+            Augmented predicted state ``[X_predict; Y_predict]``,
+            shape ``(dim_xy, 1)``.
+        Pkp1_predict : np.ndarray
+            Augmented predicted covariance matrix, shape ``(dim_xy, dim_xy)``.
+        store : bool, optional
+            Whether to record the step in the history tracker (default ``True``).
+
+        Returns
+        -------
+        PKFStep
+            The prediction-only filter step.
+
+        Raises
+        ------
+        StepValidationError
+            If ``PKFStep`` construction fails due to invalid data.
+        """
+        Xkp1_predict = Zkp1_predict[: self.dim_x]
+        PXXkp1_predict = Pkp1_predict[: self.dim_x, : self.dim_x]
+
+        try:
+            step = PKFStep(
+                k=k,
+                xkp1=xkp1.copy() if xkp1 is not None else None,
+                ykp1=ykp1.copy(),
+                Xkp1_predict=Xkp1_predict.copy(),
+                PXXkp1_predict=PXXkp1_predict.copy(),
+                Xkp1_update=Xkp1_predict.copy(),
+                PXXkp1_update=PXXkp1_predict.copy(),
+            )
+        except (ValueError, LinAlgError) as e:
+            raise StepValidationError(
+                f"Step {k}: PKFStep construction failed in _noUpdate.",
+                step=k,
+            ) from e
+
+        if store:
+            self.history.record(step)
+
+        if self.verbose > 1:
+            rich_show_fields(step, title=f"Step {k} Missing observation (no update)")
 
         return step

@@ -9,11 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Documentation, paper-reproduction scripts and tutorials only: **no change to `prg/`**,
-so the installable package is unchanged. Follows a cross-document consistency audit of the
-companion paper; every published number is now produced by a released script.
+Apart from the missing-observation support (first entry below), this batch is
+documentation, paper-reproduction scripts and tutorials only. It follows a
+cross-document consistency audit of the companion paper; every published number
+is now produced by a released script.
 
 ### Added
+- `Linear_PKF.process_filter` now supports **missing observations**: an all-NaN
+  `y` marks a gap, the update is skipped and the **full joint covariance** is
+  carried to the next prediction (exact marginalisation over the missing `y`).
+  In a pairwise model `y` is a component of the Markov chain, so the classical
+  "skip the update" recipe — rebuilding `blkdiag(P_xx, 0)` across the gap — is
+  incorrect: measured on random couples (p=4, q=2), it costs 5–7 % median state
+  RMSE at moderate gap rates, with a heavy tail (up to 45 % at the ninth decile)
+  and occasional divergence. Gap steps are recorded in the history with
+  `ikp1 = Skp1 = Kkp1 = None`. Partially-missing observations raise `ParamError`
+  (marginalising a sub-vector is not yet supported), as does a missing first
+  observation (the filter is initialised by conditioning on `y_0`). The no-gap
+  path is numerically identical to the previous implementation.
+  Downstream consumers are guarded: the linear smoothers (`Linear_PKS*`) and
+  both EM routines reject gapped data with an explicit error (their backward
+  passes require observed steps), and runner NIS diagnostics are skipped when
+  a run contains gaps. Observations are validated at the source: `None`,
+  wrong-size or partially-NaN vectors raise `ParamError`; an empty data
+  generator raises `FilterError`.
+  New tests: `prg/tests/test_missing_obs.py` (validated against an independent
+  exact joint-Gaussian recursion, atol 1e-10). Nonlinear filters
+  (EPKF/UPKF/UKF/PPF/PF) do not yet handle gaps and now reject NaN
+  observations with an explicit `ParamError` (previously a NaN silently
+  propagated NaN means past the covariance checks).
 - `experiments/identifiability_frozen.py` — checks that freezing `A^xx,A^yx,Q` restores
   identifiability of `(A^xy,A^yy)` iff `(A^xx,A^yx)` is observable (rank O = p), across
   (p,q) = (1,1),(2,2),(2,1); shows `A^yx != 0` alone is not enough when p > q.
