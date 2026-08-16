@@ -8,7 +8,7 @@ chardet==7.4.2
 sympy==1.14.0
 
 # Neural network (required by prg/utils/nn_model.py and run_paper_section5.py)
-torch==2.11.0
+torch==2.13.0
 
 # Development / testing
 pytest==9.0.3
