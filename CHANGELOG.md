@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+Paper-reproduction script only: **no change to `prg/`**.
+
+### Added
+- `experiments/exp_reducibility.py` — makes the companion paper's App. E ("When the
+  back-action is a gauge") reproducible locally: enumerates the real solutions of the
+  shear/NARE via A-invariant subspaces and reports, per (p,q), the fraction of models
+  whose back-action is a removable gauge, the number of solutions, the least-norm shear
+  quantiles, and the (zero) fraction reaching the strictly classical `Q^xy=0`. Anchor:
+  0.70 = 1/sqrt(2) at p=q=1. Writes `reducibility_results.json`. numpy only.
+
+---
+
 ## [2.15.0] - 2026-08-16
 
 Apart from the missing-observation support (first entry below), this batch is
