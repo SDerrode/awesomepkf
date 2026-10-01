@@ -1,0 +1,46 @@
+# Citation metadata (Citation File Format 1.2.0 — https://citation-file-format.github.io).
+# GitHub renders this as "Cite this repository"; Zenodo reads it on archive.
+# Version and release date track the latest PyPI release (2.15.0, 2026-08-16).
+cff-version: 1.2.0
+message: >-
+  If you use awesomepkf in published work, please cite the software itself
+  by this file and the companion paper below.
+type: software
+title: "awesomepkf"
+abstract: >-
+  Python library for pairwise Kalman filtering and smoothing on Gaussian
+  pairwise Markov models: linear pairwise Kalman filter (PKF), nonlinear
+  extensions (EPKF, UPKF, pairwise particle filter), linear smoothers,
+  EM learning and back-action tests.
+authors:
+  - given-names: Stéphane
+    family-names: Derrode
+    email: stephane.derrode@ec-lyon.fr
+    affiliation: École Centrale de Lyon, LIRIS (CNRS UMR 5205)
+    orcid: "https://orcid.org/0000-0002-2865-2057"
+version: 2.15.0
+date-released: "2026-08-16"
+repository-code: "https://github.com/SDerrode/awesomepkf"
+url: "https://pypi.org/project/awesomepkf/"
+keywords:
+  - Kalman filter
+  - pairwise Markov model
+  - Kalman smoother
+  - nonlinear filtering
+  - unscented Kalman filter
+  - expectation-maximization
+  - time series
+  - signal processing
+preferred-citation:
+  type: article
+  title: "Nonlinear extensions of the Gaussian pairwise Kalman filter"
+  authors:
+    - given-names: Clément
+      family-names: Fernandes
+    - given-names: Zied
+      family-names: Bouyahia
+    - given-names: Stéphane
+      family-names: Derrode
+  year: 2026
+  notes: "Preprint, submitted to IEEE Transactions on Signal Processing."
+  url: "https://hal.science/hal-05645741"
