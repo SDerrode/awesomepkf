@@ -1,6 +1,6 @@
 # Citation metadata (Citation File Format 1.2.0 — https://citation-file-format.github.io).
 # GitHub renders this as "Cite this repository"; Zenodo reads it on archive.
-# Version and release date track the latest PyPI release (2.15.0, 2026-08-16).
+# Version and release date track the latest GitHub release (v2.15.1, 2026-10-01).
 cff-version: 1.2.0
 message: >-
   If you use awesomepkf in published work, please cite the software itself
@@ -18,8 +18,8 @@ authors:
     email: stephane.derrode@ec-lyon.fr
     affiliation: École Centrale de Lyon, LIRIS (CNRS UMR 5205)
     orcid: "https://orcid.org/0000-0002-2865-2057"
-version: 2.15.0
-date-released: "2026-08-16"
+version: 2.15.1
+date-released: "2026-10-01"
 license: AGPL-3.0-only
 repository-code: "https://github.com/SDerrode/awesomepkf"
 url: "https://pypi.org/project/awesomepkf/"

@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.15.1] - 2026-10-01
 
-Paper-reproduction script only: **no change to `prg/`**.
+Documentation, packaging metadata and a paper-reproduction script only: **no
+change to `prg/`**, so the installable package is byte-identical to 2.15.0
+(hence a patch bump, not a minor one). Prepares the repository for citation
+and archival (Zenodo).
 
 ### Added
 - `experiments/exp_reducibility.py` — makes the companion paper's App. E ("When the
@@ -18,6 +21,14 @@ Paper-reproduction script only: **no change to `prg/`**.
   whose back-action is a removable gauge, the number of solutions, the least-norm shear
   quantiles, and the (zero) fraction reaching the strictly classical `Q^xy=0`. Anchor:
   0.70 = 1/sqrt(2) at p=q=1. Writes `reducibility_results.json`. numpy only.
+- `CITATION.cff` — citation metadata (authors, ORCID, preferred paper citation)
+  read by GitHub's "Cite this repository" and by Zenodo on archive.
+- A Zenodo DOI badge in the README.
+
+### Changed
+- `pyproject.toml` now declares the license as the SPDX expression
+  `AGPL-3.0-only` (PEP 639) instead of a classifier, matching current
+  packaging guidance.
 
 ---
 
@@ -911,6 +922,7 @@ no behaviour changes — pure consistency cleanup.
 - NEES and NIS calibration metrics with history tracking
 - Rich terminal output and matplotlib plots
 
+[2.15.1]: https://github.com/sderrode/awesomepkf/compare/v2.15.0...v2.15.1
 [2.15.0]: https://github.com/sderrode/awesomepkf/compare/v2.14.0...v2.15.0
 [2.10.0]: https://github.com/sderrode/awesomepkf/compare/v2.9.0...v2.10.0
 [0.4.0]: https://github.com/sderrode/awesomepkf/compare/v0.3.0...v0.4.0

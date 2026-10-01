@@ -1,5 +1,7 @@
 # AwesomePKF
 
+[![DOI](https://zenodo.org/badge/1220624841.svg)](https://zenodo.org/badge/latestdoi/1220624841)
+
 This repository contains a set of programs illustrating the **Pairwise Kalman Filter (PKF)**, a generalization of the classical Kalman Filter, extended to non-linear models. It includes several variants of non-linear filters:
 
 - **Extended Pairwise Kalman Filter (EPKF)**
