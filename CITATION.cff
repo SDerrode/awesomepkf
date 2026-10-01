@@ -1,6 +1,7 @@
 # Citation metadata (Citation File Format 1.2.0 — https://citation-file-format.github.io).
 # GitHub renders this as "Cite this repository"; Zenodo reads it on archive.
-# Version and release date track the latest GitHub release (v2.15.1, 2026-10-01).
+# Version, release date and DOI track the latest GitHub release (v2.15.1,
+# 2026-10-01, Zenodo record 10.5281/zenodo.23081321).
 cff-version: 1.2.0
 message: >-
   If you use awesomepkf in published work, please cite the software itself
@@ -23,6 +24,14 @@ date-released: "2026-10-01"
 license: AGPL-3.0-only
 repository-code: "https://github.com/SDerrode/awesomepkf"
 url: "https://pypi.org/project/awesomepkf/"
+doi: 10.5281/zenodo.23081321
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23081321
+    description: "The DOI of this version (2.15.1) of the software."
+  - type: doi
+    value: 10.5281/zenodo.23081320
+    description: "The concept DOI, which always resolves to the latest version."
 keywords:
   - Kalman filter
   - pairwise Markov model
