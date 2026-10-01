@@ -20,6 +20,7 @@ authors:
     orcid: "https://orcid.org/0000-0002-2865-2057"
 version: 2.15.0
 date-released: "2026-08-16"
+license: AGPL-3.0-only
 repository-code: "https://github.com/SDerrode/awesomepkf"
 url: "https://pypi.org/project/awesomepkf/"
 keywords:
