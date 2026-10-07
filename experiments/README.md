@@ -1,6 +1,12 @@
-# Paper experiments — *Smoothing, Learning, and Testing the Gaussian Pairwise Markov Model*
+# Paper experiments
 
-Self-contained scripts that regenerate the figures and tables of the companion paper.
+Self-contained scripts that regenerate the figures and tables of two companion papers:
+
+- the full paper *Smoothing, Learning, and Testing the Gaussian Pairwise Markov Model*
+  (figure/table numbers in the main table below);
+- the smoothing letter *Six Smoothers for Gaussian Pairwise Markov Chains, and How to
+  Choose One* (in preparation; see [the letter's mapping](#smoothing-letter)).
+
 They import **only** the public library and are fully deterministic.
 
 ## Setup
@@ -27,10 +33,10 @@ for precision.
 | Script | Reproduces | Command (published settings) | Runtime |
 |---|---|---|---|
 | `pmm_schematic.py` | Fig. 1 (model schematic) | `python experiments/pmm_schematic.py` | ~2 s (matplotlib diagram) |
-| `discriminating_models.py` | Fig. 2 + conditioning table (MBF safety) | `python experiments/discriminating_models.py` | ~2 min (drives the six library smoothers; also prints the q=2 check) |
-| `bench_smoothers.py` | Fig. 3 (timing/memory) | `python experiments/bench_smoothers.py` | ~3 min (six smoothers, N up to 1.6e4) |
-| `classical_vs_couple.py` | Fig. 4 | `python experiments/classical_vs_couple.py` | ~1 min |
-| `classical_vs_couple_multi.py` | Table IV | `python experiments/classical_vs_couple_multi.py` | ~2 min |
+| `discriminating_models.py` | Fig. 2 + conditioning table (MBF safety) | `python experiments/discriminating_models.py` | ~20 s (drives the six library smoothers; also prints the q=2 check) |
+| `bench_smoothers.py` | Fig. 3 (timing/memory) | `python experiments/bench_smoothers.py` | ~5 min (six smoothers, N up to 1.6e4) |
+| `classical_vs_couple.py` | Fig. 4 | `python experiments/classical_vs_couple.py` | ~9 min (200 seeds × 9 couplings; `--replot` re-renders from the cache instantly) |
+| `classical_vs_couple_multi.py` | Table IV | `python experiments/classical_vs_couple_multi.py` | ~5 min |
 | `em_identification.py` | Fig. 5 | `python experiments/em_identification.py` | **~40 min** (50 seeds × 100 iters, N=2000; the E-step is the library smoother, not a hand-rolled one) |
 | `em_lrt.py` | Fig. 6 | `python experiments/em_lrt.py` | ~1 min (direct-MLE null + power) |
 | `em_realdata.py` | Fig. 7, Table V | `python experiments/em_realdata.py` | ~2 min (needs the chemostat/S&P data under `data/`) |
@@ -46,13 +52,29 @@ by `python -m prg.run_dwy_equivalence` (defaults `--N 500 --seeds 20`), with a s
 walkthrough in `notebooks/tutorial_09_linear_smoothers.ipynb`; the learning/testing story of Figs. 5-6
 is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 
+<a id="smoothing-letter"></a>
+### Smoothing letter
+
+Same scripts, same default settings; only the numbering differs (the letter's two figures
+are the single-column versions of the paper's Figs. 2 and 4).
+
+| Letter | Command | Runtime |
+|---|---|---|
+| Table II + Fig. 1 (conditioning) and the p=q=2 check | `python experiments/discriminating_models.py` | ~20 s |
+| Fig. 2 (classical vs. pairwise, +77 %) | `python experiments/classical_vs_couple.py` | ~9 min |
+| Table III (robustness across dimension and noise) | `python experiments/classical_vs_couple_multi.py` | ~5 min |
+| Remark 1 (cost: O(N), runtime, memory) | `python experiments/bench_smoothers.py` | ~5 min |
+| Sec. IV "one estimate" (six smoothers agree to round-off) | `python -m prg.run_dwy_equivalence` | ~1 min |
+
+Runtimes measured on a laptop from a fresh clone (`pip install -e .`, Python 3.14).
+
 ## Expected results (to verify a run)
 
 | Script | Key numbers you should see |
 |---|---|
 | `bench_smoothers.py` | all six **O(N)** (slopes 0.99–1.01), within **~24 %** in runtime (RTS fastest, 2F slowest); peak memory MBF ~33 MB (lightest) to DWY ~60 MB |
 | `classical_vs_couple.py` | at ρ=1: best-fit classical MSE **+77 %**, naive ablation **+138 %**; pairwise NEES ≈ 0.99, refit ≈ 0.87 |
-| `classical_vs_couple_multi.py` | at ρ=1, ΔMSE(refit) in **37–123 %** across (p,q) and noise; couple stays calibrated |
+| `classical_vs_couple_multi.py` | at ρ=1, ΔMSE(refit) in **37–123 %** across (p,q) and noise (ablated up to **277 %**; x2y1 ×4: 70 %/160 %, NEES abl. 2.38); couple stays calibrated |
 | `em_identification.py` | `A^xy = 0.395 ± 0.041`, `A^yy = 0.403 ± 0.022` (true 0.4/0.4); monotone log-likelihood |
 | `em_lrt.py` | empirical size **0.037** at α=0.05, mean Λ ≈ 0.985 (χ²₁ mean 1); power rising to **1.0** by A^xy=0.45; predicted χ²₁(λ) curve overlays the empirical power |
 | `em_realdata.py` | chemostat Λ **70.6/102.1**, S&P **95.2/280.5**, wind **3.3 (keep) / 13.6**, negative control (circularly shifted driver) **0.74 (keep)**; learned A^xy CI ≈ **[−0.50, −0.29]**, held-out **+10.3 %** vs classical (Clark–West t=2.90, p=0.002; plain DM is *not* significant) |
@@ -61,7 +83,7 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 | `backaction_tradeoff.py` | LRT power saturates by A^xy≈0.4; the classical state-MSE penalty keeps rising to ~20 % (testability ≠ estimability) |
 | `petetin_kl_comparison.py` | Petetin Eq.(71) rises to **0.47** at R/Q=20 while the paper's KL_rate ≡ **0** on their A^yx=0 couple; KL_rate climbs **0→0.46** as A^yx opens a y-footprint |
 | `rmse_vs_lrt.py` | H0 size: naive in-sample **1.00**, held-out **0.32**, DM **0.02**, LRT **0.04** (only DM/LRT calibrated); identity Λ≈N·log(MSE0/MSE1) corr **0.997** |
-| `discriminating_models.py` | under noise starvation cond(P)→**5.9e9** (RTS), cond(Σ)→**3.3e7** (2F/DWY), cond(S)≡**1** (BF/MBF — but at q=1 that is a 1×1 tautology, not evidence), cond(R)≈1.5 (VAR); 2F/DWY smoothed-state error →**2.5e-7** while BF/MBF/VAR stay ~1e-13. Block **R3** (p=q=2, where cond(S) is informative): cond(S) saturates near **8.7** while cond(P) reaches **1.2e6** (10⁵-fold separation), and below eps=1e-8 the filter aborts on a singular S_n — so "never ill-conditioned" is too strong |
+| `discriminating_models.py` | under noise starvation cond(P)→**5.9e9** (RTS), cond(Σ)→**3.3e7** (2F/DWY), cond(S)≡**1** (BF/MBF — but at q=1 that is a 1×1 tautology, not evidence), cond(R)≈1.5 (VAR); 2F/DWY smoothed-state error →**4.2e-7** while BF/MBF/VAR stay ≲**1e-12**. Block **R3** (p=q=2, where cond(S) is informative): cond(S) saturates near **8.7** while cond(P) reaches **1.2e6** (10⁵-fold separation), and below eps=1e-8 the filter aborts on a singular S_n — so "never ill-conditioned" is too strong |
 | `missing_obs_ablation.py` | naive blkdiag recipe vs exact marginalisation: median excess state RMSE **0.5–1.1 %** at 10–30 % gap rates, ninth decile **2.5–5.5 %**, worst couple **~80 %**; gap-step-only excess ≈ 0 (negative control — the damage lands on the steps *after* each gap); **0/200** diverged at every rate |
 
 ## Outputs
