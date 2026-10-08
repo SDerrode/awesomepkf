@@ -55,18 +55,22 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 <a id="smoothing-letter"></a>
 ### Smoothing letter
 
-Same scripts, same default settings; only the numbering differs (the letter's two figures
-are the single-column versions of the paper's Figs. 2 and 4).
+The letter has its own three scripts (added in 2.16.0). `conditioning_exact.py` and
+`classical_vs_pairwise_exact.py` write a JSON with every number next to the script and
+their figures under `figures/` (both git-ignored); `check_elimination_full.py` only
+prints its table of residuals.
 
 | Letter | Command | Runtime |
 |---|---|---|
-| Table II + Fig. 1 (conditioning) and the p=q=2 check | `python experiments/discriminating_models.py` | ~20 s |
-| Fig. 2 (classical vs. pairwise, +77 %) | `python experiments/classical_vs_couple.py` | ~9 min |
-| Table III (robustness across dimension and noise) | `python experiments/classical_vs_couple_multi.py` | ~5 min |
-| Remark 1 (cost: O(N), runtime, memory) | `python experiments/bench_smoothers.py` | ~5 min |
-| Sec. IV "one estimate" (six smoothers agree to round-off) | `python -m prg.run_dwy_equivalence` | ~1 min |
+| Fig. 1 (accuracy of the six smoothers against a 60-digit reference, four stress regimes, 80 random models each) | `python experiments/conditioning_exact.py --letter-fig` | ~25 min on 10 cores (`--quick` ~1.5 min; `--from-json` redraws instantly) |
+| Table II (cost of ignoring back-action; exact MSE/NEES, no Monte Carlo) | `python experiments/classical_vs_pairwise_exact.py` | ~22 min (`--no-oracle --no-mc --no-capacity`: ~20 s, same Table II numbers) |
+| Proposition 1 (three elimination orders; identities to round-off and to 1e-49 in 50-digit arithmetic, time-varying models) | `python experiments/check_elimination_full.py` | ~7 s (exit code 1 if an identity fails) |
 
-Runtimes measured on a laptop from a fresh clone (`pip install -e .`, Python 3.14).
+The letter's 2F/DWY results require **2.16.0 or later**: earlier versions did not
+symmetrise the backward filter that 2F and DWY share, and aborted (or returned wrong
+results) under strongly correlated noise.
+
+Runtimes measured on a laptop from a clone (`pip install -e .`, Python 3.14).
 
 ## Expected results (to verify a run)
 
@@ -83,7 +87,7 @@ Runtimes measured on a laptop from a fresh clone (`pip install -e .`, Python 3.1
 | `backaction_tradeoff.py` | LRT power saturates by A^xy≈0.4; the classical state-MSE penalty keeps rising to ~20 % (testability ≠ estimability) |
 | `petetin_kl_comparison.py` | Petetin Eq.(71) rises to **0.47** at R/Q=20 while the paper's KL_rate ≡ **0** on their A^yx=0 couple; KL_rate climbs **0→0.46** as A^yx opens a y-footprint |
 | `rmse_vs_lrt.py` | H0 size: naive in-sample **1.00**, held-out **0.32**, DM **0.02**, LRT **0.04** (only DM/LRT calibrated); identity Λ≈N·log(MSE0/MSE1) corr **0.997** |
-| `discriminating_models.py` | under noise starvation cond(P)→**5.9e9** (RTS), cond(Σ)→**3.3e7** (2F/DWY), cond(S)≡**1** (BF/MBF — but at q=1 that is a 1×1 tautology, not evidence), cond(R)≈1.5 (VAR); 2F/DWY smoothed-state error →**4.2e-7** while BF/MBF/VAR stay ≲**1e-12**. Block **R3** (p=q=2, where cond(S) is informative): cond(S) saturates near **8.7** while cond(P) reaches **1.2e6** (10⁵-fold separation), and below eps=1e-8 the filter aborts on a singular S_n — so "never ill-conditioned" is too strong |
+| `discriminating_models.py` | under noise starvation cond(P)→**5.9e9** (RTS), cond(Σ)→**3.3e7** (2F/DWY), cond(S)≡**1** (BF/MBF — but at q=1 that is a 1×1 tautology, not evidence), cond(R)≈1.5 (VAR); 2F/DWY smoothed-state error →**1.7e-6** (4.2e-7 before 2.16.0) while BF/MBF/VAR stay ≲**1e-12**. Block **R3** (p=q=2, where cond(S) is informative): cond(S) saturates near **8.7** while cond(P) reaches **1.2e7** at eps=1e-8. Before 2.16.0 the filter aborted there on a scale-dependent |det S_n| ≤ 1e-15 test, not on ill-conditioning (cond(S) ≈ 8.7) |
 | `missing_obs_ablation.py` | naive blkdiag recipe vs exact marginalisation: median excess state RMSE **0.5–1.1 %** at 10–30 % gap rates, ninth decile **2.5–5.5 %**, worst couple **~80 %**; gap-step-only excess ≈ 0 (negative control — the damage lands on the steps *after* each gap); **0/200** diverged at every rate |
 
 ## Outputs

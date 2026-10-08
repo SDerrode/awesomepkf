@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.16.0] - 2026-10-08
+
+Three numerical-robustness fixes found while measuring the six linear smoothers
+against a 60-digit reference for the companion smoothing letter, and the scripts
+that reproduce that letter. Default behaviour is unchanged except where it was
+wrong (2F/DWY divergence, spurious singularity aborts).
+
+### Fixed
+- **2F and DWY: backward-filter divergence.** The backward filter shared by
+  `Linear_PKS_MF` (2F) and `Linear_PKS_DWY` (`_dwy_backward_filter`, `_cond_xy`)
+  never re-symmetrised its covariances. A skew round-off error then grows by
+  `rho(Mb_x - K Mb_y) * rho(Mb_x + K Mb_y)` per step; when that product exceeds 1
+  (e.g. strongly correlated noise) `P^b` diverged (relative error up to 1e56) and
+  2F/DWY aborted, or returned wrong results without an exception. `Sigma_n`,
+  `Q^b_n`, the backward-predicted covariance and the conditioned covariance are
+  now symmetrised at every step.
+- **Scale-dependent singularity test.** `InvertibleMatrix` compared `|det M|` with
+  an absolute threshold (1e-15), so any well-conditioned matrix of small scale
+  (e.g. an innovation covariance when all noises are small) was declared
+  singular and the filter aborted.
+
+### Changed
+- `InvertibleMatrix`'s determinant check now measures
+  `(|det M| / prod_i ||row_i||_2) ** (1 / (n - 1))` (rows first divided by their
+  max-abs entry), which lies in [0, 1], is invariant to scaling and to dimension,
+  and is roughly `1 / cond`. `InvertibleTolerances.det_warn` / `det_fail` (values
+  unchanged) now apply to this quantity, and the check is reported under the name
+  "Normalised determinant (...)". It fails only on (numerically) exactly singular
+  matrices; near-singularity is left to the rank and condition-number checks.
+- `experiments/README.md`: expected values of `discriminating_models.py` updated
+  (2F/DWY starvation error 1.7e-6; block R3 no longer aborts).
+
+### Added
+- `PKF.covariance_regularisations`: the in-place Tikhonov regularisations made by
+  `PKF._check_covariance` during the last run (`step`, `name`, `eps`,
+  `min_eig_before`, `min_eig_after`); previously they were only logged. The list
+  is cleared at the start of each run (new `PKF._reset_run_state`).
+- `PKF.strict_covariance` (default `False`): set it to `True` on an instance to make
+  `_check_covariance` raise `CovarianceError` instead of regularising. Not applied
+  to augmented models, to the sigma-point Cholesky jitter, or to the PF/PPF
+  construction-time regularisation.
+- `prg/tests/test_numerical_robustness.py`: 22 regression tests for the changes
+  above (13 of them fail on 2.15.1).
+- Reproduction scripts of the companion smoothing letter ("Six Smoothers for
+  Gaussian Pairwise Markov Chains, and How to Choose One"), mapped in
+  `experiments/README.md`: `conditioning_exact.py` (accuracy of the six smoothers
+  against a 60-digit reference under four stress regimes, 80 random models each),
+  `classical_vs_pairwise_exact.py` (exact MSE/NEES cost of ignoring back-action),
+  `check_elimination_full.py` (the three elimination orders of the lifted system,
+  checked to 1e-49 in 50-digit arithmetic on time-varying models).
+
+---
+
 ## [2.15.1] - 2026-10-01
 
 Documentation, packaging metadata and a paper-reproduction script only: **no
@@ -922,6 +975,7 @@ no behaviour changes — pure consistency cleanup.
 - NEES and NIS calibration metrics with history tracking
 - Rich terminal output and matplotlib plots
 
+[2.16.0]: https://github.com/sderrode/awesomepkf/compare/v2.15.1...v2.16.0
 [2.15.1]: https://github.com/sderrode/awesomepkf/compare/v2.15.0...v2.15.1
 [2.15.0]: https://github.com/sderrode/awesomepkf/compare/v2.14.0...v2.15.0
 [2.10.0]: https://github.com/sderrode/awesomepkf/compare/v2.9.0...v2.10.0
