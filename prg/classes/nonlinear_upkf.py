@@ -113,7 +113,7 @@ class NonLinear_UPKF(PKF):
             If an unexpected error occurs during the update step.
         """
         self._validate_N(N)
-        self.history.clear()
+        self._reset_run_state()
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()

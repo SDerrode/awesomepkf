@@ -37,7 +37,8 @@ class InvertibleTolerances:
     condition_warn: float = 1e6
     condition_fail: float = 1e12
 
-    # |det| minimum
+    # Minimum of (|det| / prod_i ||row_i||_2) ** (1 / (n - 1)), in [0, 1]:
+    # invariant to scaling and to dimension (roughly 1 / cond for most matrices)
     det_warn: float = 1e-10
     det_fail: float = 1e-15
 

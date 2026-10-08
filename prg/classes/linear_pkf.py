@@ -139,7 +139,7 @@ class Linear_PKF(PKF):
             If an unexpected error occurs during the update step.
         """
         self._validate_N(N)
-        self.history.clear()
+        self._reset_run_state()
 
         # print(f"self.param.pairwiseModel:={self.param.pairwiseModel:}")
         # print(f"self.param.augmented:={self.param.augmented:}")

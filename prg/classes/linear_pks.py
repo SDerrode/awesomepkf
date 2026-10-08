@@ -714,7 +714,8 @@ def _cond_xy(
     Pxx = Pzz[:dx, :dx]
     Pyy, Pyx = Pzz[dx:, dx:], Pzz[dx:, :dx]
     K = np.linalg.solve(Pyy, Pyx).T          # K = Pxy Pyy^{-1}, shape (dx, dy)
-    return mx + K @ (y - my), Pxx - K @ Pyx
+    P = Pxx - K @ Pyx
+    return mx + K @ (y - my), 0.5 * (P + P.T)
 
 
 def _dwy_backward_filter(s: _LinearPKSBase, N_records: int) -> dict:
@@ -754,7 +755,8 @@ def _dwy_backward_filter(s: _LinearPKSBase, N_records: int) -> dict:
     Sig: list = [Sig0]
     mz: list = [mz0]
     for _ in range(NN):
-        Sig.append(A @ Sig[-1] @ AT + Qp)
+        S_next = A @ Sig[-1] @ AT + Qp
+        Sig.append(0.5 * (S_next + S_next.T))
         mz.append(A @ mz[-1])
 
     # --- backward (complementary) model: A^b, Q^b, M^b, offset c^b ---
@@ -765,7 +767,8 @@ def _dwy_backward_filter(s: _LinearPKSBase, N_records: int) -> dict:
     for n in range(NN):
         Abn = Sig[n] @ AT @ np.linalg.inv(Sig[n + 1])
         Ab[n] = Abn
-        Qb[n] = Sig[n] - Abn @ Sig[n + 1] @ Abn.T
+        Qbn = Sig[n] - Abn @ Sig[n + 1] @ Abn.T
+        Qb[n] = 0.5 * (Qbn + Qbn.T)
         Mb[n] = Abn[:, :dx]                       # X-columns block
         cb[n] = mz[n] - Abn @ mz[n + 1]           # non-zero-mean offset c^b_n
 
@@ -779,9 +782,13 @@ def _dwy_backward_filter(s: _LinearPKSBase, N_records: int) -> dict:
     xb: list = [None] * (NN + 1)
     Ppred: list = [None] * (NN + 1)   # P^b_{n-1|n}  (stored at index n-1)
     zpred: list = [None] * (NN + 1)   # z^b_{n-1|n}
+    # Every covariance is re-symmetrised at each step: without it a skew
+    # rounding error grows like rho(Mb_x - K Mb_y) * rho(Mb_x + K Mb_y) per step
+    # and, when that product exceeds 1, makes P^b diverge (2F/DWY then abort).
     xb[NN], Pb[NN] = _cond_xy(mz[NN], Sig[NN], ys[NN], dx)
     for n in range(NN, 0, -1):
         Pzz = Mb[n - 1] @ Pb[n] @ Mb[n - 1].T + Qb[n - 1]
+        Pzz = 0.5 * (Pzz + Pzz.T)
         zp = Ab[n - 1] @ np.vstack([xb[n], ys[n]]) + cb[n - 1]
         Ppred[n - 1] = Pzz
         zpred[n - 1] = zp

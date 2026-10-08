@@ -119,7 +119,21 @@ class PKF:
         first observation yields ``xkp1 = None``.
     history : HistoryTracker
         Records all filter steps for post-processing.
+    strict_covariance : bool
+        If ``True``, a covariance that fails the PSD diagnostics of
+        :meth:`_check_covariance` raises :class:`CovarianceError` instead of
+        being Tikhonov-regularised in place (default ``False``, class-level;
+        set it on an instance). Not applied to augmented models, to the
+        sigma-point Cholesky jitter, or to the PF/PPF construction-time
+        regularisation.
+    covariance_regularisations : list[dict]
+        One record per in-place regularisation made by
+        :meth:`_check_covariance` during the last run (keys ``step``,
+        ``name``, ``eps``, ``min_eig_before``, ``min_eig_after``); cleared at
+        the start of each run.
     """
+
+    strict_covariance: bool = False
 
     def __init__(
         self,
@@ -189,6 +203,14 @@ class PKF:
 
         # History tracker
         self.history = HistoryTracker(self.verbose)
+
+        # In-place covariance regularisations performed by _check_covariance
+        self.covariance_regularisations: list[dict] = []
+
+    def _reset_run_state(self) -> None:
+        """Clear the per-run state (history and regularisation records)."""
+        self.history.clear()
+        self.covariance_regularisations.clear()
 
     # ------------------------------------------------------------------
     # Data simulation & processing
@@ -427,7 +449,9 @@ class PKF:
         ------
         CovarianceError
             If the matrix contains NaN/Inf, or if it is not a valid
-            covariance matrix and regularization fails.
+            covariance matrix and either ``strict_covariance`` is ``True`` or
+            regularization fails. Successful regularisations are recorded in
+            ``covariance_regularisations``.
         """
         # Cheap NaN/Inf guard — applies to ALL models, including augmented:
         # a NaN/Inf entry is always a real numerical failure that must surface.
@@ -443,6 +467,13 @@ class PKF:
 
         report = CovarianceMatrix(mat).check()
         if not report.is_ok and not report.is_valid:
+            if self.strict_covariance:
+                raise CovarianceError(
+                    f"Step {k}: {name} is not a valid covariance matrix "
+                    f"(strict_covariance=True, no regularisation).",
+                    matrix_name=name,
+                    step=k,
+                )
             try:
                 result = CovarianceMatrix(mat).regularize()
             except (ValueError, RuntimeError) as e:
@@ -454,6 +485,15 @@ class PKF:
                 ) from e
 
             mat[:] = result.matrix_regularized
+            self.covariance_regularisations.append(
+                {
+                    "step": k,
+                    "name": name,
+                    "eps": result.eps_applied,
+                    "min_eig_before": result.min_eigenvalue_before,
+                    "min_eig_after": result.min_eigenvalue_after,
+                }
+            )
             logger.warning(
                 "Step %d: %s regularised in place "
                 "(eps=%.3g, min_eig %.3g → %.3g).",

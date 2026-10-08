@@ -203,7 +203,7 @@ class NonLinear_PF(_BaseParticleFilter):
             If an unexpected error occurs during filtering.
         """
         self._validate_N(N)
-        self.history.clear()
+        self._reset_run_state()
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()

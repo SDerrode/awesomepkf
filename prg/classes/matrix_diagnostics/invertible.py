@@ -126,30 +126,46 @@ class InvertibleMatrix(_BaseMatrixDiagnostic):
         )
 
     def _check_determinant(self) -> CheckResult:
-        name = "Determinant |det|"
+        # Invariant to scaling AND to dimension: r = (|det M| / prod_i ||row_i||_2)
+        # ** (1 / (n - 1)), in [0, 1]. A raw |det| threshold declares any matrix of
+        # small scale singular (det scales like s^n); the bare Hadamard ratio decays
+        # like cond^-(n-1) and declares well-conditioned large matrices singular.
+        # Rows are first divided by their max-abs entry so that the norms cannot
+        # overflow or underflow. Rank and condition-number checks remain the
+        # primary singularity tests.
+        name = "Normalised determinant (|det| / prod ||row||)^(1/(n-1))"
         tol = self.tol
-        det = float(np.linalg.det(self._M))
-        abs_det = abs(det)
+        row_max = np.max(np.abs(self._M), axis=1)
+        if np.any(row_max == 0.0):
+            root = 0.0
+        else:
+            Mn = self._M / row_max[:, None]
+            sign, logdet = np.linalg.slogdet(Mn)
+            if sign == 0:
+                root = 0.0
+            else:
+                log_ratio = logdet - np.sum(np.log(np.linalg.norm(Mn, axis=1)))
+                root = float(np.exp(log_ratio / max(self._n - 1, 1)))
 
-        if abs_det <= tol.det_fail:
+        if root <= tol.det_fail:
             return self._fail(
                 name,
-                abs_det,
+                root,
                 tol.det_fail,
-                f"|det| = {abs_det:.4g} ≈ 0 — matrix is singular.",
+                f"Normalised |det| = {root:.4g} ≈ 0 — matrix is singular.",
             )
-        if abs_det <= tol.det_warn:
+        if root <= tol.det_warn:
             return self._warn(
                 name,
-                abs_det,
+                root,
                 tol.det_warn,
-                f"|det| = {abs_det:.4g} is very small — near-singular.",
+                f"Normalised |det| = {root:.4g} is very small — near-singular.",
             )
         return self._ok(
             name,
-            abs_det,
+            root,
             tol.det_warn,
-            f"|det| = {abs_det:.4g}.",
+            f"Normalised |det| = {root:.4g}.",
         )
 
     def _check_condition(self) -> CheckResult:

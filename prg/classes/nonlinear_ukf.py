@@ -199,7 +199,7 @@ class NonLinear_UKF(PKF):
         """
 
         self._validate_N(N)
-        self.history.clear()
+        self._reset_run_state()
 
         generator = (
             data_generator if data_generator is not None else self._data_generation()
