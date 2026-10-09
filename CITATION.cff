@@ -1,7 +1,7 @@
 # Citation metadata (Citation File Format 1.2.0 — https://citation-file-format.github.io).
 # GitHub renders this as "Cite this repository"; Zenodo reads it on archive.
-# Version, release date and DOI track the latest GitHub release (v2.16.1,
-# 2026-10-09, Zenodo record 10.5281/zenodo.23253726).
+# Version, release date and DOI track the latest GitHub release (v2.16.2,
+# 2026-10-09, Zenodo record 10.5281/zenodo.23258382).
 cff-version: 1.2.0
 message: >-
   If you use awesomepkf in published work, please cite the software itself
@@ -24,11 +24,11 @@ date-released: "2026-10-09"
 license: AGPL-3.0-only
 repository-code: "https://github.com/SDerrode/awesomepkf"
 url: "https://pypi.org/project/awesomepkf/"
-doi: 10.5281/zenodo.23253726
+doi: 10.5281/zenodo.23258382
 identifiers:
   - type: doi
-    value: 10.5281/zenodo.23253726
-    description: "The DOI of this version (2.16.1) of the software."
+    value: 10.5281/zenodo.23258382
+    description: "The DOI of this version (2.16.2) of the software."
   - type: doi
     value: 10.5281/zenodo.23081320
     description: "The concept DOI, which always resolves to the latest version."
