@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.16.1] - 2026-10-09
+
+Paper-reproduction scripts only: **no change to `prg/`** apart from the version
+string, so the installable package behaves exactly as 2.16.0. Makes the printed
+figure of the companion smoothing letter reproducible from a released version.
+
+### Changed
+- `experiments/conditioning_exact.py`: the letter figure (`--letter-fig`) is now a
+  full-page-width 2x2 grid by default (`--letter-layout 2x2wide`; `1x4` and the
+  former one-column `2x2` remain available), with per-panel y-ranges, panel titles
+  (a)-(d) naming the regimes, `log10(.)` axis labels, the median drawn with markers
+  and the maximum as a thin line. `meta.library.dirty` is now a boolean.
+- `experiments/check_elimination_full.py`: docstring maps its rows to Proposition 1.
+
+---
+
 ## [2.16.0] - 2026-10-08
 
 Three numerical-robustness fixes found while measuring the six linear smoothers
@@ -975,6 +991,7 @@ no behaviour changes — pure consistency cleanup.
 - NEES and NIS calibration metrics with history tracking
 - Rich terminal output and matplotlib plots
 
+[2.16.1]: https://github.com/sderrode/awesomepkf/compare/v2.16.0...v2.16.1
 [2.16.0]: https://github.com/sderrode/awesomepkf/compare/v2.15.1...v2.16.0
 [2.15.1]: https://github.com/sderrode/awesomepkf/compare/v2.15.0...v2.15.1
 [2.15.0]: https://github.com/sderrode/awesomepkf/compare/v2.14.0...v2.15.0

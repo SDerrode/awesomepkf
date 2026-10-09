@@ -2454,8 +2454,10 @@ def make_figure(results, path):
 
 
 # compact letter figure (covariance error only; aborts / indefinite in a strip per panel)
-LETTER_XLABEL = {"D": r"(D)  log10 $s$", "S": r"(S)  log10 $\varepsilon$",
-                 "C": r"(C)  log10$(1-c)$", "M": r"(M)  log10$(1-\rho)$"}
+LETTER_XLABEL = {"D": r"$\log_{10}(s)$", "S": r"$\log_{10}(\varepsilon)$",
+                 "C": r"$\log_{10}(1-c)$", "M": r"$\log_{10}(1-\rho)$"}
+LETTER_PANEL = {"D": "(a) D: broad prior", "S": "(b) S: vanishing state noise",
+                "C": "(c) C: correlated noise", "M": "(d) M: slow mixing"}
 MEAN_COV_FACTOR = 100.0    # mean vs covariance error "differ": ratio > this (either way) ...
 MEAN_COV_FLOOR = 1e-12     # ... with the larger of the two above this (else both at round-off)
 
@@ -2593,8 +2595,9 @@ def build_caption_letter(results):
             + mean_txt)
 
 
-def make_letter_figure(results, path):
-    """Compact letter figure: 2 x 2 panels (D, S / C, M), covariance error (raw, whole record)
+def make_letter_figure(results, path, layout="2x2wide"):
+    """Letter figure, layout "2x2wide" (full page width, D, S / C, M), "1x4" (full page width,
+    one row) or "2x2" (one column): covariance error (raw, whole record)
     vs log10 of the sweep parameter, six smoothers: median line + max open marker over the
     random-family models; a strip above each panel marks aborts (x) and indefinite raw
     covariances (o), on at least one model, per smoother."""
@@ -2605,17 +2608,37 @@ def make_letter_figure(results, path):
     fd = figure_data(results)
     regs = list(REGIMES)
     allv = [v for reg in regs for nm in NAMES for v in fd[reg][nm]["cov_max"] if np.isfinite(v)]
-    ytop = 10 ** np.ceil(np.log10(max(allv) * 3))
-    ylo = 1e-17
-    W = 3.5
-    leg_h, strip_h, sgap, ax_h, xlab_h, bot = 0.36, 0.12, 0.02, 0.64, 0.30, 0.03
-    H = leg_h + 2 * (strip_h + sgap + ax_h + xlab_h) + bot
-    left_in, right_in, gap_in = 0.56, 0.04, 0.10
-    pw = (W - left_in - right_in - gap_in) / 2
+    ytop_all = 10 ** np.ceil(np.log10(max(allv) * 3))
+    ylo = 10 ** -16.5 if layout == "2x2wide" else 1e-17
+
+    def _ytop(reg):
+        if layout != "2x2wide":
+            return ytop_all
+        v = [u for nm in NAMES for u in fd[reg][nm]["cov_max"] if np.isfinite(u)]
+        return 10 ** np.ceil(np.log10(max(v) * 10))
+    if layout == "2x2wide":
+        mpl.rcParams.update({"xtick.labelsize": 9, "ytick.labelsize": 9, "legend.fontsize": 9})
+    wide = layout in ("1x4", "2x2wide")
+    ncols = 4 if layout == "1x4" else 2
+    nrows = len(regs) // ncols
+    if layout == "2x2wide":
+        W = 7.16
+        leg_h, strip_h, sgap, ax_h, xlab_h, bot = 0.26, 0.15, 0.02, 2.45, 0.36, 0.03
+        left_in, right_in, gap_in = 0.66, 0.04, 0.42
+    elif layout == "1x4":
+        W = 7.16
+        leg_h, strip_h, sgap, ax_h, xlab_h, bot = 0.22, 0.12, 0.02, 0.92, 0.30, 0.03
+        left_in, right_in, gap_in = 0.56, 0.04, 0.16
+    else:
+        W = 3.5
+        leg_h, strip_h, sgap, ax_h, xlab_h, bot = 0.36, 0.12, 0.02, 0.64, 0.30, 0.03
+        left_in, right_in, gap_in = 0.56, 0.04, 0.10
+    H = leg_h + nrows * (strip_h + sgap + ax_h + xlab_h) + bot
+    pw = (W - left_in - right_in - (ncols - 1) * gap_in) / ncols
     fig = plt.figure(figsize=(W, H))
     axes, strips = {}, {}
     for i, reg in enumerate(regs):
-        r, c = divmod(i, 2)
+        r, c = divmod(i, ncols)
         x0 = left_in + c * (pw + gap_in)
         ytop_row = H - leg_h - r * (strip_h + sgap + ax_h + xlab_h)
         strips[reg] = fig.add_axes([x0 / W, (ytop_row - strip_h) / H, pw / W, strip_h / H])
@@ -2630,12 +2653,13 @@ def make_letter_figure(results, path):
         for k, nm in enumerate(NAMES):
             st, e = STYLE[nm], d[nm]
             z = 3 if nm in ("DWY", "MBF", "VAR") else 2
+            ytop = _ytop(reg)
             med = np.clip(e["cov_med"], ylo, ytop)
             med = np.where(e["n_ran"] >= 0.5 * np.array(d["n_models"]), med, np.nan)
             mx = np.clip(e["cov_max"], ylo, ytop)
-            ax.plot(x, med, color=st["color"], ls=st["ls"], lw=1.0, zorder=z)
-            ax.plot(x, mx, ls="none", marker=st["marker"], ms=st["ms"], mfc="none",
-                    mec=st["color"], mew=0.7, zorder=z + 0.4)
+            ax.plot(x, med, color=st["color"], ls=st["ls"], lw=1.2, marker=st["marker"],
+                    ms=st["ms"], mfc=st["color"], mec=st["color"], mew=0.6, zorder=z + 0.4)
+            ax.plot(x, mx, color=st["color"], ls=st["ls"], lw=1.0, alpha=0.7, zorder=z)
             dodge = 0.032 * span * (k - 2.5)
             sel = e["abort"] > 0
             if sel.any():
@@ -2646,12 +2670,16 @@ def make_letter_figure(results, path):
                 sx.plot(x[sel] + dodge, np.full(sel.sum(), 0.28), ls="none", marker="o", ms=2.8,
                         mfc=st["color"], mec=st["color"], mew=0.5, clip_on=False)
         ax.set_yscale("log")
+        ytop = _ytop(reg)
         ax.set_ylim(ylo, ytop)
-        ax.set_yticks([1e-16, 1e-8, 1])
-        ax.yaxis.set_major_formatter(fmt)
+        if layout == "2x2wide":
+            ax.set_yticks([10.0 ** k for k in range(-16, int(np.log10(ytop)) + 1, 4)])
+        else:
+            ax.set_yticks([1e-16, 1e-8, 1])
+        ax.yaxis.set_major_formatter(mpl.ticker.LogFormatterMathtext() if layout == "2x2wide" else fmt)
         ax.yaxis.set_minor_locator(mpl.ticker.NullLocator())
         ax.axhline(1.1e-16, color="#999999", lw=0.5, ls="-", zorder=0)
-        if i % 2 == 1:
+        if i % ncols != 0 and layout != "2x2wide":
             ax.tick_params(labelleft=False)
         sx.set_ylim(0, 1)
         sx.set_yticks([])
@@ -2659,7 +2687,7 @@ def make_letter_figure(results, path):
         for sp in sx.spines.values():
             sp.set_visible(False)
         sx.set_facecolor("#ececec")
-        if i % 2 == 0:
+        if i % ncols == 0:
             sx.text(-0.03, 0.5, "fails", transform=sx.transAxes, ha="right", va="center",
                     fontsize=8, color="#444444")
         ax.margins(x=0.08)
@@ -2669,22 +2697,32 @@ def make_letter_figure(results, path):
         ax.set_xticks(RF_XTICKS[reg])
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(lambda v, _p: f"{v:.0f}".replace("-", "−")))
         ax.tick_params(axis="both", which="major", length=2.5, pad=1.5)
-        ax.set_xlabel(LETTER_XLABEL[reg], fontsize=9, labelpad=1.5)
-    y_mid = 0.5 * (axes["D"].get_position().y1 + axes["C"].get_position().y0)
-    fig.text(0.004, y_mid, "covariance error", rotation=90, ha="left", va="center", fontsize=9)
-    h = [Line2D([], [], color=STYLE[nm]["color"], ls=STYLE[nm]["ls"], lw=1.0,
-                marker=STYLE[nm]["marker"], ms=STYLE[nm]["ms"], mfc="none",
-                mec=STYLE[nm]["color"], mew=0.7) for nm in NAMES]
-    fig.legend(h, list(NAMES), loc="upper center", ncol=6, frameon=False,
-               bbox_to_anchor=(0.5, 1 + 0.03 / H), handlelength=1.7, columnspacing=0.6,
-               handletextpad=0.25, borderaxespad=0.0)
-    h2 = [Line2D([], [], ls="-", color="#555555", lw=1.0),
-          Line2D([], [], ls="none", marker="o", ms=3.6, mfc="none", mec="#555555", mew=0.7),
+        ax.set_xlabel(LETTER_XLABEL[reg], fontsize=11 if layout == "2x2wide" else 9, labelpad=1.5)
+        ax.text(0.015, 0.97, LETTER_PANEL[reg], transform=ax.transAxes, ha="left", va="top",
+                fontsize=10 if layout == "2x2wide" else 8, zorder=10,
+                bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none", alpha=0.85))
+    y_mid = 0.5 * (axes["D"].get_position().y1 + axes[regs[ncols * (nrows - 1)]].get_position().y0)
+    fig.text(0.004, y_mid, "covariance error", rotation=90, ha="left", va="center",
+             fontsize=10 if layout == "2x2wide" else 9)
+    h = [Line2D([], [], color=STYLE[nm]["color"], ls=STYLE[nm]["ls"], lw=1.2,
+                marker=STYLE[nm]["marker"], ms=STYLE[nm]["ms"], mfc=STYLE[nm]["color"],
+                mec=STYLE[nm]["color"], mew=0.6) for nm in NAMES]
+    h2 = [Line2D([], [], ls="-", color="#888888", lw=1.4),
+          Line2D([], [], ls="-", color="#888888", lw=1.0, alpha=0.5),
           Line2D([], [], ls="none", marker="x", ms=3.4, mew=1.0, color="#555555"),
           Line2D([], [], ls="none", marker="o", ms=2.8, mfc="#555555", mec="#555555", mew=0.5)]
-    fig.legend(h2, ["median", "max", "abort", "indefinite"], loc="upper center", ncol=4,
-               frameon=False, bbox_to_anchor=(0.5, 1 - 0.155 / H), handlelength=1.5,
-               columnspacing=0.8, handletextpad=0.3, borderaxespad=0.0)
+    labels2 = ["median", "maximum", "abort", "indefinite"]
+    if wide:
+        fig.legend(h + h2, list(NAMES) + labels2, loc="upper center", ncol=10, frameon=False,
+                   bbox_to_anchor=(0.5, 1 + 0.03 / H), handlelength=1.5, columnspacing=0.55,
+                   handletextpad=0.2, borderaxespad=0.0)
+    else:
+        fig.legend(h, list(NAMES), loc="upper center", ncol=6, frameon=False,
+                   bbox_to_anchor=(0.5, 1 + 0.03 / H), handlelength=1.7, columnspacing=0.6,
+                   handletextpad=0.25, borderaxespad=0.0)
+        fig.legend(h2, labels2, loc="upper center", ncol=4,
+                   frameon=False, bbox_to_anchor=(0.5, 1 - 0.155 / H), handlelength=1.5,
+                   columnspacing=0.8, handletextpad=0.3, borderaxespad=0.0)
     fig.savefig(str(path) + ".pdf")
     fig.savefig(str(path) + ".png", dpi=300)
     plt.close(fig)
@@ -3384,6 +3422,9 @@ def main():
     ap.add_argument("--no-figure", action="store_true")
     ap.add_argument("--letter-fig", action="store_true",
                     help="also draw the compact letter figure (figures/conditioning_letter)")
+    ap.add_argument("--letter-layout", choices=["2x2wide", "1x4", "2x2"], default="2x2wide",
+                    help="letter figure layout: full page width as 2x2 (default) or one row "
+                         "(1x4), or one column (2x2)")
     ap.add_argument("--letter-fig-out", default=str(OUT_LETTER_FIG),
                     help="letter figure path without extension")
     ap.add_argument("--from-json", action="store_true",
@@ -3515,7 +3556,7 @@ def main():
         if args.base_fig_out:
             make_figure_base(results, args.fig_q, args.base_fig_out)
     if args.letter_fig:
-        lfam, lsize = make_letter_figure(results, args.letter_fig_out)
+        lfam, lsize = make_letter_figure(results, args.letter_fig_out, layout=args.letter_layout)
         results.setdefault("figure", {})["letter_size_in"] = [round(v, 3) for v in lsize]
     notes, caption, caption_letter = build_notes(results)
     results["summary_notes"] = notes

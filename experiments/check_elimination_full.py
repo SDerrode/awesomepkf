@@ -16,6 +16,10 @@ The reference is the exact posterior p(x_{0:N} | y_{0:N}): J and eta are read of
 joint precision of z_{0:N} (forward factorisation), and are themselves cross-checked
 against plain Gaussian conditioning of the joint prior covariance of z_{0:N}.
 
+Mapping to the letter: script rows (a), (b), (c) -> Proposition 1(a) (top-down pivots,
+RTS multiplier, MBF coordinates); (d) -> Proposition 1(b) (DWY, bottom-up);
+(e) -> Proposition 1(c) (2F, twisted factorization).
+
 Identities (rows of the printed table; "gate" rows must hold to round-off):
   J      explicit time-varying blocks of J and eta; J from the BACKWARD factorisation;
          explicit blocks in backward-chain quantities; the prior-chain split identity.
