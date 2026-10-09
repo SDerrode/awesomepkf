@@ -110,7 +110,8 @@ default noise correlation; R = D_sd C(c) D_sd, D_sd = I for the base model and G
      correlation matrix is kept, R stays PD, cond R ~ 1/eps).
   C  strongly correlated noise: R = D_sd C(c) D_sd, c = 1 - delta, delta = 0.5 .. 1e-10
      (base) or 1e-1 .. 1e-10 (random families); cond R up to ~1e10-1e12, R PD.
-  M  slow mixing: A(rho) = (rho / rho(A_model)) A_model (non-normal), rho = 0.9 .. 0.9999.
+  M  poles near the unit circle (regime U in the letter; key "M" kept for the stored results):
+     A(rho) = (rho / rho(A_model)) A_model (non-normal), rho = 0.9 .. 0.9999.
 In S, C and M the smoother prior is the stationary law of the current model (Pz0 =
 Sigma_inf, solution of Sigma = A Sigma A^T + R), which is also the law the data start from,
 so these regimes carry no prior/data mismatch transient.
@@ -462,7 +463,7 @@ REGIMES = {
           "title": "correlated noise", "xlabel": r"$1-c$ (noise correlation $c$)",
           "desc": "R = C(c), c = 1 - value; A = A0; Pz0 = stationary covariance"},
     "M": {"param": "1-rho", "values": [0.1, 0.03, 0.01, 0.003, 0.001, 0.0001],
-          "title": "slow mixing", "xlabel": r"$1-\rho(\mathbf{A})$",
+          "title": "poles near the unit circle", "xlabel": r"$1-\rho(\mathbf{A})$",
           "desc": "A = (rho/rho(A0)) A0 with rho = 1 - value; R = R0; Pz0 = stationary "
                   "covariance"},
 }
@@ -2110,7 +2111,7 @@ FLOOR, YTOP = 1e-17, 1e3
 FIG_XLABEL = {"D": r"(D) diffuse prior: prior scale $s$",
               "S": r"(S) state-noise starvation: scale $\varepsilon$",
               "C": r"(C) correlated noise: $1-c$",
-              "M": r"(M) slow mixing: $1-\rho(\mathbf{A})$"}
+              "M": r"(U) poles near the unit circle: $1-\rho(\mathbf{A})$"}
 
 
 def _pow10_label(v, _pos=None):
@@ -2293,7 +2294,7 @@ RF_XTICKS_FAIL = {"D": [0, 10], "S": [0, -10], "C": [-2, -10], "M": [-1, -4]}   
 RF_FIG_XLABEL = {"D": r"(D) diffuse prior: log10 of the prior scale $s$",
                  "S": r"(S) state-noise starvation: log10 $\varepsilon$",
                  "C": r"(C) correlated noise: log10$(1-c)$",
-                 "M": r"(M) slow mixing: log10$(1-\rho(\mathbf{A}))$"}
+                 "M": r"(U) poles near the unit circle: log10$(1-\rho(\mathbf{A}))$"}
 ERR_KEYS = ("cov", "cov_mid", "mean")
 
 
@@ -2457,7 +2458,7 @@ def make_figure(results, path):
 LETTER_XLABEL = {"D": r"$\log_{10}(s)$", "S": r"$\log_{10}(\varepsilon)$",
                  "C": r"$\log_{10}(1-c)$", "M": r"$\log_{10}(1-\rho)$"}
 LETTER_PANEL = {"D": "(a) D: broad prior", "S": "(b) S: vanishing state noise",
-                "C": "(c) C: correlated noise", "M": "(d) M: slow mixing"}
+                "C": "(c) C: correlated noise", "M": "(d) U: poles near the unit circle"}
 MEAN_COV_FACTOR = 100.0    # mean vs covariance error "differ": ratio > this (either way) ...
 MEAN_COV_FLOOR = 1e-12     # ... with the larger of the two above this (else both at round-off)
 
@@ -2583,7 +2584,7 @@ def build_caption_letter(results):
     return (f"Covariance error max_n ||P_n-P_ref,n||_2/||P_ref,n||_2 of the six library smoothers "
             f"(raw output, before the library's in-place regularisation) against a 60-digit "
             f"reference, N=400, in four stress regimes: (D) diffuse prior P_0=sI; (S) state-noise "
-            f"scale eps (R^xx -> eps R^xx); (C) X/Y noise correlation c -> 1; (M) spectral radius "
+            f"scale eps (R^xx -> eps R^xx); (C) X/Y noise correlation c -> 1; (U) spectral radius "
             f"rho(A) -> 1. Each point pools {n_all} random models ({m} from each of two generators at "
             f"each of (p,q)=(2,1) and (2,2); {rf['seeds']} records per model, max over records). Line: "
             f"median over the models on which the smoother ran (not drawn where fewer than half ran); "

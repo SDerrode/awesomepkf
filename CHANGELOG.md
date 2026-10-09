@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.16.2] - 2026-10-09
+
+A large condition number no longer invalidates a covariance. Found by running the
+smoothing letter's accuracy study on classical (textbook) models.
+
+### Fixed
+- **Ill-conditioned covariances were altered or refused.** `CovarianceMatrix`
+  declared any covariance with condition number >= 1e12 invalid, even when positive
+  definite. Two consequences:
+  - the filter (`PKF._check_covariance`) "regularised" such covariances in place by
+    adding eps * I with eps = 10 * (lambda_max / 1e12 - lambda_min). Under a broad
+    prior (P0 = 1e10 I) eps is about 0.1, which swamps the well-determined
+    directions: on 11 of 80 random textbook models the RTS smoothed covariance was
+    wrong by O(1) at the first steps (relative error up to 3.3 against a 60-digit
+    reference; 1.4e-5 without the regularisation), and every smoother built on that
+    filter was contaminated;
+  - models with such a noise covariance or prior (e.g. nearly noiseless
+    measurements) were refused at construction with a misleading "not positive
+    semi-definite" message (26 of the 1920 sweep points of the classical study,
+    25 of its 80 models at the smallest measurement noise).
+
+  A large condition number now yields a WARNING only. Automatic regularisation
+  (`CovarianceMatrix.regularize`) corrects only zero or negative eigenvalues, with a
+  margin relative to the scale of the matrix instead of an absolute 1e-9 floor (kept
+  only for a zero matrix); a positive definite matrix is never modified, whatever its
+  scale or conditioning.
+- The particle filters (`NonLinear_PF`, `NonLinear_PPF`) fall back to a minimal,
+  scale-relative diagonal shift (`cholesky_eps`) when a positive definite but very
+  ill-conditioned covariance does not factorise in float64.
+
+### Changed
+- Covariance-validation errors now name the matrix and the failed check
+  (`DiagnosticReport.failure_messages`) instead of "not positive semi-definite".
+
+### Added
+- `prg/tests/test_covariance_conditioning.py` (5 tests; 3 fail on 2.16.1).
+- `experiments/conditioning_exact_classical.py`: the letter's accuracy study on
+  textbook models y = Hx + v (requires 2.16.2). The pairwise study
+  (`conditioning_exact.py`) gives identical results with 2.16.1 and 2.16.2.
+- `experiments/conditioning_exact.py`: the slow-mixing regime is labelled "U: poles
+  near the unit circle" in the figures (stored key "M" unchanged).
+
+---
+
 ## [2.16.1] - 2026-10-09
 
 Paper-reproduction scripts only: **no change to `prg/`** apart from the version

@@ -55,7 +55,8 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 <a id="smoothing-letter"></a>
 ### Smoothing letter
 
-The letter has its own three scripts (added in 2.16.0). `conditioning_exact.py` and
+The letter has its own four scripts (added in 2.16.0; `conditioning_exact_classical.py`
+in 2.16.2). `conditioning_exact.py`, `conditioning_exact_classical.py` and
 `classical_vs_pairwise_exact.py` write a JSON with every number next to the script and
 their figures under `figures/` (both git-ignored); `check_elimination_full.py` only
 prints its table of residuals.
@@ -63,12 +64,16 @@ prints its table of residuals.
 | Letter | Command | Runtime |
 |---|---|---|
 | Fig. 1 (accuracy of the six smoothers against a 60-digit reference, four stress regimes, 80 random models each) | `python experiments/conditioning_exact.py --letter-fig` (full-width 2x2 panels; `--letter-layout 1x4` or `2x2` for the other layouts) | ~25 min on 10 cores (`--quick` ~1.5 min; `--from-json --letter-fig --no-figure` redraws instantly) |
+| Sec. IV, classical models (the same study on 80 textbook models y = Hx + v per regime; same ranking and choice rule) | `python experiments/conditioning_exact_classical.py` (prints a side-by-side comparison if `conditioning_exact.py` was run first) | ~25 min on 10 cores (`--quick` ~1 min) |
 | Table II (cost of ignoring back-action; exact MSE/NEES, no Monte Carlo) | `python experiments/classical_vs_pairwise_exact.py` | ~22 min (`--no-oracle --no-mc --no-capacity`: ~20 s, same Table II numbers) |
 | Proposition 1 (three elimination orders; identities to round-off and to 1e-49 in 50-digit arithmetic, time-varying models) | `python experiments/check_elimination_full.py` | ~7 s (exit code 1 if an identity fails) |
 
 The letter's 2F/DWY results require **2.16.0 or later**: earlier versions did not
 symmetrise the backward filter that 2F and DWY share, and aborted (or returned wrong
-results) under strongly correlated noise.
+results) under strongly correlated noise. The classical-model study requires **2.16.2 or
+later**: earlier versions declared any covariance with condition number >= 1e12 invalid,
+refused 26 of its models and regularised the filter covariances in place under the
+broadest prior (spurious O(1) RTS errors).
 
 Runtimes measured on a laptop from a clone (`pip install -e .`, Python 3.14).
 

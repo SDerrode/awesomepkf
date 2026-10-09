@@ -135,3 +135,4 @@ experiments/*.png
 experiments/lrt_vector_*.json
 experiments/conditioning_exact_results.json
 experiments/classical_vs_pairwise_results.json
+experiments/conditioning_exact_classical_results.json
