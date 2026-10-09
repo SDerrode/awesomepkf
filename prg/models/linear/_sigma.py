@@ -70,10 +70,13 @@ class LinearSigma(BaseModelLinear):
         self.B = np.eye(self.A.shape[0])
 
         if __debug__:
-            for arr in [self.sxx, self.syy, Q1]:
+            for name, arr in [("sxx", self.sxx), ("syy", self.syy), ("Q1", Q1)]:
                 report = CovarianceMatrix(arr).check()
                 if not report.is_valid:
-                    raise ValueError("Matrix is not positive semi-definite.")
+                    raise ValueError(
+                        f"Matrix {name} is not a valid covariance: "
+                        f"{report.failure_messages}"
+                    )
 
         self._build_symbolic_model()
 

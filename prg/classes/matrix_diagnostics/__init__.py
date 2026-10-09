@@ -4,7 +4,8 @@ Matrix diagnostics package.
 Three diagnostic classes are exposed:
 
 - :class:`CovarianceMatrix` — checks symmetry, positive
-  semi-definiteness, condition number; offers Tikhonov regularisation.
+  semi-definiteness, condition number (warning only); offers Tikhonov
+  regularisation of non positive definite matrices.
 - :class:`InvertibleMatrix` — checks rank, determinant, condition
   number, post-inversion residual; caches the inverse.
 - :class:`StabilityMatrix` — checks all eigenvalue moduli lie in
@@ -17,6 +18,7 @@ Each class returns a :class:`DiagnosticReport` aggregating
 from prg.classes.matrix_diagnostics.covariance import (
     CovarianceMatrix,
     RegularizationResult,
+    cholesky_eps,
 )
 from prg.classes.matrix_diagnostics.invertible import InvertibleMatrix
 from prg.classes.matrix_diagnostics.results import CheckResult, DiagnosticReport
@@ -39,4 +41,5 @@ __all__ = [
     "StabilityMatrix",
     "StabilityTolerances",
     "Status",
+    "cholesky_eps",
 ]

@@ -238,7 +238,8 @@ class ParamLinear:
             report = CovarianceMatrix(arr).check()
             if not report.is_valid:
                 raise CovarianceError(
-                    f"Matrix {name!r} is not positive semi-definite.",
+                    f"Matrix {name!r} is not a valid covariance: "
+                    f"{report.failure_messages}",
                     matrix_name=name,
                 )
 

@@ -107,7 +107,8 @@ class ParamNonLinear:
             report = CovarianceMatrix(arr).check()
             if not report.is_valid:
                 raise CovarianceError(
-                    f"Matrix {name!r} is not positive semi-definite.",
+                    f"Matrix {name!r} is not a valid covariance: "
+                    f"{report.failure_messages}",
                     matrix_name=name,
                 )
 
@@ -154,7 +155,8 @@ class ParamNonLinear:
             report = CovarianceMatrix(self._mQ).check()
             if not report.is_valid:
                 raise CovarianceError(
-                    "Matrix 'mQ' is not positive semi-definite after update.",
+                    "Matrix 'mQ' is not a valid covariance after update: "
+                    f"{report.failure_messages}",
                     matrix_name="mQ",
                 )
 

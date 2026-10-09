@@ -40,10 +40,17 @@ class LinearAmQ(BaseModelLinear):
             ) from e
 
         if __debug__ and not self.augmented:
-            for arr in [self.mQ, self.Pz0, self.B @ self.B.transpose()]:
+            for name, arr in [
+                ("mQ", self.mQ),
+                ("Pz0", self.Pz0),
+                ("B B^T", self.B @ self.B.transpose()),
+            ]:
                 report = CovarianceMatrix(arr).check()
                 if not report.is_valid:
-                    raise ValueError("Matrix is not positive semi-definite.")
+                    raise ValueError(
+                        f"Matrix {name} is not a valid covariance: "
+                        f"{report.failure_messages}"
+                    )
 
         self._build_symbolic_model()
 

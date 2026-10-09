@@ -64,6 +64,11 @@ class DiagnosticReport:
         """True if no check is FAIL (warnings tolerated)."""
         return self.overall_status != Status.FAIL
 
+    @property
+    def failure_messages(self) -> str:
+        """Messages of the failed checks, joined with '; ' (empty if valid)."""
+        return "; ".join(c.message for c in self.checks if c.status == Status.FAIL)
+
     def __str__(self) -> str:
         lines = [
             "=" * 60,

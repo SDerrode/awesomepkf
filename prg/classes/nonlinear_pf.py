@@ -22,10 +22,10 @@ import logging
 from collections.abc import Generator
 
 import numpy as np
-from scipy.linalg import cholesky
+from scipy.linalg import LinAlgError, cholesky
 
 from prg.classes._base_particle_filter import _BaseParticleFilter
-from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix, cholesky_eps
 from prg.classes.pkf import PKFStep
 from prg.utils.display import rich_show_fields
 from prg.utils.exceptions import (
@@ -147,12 +147,17 @@ class NonLinear_PF(_BaseParticleFilter):
         report = cov_diag.check()
         if not report.is_ok and not report.is_valid:
             Q = cov_diag.regularized()
+        try:
+            L_Q = cholesky(Q, lower=True)
+        except LinAlgError:  # positive definite in exact terms, not in float64
+            Q = CovarianceMatrix(Q).regularized(eps=cholesky_eps(Q))
+            L_Q = cholesky(Q, lower=True)
 
         self._cached = {
             "Q": Q,
             "R": R,
             "R_inv": R_inv,
-            "L_Q": cholesky(Q, lower=True),
+            "L_Q": L_Q,
             "log_norm_const": -0.5
             * (self.dim_y * np.log(2 * np.pi) + np.linalg.slogdet(R)[1]),
         }

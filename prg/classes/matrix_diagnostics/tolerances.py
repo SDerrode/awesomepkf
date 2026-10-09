@@ -21,7 +21,8 @@ class CovarianceTolerances:
     eigenvalue_warn: float = 1e-10  # near-singular
     eigenvalue_fail: float = 0.0  # negative or zero eigenvalue
 
-    # Condition number
+    # Condition number: WARNING levels only (a large condition number never
+    # invalidates a covariance; above condition_fail the message is stronger)
     condition_warn: float = 1e6
     condition_fail: float = 1e12
 

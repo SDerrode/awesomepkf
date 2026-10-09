@@ -10,10 +10,10 @@ import logging
 from collections.abc import Generator
 
 import numpy as np
-from scipy.linalg import cholesky
+from scipy.linalg import LinAlgError, cholesky
 
 from prg.classes._base_particle_filter import _BaseParticleFilter
-from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix
+from prg.classes.matrix_diagnostics import CovarianceMatrix, InvertibleMatrix, cholesky_eps
 from prg.classes.pkf import PKFStep
 from prg.utils.display import rich_show_fields
 from prg.utils.exceptions import (
@@ -122,6 +122,10 @@ class NonLinear_PPF(_BaseParticleFilter):
             P_prime_x = cov_diag.regularized()
         else:
             P_prime_x = P_prime_x_base
+        try:
+            cholesky(P_prime_x, lower=True)
+        except LinAlgError:  # positive definite in exact terms, not in float64
+            P_prime_x = CovarianceMatrix(P_prime_x).regularized(eps=cholesky_eps(P_prime_x))
 
         self._cached = {
             "R": R,

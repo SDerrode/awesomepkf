@@ -12,7 +12,17 @@ from prg.classes.matrix_diagnostics.results import CheckResult, DiagnosticReport
 from prg.classes.matrix_diagnostics.status import Status
 from prg.classes.matrix_diagnostics.tolerances import CovarianceTolerances
 
-__all__ = ["CovarianceMatrix", "RegularizationResult"]
+__all__ = ["CovarianceMatrix", "RegularizationResult", "cholesky_eps"]
+
+
+def cholesky_eps(M: np.ndarray) -> float:
+    """Smallest diagonal shift that makes a positive definite but ill-conditioned
+    matrix Cholesky-factorisable in float64, relative to its scale:
+    ``10 * n * machine_eps * max |eigenvalue| + max(0, -min eigenvalue)``."""
+    w = np.linalg.eigvalsh((M + M.T) / 2)
+    return float(
+        10 * M.shape[0] * np.finfo(float).eps * np.abs(w).max() + max(0.0, -w.min())
+    )
 
 
 class CovarianceMatrix(_BaseMatrixDiagnostic):
@@ -21,6 +31,12 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
 
     Checks: NaN/Inf, symmetry, positive diagonal,
             eigenvalues, condition number.
+
+    Validity means symmetric with a positive diagonal and positive eigenvalues.
+    The condition number never invalidates a covariance: a positive definite
+    matrix with a large condition number (a broad prior, nearly noiseless
+    measurements) is a legitimate covariance, so a large condition number only
+    yields a WARNING.
     """
 
     def __init__(
@@ -148,11 +164,13 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
         cond = float(np.linalg.cond(self._M))
 
         if cond >= tol.condition_fail:
-            return self._fail(
+            # Ill-conditioning is not invalidity: warn, never fail.
+            return self._warn(
                 name,
                 cond,
                 tol.condition_fail,
-                f"Condition number {cond:.4g} is extremely large — matrix is ill-conditioned.",
+                f"Condition number {cond:.4g} is extremely large — results computed "
+                "from this matrix may lose most of their significant digits.",
             )
         if cond >= tol.condition_warn:
             return self._warn(
@@ -189,44 +207,35 @@ class CovarianceMatrix(_BaseMatrixDiagnostic):
             Regularization ``eps`` selected from eigenvalue and conditioning
             criteria. Returns ``0.0`` when matrix is already numerically healthy.
         """
-        eigenvalue_ok = min_eig > self.tol.eigenvalue_warn
-        # Avoids cond(NaN) if max_eig ~ 0; also protects division.
-        if max_eig > 0.0 and min_eig > 0.0:
-            cond = max_eig / min_eig  # equivalent to np.linalg.cond for SPD
-        else:
-            cond = np.inf
-        condition_ok = cond < self.tol.condition_fail
-
-        if eigenvalue_ok and condition_ok:
-            # Matrix already healthy — no regularisation needed.
+        if min_eig > self.tol.eigenvalue_fail:
+            # Positive definite — no regularisation needed, whatever the
+            # condition number or the scale (lifting the small eigenvalues of a
+            # positive definite matrix would corrupt the well-determined
+            # directions).
             return 0.0
 
-        # eps must simultaneously:
-        #   1. make lambda_min strictly positive (if needed)
-        #   2. lower conditioning below condition_fail threshold.
-        eps_for_eigenvalue = (
-            abs(min_eig) + self.tol.eigenvalue_warn * 10 if not eigenvalue_ok else 0.0
-        )
-        eps_for_condition = (
-            max_eig / self.tol.condition_fail - min_eig if not condition_ok else 0.0
-        )
-        # x10 safety factor to keep a comfortable numerical margin.
-        return max(eps_for_eigenvalue, eps_for_condition) * 10
+        # Make lambda_min strictly positive, with a margin relative to the
+        # scale of the matrix (the absolute floor only for a zero matrix);
+        # x10 safety factor.
+        scale = max(abs(max_eig), abs(min_eig))
+        if scale > 0.0:
+            margin = 10 * self._n * np.finfo(float).eps * scale
+        else:
+            margin = self.tol.eigenvalue_warn * 10
+        return (abs(min_eig) + margin) * 10
 
     def regularize(self, eps: float | None = None) -> RegularizationResult:
         """
         Tikhonov regularisation: M_reg = (M + M.T)/2 + ε * I.
 
         Corrects an invalid covariance matrix by adding a diagonal perturbation
-        ε · I. Two failure cases are handled:
+        ε · I. With automatic ε, only **zero/negative eigenvalues** are
+        corrected: ε is chosen to make λ_min strictly positive with a
+        reasonable margin. Poor conditioning alone is not corrected (it does
+        not make a covariance invalid, see :meth:`check`).
 
-        1. **Zero/negative eigenvalues**: ε is chosen to make λ_min
-        strictly positive with a reasonable margin.
-        2. **Poor conditioning** (cond ≥ condition_fail): ε is chosen to
-        bring the condition number below the ``condition_fail`` threshold.
-
-        If the matrix is already healthy (λ_min > eigenvalue_warn **and**
-        cond < condition_fail), no perturbation is applied (ε = 0).
+        If the matrix is already positive definite (λ_min > 0), no
+        perturbation is applied (ε = 0).
 
         If ``eps`` is provided explicitly, it is used directly without
         automatic computation.
