@@ -18,7 +18,7 @@ figure of the companion smoothing letter reproducible from a released version.
   full-page-width 2x2 grid by default (`--letter-layout 2x2wide`; `1x4` and the
   former one-column `2x2` remain available), with per-panel y-ranges, panel titles
   (a)-(d) naming the regimes, `log10(.)` axis labels, the median drawn with markers
-  and the maximum as a thin line. `meta.library.dirty` is now a boolean.
+  and the maximum as a thin line, larger abort/indefinite markers in the grey strips. `meta.library.dirty` is now a boolean.
 - `experiments/check_elimination_full.py`: docstring maps its rows to Proposition 1.
 
 ---

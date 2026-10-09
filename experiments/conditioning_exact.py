@@ -2623,7 +2623,7 @@ def make_letter_figure(results, path, layout="2x2wide"):
     nrows = len(regs) // ncols
     if layout == "2x2wide":
         W = 7.16
-        leg_h, strip_h, sgap, ax_h, xlab_h, bot = 0.26, 0.15, 0.02, 2.45, 0.36, 0.03
+        leg_h, strip_h, sgap, ax_h, xlab_h, bot = 0.44, 0.22, 0.02, 2.45, 0.36, 0.03
         left_in, right_in, gap_in = 0.66, 0.04, 0.42
     elif layout == "1x4":
         W = 7.16
@@ -2663,11 +2663,13 @@ def make_letter_figure(results, path, layout="2x2wide"):
             dodge = 0.032 * span * (k - 2.5)
             sel = e["abort"] > 0
             if sel.any():
-                sx.plot(x[sel] + dodge, np.full(sel.sum(), 0.68), ls="none", marker="x", ms=3.4,
-                        mew=1.0, color=st["color"], clip_on=False)
+                sx.plot(x[sel] + dodge, np.full(sel.sum(), 0.68), ls="none", marker="x",
+                        ms=6.0 if layout == "2x2wide" else 3.4, mew=1.6 if layout == "2x2wide" else 1.0,
+                        color=st["color"], clip_on=False)
             sel = e["indef"] > 0
             if sel.any():
-                sx.plot(x[sel] + dodge, np.full(sel.sum(), 0.28), ls="none", marker="o", ms=2.8,
+                sx.plot(x[sel] + dodge, np.full(sel.sum(), 0.28), ls="none", marker="o",
+                        ms=5.0 if layout == "2x2wide" else 2.8,
                         mfc=st["color"], mec=st["color"], mew=0.5, clip_on=False)
         ax.set_yscale("log")
         ytop = _ytop(reg)
@@ -2709,10 +2711,20 @@ def make_letter_figure(results, path, layout="2x2wide"):
                 mec=STYLE[nm]["color"], mew=0.6) for nm in NAMES]
     h2 = [Line2D([], [], ls="-", color="#888888", lw=1.4),
           Line2D([], [], ls="-", color="#888888", lw=1.0, alpha=0.5),
-          Line2D([], [], ls="none", marker="x", ms=3.4, mew=1.0, color="#555555"),
-          Line2D([], [], ls="none", marker="o", ms=2.8, mfc="#555555", mec="#555555", mew=0.5)]
-    labels2 = ["median", "maximum", "abort", "indefinite"]
-    if wide:
+          Line2D([], [], ls="none", marker="x", ms=6.0 if layout == "2x2wide" else 3.4,
+                 mew=1.6 if layout == "2x2wide" else 1.0, color="#555555"),
+          Line2D([], [], ls="none", marker="o", ms=5.0 if layout == "2x2wide" else 2.8,
+                 mfc="#555555", mec="#555555", mew=0.5)]
+    labels2 = (["median", "maximum", "abort (grey strip)", "indefinite (grey strip)"]
+               if layout == "2x2wide" else ["median", "maximum", "abort", "indefinite"])
+    if layout == "2x2wide":
+        fig.legend(h, list(NAMES), loc="upper center", ncol=6, frameon=False,
+                   bbox_to_anchor=(0.5, 1 + 0.03 / H), handlelength=1.7, columnspacing=1.2,
+                   handletextpad=0.3, borderaxespad=0.0)
+        fig.legend(h2, labels2, loc="upper center", ncol=4, frameon=False,
+                   bbox_to_anchor=(0.5, 1 - 0.20 / H), handlelength=1.7, columnspacing=1.6,
+                   handletextpad=0.3, borderaxespad=0.0)
+    elif wide:
         fig.legend(h + h2, list(NAMES) + labels2, loc="upper center", ncol=10, frameon=False,
                    bbox_to_anchor=(0.5, 1 + 0.03 / H), handlelength=1.5, columnspacing=0.55,
                    handletextpad=0.2, borderaxespad=0.0)
