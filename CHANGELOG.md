@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.16.5] - 2026-10-10
+
+Paper-reproduction scripts only: **no change to `prg/`** apart from the version string,
+so the installable package behaves exactly as 2.16.4.
+
+### Added
+- Scripts of the back-action paper (*When the Observation Drives the State: Learning and
+  Testing Back-Action in Gaussian Pairwise Markov Chains*):
+  - `experiments/unified_backaction_cost.py`: exact (N -> infinity) state-MSE cost of
+    ignoring back-action for several classical competitors, and the power of the
+    back-action LRT, on one scalar model as A^xy grows.
+  - `experiments/backaction_oscillator_classC.py`: the out-of-class oscillator against
+    the classical class with R^xy free, with one and two latent states (exact
+    y-likelihood, fitted poles, held-out Diebold--Mariano tests, AIC/BIC).
+  - `experiments/capacity_counterexample.py`: random scalar models for which no
+    stationary classical model reproduces the pairwise smoother, and the best stable
+    classical penalty on them.
+  - `experiments/estimability_petetin.py`: state-MSE penalties on the
+    Petetin--Desbouvries model, where the back-action test has no power.
+
+### Changed
+- `experiments/petetin_kl_comparison.py`: panel (a) title.
+- `experiments/README.md`: mapping of the back-action paper's figures and tables to
+  their commands, runtimes and expected numbers (Table II needs
+  `em_observability.py --Ns 500 --inits 5 --iters 60|250|1000`).
+
+---
+
 ## [2.16.4] - 2026-10-10
 
 Paper-reproduction scripts only: **no change to `prg/`** apart from the version string,

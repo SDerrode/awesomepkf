@@ -85,7 +85,7 @@ broadest prior (spurious O(1) RTS errors).
 <a id="back-action-paper"></a>
 ### Back-action paper (learning and testing)
 
-The paper reuses several scripts of the full paper and adds `unified_backaction_cost.py`,
+The paper reuses several scripts of the full paper and adds (in 2.16.5) `unified_backaction_cost.py`,
 `backaction_oscillator_classC.py`, `capacity_counterexample.py` and `estimability_petetin.py`
 (they import `classical_vs_pairwise_exact.py`, `backaction_oscillator.py` and
 `petetin_kl_comparison.py` from this directory). JSONs are written next to the scripts,
