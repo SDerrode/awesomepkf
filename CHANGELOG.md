@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- `prg.learning.em_partial_dynamics.estimate_dynamics_em`: when only one of `A_xy`,
+  `A_yy` is learned (e.g. the `H0` fit `learn_back_action=False`), the M-step is now
+  the restricted maximiser. The other row's residual is regressed out through `Q`
+  (`Q_yx Q_xx^{-1}`, resp. `Q_xy Q_yy^{-1}`). The former row-wise OLS ignored
+  `Q_xy != 0` and converged to a non-maximiser (`A_yy` off by up to 0.02 on a scalar
+  model with `Q_xy = 0.05`).
+- `back_action_lrt`: the EM end points now only seed a direct BFGS maximisation of
+  the exact `y`-log-likelihood (new `polish=True` keyword; `polish=False` gives the
+  EM-only statistic, with the corrected restricted M-step). EM's plateau stop left
+  the free fit short of the maximum along weakly observable directions and biased
+  `Λ` downward. On the p=2, q=1 null model of `experiments/lrt_vector.py`, Λ now
+  equals the directly maximised statistic to < 1e-7 (EM alone: mean ≈ 1, size ≈
+  0.01, instead of mean ≈ 2, size ≈ 0.05 under `χ²_2`).
+
+---
+
 ## [2.16.5] - 2026-10-10
 
 Paper-reproduction scripts only: **no change to `prg/`** apart from the version string,
