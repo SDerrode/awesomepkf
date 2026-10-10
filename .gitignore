@@ -136,3 +136,5 @@ experiments/lrt_vector_*.json
 experiments/conditioning_exact_results.json
 experiments/classical_vs_pairwise_results.json
 experiments/conditioning_exact_classical_results.json
+experiments/conditioning_exact_joseph_results.json
+experiments/bench_letter_results.json

@@ -55,18 +55,23 @@ is walked through in `notebooks/tutorial_10_learning_and_testing.ipynb`.
 <a id="smoothing-letter"></a>
 ### Smoothing letter
 
-The letter has its own four scripts (added in 2.16.0; `conditioning_exact_classical.py`
-in 2.16.2). `conditioning_exact.py`, `conditioning_exact_classical.py` and
-`classical_vs_pairwise_exact.py` write a JSON with every number next to the script and
-their figures under `figures/` (both git-ignored); `check_elimination_full.py` only
-prints its table of residuals.
+The letter's scripts (added in 2.16.0; `conditioning_exact_classical.py` in 2.16.2;
+`conditioning_exact_joseph.py`, `bench_letter.py` and `schematic_elimination.py` in 2.16.4)
+write a JSON with every number next to the script and their figures under `figures/` (both
+git-ignored); `check_elimination_full.py` only prints its table of residuals.
 
 | Letter | Command | Runtime |
 |---|---|---|
-| Fig. 1 (accuracy of the six smoothers against a 60-digit reference, four stress regimes, 80 random models each) | `python experiments/conditioning_exact.py --letter-fig` (2x2 panels at 80 % of the page width, maximum over the models only; `--letter-scale 1` for full width, `--letter-stat both` to add the median, `--letter-layout 1x4` or `2x2` for the other layouts) | ~25 min on 10 cores (`--quick` ~1.5 min; `--from-json --letter-fig --no-figure` redraws instantly) |
+| Fig. 1 (the three block-elimination orders, schematic) | `python experiments/schematic_elimination.py` | ~2 s |
+| Fig. 2 (accuracy of the six smoothers against a 60-digit reference, four stress regimes, 80 random models each) and the "Fails in" column of Table I | `python experiments/conditioning_exact.py --letter-fig` (2x2 panels at 80 % of the page width, maximum over the models only; `--letter-scale 1` for full width, `--letter-stat both` to add the median, `--letter-layout 1x4` or `2x2` for the other layouts) | ~25 min on 10 cores (`--quick` ~1.5 min; `--from-json --letter-fig --no-figure` redraws instantly) |
 | Sec. IV, classical models (the same study on 80 textbook models y = Hx + v per regime; same ranking and choice rule) | `python experiments/conditioning_exact_classical.py` (prints a side-by-side comparison if `conditioning_exact.py` was run first) | ~25 min on 10 cores (`--quick` ~1 min) |
-| Table II (cost of ignoring back-action; exact MSE/NEES, no Monte Carlo) | `python experiments/classical_vs_pairwise_exact.py` | ~22 min (`--no-oracle --no-mc --no-capacity`: ~20 s, same Table II numbers) |
+| Sec. IV, Joseph-form 2F (library backward filter + Joseph-form fusion: same failures as 2F) | `python experiments/conditioning_exact_joseph.py` | ~30 min on 10 cores (`--quick` ~1.5 min) |
+| Table I, "Time" column (run time of the smoothing pass relative to RTS, (p,q)=(10,5), N=1000) | `python experiments/bench_letter.py` | ~3 min (single core; absolute times are machine-dependent, the ratios are quoted) |
 | Proposition 1 (three elimination orders; identities to round-off and to 1e-49 in 50-digit arithmetic, time-varying models) | `python experiments/check_elimination_full.py` | ~7 s (exit code 1 if an identity fails) |
+
+`classical_vs_pairwise_exact.py` (cost of ignoring back-action, exact MSE/NEES) belonged to an
+earlier version of the letter; it is kept for the companion work (`--no-oracle --no-mc
+--no-capacity`: ~20 s).
 
 The letter's 2F/DWY results require **2.16.0 or later**: earlier versions did not
 symmetrise the backward filter that 2F and DWY share, and aborted (or returned wrong

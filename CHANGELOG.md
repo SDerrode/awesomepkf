@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.16.4] - 2026-10-10
+
+Paper-reproduction scripts only: **no change to `prg/`** apart from the version string,
+so the installable package behaves exactly as 2.16.3.
+
+### Added
+- `experiments/schematic_elimination.py`: the smoothing letter's Fig. 1 (the three
+  block-elimination orders of the block-tridiagonal matrix J).
+- `experiments/conditioning_exact_joseph.py`: the accuracy study with an extra
+  two-filter variant, the library's backward filter followed by a Joseph-form fusion.
+  Its maxima and aborts are those of 2F in every regime (the failures arise in the
+  prior-moment backward chain, not in the fusion).
+- `experiments/bench_letter.py`: run time of the six smoothers (total, forward filter,
+  smoothing pass) on random pairwise models up to (p,q) = (20,10).
+
+### Changed
+- `experiments/conditioning_exact.py`: "fails" is printed in bold above every panel of
+  the letter figure (now Fig. 2); the compact random-family records also keep the
+  cancellation factors (kappa).
+- `experiments/README.md`: letter mapping updated (Fig. 1 schematic, Fig. 2 accuracy).
+
+---
+
 ## [2.16.3] - 2026-10-10
 
 Paper-reproduction script only: **no change to `prg/`** apart from the version string,

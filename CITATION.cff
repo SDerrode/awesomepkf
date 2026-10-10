@@ -19,7 +19,7 @@ authors:
     email: stephane.derrode@ec-lyon.fr
     affiliation: École Centrale de Lyon, LIRIS (CNRS UMR 5205)
     orcid: "https://orcid.org/0000-0002-2865-2057"
-version: 2.16.3
+version: 2.16.4
 date-released: "2026-10-10"
 license: AGPL-3.0-only
 repository-code: "https://github.com/SDerrode/awesomepkf"

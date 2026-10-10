@@ -1564,6 +1564,8 @@ def compact_case(out):
     return {"regime": out["regime"], "q": out["q"], "index": out["index"], "value": out["value"],
             "gen": out["gen"], "model_id": out["model_id"], "model": out["model"],
             "bwd": bwd, "var_pivots": var, "cond_exact": cond,
+            "kappa": {k: [v["max"], v["median"]] for k, v in (out["kappa"] or {}).items()
+                      if isinstance(v, dict) and "max" in v},
             "smoothers": smo, "consistency_control": ctrl, "runtime_s": out["runtime_s"]["total"]}
 
 
@@ -2699,9 +2701,10 @@ def make_letter_figure(results, path, layout="2x2wide", scale=1.0, stat="max"):
         for sp in sx.spines.values():
             sp.set_visible(False)
         sx.set_facecolor("#ececec")
-        if i % ncols == 0:
+        if i % ncols == 0 or layout == "2x2wide":   # every panel of the letter figure
             sx.text(-0.03, 0.5, "fails", transform=sx.transAxes, ha="right", va="center",
-                    fontsize=8, color="#444444")
+                    fontsize=8, color="#444444",
+                    weight="bold" if layout == "2x2wide" else "normal")
         ax.margins(x=0.08)
         if reg in ("S", "C", "M"):
             ax.invert_xaxis()      # stress increases to the right in every panel
