@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.16.3] - 2026-10-10
+
+Paper-reproduction script only: **no change to `prg/`** apart from the version string,
+so the installable package behaves exactly as 2.16.2. Makes the printed figure of the
+smoothing letter reproducible from a released version.
+
+### Changed
+- `experiments/conditioning_exact.py`: the letter figure (`--letter-fig`) now draws
+  only the maximum over the models (`--letter-stat max`, the default; `both` restores
+  the median and maximum curves), with 2x2 panels at 80 % of the page width and
+  unchanged fonts (`--letter-scale 0.8`, the default; `1` for full width); the
+  y-axis reads "maximum covariance error".
+
+---
+
 ## [2.16.2] - 2026-10-09
 
 A large condition number no longer invalidates a covariance. Found by running the

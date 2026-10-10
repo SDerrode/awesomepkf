@@ -63,7 +63,7 @@ prints its table of residuals.
 
 | Letter | Command | Runtime |
 |---|---|---|
-| Fig. 1 (accuracy of the six smoothers against a 60-digit reference, four stress regimes, 80 random models each) | `python experiments/conditioning_exact.py --letter-fig` (full-width 2x2 panels; `--letter-layout 1x4` or `2x2` for the other layouts) | ~25 min on 10 cores (`--quick` ~1.5 min; `--from-json --letter-fig --no-figure` redraws instantly) |
+| Fig. 1 (accuracy of the six smoothers against a 60-digit reference, four stress regimes, 80 random models each) | `python experiments/conditioning_exact.py --letter-fig` (2x2 panels at 80 % of the page width, maximum over the models only; `--letter-scale 1` for full width, `--letter-stat both` to add the median, `--letter-layout 1x4` or `2x2` for the other layouts) | ~25 min on 10 cores (`--quick` ~1.5 min; `--from-json --letter-fig --no-figure` redraws instantly) |
 | Sec. IV, classical models (the same study on 80 textbook models y = Hx + v per regime; same ranking and choice rule) | `python experiments/conditioning_exact_classical.py` (prints a side-by-side comparison if `conditioning_exact.py` was run first) | ~25 min on 10 cores (`--quick` ~1 min) |
 | Table II (cost of ignoring back-action; exact MSE/NEES, no Monte Carlo) | `python experiments/classical_vs_pairwise_exact.py` | ~22 min (`--no-oracle --no-mc --no-capacity`: ~20 s, same Table II numbers) |
 | Proposition 1 (three elimination orders; identities to round-off and to 1e-49 in 50-digit arithmetic, time-varying models) | `python experiments/check_elimination_full.py` | ~7 s (exit code 1 if an identity fails) |

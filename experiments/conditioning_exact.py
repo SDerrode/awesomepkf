@@ -2596,9 +2596,10 @@ def build_caption_letter(results):
             + mean_txt)
 
 
-def make_letter_figure(results, path, layout="2x2wide"):
-    """Letter figure, layout "2x2wide" (full page width, D, S / C, M), "1x4" (full page width,
-    one row) or "2x2" (one column): covariance error (raw, whole record)
+def make_letter_figure(results, path, layout="2x2wide", scale=1.0, stat="max"):
+    """Letter figure, layout "2x2wide" (full page width, D, S / C, M; `scale` < 1 shrinks the
+    panels, not the fonts), "1x4" (full page width, one row) or "2x2" (one column); `stat` "max"
+    draws only the maximum over the models, "both" the median and the maximum: covariance error (raw, whole record)
     vs log10 of the sweep parameter, six smoothers: median line + max open marker over the
     random-family models; a strip above each panel marks aborts (x) and indefinite raw
     covariances (o), on at least one model, per smoother."""
@@ -2634,6 +2635,10 @@ def make_letter_figure(results, path, layout="2x2wide"):
         W = 3.5
         leg_h, strip_h, sgap, ax_h, xlab_h, bot = 0.36, 0.12, 0.02, 0.64, 0.30, 0.03
         left_in, right_in, gap_in = 0.56, 0.04, 0.10
+    if layout == "2x2wide" and scale != 1.0:   # smaller panels, same fonts and margins
+        pw0 = (W - left_in - right_in - (ncols - 1) * gap_in) / ncols
+        ax_h *= scale
+        W = left_in + right_in + (ncols - 1) * gap_in + ncols * pw0 * scale
     H = leg_h + nrows * (strip_h + sgap + ax_h + xlab_h) + bot
     pw = (W - left_in - right_in - (ncols - 1) * gap_in) / ncols
     fig = plt.figure(figsize=(W, H))
@@ -2658,9 +2663,13 @@ def make_letter_figure(results, path, layout="2x2wide"):
             med = np.clip(e["cov_med"], ylo, ytop)
             med = np.where(e["n_ran"] >= 0.5 * np.array(d["n_models"]), med, np.nan)
             mx = np.clip(e["cov_max"], ylo, ytop)
-            ax.plot(x, med, color=st["color"], ls=st["ls"], lw=1.2, marker=st["marker"],
-                    ms=st["ms"], mfc=st["color"], mec=st["color"], mew=0.6, zorder=z + 0.4)
-            ax.plot(x, mx, color=st["color"], ls=st["ls"], lw=1.0, alpha=0.7, zorder=z)
+            if stat == "max":
+                ax.plot(x, mx, color=st["color"], ls=st["ls"], lw=1.2, marker=st["marker"],
+                        ms=st["ms"], mfc=st["color"], mec=st["color"], mew=0.6, zorder=z + 0.4)
+            else:
+                ax.plot(x, med, color=st["color"], ls=st["ls"], lw=1.2, marker=st["marker"],
+                        ms=st["ms"], mfc=st["color"], mec=st["color"], mew=0.6, zorder=z + 0.4)
+                ax.plot(x, mx, color=st["color"], ls=st["ls"], lw=1.0, alpha=0.7, zorder=z)
             dodge = 0.032 * span * (k - 2.5)
             sel = e["abort"] > 0
             if sel.any():
@@ -2705,7 +2714,8 @@ def make_letter_figure(results, path, layout="2x2wide"):
                 fontsize=10 if layout == "2x2wide" else 8, zorder=10,
                 bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none", alpha=0.85))
     y_mid = 0.5 * (axes["D"].get_position().y1 + axes[regs[ncols * (nrows - 1)]].get_position().y0)
-    fig.text(0.004, y_mid, "covariance error", rotation=90, ha="left", va="center",
+    fig.text(0.004, y_mid, "maximum covariance error" if stat == "max" else "covariance error",
+             rotation=90, ha="left", va="center",
              fontsize=10 if layout == "2x2wide" else 9)
     h = [Line2D([], [], color=STYLE[nm]["color"], ls=STYLE[nm]["ls"], lw=1.2,
                 marker=STYLE[nm]["marker"], ms=STYLE[nm]["ms"], mfc=STYLE[nm]["color"],
@@ -2718,11 +2728,13 @@ def make_letter_figure(results, path, layout="2x2wide"):
                  mfc="#555555", mec="#555555", mew=0.5)]
     labels2 = (["median", "maximum", "abort (grey strip)", "indefinite (grey strip)"]
                if layout == "2x2wide" else ["median", "maximum", "abort", "indefinite"])
+    if stat == "max":   # no median/maximum entries
+        h2, labels2 = h2[2:], labels2[2:]
     if layout == "2x2wide":
         fig.legend(h, list(NAMES), loc="upper center", ncol=6, frameon=False,
                    bbox_to_anchor=(0.5, 1 + 0.03 / H), handlelength=1.7, columnspacing=1.2,
                    handletextpad=0.3, borderaxespad=0.0)
-        fig.legend(h2, labels2, loc="upper center", ncol=4, frameon=False,
+        fig.legend(h2, labels2, loc="upper center", ncol=len(h2), frameon=False,
                    bbox_to_anchor=(0.5, 1 - 0.20 / H), handlelength=1.7, columnspacing=1.6,
                    handletextpad=0.3, borderaxespad=0.0)
     elif wide:
@@ -3438,6 +3450,12 @@ def main():
     ap.add_argument("--letter-layout", choices=["2x2wide", "1x4", "2x2"], default="2x2wide",
                     help="letter figure layout: full page width as 2x2 (default) or one row "
                          "(1x4), or one column (2x2)")
+    ap.add_argument("--letter-scale", type=float, default=0.8,
+                    help="2x2wide letter figure: panel size relative to full page width "
+                         "(fonts unchanged; default 0.8)")
+    ap.add_argument("--letter-stat", choices=["max", "both"], default="max",
+                    help="letter figure: maximum over the models only (default) or median and "
+                         "maximum")
     ap.add_argument("--letter-fig-out", default=str(OUT_LETTER_FIG),
                     help="letter figure path without extension")
     ap.add_argument("--from-json", action="store_true",
@@ -3569,7 +3587,8 @@ def main():
         if args.base_fig_out:
             make_figure_base(results, args.fig_q, args.base_fig_out)
     if args.letter_fig:
-        lfam, lsize = make_letter_figure(results, args.letter_fig_out, layout=args.letter_layout)
+        lfam, lsize = make_letter_figure(results, args.letter_fig_out, layout=args.letter_layout,
+                                        scale=args.letter_scale, stat=args.letter_stat)
         results.setdefault("figure", {})["letter_size_in"] = [round(v, 3) for v in lsize]
     notes, caption, caption_letter = build_notes(results)
     results["summary_notes"] = notes
