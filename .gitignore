@@ -138,3 +138,7 @@ experiments/classical_vs_pairwise_results.json
 experiments/conditioning_exact_classical_results.json
 experiments/conditioning_exact_joseph_results.json
 experiments/bench_letter_results.json
+experiments/unified_backaction_cost_results.json
+experiments/backaction_oscillator_classC_results.json
+experiments/capacity_counterexample_results.json
+experiments/estimability_petetin_results.json

@@ -6,6 +6,8 @@ Self-contained scripts that regenerate the figures and tables of two companion p
   (figure/table numbers in the main table below);
 - the smoothing letter *Six Smoothers for Gaussian Pairwise Markov Chains, and How to
   Choose One* (in preparation; see [the letter's mapping](#smoothing-letter)).
+- the paper *When the Observation Drives the State: Learning and Testing Back-Action in
+  Gaussian Pairwise Markov Chains* (in preparation; see [its mapping](#back-action-paper)).
 
 They import **only** the public library and are fully deterministic.
 
@@ -79,6 +81,31 @@ results) under strongly correlated noise. The classical-model study requires **2
 later**: earlier versions declared any covariance with condition number >= 1e12 invalid,
 refused 26 of its models and regularised the filter covariances in place under the
 broadest prior (spurious O(1) RTS errors).
+
+<a id="back-action-paper"></a>
+### Back-action paper (learning and testing)
+
+The paper reuses several scripts of the full paper and adds `unified_backaction_cost.py`,
+`backaction_oscillator_classC.py`, `capacity_counterexample.py` and `estimability_petetin.py`
+(they import `classical_vs_pairwise_exact.py`, `backaction_oscillator.py` and
+`petetin_kl_comparison.py` from this directory). JSONs are written next to the scripts,
+figures under `figures/` (both git-ignored).
+
+| Paper | Command | Runtime | Key numbers |
+|---|---|---|---|
+| Fig. 1 (cost of ignoring back-action and LRT power on one scalar model, exact) | `python experiments/unified_backaction_cost.py` (`--from-json` redraws) | ~20 s | from A^xy = 0.1 to 0.5: ablated **3.4 → 158 %**, likelihood (KL) fit **0.8 → 18.6 %**, frozen-best **0.3 → 7.0 %**, best-in-class **0**; LRT power (N=400) **0.17 → 1.0** |
+| Table I (cost, scalar and vector models, exact) | `python experiments/classical_vs_pairwise_exact.py` | ~30 min on 8 workers | — (all numbers in `classical_vs_pairwise_results.json`) |
+| Sec. III, capacity counterexamples (300 random scalar models) | `python experiments/capacity_counterexample.py` | ~4 min | **194** stationary exact member / **54** non-stationary / **52** none; best stable classical penalty on the 12 searched draws **0.03–166 %** (median **11.7 %**) |
+| Theorem 1, restart check | `python experiments/identifiability_frozen.py` | ~30 s | observable cases: **1** distinct exact fit; (2,1) unobservable: **96/96** distinct |
+| Fig. 2 (partial EM recovery) | `python experiments/em_identification.py` | ~40 min | `A^xy = 0.395 ± 0.041`, `A^yy = 0.403 ± 0.022` |
+| Table II (EM spread over initializations, observable vs. not) | `python experiments/em_observability.py --Ns 500 --inits 5 --iters 60` (then `250`, `1000`) | ~2 / 7 / 30 min | observable **0.436 / 0.249 / 0.027**, unobservable **0.656** throughout |
+| Fig. 3 (LRT size and power) | `python experiments/em_lrt.py` | ~6 min | size **0.037**, mean Λ **0.985**, power → **1.0** |
+| Sec. VI, vector LRT | `python experiments/lrt_vector.py` | ~8 min | as in the full paper (x2y2 size 0.04, x2y1 size 0.013) |
+| Fig. 4 (oscillator vs. the classical class with R^xy free) | `python experiments/backaction_oscillator_classC.py` (`--replot` redraws) | ~22 min | held-out gain of pairwise over C(p=1) **5.4 %** (DM t ≈ 9); C(p=2) beats pairwise by **11.0 %**; complex poles **40/40** (pairwise), **0/40** (C, p=1), **40/40** (C, p=2); in-class control: **−0.3 %** (n.s.) |
+| Sec. VII, comparison with R^xy = 0 | `python experiments/backaction_oscillator.py` | ~15 min | ~35 % (vs. the R^xy = 0 class, not the paper's class C) |
+| Fig. 5 (Petetin–Desbouvries model) | `python experiments/petetin_kl_comparison.py` | ~5 s | Petetin Eq. (71) **0.47** at R/Q=20, KL_rate ≈ **1e-31** |
+| Sec. VII, state-MSE penalties on that model | `python experiments/estimability_petetin.py` | ~1.5 min | over R/Q = 0.05 → 20: ablated **15704 → 16 %**, likelihood fit **7–130 %**, best stable classical **1180 → 1.2 %** |
+| Table III, Fig. 6 (real data) | `python experiments/em_realdata.py` | ~2 min | as in the full paper |
 
 Runtimes measured on a laptop from a clone (`pip install -e .`, Python 3.14).
 

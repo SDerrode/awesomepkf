@@ -89,7 +89,7 @@ def main():
     ax[0].axhline(0, color=GREY, lw=0.8, ls=":")
     ax[0].set_xlabel(r"noise ratio $R/Q$")
     ax[0].set_ylabel("KL divergence (per step / rate)")
-    ax[0].set_title(r"(a) two KL functionals on Petetin's couple ($A^{yx}{=}0$)")
+    ax[0].set_title(r"(a) two KL functionals on the pairwise model ($A^{yx}{=}0$)")
     ax[0].legend(loc="upper left"); ax[0].grid(alpha=0.3, which="both")
     ax[0].annotate("test powerless:\nno $y$-footprint", xy=(6, 0.004),
                    xytext=(1.1, 0.16), fontsize=6.5, color=BLUE,
