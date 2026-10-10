@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.16.6] - 2026-10-10
+
+Fixes to the partial-EM back-action estimator and test in `prg.learning`, and updated
+scripts of the back-action paper.
 
 ### Fixed
 - `prg.learning.em_partial_dynamics.estimate_dynamics_em`: when only one of `A_xy`,
@@ -23,6 +26,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Λ` downward. On the p=2, q=1 null model of `experiments/lrt_vector.py`, Λ now
   equals the directly maximised statistic to < 1e-7 (EM alone: mean ≈ 1, size ≈
   0.01, instead of mean ≈ 2, size ≈ 0.05 under `χ²_2`).
+
+### Changed
+- `experiments/lrt_vector.py`: Λ is computed twice on every record, by direct BFGS
+  maximisation of both exact `y`-log-likelihoods (the statistic the back-action paper
+  reports) and by the library's EM alone (`back_action_lrt(..., polish=False)`, kept
+  as a diagnostic).
+- `experiments/backaction_oscillator_classC.py`: AIC/BIC count the identifiable
+  dimension of each `y`-law (4, 4, 6) instead of the raw parameter counts, and report
+  in how many realizations each model is preferred.
+- `experiments/em_identification.py`, `experiments/unified_backaction_cost.py`: panel
+  titles and legend labels only (same numbers).
+- `notebooks/tutorial_10_learning_and_testing.ipynb`: the LRT section says that the EM
+  end points are polished by direct maximisation.
 
 ---
 

@@ -42,7 +42,7 @@ for precision.
 | `em_identification.py` | Fig. 5 | `python experiments/em_identification.py` | **~40 min** (50 seeds × 100 iters, N=2000; the E-step is the library smoother, not a hand-rolled one) |
 | `em_lrt.py` | Fig. 6 | `python experiments/em_lrt.py` | ~1 min (direct-MLE null + power) |
 | `em_realdata.py` | Fig. 7, Table V | `python experiments/em_realdata.py` | ~2 min (needs the chemostat/S&P data under `data/`) |
-| `lrt_vector.py` | Remark 3 (vector `chi2_pq`) | `python experiments/lrt_vector.py` | ~8 min (library LRT, two cases) |
+| `lrt_vector.py` | Remark 3 (vector `chi2_pq`) | `python experiments/lrt_vector.py` | ~35 min (two cases, each record by direct maximisation and by the library's EM; `x2y1` or `x2y2` runs one case) |
 | `backaction_oscillator.py` | Fig. 8 (fitted poles) | `python experiments/backaction_oscillator.py` | ~15 min (40 realizations × 4 MLE fits × 2 systems); `... 8` for a quick look |
 | `backaction_tradeoff.py` | Fig. 9 | `python experiments/backaction_tradeoff.py` | ~10 s (self-contained) |
 | `petetin_kl_comparison.py` | Fig. 10 (estimability vs. testability, cf. Petetin–Desbouvries 2014) | `python experiments/petetin_kl_comparison.py` | ~5 s (self-contained) |
@@ -85,7 +85,7 @@ broadest prior (spurious O(1) RTS errors).
 <a id="back-action-paper"></a>
 ### Back-action paper (learning and testing)
 
-The paper reuses several scripts of the full paper and adds (in 2.16.5) `unified_backaction_cost.py`,
+The paper reuses several scripts of the full paper and adds (in 2.16.5; updated in 2.16.6) `unified_backaction_cost.py`,
 `backaction_oscillator_classC.py`, `capacity_counterexample.py` and `estimability_petetin.py`
 (they import `classical_vs_pairwise_exact.py`, `backaction_oscillator.py` and
 `petetin_kl_comparison.py` from this directory). JSONs are written next to the scripts,
@@ -100,8 +100,8 @@ figures under `figures/` (both git-ignored).
 | Fig. 2 (partial EM recovery) | `python experiments/em_identification.py` | ~40 min | `A^xy = 0.395 ± 0.041`, `A^yy = 0.403 ± 0.022` |
 | Table II (EM spread over initializations, observable vs. not) | `python experiments/em_observability.py --Ns 500 --inits 5 --iters 60` (then `250`, `1000`) | ~2 / 7 / 30 min | observable **0.436 / 0.249 / 0.027**, unobservable **0.656** throughout |
 | Fig. 3 (LRT size and power) | `python experiments/em_lrt.py` | ~6 min | size **0.037**, mean Λ **0.985**, power → **1.0** |
-| Sec. VI, vector LRT | `python experiments/lrt_vector.py` | ~8 min | as in the full paper (x2y2 size 0.04, x2y1 size 0.013) |
-| Fig. 4 (oscillator vs. the classical class with R^xy free) | `python experiments/backaction_oscillator_classC.py` (`--replot` redraws) | ~22 min | held-out gain of pairwise over C(p=1) **5.4 %** (DM t ≈ 9); C(p=2) beats pairwise by **11.0 %**; complex poles **40/40** (pairwise), **0/40** (C, p=1), **40/40** (C, p=2); in-class control: **−0.3 %** (n.s.) |
+| Sec. VI, vector LRT | `python experiments/lrt_vector.py` | ~35 min | exact statistic: x2y2 mean **3.79**, var **7.37**, size **0.040**, KS p **0.36**; x2y1 mean **1.97**, var **3.48**, size **0.047**, KS p **0.95**; EM alone (x2y1): mean **0.95**, size **0.013**, median **21** iterations (requires 2.16.6) |
+| Fig. 4 (oscillator vs. the classical class with R^xy free) | `python experiments/backaction_oscillator_classC.py` (`--replot` redraws) | ~22 min | held-out gain of pairwise over C(p=1) **5.4 %** (DM t ≈ 9); C(p=2) beats pairwise by **11.0 %**; complex poles **40/40** (pairwise), **0/40** (C, p=1), **40/40** (C, p=2); in-class control: **−0.3 %** (n.s.); AIC and BIC (identifiable dimensions 4, 4, 6) prefer C(p=2) in **40/40** realizations |
 | Sec. VII, comparison with R^xy = 0 | `python experiments/backaction_oscillator.py` | ~15 min | ~35 % (vs. the R^xy = 0 class, not the paper's class C) |
 | Fig. 5 (Petetin–Desbouvries model) | `python experiments/petetin_kl_comparison.py` | ~5 s | Petetin Eq. (71) **0.47** at R/Q=20, KL_rate ≈ **1e-31** |
 | Sec. VII, state-MSE penalties on that model | `python experiments/estimability_petetin.py` | ~1.5 min | over R/Q = 0.05 → 20: ablated **15704 → 16 %**, likelihood fit **7–130 %**, best stable classical **1180 → 1.2 %** |
@@ -119,7 +119,7 @@ Runtimes measured on a laptop from a clone (`pip install -e .`, Python 3.14).
 | `em_identification.py` | `A^xy = 0.395 ± 0.041`, `A^yy = 0.403 ± 0.022` (true 0.4/0.4); monotone log-likelihood |
 | `em_lrt.py` | empirical size **0.037** at α=0.05, mean Λ ≈ 0.985 (χ²₁ mean 1); power rising to **1.0** by A^xy=0.45; predicted χ²₁(λ) curve overlays the empirical power |
 | `em_realdata.py` | chemostat Λ **70.6/102.1**, S&P **95.2/280.5**, wind **3.3 (keep) / 13.6**, negative control (circularly shifted driver) **0.74 (keep)**; learned A^xy CI ≈ **[−0.50, −0.29]**, held-out **+10.3 %** vs classical (Clark–West t=2.90, p=0.002; plain DM is *not* significant) |
-| `lrt_vector.py` | x2y2 (q=p=2): mean Λ ≈ 3.8 (dof pq=4), size ≈ 0.04 — tracks χ²₄; x2y1 (q=1<p): mean Λ ≈ 1 < pq, size ≈ 0.01 — conservative |
+| `lrt_vector.py` | exact (directly maximised) Λ: x2y2 (q=p=2) mean ≈ 3.8 (dof pq=4), size ≈ 0.04 — tracks χ²₄; x2y1 (q=1<p, observable but ill-conditioned) mean ≈ 2.0, size ≈ 0.05 — tracks χ²₂. The EM-only column (x2y1) has mean ≈ 1, size ≈ 0.01: EM stops before the maximum along the weak direction |
 | `backaction_oscillator.py` | out-of-class oscillator: pairwise lowers held-out error **~35 %** (Diebold–Mariano p<1e-20), complex poles in **40/40** runs vs classical real **0/40**; in-class control (A^xy=0 truth): **≈0 %** (n.s.) |
 | `backaction_tradeoff.py` | LRT power saturates by A^xy≈0.4; the classical state-MSE penalty keeps rising to ~20 % (testability ≠ estimability) |
 | `petetin_kl_comparison.py` | Petetin Eq.(71) rises to **0.47** at R/Q=20 while the paper's KL_rate ≡ **0** on their A^yx=0 couple; KL_rate climbs **0→0.46** as A^yx opens a y-footprint |
@@ -133,7 +133,7 @@ Runtimes measured on a laptop from a clone (`pip install -e .`, Python 3.14).
 - `em_lrt.py` → `experiments/em_lrt.pdf` (+ `.png` preview)
 - `classical_vs_couple.py` → `figures/classical_vs_couple.pdf` (+ `.png`; `--replot` re-renders from the cached `figures/classical_vs_couple_data.npz`)
 - `classical_vs_couple_multi.py` → prints a table to stdout
-- `lrt_vector.py` → `experiments/lrt_vector_both.json` (+ prints the size table)
+- `lrt_vector.py` → `experiments/lrt_vector_<case>.json` (`both` by default; + prints the size table)
 - `backaction_oscillator.py` → `figures/backaction_poles.pdf` (+ `.png`; caches `figures/backaction_oscillator_data.npz`, `--replot` re-renders from it)
 - `backaction_tradeoff.py` → `figures/backaction_two_quantities.pdf` (+ `.png` preview)
 - `petetin_kl_comparison.py` → `figures/petetin_kl_comparison.pdf` (+ `.png` preview; self-contained, numpy/scipy/matplotlib)

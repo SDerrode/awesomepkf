@@ -150,7 +150,7 @@ def make_figure(rows):
     col = {"ablated": "#D55E00", "projected": "#0072B2", "frozen_best": "#009E73"}
     lab = {"ablated": r"ablated ($A^{xy}$ set to 0)",
            "projected": "likelihood fit (KL projection)",
-           "frozen_best": "best for the state, blocks frozen"}
+           "frozen_best": "frozen best (true blocks, best $A^{yy}$)"}
     mk = {"ablated": "o", "projected": "s", "frozen_best": "^"}
     fig, ax = plt.subplots(1, 2, figsize=(7.0, 2.5))
     for k in ("ablated", "projected", "frozen_best"):
@@ -160,7 +160,7 @@ def make_figure(rows):
     ax[0].set_ylabel("state-MSE penalty over pairwise (%)")
     ax[0].set_title("(a) cost of a classical smoother", fontsize=8)
     ax[0].legend(loc="lower right", frameon=False,
-                 title="best in the class: 0 (exact match)", title_fontsize=7)
+                 title="best in class: 0 (exact match)", title_fontsize=7)
     ax[0].set_xlim(-0.01, 0.51)
     ax[0].grid(alpha=0.3, which="both")
     ax[1].plot(x, [r["test"]["power"] for r in rows], "-o", ms=3, color="#CC79A7")

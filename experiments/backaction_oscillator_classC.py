@@ -16,7 +16,9 @@ filter, much faster in Python); its held-out predictions are the innovations of 
 factorization on the test segment, from the stationary prior, as for the p = 1 models.
 
 Reports: complex fitted poles (count over realizations), held-out gain over C(p=1) with
-paired Diebold--Mariano tests, and AIC/BIC on the training likelihood.
+paired Diebold--Mariano tests, and AIC/BIC on the training likelihood, counting the
+identifiable dimension of each y-law (4, 4, 6) rather than the raw parameters above, with
+the number of realizations in which each model is preferred.
 
 Run (from the paper directory): python -B experiments/backaction_oscillator_classC.py [M]
   [--oscillator-only: keep the saved in-class control] [--replot: redraw the figure]
@@ -118,7 +120,9 @@ def run(sim_fn, label, M, N=600, split=0.7):
     rec = {"mse": {"pairwise": [], "C1": [], "C2": []}, "ll": {"pairwise": [], "C1": [], "C2": []},
            "complex": {"pairwise": 0, "C1": 0, "C2": 0},
            "poles": {"pairwise": [], "C1": [], "C2": []}}
-    npar = {"pairwise": 6, "C1": 5, "C2": 13}
+    # identifiable dimensions: the y-law of each model (Prop. 1), not its raw parameter count;
+    # pairwise and C(p=1) are ARMA(2,1) laws (4), C(p=2) an ARMA(3,2) law (6)
+    npar = {"pairwise": 4, "C1": 4, "C2": 6}
     for m in range(M):
         Y = sim_fn(N, np.random.default_rng(m))          # same records as backaction_oscillator.py
         Ytr, Yte = Y[:ntr], Y[ntr:]
@@ -144,6 +148,15 @@ def run(sim_fn, label, M, N=600, split=0.7):
     out["gain_C2_over_pairwise_pct"] = [float(g.mean()), float(g.std(ddof=1) / np.sqrt(M))]
     out["dm_C2_vs_pairwise"] = dm(mse["pairwise"], mse["C2"])
     ntr_ = int(N * split)
+    crit = {}
+    for k in ("pairwise", "C1", "C2"):
+        ll = np.array(rec["ll"][k])
+        crit[k] = (-2 * ll + 2 * npar[k], -2 * ll + np.log(ntr_) * npar[k])
+        out[f"ll_train_{k}"] = ll.tolist()
+    for j, name in ((0, "aic"), (1, "bic")):
+        best = np.argmin(np.vstack([crit[k][j] for k in ("pairwise", "C1", "C2")]), axis=0)
+        out[f"{name}_preferred_counts"] = {k: int(np.sum(best == i))
+                                           for i, k in enumerate(("pairwise", "C1", "C2"))}
     for k in ("pairwise", "C1", "C2"):
         ll = np.array(rec["ll"][k])
         out[f"aic_{k}"] = float(np.mean(-2 * ll + 2 * npar[k]))

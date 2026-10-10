@@ -147,6 +147,7 @@ def main(N=2000, iters=100, seeds=50):
                  xytext=(10, -9), fontsize=7)
     ax1.set_xlabel("EM iteration")
     ax1.set_ylabel("coupling coefficient")
+    ax1.set_title("(a) estimates", fontsize=8)
     ax1.legend(fontsize=7.5, loc="lower right")
     ax1.grid(True, alpha=0.3)
 
@@ -154,7 +155,8 @@ def main(N=2000, iters=100, seeds=50):
         ax2.plot(it, A_ll[k], "-", color="0.35", alpha=0.12, lw=0.7)
     ax2.plot(it, A_ll.mean(0), "-", color="0.35", lw=2.4)
     ax2.set_xlabel("EM iteration")
-    ax2.set_ylabel(r"marginal $\log p(\mathbf{y}_{1:N})/N$")
+    ax2.set_ylabel("log-likelihood of $\\mathbf{y}$ per step")
+    ax2.set_title("(b) log-likelihood", fontsize=8)
     ax2.grid(True, alpha=0.3)
 
     fig.tight_layout()
