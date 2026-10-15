@@ -130,6 +130,39 @@ def lrt(Z):
     return max(2.0 * (llf - llr), 0.0), Ar, Sr
 
 
+def _simulate_var1(A, S, n, rng, z0):
+    L = np.linalg.cholesky(S + 1e-12 * np.eye(2))
+    Z = np.empty((n, 2)); Z[0] = z0
+    for t in range(1, n):
+        Z[t] = A @ Z[t - 1] + L @ rng.standard_normal(2)
+    return Z
+
+
+def parametric_boot(Z, B, seed):
+    """Null of Lambda under the restricted VAR(1) fit (A^xy=0); targets H0 when VAR(1) holds."""
+    Ar, Sr, _ = fit_restricted(Z)
+    stat = lrt(Z)[0]
+    rng = np.random.default_rng(seed)
+    nulls = np.array([lrt(_simulate_var1(Ar, Sr, len(Z), rng, Z[0]))[0] for _ in range(B)])
+    return (1 + int(np.sum(nulls >= stat))) / (1 + B)
+
+
+def var_order_bic(Z, pmax=8):
+    """BIC-selected order of an unrestricted VAR(p) on the bivariate series Z."""
+    T = len(Z); best = (np.inf, 0)
+    for p in range(1, pmax + 1):
+        Y = Z[p:]
+        lags = [Z[p - 1 - k:T - 1 - k] for k in range(p)]
+        Xr = np.column_stack([np.ones(len(Y))] + lags)
+        Bc = np.linalg.lstsq(Xr, Y, rcond=None)[0]
+        E = Y - Xr @ Bc
+        _, ld = np.linalg.slogdet((E.T @ E) / len(Y))
+        bic = len(Y) * ld + Bc.size * np.log(len(Y))
+        if bic < best[0]:
+            best = (bic, p)
+    return best[1]
+
+
 def detect(Z, B, seed):
     """Test surrogate de H0: Y ne pilote pas X (Axy=0). Le null est obtenu en
     randomisant la PHASE du pilote Y (col.1) — spectre/autocov préservés, couplage
@@ -143,7 +176,9 @@ def detect(Z, B, seed):
     nulls = np.array([lrt(np.column_stack([X, phase_randomize(Y, rng)]))[0]
                       for _ in range(B)])
     p_surr = (1 + int(np.sum(nulls >= stat))) / (1 + B)
-    return stat, p_surr, float(chi2.sf(stat, 1)), nulls
+    q95 = float(np.quantile(nulls, 0.95))
+    p_boot = parametric_boot(Z, B, seed + 10000)
+    return stat, p_surr, float(chi2.sf(stat, 1)), nulls, p_boot, q95
 
 
 # --------------------------------------------------------------------------- #
@@ -219,7 +254,8 @@ def learning_chemostat(B, seed):
     axy, ayy = A[0, 1], A[1, 1]
     # IC bootstrap par blocs mobiles sur Axy, Ayy
     rng = np.random.default_rng(seed)
-    T = len(Z) - 1
+    Z0, Z1 = Z[:-1], Z[1:]                             # transition pairs
+    T = len(Z0)
     L = max(10, round(len(Z) ** (1 / 3) * 2))
     axys, ayys = [], []
     for _ in range(B):
@@ -228,8 +264,8 @@ def learning_chemostat(B, seed):
             s = int(rng.integers(0, T - L + 1))
             idx.extend(range(s, s + L))
         idx = np.array(idx[:T])
-        Zb = np.vstack([Z[idx], Z[idx[-1] + 1]])
-        Ab, _, _ = fit_full(Zb)
+        Z0b, Z1b = Z0[idx], Z1[idx]                    # resample pairs, no junction transitions
+        Ab = (Z1b.T @ Z0b) @ np.linalg.inv(Z0b.T @ Z0b)
         axys.append(Ab[0, 1]); ayys.append(Ab[1, 1])
     def ci(v):
         return (float(np.percentile(v, 2.5)), float(np.percentile(v, 97.5)))
@@ -268,14 +304,25 @@ def main(B=500, seed=1):
          np.column_stack([algae, np.roll(rot, len(rot) // 2)])),
     ]
     rows, chemo_stat, chemo_nulls = [], None, None
-    print(f"{'test':32s} {'N':>5s} {'Lambda':>9s} {'p_chi2':>10s} {'p_surr':>8s}  verdict")
+    print(f"{'test':32s} {'N':>5s} {'Lambda':>9s} {'p_boot':>8s} {'p_surr':>8s} {'surr_q95':>9s}  verdict")
     for i, (lab, Z) in enumerate(tests):
-        stat, ps, pc, nulls = detect(Z, B=B, seed=seed + i)
-        rows.append((lab, len(Z), stat, pc, ps))
+        stat, ps, pc, nulls, pb, q95 = detect(Z, B=B, seed=seed + i)
+        rows.append((lab, len(Z), stat, pb, ps, q95))
         v = "REJECT" if ps < 0.05 else "keep"
-        print(f"{lab:32s} {len(Z):5d} {stat:9.2f} {pc:10.2e} {ps:8.3f}  {v}")
+        print(f"{lab:32s} {len(Z):5d} {stat:9.2f} {pb:8.3f} {ps:8.3f} {q95:9.2f}  {v}")
         if lab.startswith("chemostat: rotif"):
             chemo_stat, chemo_nulls = stat, nulls
+
+    # negative control: distribution of Lambda over circular shifts of the driver
+    rng_sh = np.random.default_rng(seed + 777)
+    shifts = np.unique(np.linspace(10, len(rot) - 10, 110).astype(int))
+    lam_sh = np.array([lrt(np.column_stack([algae, np.roll(rot, int(k))]))[0] for k in shifts])
+    print(f"\ncontrol over {len(lam_sh)} shifts: median {np.median(lam_sh):.2f}  "
+          f"frac>3.84 {np.mean(lam_sh > 3.84):.3f}  q95 {np.quantile(lam_sh, 0.95):.2f}")
+    for lab, Z in (("chemostat", np.column_stack([algae, rot])),
+                   ("S&P", np.column_stack([x0, y0])),
+                   ("wind", np.column_stack([power, speed]))):
+        print(f"  VAR order (BIC) {lab}: {var_order_bic(Z)}")
 
     lrn = learning_chemostat(B=B, seed=seed)
     print("\n[learning — chemostat, couple VAR]")

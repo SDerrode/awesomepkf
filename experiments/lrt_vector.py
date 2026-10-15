@@ -105,10 +105,17 @@ def exact_lrt(A0, Q, p, q, Y, start_free):
         return A
 
     def best(f, starts):
+        # BFGS can stop on "precision loss"; a Nelder--Mead polish from each endpoint makes
+        # the optimum independent of the BFGS convergence flag (multistart over the null
+        # optimum and the EM end point guards against local optima).
         rs = []
         for x0 in starts:
             with np.errstate(all="ignore"):
-                rs.append(minimize(f, x0, method="BFGS", options={"gtol": 1e-7}))
+                r = minimize(f, x0, method="BFGS", options={"gtol": 1e-7})
+            rs.append(r)
+            with np.errstate(all="ignore"):
+                rs.append(minimize(f, r.x, method="Nelder-Mead",
+                                   options={"xatol": 1e-9, "fatol": 1e-12, "maxiter": 4000}))
         return min(rs, key=lambda r: r.fun)
 
     f0 = lambda t: -y_loglik(Y, build(np.zeros((p, q)), t.reshape(q, q)), Q, p, q)

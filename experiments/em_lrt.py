@@ -27,7 +27,7 @@ from pathlib import Path
 import matplotlib as mpl
 import numpy as np
 from scipy.optimize import minimize, minimize_scalar
-from scipy.stats import chi2, ncx2
+from scipy.stats import beta, chi2, ncx2
 
 mpl.use("Agg")
 
@@ -135,14 +135,17 @@ def main(seeds=350, N=400, npow=120):
     size = float(np.mean(lam0 > crit))
     print(f"null: size={size:.3f} mean={lam0.mean():.3f}")
     axyg = np.array([0.0, 0.075, 0.15, 0.225, 0.30, 0.375, 0.45])
-    powm, powse = [], []
+    powm, powlo, powhi = [], [], []
     for a in axyg:
         L = np.array([lrt(sim(a, 0.4, N, np.random.default_rng(5000 + int(a * 1000) * 97 + s)))
                       for s in range(npow)])
-        p = float(np.mean(crit < L))
-        powm.append(p)
-        powse.append(1.96 * np.sqrt(p * (1 - p) / npow))
-    powm, powse = np.array(powm), np.array(powse)
+        k = int(np.sum(crit < L))
+        powm.append(k / npow)
+        # Clopper--Pearson 95% interval (exact; stays within [0, 1] at k = 0 or npow)
+        powlo.append(0.0 if k == 0 else beta.ppf(0.025, k, npow - k + 1))
+        powhi.append(1.0 if k == npow else beta.ppf(0.975, k + 1, npow - k))
+    powm = np.array(powm)
+    powse = np.vstack([powm - np.array(powlo), np.array(powhi) - powm])
     print("power:", np.round(powm, 3))
     # predicted power from the spectral noncentrality lambda(A^xy) = 2N * KL_rate
     axyf = np.linspace(0.0, axyg[-1], 60)
