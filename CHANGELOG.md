@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.16.7] - 2026-10-15
+
+Scripts of the back-action paper only (no change to the library code).
+
+### Changed
+- `experiments/em_realdata.py`: the real-data test adds a parametric bootstrap from the
+  restricted VAR(1) fit (new `p_boot` column), the 95% quantile of the surrogate
+  null, a BIC selection of the VAR order (`var_order_bic`), a pairs-block bootstrap
+  for the chemostat `A_xy` confidence interval (transition pairs are resampled, so
+  no junction transitions are created), and the distribution of `Λ` over ~110
+  circular shifts of the driver as a negative control.
+- `experiments/em_lrt.py`: the power intervals of Fig. 3(b) are Clopper–Pearson
+  instead of Wald.
+- `experiments/lrt_vector.py`: the exact-LRT optimiser polishes each BFGS end point
+  with Nelder–Mead, so the optimum no longer depends on the BFGS convergence flag.
+
+---
+
 ## [2.16.6] - 2026-10-10
 
 Fixes to the partial-EM back-action estimator and test in `prg.learning`, and updated

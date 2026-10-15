@@ -31,7 +31,7 @@ Example
 >>> results = pkf.process_N_data(N=100)
 """
 
-__version__ = "2.16.6"
+__version__ = "2.16.7"
 
 from prg.classes.linear_pkf import Linear_PKF
 from prg.classes.nonlinear_epkf import NonLinear_EPKF
